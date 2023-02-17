@@ -3,7 +3,7 @@
 /// 
 
 #[cxx::bridge(namespace = "atermpp")]
-mod atermpp {
+mod ffi {
 
   unsafe extern "C++" {    
     include!("mcrl2-rust/atermpp/aterm.h");
@@ -14,6 +14,19 @@ mod atermpp {
   } 
 }
 
+/// Rust representation of a atermpp::aterm
+struct ATerm
+{
+  term: ffi::aterm
+}
+
+impl Aterm
+{
+  pub fn new() -> Aterm
+  {
+    Aterm { term: new_aterm() }
+  }
+}
 
 #[cfg(test)]
 mod tests
@@ -23,6 +36,6 @@ mod tests
     #[test]
     fn test_make_aterm()
     {
-      let term = atermpp::new_aterm();
+      let term = atermpp::Aterm::new();
     }
 }

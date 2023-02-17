@@ -21,7 +21,7 @@ mod ffi {
 /// Rust representation of a lps::linear_process_specification.
 pub struct LinearProcessSpecification
 {
-  a: UniquePtr<ffi::specification>
+  lps: UniquePtr<ffi::specification>
 }
 
 impl LinearProcessSpecification
@@ -29,13 +29,13 @@ impl LinearProcessSpecification
   pub fn read(filename: &str) -> LinearProcessSpecification
   {
     return LinearProcessSpecification {
-      a: ffi::read_linear_process_specification(filename).expect("cannot read given lps.")
+      lps: ffi::read_linear_process_specification(filename).expect("cannot read given lps.")
     }
   }
 }
 
 impl fmt::Display for LinearProcessSpecification {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "{}", ffi::print_linear_process_specification(&self.a))
+      write!(f, "{}", ffi::print_linear_process_specification(&self.lps))
   }
 }
