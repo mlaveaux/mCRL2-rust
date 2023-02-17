@@ -13,13 +13,12 @@ fn add_prefix(prefix: String, paths: &[&str]) -> Vec<String>
   return result;
 }
 
-// Add MSVC specific flags and definitions.
+/// Add MSVC specific flags and definitions.
 #[cfg(windows)]
 fn add_platform_flags(build: &mut Build, mcrl2_path: String)
 { 
   build
     .include(mcrl2_path + "build/workarounds/msvc") // These are MSVC workarounds that mCRL2 relies on for compilation. 
-    .flag_if_supported("/std:c++17")
     .flag_if_supported("/EHs")
     .flag_if_supported("/bigobj")
     .flag_if_supported("/W3")
@@ -33,12 +32,23 @@ fn add_platform_flags(build: &mut Build, mcrl2_path: String)
     .define("BOOST_ALL_NO_LIB", "1");
 }
 
+/// Add Linux specific flags and definitions.
 #[cfg(unix)]
 fn add_platform_flags(build: &mut Build, _mcrl2_path: String)
+{}
+
+#[cfg(windows)]
+fn add_cpp_flags(build: &mut Build)
 {
-  // Add Linux specific flags an definitions.
+  build.flag_if_supported("/std:c++17")
+}
+
+#[cfg(unix)]
+fn add_cpp_flags(build: &mut Build)
+{
   build.flag_if_supported("-std=c++17");
 }
+
 
 fn main() {
 
@@ -105,10 +115,13 @@ fn main() {
   let mcrl2_workarounds_path = String::from("../../3rd-party/mCRL2-workarounds/");
 
   // Build dparser separately since it's a C library.
-  let _build_dparser = cc::Build::new()
+  let mut build_dparser = cc::Build::new();
+  build_dparser
     .include(mcrl2_path.clone() + "3rd-party/dparser/")
-    .files(add_prefix(mcrl2_path.clone() + "3rd-party/dparser/", &dparser_source_files))
-    .compile("dparser");
+    .files(add_prefix(mcrl2_path.clone() + "3rd-party/dparser/", &dparser_source_files));
+
+  add_platform_flags(&mut build_dparser, mcrl2_path.clone());
+  build_dparser.compile("dparser");
 
   // These are the files for which we need to call cxxbuild to produce the bridge code.
   let mut build = cxx_build::bridges([ "src/lps.rs", "src/atermpp.rs" ]);
@@ -140,6 +153,7 @@ fn main() {
   //build.define("MCRL2_THREAD_SAFE", "1");
 
   add_platform_flags(&mut build, mcrl2_path);
+  add_cpp_flags(&mut build);
 
   build.compile("mcrl2-rust");
 
