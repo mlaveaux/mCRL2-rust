@@ -7,6 +7,6 @@ debug = true
 
 [workspace]
 members = [
-    "mcrl2-rust",
+    "libraries/*",
     "tools/*"
 ]
