@@ -1,3 +1,5 @@
+use cc::Build;
+
 /// \returns A vector of strings where prefix is prepended to every string slice in paths.
 fn add_prefix(prefix: String, paths: &[&str]) -> Vec<String>
 {
@@ -9,6 +11,33 @@ fn add_prefix(prefix: String, paths: &[&str]) -> Vec<String>
   }
 
   return result;
+}
+
+// Add MSVC specific flags and definitions.
+#[cfg(windows)]
+fn add_platform_flags(build: &mut Build, mcrl2_path: String)
+{ 
+  build
+    .include(mcrl2_path + "build/workarounds/msvc") // These are MSVC workarounds that mCRL2 relies on for compilation. 
+    .flag_if_supported("/std:c++17")
+    .flag_if_supported("/EHs")
+    .flag_if_supported("/bigobj")
+    .flag_if_supported("/W3")
+    .flag_if_supported("/MP")
+    .flag_if_supported("/permissive-")
+    .define("WIN32", "1")
+    .define("NOMINMAX", "1")
+    .define("_USE_MATH_DEFINES", "1")
+    .define("_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES", "1")
+    .define("_CRT_SECURE_NO_WARNINGS", "1")
+    .define("BOOST_ALL_NO_LIB", "1");
+}
+
+#[cfg(unix)]
+fn add_platform_flags(build: &mut Build, mcrl2_path: String)
+{
+  // Add Linux specific flags an definitions.
+  build.flag_if_supported("-std=c++17");
 }
 
 fn main() {
@@ -72,18 +101,16 @@ fn main() {
   ];
 
   // Path to the mCRL2 location
-  let mcrl2_path = String::from("../3rd-party/mCRL2/");
-  let mcrl2_workarounds_path = String::from("../3rd-party/mCRL2-workarounds/");
+  let mcrl2_path = String::from("../../3rd-party/mCRL2/");
+  let mcrl2_workarounds_path = String::from("../../3rd-party/mCRL2-workarounds/");
 
   // These are the files for which we need to call cxxbuild to produce the bridge code.
   let mut build = cxx_build::bridges([ "src/lps.rs", "src/atermpp.rs" ]);
 
   // Additional files needed to compile the bridge, basically to build mCRL2 itself.
   build.cpp(true)
-      .flag_if_supported("-std=c++17")
       .includes(add_prefix(mcrl2_path.clone(), &[
         "3rd-party/dparser/",
-        "build/workarounds/msvc", // These are MSVC workarounds that mCRL2 relies on for compilation.  
         "libraries/atermpp/include",
         "libraries/core/include",
         "libraries/data/include",
@@ -92,6 +119,7 @@ fn main() {
         "libraries/utilities/include",  
         ]))
       .include(mcrl2_workarounds_path.clone() + "include/")
+      .include("../../3rd-party/boost-include-only/")
       .files(add_prefix(mcrl2_path.clone() + "libraries/atermpp/source/", &atermpp_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/lps/source/", &lps_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/data/source/", &data_source_files))
@@ -99,26 +127,13 @@ fn main() {
       .files(add_prefix(mcrl2_path.clone() + "libraries/core/source/", &core_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/process/source/", &process_source_files))      
       .files(add_prefix(mcrl2_path.clone() + "3rd-party/dparser/", &dparser_source_files))
-      .include("../3rd-party/boost-include-only/")
       .file(mcrl2_workarounds_path.clone() + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
 
   // Disable assertions and other checks.
   build.define("DNDEBUG", "1");
   //build.define("MCRL2_THREAD_SAFE", "1");
 
-  // Add MSVC specific flags and definitions.
-  build.flag_if_supported("/std:c++17")
-    .flag_if_supported("/EHs")
-    .flag_if_supported("/bigobj")
-    .flag_if_supported("/W3")
-    .flag_if_supported("/MP")
-    .flag_if_supported("/permissive-")
-    .define("WIN32", "1")
-    .define("NOMINMAX", "1")
-    .define("_USE_MATH_DEFINES", "1")
-    .define("_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES", "1")
-    .define("_CRT_SECURE_NO_WARNINGS", "1")
-    .define("BOOST_ALL_NO_LIB", "1");
+  add_platform_flags(&mut build, mcrl2_path);
 
   build.compile("mcrl2-rust");
 
