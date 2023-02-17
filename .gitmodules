@@ -1,0 +1,3 @@
+[submodule "3rd-party/mCRL2"]
+	path = 3rd-party/mCRL2
+	url = https://github.com/mCRL2org/mCRL2.git
