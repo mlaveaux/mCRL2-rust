@@ -4,7 +4,7 @@ use cxx::UniquePtr;
 mod ffi {
 
   unsafe extern "C++" {    
-    include!("mcrl2-rust/atermpp/aterm.h");
+    include!("mcrl2-rust/cpp/atermpp/aterm.h");
 
     type aterm;
 
@@ -18,22 +18,18 @@ struct ATerm
   term: UniquePtr<ffi::aterm>
 }
 
+/// A function symbol is simply a number
+type Symbol = usize;
+
 impl ATerm
 {
   pub fn new() -> ATerm
   {
     ATerm { term: ffi::new_aterm() }
   }
-}
 
-#[cfg(test)]
-mod tests
-{
-    use super::*;
-
-    #[test]
-    fn test_make_aterm()
-    {
-      let term = ATerm::new();
-    }
+  pub fn get_head_symbol() -> Symbol
+  {
+    0
+  }
 }

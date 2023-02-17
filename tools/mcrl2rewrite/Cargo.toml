@@ -1,0 +1,9 @@
+[package]
+name = "mcrl2rewrite"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mcrl2-rust = { path="../../libraries/mcrl2-rust" }
