@@ -34,7 +34,7 @@ fn add_platform_flags(build: &mut Build, mcrl2_path: String)
 }
 
 #[cfg(unix)]
-fn add_platform_flags(build: &mut Build, mcrl2_path: String)
+fn add_platform_flags(build: &mut Build, _mcrl2_path: String)
 {
   // Add Linux specific flags an definitions.
   build.flag_if_supported("-std=c++17");
@@ -104,6 +104,12 @@ fn main() {
   let mcrl2_path = String::from("../../3rd-party/mCRL2/");
   let mcrl2_workarounds_path = String::from("../../3rd-party/mCRL2-workarounds/");
 
+  // Build dparser separately since it's a C library.
+  let _build_dparser = cc::Build::new()
+    .include(mcrl2_path.clone() + "3rd-party/dparser/")
+    .files(add_prefix(mcrl2_path.clone() + "3rd-party/dparser/", &dparser_source_files))
+    .compile("dparser");
+
   // These are the files for which we need to call cxxbuild to produce the bridge code.
   let mut build = cxx_build::bridges([ "src/lps.rs", "src/atermpp.rs" ]);
 
@@ -120,13 +126,13 @@ fn main() {
         ]))
       .include(mcrl2_workarounds_path.clone() + "include/")
       .include("../../3rd-party/boost-include-only/")
+      .include("dparser")
       .files(add_prefix(mcrl2_path.clone() + "libraries/atermpp/source/", &atermpp_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/lps/source/", &lps_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/data/source/", &data_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/utilities/source/", &utilities_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/core/source/", &core_source_files))
-      .files(add_prefix(mcrl2_path.clone() + "libraries/process/source/", &process_source_files))      
-      .files(add_prefix(mcrl2_path.clone() + "3rd-party/dparser/", &dparser_source_files))
+      .files(add_prefix(mcrl2_path.clone() + "libraries/process/source/", &process_source_files))
       .file(mcrl2_workarounds_path.clone() + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
 
   // Disable assertions and other checks.
