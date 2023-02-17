@@ -46,7 +46,7 @@ jobs:
       - name: Build Documentation
         run: |
           cargo doc --no-deps --verbose -j ${{steps.cpu-cores.outputs.count}}
-          echo "<meta http-equiv=\"refresh\" content=\"0; url=ldd\">" > target/doc/index.html
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=mcrl2_rust\">" > target/doc/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
