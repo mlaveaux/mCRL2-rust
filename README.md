@@ -4,7 +4,7 @@ A library that provides Rust wrappers for various library functionality of the m
 
 # Building
 
-First the submodules must initialised to obtain the 3rd-party libraries. After that the workspace can be build. This will also build the necessary components of the mCRL2 toolset, which can take some time.
+First the submodules must initialised to obtain the 3rd-party libraries. Furthermore, we need a C++ compiler to build the mCRL2 toolset. This can be MSVC on Windows, AppleClang on MacOS or either GCC or Clang on Linux. In the latter case it uses whatever compiler is provided by the CXX environment variable. After that the cargo workspace can be build. This will also build the necessary components of the mCRL2 toolset, which can take some time.
 
 ```bash
 git submodule update --init --recursive

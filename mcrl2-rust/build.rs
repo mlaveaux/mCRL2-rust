@@ -99,11 +99,12 @@ fn main() {
       .files(add_prefix(mcrl2_path.clone() + "libraries/core/source/", &core_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/process/source/", &process_source_files))      
       .files(add_prefix(mcrl2_path.clone() + "3rd-party/dparser/", &dparser_source_files))
-      .include("D:/Software/boost_1_79_0/") // TODO: Figure out how to determine where boost is installed/located.
+      .include("../3rd-party/boost-include-only/")
       .file(mcrl2_workarounds_path.clone() + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
 
   // Disable assertions and other checks.
   build.define("DNDEBUG", "1");
+  //build.define("MCRL2_THREAD_SAFE", "1");
 
   // Add MSVC specific flags and definitions.
   build.flag_if_supported("/std:c++17")
