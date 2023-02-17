@@ -1,6 +1,4 @@
-///
-/// The FFI between the mCRL2 aterm library.
-/// 
+use cxx::UniquePtr;
 
 #[cxx::bridge(namespace = "atermpp")]
 mod ffi {
@@ -17,14 +15,14 @@ mod ffi {
 /// Rust representation of a atermpp::aterm
 struct ATerm
 {
-  term: ffi::aterm
+  term: UniquePtr<ffi::aterm>
 }
 
-impl Aterm
+impl ATerm
 {
-  pub fn new() -> Aterm
+  pub fn new() -> ATerm
   {
-    Aterm { term: new_aterm() }
+    ATerm { term: ffi::new_aterm() }
   }
 }
 
@@ -36,6 +34,6 @@ mod tests
     #[test]
     fn test_make_aterm()
     {
-      let term = atermpp::Aterm::new();
+      let term = ATerm::new();
     }
 }
