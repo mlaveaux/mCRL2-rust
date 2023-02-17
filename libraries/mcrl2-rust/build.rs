@@ -40,7 +40,7 @@ fn add_platform_flags(build: &mut Build, _mcrl2_path: String)
 #[cfg(windows)]
 fn add_cpp_flags(build: &mut Build)
 {
-  build.flag_if_supported("/std:c++17")
+  build.flag_if_supported("/std:c++17");
 }
 
 #[cfg(unix)]
@@ -48,7 +48,6 @@ fn add_cpp_flags(build: &mut Build)
 {
   build.flag_if_supported("-std=c++17");
 }
-
 
 fn main() {
 

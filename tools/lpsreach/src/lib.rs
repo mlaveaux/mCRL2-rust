@@ -6,11 +6,10 @@ use mcrl2_rust::lps::LinearProcessSpecification;
 pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
 {
     let linear_process = LinearProcessSpecification::read(&config.filename);
-    println!("{}", linear_process);
 
-    // Initialize the library.
-    //let mut storage = ldd::Storage::new();
-    //storage.enable_performance_metrics(true);
+    // Initialize the ldd library.
+    let mut storage = ldd::Storage::new();
+    storage.enable_performance_metrics(true);
 
     //let (initial_state, transitions) = sylvan_io::load_model(&mut storage, &config.filename)?;
 
