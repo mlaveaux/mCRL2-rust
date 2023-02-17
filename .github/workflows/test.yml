@@ -19,10 +19,16 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
+    - name: Checkout the repository
+      uses: actions/checkout@v3
+      submodules: true
 
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose -j ${{steps.cpu-cores.outputs.count}}
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose -j ${{steps.cpu-cores.outputs.count}}

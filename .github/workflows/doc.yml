@@ -31,15 +31,20 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout
+      - name: Get number of CPU cores
+        uses: SimenB/github-actions-cpu-cores@v1
+        id: cpu-cores
+
+      - name: Checkout the repository
         uses: actions/checkout@v3
+        submodules: true
         
       - name: Setup Pages
         uses: actions/configure-pages@v3
         
       - name: Build Documentation
         run: |
-          cargo doc --no-deps --verbose
+          cargo doc --no-deps --verbose -j ${{steps.cpu-cores.outputs.count}}
           echo "<meta http-equiv=\"refresh\" content=\"0; url=ldd\">" > target/doc/index.html
 
       - name: Upload artifact
