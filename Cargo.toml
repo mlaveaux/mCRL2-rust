@@ -1,0 +1,12 @@
+[profile.release]
+lto = true
+incremental = true
+
+[profile.bench]
+debug = true
+
+[workspace]
+members = [
+    "mcrl2-rust",
+    "tools/*"
+]
