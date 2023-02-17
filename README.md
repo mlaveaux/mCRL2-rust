@@ -7,7 +7,7 @@ A library that provides Rust wrappers for various library functionality of the m
 First the submodules must initialised to obtain the 3rd-party libraries. After that the workspace can be build. This will also build the necessary components of the mCRL2 toolset, which can take some time.
 
 ```bash
-git submodule update --init --recursive.
+git submodule update --init --recursive
 cargo build -j<number_of_cores>
 ```
 
