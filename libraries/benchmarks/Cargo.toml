@@ -1,0 +1,15 @@
+[package]
+name = "mcrl2-benchmarks"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mcrl2-rust = { path="../mcrl2-rust" }
+rand = "0.8.4"
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "rewrite"
+harness = false
