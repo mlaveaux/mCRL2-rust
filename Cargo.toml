@@ -7,8 +7,10 @@ debug = true
 
 [workspace]
 members = [
-    "libraries/mcrl2-rust",
+    "libraries/benchmarks",
     "libraries/ldd-library/benchmarks", # Add these crates separatedly since the ldd-library has it's own workspace
     "libraries/ldd-library/ldd",
+    "libraries/mcrl2-rust",
+    "libraries/sabre",
     "tools/*"
 ]
