@@ -34,7 +34,8 @@ impl LinearProcessSpecification
   }
 }
 
-impl fmt::Display for LinearProcessSpecification {
+impl fmt::Display for LinearProcessSpecification 
+{
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
       write!(f, "{}", ffi::print_linear_process_specification(&self.lps))
   }
