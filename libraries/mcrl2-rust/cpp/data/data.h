@@ -5,6 +5,7 @@
 
 #include "mcrl2/data/parse.h"
 #include "mcrl2/data/detail/rewrite/jitty.h"
+//#include "mcrl2/data/detail/rewrite/jittyc.h"
 
 namespace mcrl2::data
 {
@@ -24,6 +25,13 @@ std::unique_ptr<detail::RewriterJitty> ffi_create_jitty_rewriter(const data_spec
   used_data_equation_selector selector;
   return std::make_unique<detail::RewriterJitty>(detail::RewriterJitty(spec, selector));
 }
+
+/*#ifdef MCRL2_JITTYC_AVAILABLE
+std::unique_ptr<detail::RewriterCompilingJitty> ffi_create_jittyc_rewriter(const data_specification& spec)
+{
+  
+}
+#endif // MCRL2_JITTYC_AVAILABLE*/
 
 std::unique_ptr<atermpp::aterm> ffi_rewrite(detail::RewriterJitty& rewriter, const atermpp::aterm& term)
 {

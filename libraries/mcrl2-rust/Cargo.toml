@@ -9,3 +9,4 @@ cxx = "1.0"
 [build-dependencies]
 cxx-build = { version = "1.0", features = ["parallel"] }
 cc = "1.0"
+cargo-emit = "0.1"

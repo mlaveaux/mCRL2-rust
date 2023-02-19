@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, hash::Hash, hash::Hasher, cmp::Ordering};
 use cxx::UniquePtr;
 
 #[cxx::bridge(namespace = "atermpp")]
@@ -14,6 +14,18 @@ pub mod ffi {
 
     /// Converts an aterm to a string.
     fn print_aterm(term: &aterm) -> String;
+
+    /// Computes the hash for an aterm.
+    fn hash_aterm(term: &aterm) -> usize;
+
+    /// Returns true iff the terms are equivalent.
+    fn equal_aterm(first: &aterm, second: &aterm) -> bool;
+
+    /// Returns true iff the first term is less than the second term.
+    fn less_aterm(first: &aterm, second: &aterm) -> bool;
+
+    /// Makes a copy of the given term.
+    fn copy_aterm(term: &aterm) -> UniquePtr<aterm>;
   } 
 }
 
@@ -60,6 +72,71 @@ impl ATerm
 impl fmt::Display for ATerm 
 {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "{}", ffi::print_aterm(&self.term))
+    write!(f, "{}", ffi::print_aterm(&self.term))
   }
 }
+
+impl fmt::Debug for ATerm 
+{
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", ffi::print_aterm(&self.term))
+  }
+}
+
+impl Hash for ATerm
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    state.write_usize(ffi::hash_aterm(&self.term));
+  }
+}
+
+impl PartialEq for ATerm
+{
+  fn eq(&self, other: &Self) -> bool
+  {
+    ffi::equal_aterm(&self.term, &other.term)
+  }
+}
+
+impl PartialOrd for ATerm
+{
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+  {
+    if ffi::less_aterm(&self.term, &other.term) {
+      Some(Ordering::Less)
+    } else if ffi::equal_aterm(&self.term, &other.term) {
+      Some(Ordering::Equal)
+    }
+    else {
+      Some(Ordering::Greater)
+    }
+  }
+}
+
+impl Ord for ATerm 
+{
+  fn cmp(&self, other: &Self) -> Ordering
+  {
+    if ffi::less_aterm(&self.term, &other.term) {
+      Ordering::Less
+    } else if ffi::equal_aterm(&self.term, &other.term) {
+      Ordering::Equal
+    }
+    else {
+      Ordering::Greater
+    }
+  }
+
+}
+
+impl Clone for ATerm
+{
+  fn clone(&self) -> Self 
+  {
+    ATerm {
+      term: ffi::copy_aterm(&self.term),
+    }      
+  }
+}
+
+impl Eq for ATerm {}
