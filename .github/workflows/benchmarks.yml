@@ -1,0 +1,32 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:      
+        os: [ubuntu-20.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
+    - name: Checkout the repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Run Benchmarks
+      run: cargo bench --verbose -j ${{steps.cpu-cores.outputs.count}}
