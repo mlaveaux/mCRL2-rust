@@ -3,28 +3,30 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 
 use mcrl2_rust::data::{DataSpecification, JittyRewriter};
-//use sabre::SabreRewriter;
+//use sabre::set_automaton::SetAutomaton;
 
 /// Performs state space exploration of the given model and returns the number of states.
 pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
 {
     // Read the data specification
     let data_spec_text = fs::read_to_string(&config.filename_dataspec).expect("failed to read file");
-    let data_spec = DataSpecification::from(&data_spec_text);
+    let data_spec = DataSpecification::new(&data_spec_text);
 
     // Create a jitty rewriter;
     let mut rewriter = JittyRewriter::new(&data_spec);
 
     // Convert to the rewrite rules that sabre expects.
-    //let rewriter = SabreRewriter::new(x);
+    //let rewriter = SabreRewriter::new(&data_spec);
+    //let automaton = SetAutomaton::new(&data_spec);
 
     // Open the file in read-only mode.
     let file = File::open(&config.filename_expressions).unwrap(); 
 
     // Read the file line by line, and return an iterator of the lines of the file.
-    for line in BufReader::new(file).lines()
+    for line in BufReader::new(file).lines().map(|x| x.unwrap() )
     {
-        println!("{}", rewriter.rewrite(&data_spec.parse(&line.unwrap())));
+        println!("{}", &line);
+        println!("{}", rewriter.rewrite(&data_spec.parse(&line)));
     }
     
     Ok(0)

@@ -55,7 +55,7 @@ impl SabreRewriter
     }
 
     /// Function to rewrite a term. See the module documentation.
-    pub fn stack_based_normalise(&mut self, t: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
+    /*pub fn stack_based_normalise(&mut self, t: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
     {
         SabreRewriter::stack_based_normalise_aux(&mut self.automaton.term_pool, &self.automaton.states, t, stats, true)
     }
@@ -248,5 +248,5 @@ impl SabreRewriter
         } else {
             false
         }
-    }
+    }*/
 }

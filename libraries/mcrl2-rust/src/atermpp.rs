@@ -8,6 +8,7 @@ pub mod ffi {
     include!("mcrl2-rust/cpp/atermpp/aterm.h");
 
     type aterm;
+    type function_symbol;
 
     /// Creates a default term.
     fn new_aterm() -> UniquePtr<aterm>;
@@ -26,14 +27,23 @@ pub mod ffi {
 
     /// Makes a copy of the given term.
     fn copy_aterm(term: &aterm) -> UniquePtr<aterm>;
+
+    /// Returns the function symbol of an aterm.
+    fn get_aterm_function_symbol(term: &aterm) -> UniquePtr<function_symbol>;
+
+    /// Returns the function symbol name
+    fn get_function_symbol_name(symbol: &function_symbol) -> &str;
+
+    /// Returns the function symbol name
+    fn get_function_symbol_arity(symbol: &function_symbol) -> usize;
+
+    /// Returns the ith argument of this term.
+    fn get_term_argument(term: &aterm, index: usize) -> UniquePtr<aterm>;
+
+    fn ffi_is_variable(term: &aterm) -> bool;
   } 
 }
 
-/// Rust representation of a atermpp::aterm
-pub struct ATerm
-{
-  term: UniquePtr<ffi::aterm>
-}
 
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
 pub struct TermPool
@@ -41,8 +51,30 @@ pub struct TermPool
 
 }
 
-/// A function symbol is simply a number
-type Symbol = usize;
+/// A Symbol now references to an aterm function symbol, which has a name and an arity.
+pub struct Symbol
+{
+  function: UniquePtr<ffi::function_symbol>
+}
+
+impl Symbol
+{
+  pub fn name(&self) -> &str
+  {
+    ffi::get_function_symbol_name(&self.function)
+  }
+
+  pub fn arity(&self) -> usize
+  {
+    ffi::get_function_symbol_arity(&self.function)
+  }
+}
+
+/// Rust representation of a atermpp::aterm
+pub struct ATerm
+{
+  term: UniquePtr<ffi::aterm>
+}
 
 impl ATerm
 {
@@ -62,12 +94,34 @@ impl ATerm
     &self.term
   }
 
-  pub fn get_head_symbol() -> Symbol
+  pub fn arg(&self, index: usize) -> ATerm
   {
-    0
+    ATerm { term: ffi::get_term_argument(&self.term, index) }
+  }
+
+  pub fn arguments(&self) -> Vec<ATerm>
+  {
+    let mut result = vec![];
+    for i in 0..self.get_head_symbol().arity()
+    {
+      result.push(self.arg(i));
+    }
+    result
+  }
+
+  pub fn is_variable(&self) -> bool
+  {
+    ffi::ffi_is_variable(&self.term)
+  }
+
+  pub fn get_head_symbol(&self) -> Symbol
+  {
+    Symbol 
+    { 
+      function: ffi::get_aterm_function_symbol(&self.term), 
+    }
   }
 }
-
 
 impl fmt::Display for ATerm 
 {

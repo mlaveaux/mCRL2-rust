@@ -2,49 +2,109 @@ use std::cmp::min;
 use std::collections::VecDeque;
 
 use ahash::{AHashMap as HashMap, RandomState};
+use mcrl2_rust::atermpp::TermPool;
 use smallvec::SmallVec;
 use rayon::prelude::*;
 use rayon::iter::IntoParallelRefIterator;
 
 use crate::set_automaton::*;
-use crate::rewrite_specification::RewriteRule;
-use crate::utilities::position::ExplicitPosition;
+use crate::utilities::position::{ExplicitPosition, get_position};
+use mcrl2_rust::{data::DataEquation, atermpp::ATerm};
 
+/// An equivalence class is a variable with (multiple) positions.
+/// This is necessary for non-linear patterns.
+/// It is used by EnhancedMatchAnnouncement to store what positions need to be compared.
+///
+/// TODO: there is probably a better term than "equivalence class"
+///
+/// # Example
+/// Suppose we have a pattern f(x,x), where x is a variable.
+/// Then it will have one equivalence class storing "x" and the positions 1 and 2.
+/// The function equivalences_hold checks whether the term has the same term on those positions.
+/// For example, it will returns false on the term f(a, b) and true on the term f(a, a).
+#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+struct EquivalenceClass 
+{
+    variable: ATerm,
+    positions: Vec<ExplicitPosition>
+}
+
+impl EquivalenceClass 
+{
+    pub fn equivalences_hold(term: &ATerm, eqs: &Vec<EquivalenceClass>) -> bool 
+    {
+        eqs.iter().all(|ec| {
+            ec.positions.len() < 2 || {
+                let mut iter_pos = ec.positions.iter();
+                let first = iter_pos.next().unwrap();
+                iter_pos.all(|other_pos| {get_position(term, first) == get_position(term, other_pos) })}
+        })
+    }
+}
 
 /// A struct announcing that a match has been made
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub(crate) struct MatchAnnouncement 
+pub struct MatchAnnouncement 
 {
-    pub rule: RewriteRule,
+    pub rule: DataEquation,
     pub position: ExplicitPosition,
     pub symbols_seen: usize
 }
 
-/*
+/// Adds the position of a variable to the equivalence classes
+fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: ExplicitPosition) 
+{
+    // Check if the variable was seen before
+    if ve.iter().any(|ec| { &ec.variable == variable }) 
+    {
+        for ec in ve.iter_mut() 
+        {
+            //Find the equivalence class and add the position
+            if &ec.variable == variable && !ec.positions.iter().any(|x| { x == &pos }) 
+            {
+                ec.positions.push(pos.clone());
+            }
+        }
+    } 
+    else 
+    {
+        // If the variable was not found at another position add a new equivalence class
+        ve.push(EquivalenceClass { variable: variable.clone(), positions: vec![pos] });
+    }
+}
+
 impl MatchAnnouncement 
 {
     /// Derives the positions in a pattern with same variable (for non-linear patters)
-    fn derive_equivalence_classes(&self, tp: &TermPool, arity_per_symbol: &HashMap<Symbol,usize>)
+    fn derive_equivalence_classes(&self, tp: &TermPool)
             -> Vec<EquivalenceClass> 
     {
         // A queue is used to keep track of the positions we still need to visit in the pattern
         let mut queue = VecDeque::new();
         queue.push_back(ExplicitPosition::empty_pos()); //push the root position in the queue
         let mut var_equivalences = vec![];
-        while !queue.is_empty() {
-            //select a position to inspect
+
+        while !queue.is_empty() 
+        {
+            // Select a position to inspect
             let pos = queue.pop_front().unwrap();
-            let term = self.rule.lhs.get_position(&pos);
-            //The symbol "ω" was used early in development to indicate an abstract variable, not used in REC
-            //We need to discard this option because it is not a concrete variable whose position we must match
-            if tp.get_head_symbol_string(&term) != "ω" {
-                //If arity_per_symbol does not contain the head symbol it is a variable
-                if !arity_per_symbol.contains_key(&term.get_head_symbol()) {
-                    //Register the position of the variable
-                    MatchAnnouncement::update_equivalences(&mut var_equivalences, term.get_head_symbol(), pos);
-                } else {
-                    //Put all subterms in the queue for exploration
-                    for i in 1 .. term.get_subterms().len() + 1 {
+            let term = get_position(&self.rule.lhs, &pos);
+
+            // The symbol "ω" was used early in development to indicate an abstract variable, not used in REC
+            // We need to discard this option because it is not a concrete variable whose position we must match
+            if term.get_head_symbol().name() != "ω" 
+            {
+                // If arity_per_symbol does not contain the head symbol it is a variable
+                if term.is_variable() 
+                {
+                    // Register the position of the variable
+                    update_equivalences(&mut var_equivalences, &term, pos);
+                } 
+                else 
+                {
+                    // Put all subterms in the queue for exploration
+                    for i in 1 .. term.arguments().len() + 1 
+                    {
                         let mut sub_term_pos = pos.clone();
                         sub_term_pos.indices.push(i);
                         queue.push_back(sub_term_pos);
@@ -52,29 +112,16 @@ impl MatchAnnouncement
                 }
             }
         }
-        //Discard variables that only occur once
+
+        // Discard variables that only occur once
         var_equivalences.retain(|x| {x.positions.len() > 1});
         var_equivalences
     }
 
-    /// Adds the position of a variable to the equivalence classes
-    fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: Symbol, pos: ExplicitPosition) {
-        //Check if the variable was seen before
-        if ve.iter().any(|ec| { ec.variable == variable }) {
-            for ec in ve.iter_mut() {
-                //Find the equivalence class and add the position
-                if ec.variable == variable && !ec.positions.iter().any(|x| { x == &pos }) {
-                    ec.positions.push(pos.clone());
-                }
-            }
-        } else {//if the variable was not found at another position add a new equivalence class
-            ve.push(EquivalenceClass { variable, positions: vec![pos] });
-        }
-    }
 
-    /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
-    /// for faster rewriting.
-    fn derive_redex(&self, tp: &TermPool, arity_per_symbol: &HashMap<Symbol,usize,RandomState>) -> EnhancedMatchAnnouncement {
+    // For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
+    // for faster rewriting.
+    /*fn derive_redex(&self, tp: &TermPool, arity_per_symbol: &HashMap<Symbol,usize,RandomState>) -> EnhancedMatchAnnouncement {
         //Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         //rhs of the rewrite rule and for lhs and rhs of each condition.
         //Also see the documentation of SemiCompressedTermTree
@@ -93,15 +140,16 @@ impl MatchAnnouncement
         let nf_subterms = sctt_rhs.nf_subterms();
         EnhancedMatchAnnouncement {
             announcement: self.clone(),
-            equivalence_classes: self.derive_equivalence_classes(tp,arity_per_symbol),
+            equivalence_classes: self.derive_equivalence_classes(tp),
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,
             nf_subterms
         }
-    }
+    }*/
 }
 
+/* 
 impl MatchGoal {
     /// Derive the greatest common prefix (gcp) of the announcement and obligation positions
     /// of a list of match goals.

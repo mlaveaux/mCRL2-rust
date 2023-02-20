@@ -1,4 +1,5 @@
 //! Module for storing positions in terms
+use mcrl2_rust::atermpp::ATerm;
 use smallvec::{SmallVec,smallvec};
 use core::fmt;
 
@@ -51,6 +52,23 @@ impl ExplicitPosition
             s
         }
     }
+}
+
+fn get_position_rec<'a>(term: &'a ATerm, queue: &[PositionIndex]) -> ATerm
+{
+ if queue.is_empty() {
+    term.clone()
+ }
+ else {
+    let arg = term.arg(queue[0]);
+    get_position_rec(&arg, &queue[1..]).clone()
+ }
+}
+
+/// Returns the subterm at the specific position
+pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATerm
+{
+    get_position_rec(term, &position.indices)
 }
 
 impl fmt::Display for ExplicitPosition 

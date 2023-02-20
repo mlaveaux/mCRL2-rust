@@ -14,7 +14,7 @@ pub fn load_case(name: &str) -> (JittyRewriter, Vec<ATerm>)
 
     // Read the data specification
     let data_spec_text = fs::read_to_string(&path).expect("failed to read file");
-    let data_spec = DataSpecification::from(&data_spec_text);
+    let data_spec = DataSpecification::new(&data_spec_text);
 
     // Create a jitty rewriter;
     let rewriter = JittyRewriter::new(&data_spec);
@@ -36,7 +36,7 @@ pub fn criterion_benchmark(c: &mut Criterion)
     c.bench_function("add16", 
     |bencher| 
     {        
-        let (mut rewriter, expressions) = load_case("../cases/add16");
+        let (mut rewriter, expressions) = load_case("cases/add16");
 
         bencher.iter(
         || {            

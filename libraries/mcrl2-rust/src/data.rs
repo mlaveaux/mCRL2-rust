@@ -43,10 +43,23 @@ pub struct DataSpecification
   pub data_spec: UniquePtr<ffi::data_specification>,
 }
 
+/// A pattern is simply an aterm of the shape f(...)
+pub type DataExpression = ATerm;
+pub type Variable = ATerm;
+
+#[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Debug)]
+pub struct DataEquation
+{
+  pub variables: Vec<Variable>,
+  pub condition: DataExpression,
+  pub lhs: DataExpression,
+  pub rhs: DataExpression
+}
+
 impl DataSpecification
 {
   /// Parses the given text into a data specification
-  pub fn from(text: &str) -> Self
+  pub fn new(text: &str) -> Self
   {
     DataSpecification { data_spec: ffi::ffi_parse_data_specification(text).expect("failed to parse data specification") }
   }
@@ -55,6 +68,11 @@ impl DataSpecification
   pub fn parse(&self, text: &str) -> ATerm
   {
     ATerm::from(ffi::ffi_parse_data_expression(text, &self.data_spec))
+  }
+
+  pub fn equations(&self) -> Vec<DataEquation>
+  {
+    vec![]
   }
 }
 

@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 mcrl2-rust = { path="../../libraries/mcrl2-rust" }
+sabre = { path="../../libraries/sabre" }
