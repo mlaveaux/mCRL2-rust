@@ -40,9 +40,15 @@ pub fn criterion_benchmark(c: &mut Criterion)
 
         bencher.iter(
         || {            
+            let mut amount = 0;
             for expression in expressions.iter()
             {
+                if amount == 10 {
+                    return;
+                }
+
                 black_box(rewriter.rewrite(expression));
+                amount += 1;
             }
         })
     });

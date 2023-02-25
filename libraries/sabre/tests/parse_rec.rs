@@ -9,7 +9,6 @@
 //! let (spec, terms) = load_REC_from_file(path);
 //! ```
 
-/*
 use std::fs;
 use pest::Parser;
 use pest::iterators::{Pair};
@@ -77,13 +76,17 @@ fn parse_REC(contents: &str, path: Option<PathBuf>) -> (RewriteSpec, Vec<TermSyn
             let arity_per_symbol_cons = parse_constructors(cons);
             let arity_per_symbol_opns = parse_operations(opns);
             rewrite_spec.rewrite_rules.extend_from_slice(&parse_rewrite_rules(rules));
-            if eval.as_rule() == Rule::eval {
+            if eval.as_rule() == Rule::eval 
+            {
                 terms.extend_from_slice(&parse_eval(eval));
             }
+
             rewrite_spec.arity_per_symbol.extend(arity_per_symbol_cons);
             rewrite_spec.arity_per_symbol.extend(arity_per_symbol_opns);
-            for (symbol,_) in &rewrite_spec.arity_per_symbol {
-                if !rewrite_spec.symbols.contains(&symbol) {
+            for (symbol,_) in &rewrite_spec.arity_per_symbol 
+            {
+                if !rewrite_spec.symbols.contains(&symbol) 
+                {
                     rewrite_spec.symbols.push(symbol.clone());
                 }
             }
@@ -299,8 +302,3 @@ fn test_parsing_rec() {
 fn loading_rec() {
     let _ = parse_REC(include_str!("missionaries.rec"), None);
 }
-*/
-
-
-
-

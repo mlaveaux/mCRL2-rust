@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use utilities::set_automaton;
+//use utilities::set_automaton;
+use mcrl2_rust::atermpp::{ATerm, TermPool};
+use mcrl2_rust::data::DataSpecification;
 
 /// A shared trait for all the rewriters
 trait RewriteEngine
@@ -41,30 +43,31 @@ pub struct RewritingStatistics
 pub struct SabreRewriter 
 {
     term_pool: Rc<TermPool>,
-    automaton: SetAutomaton,
+    //automaton: SetAutomaton,
 }
 
 impl RewriteEngine for SabreRewriter 
 {
-    fn rewrite(&mut self, term: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
+    fn rewrite(&mut self, term: ATerm) -> ATerm 
     {
-        self.stack_based_normalise(term, stats)
+        self.stack_based_normalise(term)
     }
 }
 
 impl SabreRewriter
 {
-    fn new(tp: Rc<TermPool>, spec: RewriteSpecification) -> Self 
+    fn new(tp: Rc<TermPool>, spec: DataSpecification) -> Self 
     {
         SabreRewriter {
             term_pool: tp,
-            automaton: SetAutomaton::construct(spec)
+            //automaton: SetAutomaton::construct(spec)
         }
     }
 
     /// Function to rewrite a term. See the module documentation.
-    pub fn stack_based_normalise(&mut self, t: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
+    pub fn stack_based_normalise(&mut self, t: ATerm) -> ATerm 
     {
+        t
         //SabreRewriter::stack_based_normalise_aux(&mut self.automaton.term_pool, &self.automaton.states, t, stats, true)
     }
     /*
@@ -222,8 +225,8 @@ impl SabreRewriter
         cl.prune(prune_point + 0, new_subterm, tp, states);
     }*/
 
-    /// Checks conditions and subterm equality of non-linear patterns.
     /*
+    /// Checks conditions and subterm equality of non-linear patterns.
     #[inline]
     fn conditions_hold(ema:&EnhancedMatchAnnouncement, leaf:&Configuration, tp: &mut TermPool, states: &Vec<State>, stats: &mut RewritingStatistics) -> bool 
     {
