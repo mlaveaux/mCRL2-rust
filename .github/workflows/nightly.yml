@@ -1,4 +1,4 @@
-name: Build and Test
+name: Nightly Build
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       with:
         submodules: true
 
-    - name: Build
+    - name: Build Release
       run: cargo build --release --verbose -j ${{steps.cpu-cores.outputs.count}}
 
     - name: Run tests
