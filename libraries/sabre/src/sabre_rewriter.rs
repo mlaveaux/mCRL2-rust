@@ -2,6 +2,19 @@ use std::rc::Rc;
 
 use utilities::set_automaton;
 
+/// A shared trait for all the rewriters
+trait RewriteEngine
+{
+    /// Rewrites the given term into normal form.
+    fn rewrite(&mut self, term: ATerm) -> ATerm;
+}
+
+pub struct RewritingStatistics 
+{
+    pub rewrite_steps: usize,
+    pub symbol_comparisons: usize
+}
+
 /// Set automaton rewriter that implements the RewriteEngine trait.
 ///
 /// # Example
@@ -31,12 +44,6 @@ pub struct SabreRewriter
     automaton: SetAutomaton,
 }
 
-trait RewriteEngine
-{
-    /// Rewrites the given term into normal form.
-    fn rewrite(&mut self, term: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm;
-}
-
 impl RewriteEngine for SabreRewriter 
 {
     fn rewrite(&mut self, term: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
@@ -47,19 +54,20 @@ impl RewriteEngine for SabreRewriter
 
 impl SabreRewriter
 {
-    fn new(spec: RewriteSpecification) -> Self 
+    fn new(tp: Rc<TermPool>, spec: RewriteSpecification) -> Self 
     {
         SabreRewriter {
-            automaton: SetAutomaton::construct(spec, false)
+            term_pool: tp,
+            automaton: SetAutomaton::construct(spec)
         }
     }
 
     /// Function to rewrite a term. See the module documentation.
-    /*pub fn stack_based_normalise(&mut self, t: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
+    pub fn stack_based_normalise(&mut self, t: StoredTerm, stats: &mut RewritingStatistics) -> StoredTerm 
     {
-        SabreRewriter::stack_based_normalise_aux(&mut self.automaton.term_pool, &self.automaton.states, t, stats, true)
+        //SabreRewriter::stack_based_normalise_aux(&mut self.automaton.term_pool, &self.automaton.states, t, stats, true)
     }
-
+    /*
     /// The _aux function splits the term pool and the states to make borrow checker happy.
     /// We can now mutate the term pool and read the state and transition information at the same time
     fn stack_based_normalise_aux(tp: &mut TermPool, states: &Vec<State>, t: StoredTerm, stats: &mut RewritingStatistics, _gc: bool) -> StoredTerm 
@@ -212,41 +220,35 @@ impl SabreRewriter
         //The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;
         cl.prune(prune_point + 0, new_subterm, tp, states);
-    }
+    }*/
 
     /// Checks conditions and subterm equality of non-linear patterns.
+    /*
     #[inline]
-    fn conditions_hold(ema:&EnhancedMatchAnnouncement, leaf:&Configuration, tp: &mut TermPool, states: &Vec<State>, stats: &mut RewritingStatistics) -> bool {
-        let mut condition_holds = true;
-        for c in &ema.conditions {
+    fn conditions_hold(ema:&EnhancedMatchAnnouncement, leaf:&Configuration, tp: &mut TermPool, states: &Vec<State>, stats: &mut RewritingStatistics) -> bool 
+    {
+        for c in &ema.conditions 
+        {
             let rhs = c.semi_compressed_rhs.evaluate(&leaf.subterm.get_position(&ema.announcement.position), tp);
             let lhs = c.semi_compressed_lhs.evaluate(&leaf.subterm.get_position(&ema.announcement.position), tp);
-            if lhs == rhs && c.equality {
+
+            if lhs == rhs && c.equality 
+            {
                 //do nothing
-            } else {
+            } 
+            else 
+            {
                 let rhs_normal = SabreRewriter::stack_based_normalise_aux(tp, states,rhs.clone(), stats,false);
                 let lhs_normal = SabreRewriter::stack_based_normalise_aux(tp, states,lhs.clone(), stats,false);
-                lhs.set_normal_form(lhs_normal.clone());
-                rhs.set_normal_form(rhs_normal.clone());
-                lhs_normal.mark_normal_form();
-                rhs_normal.mark_normal_form();
-                let holds = (lhs_normal == rhs_normal && c.equality) || (lhs_normal != rhs_normal && !c.equality);
-                if !holds {
-                    condition_holds = false;
-                    break;
+                
+                if !(lhs_normal == rhs_normal && c.equality) || (lhs_normal != rhs_normal && !c.equality) 
+                {
+                    return EquivalenceClass::equivalences_hold(leaf.subterm.clone(), &ema.equivalence_classes);
                 }
             }
         }
-
-        if condition_holds
-        {
-            if EquivalenceClass::equivalences_hold(leaf.subterm.clone(), &ema.equivalence_classes) {
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }*/
+        
+        false
+    }
+    */
 }

@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use rayon::iter::IntoParallelRefIterator;
 
 use crate::set_automaton::*;
-use crate::utilities::position::{ExplicitPosition, get_position};
+use crate::utilities::position::{ExplicitPosition, SemiCompressedTermTree, get_position};
 use mcrl2_rust::{data::DataEquation, atermpp::ATerm};
 
 /// An equivalence class is a variable with (multiple) positions.
@@ -73,11 +73,36 @@ fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: Ex
     }
 }
 
+/// A condition for an enhanced match announcement.
+#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub(crate) struct EMACondition 
+{
+    /// Conditions lhs and rhs are stored in the term pool as much as possible with a SemiCompressedTermTree
+    pub(crate) semi_compressed_lhs: SemiCompressedTermTree,
+    pub(crate) semi_compressed_rhs: SemiCompressedTermTree,
+    pub(crate) equality: bool //whether the lhs and rhs should be equal or different
+}
+
+/// An EnhancedMatchAnnouncement is used on transitions. Besides the normal MatchAnnouncement
+/// it stores additional information.
+#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct EnhancedMatchAnnouncement 
+{
+    pub announcement: MatchAnnouncement,
+    /// Positions in the pattern with the same variable, for non-linear patterns
+    pub equivalence_classes: Vec<EquivalenceClass>,
+    /// Right hand side is stored in the term pool as much as possible with a SemiCompressedTermTree
+    pub semi_compressed_rhs: SemiCompressedTermTree,
+    pub conditions: Vec<EMACondition>,
+    /// Whether the rewrite rule duplicates subterms, e.g. times(s(x), y) = plus(y, times(x, y))
+    pub is_duplicating: bool,
+}
+
+
 impl MatchAnnouncement 
 {
     /// Derives the positions in a pattern with same variable (for non-linear patters)
-    fn derive_equivalence_classes(&self, tp: &TermPool)
-            -> Vec<EquivalenceClass> 
+    fn derive_equivalence_classes(&self, tp: &TermPool) -> Vec<EquivalenceClass> 
     {
         // A queue is used to keep track of the positions we still need to visit in the pattern
         let mut queue = VecDeque::new();
@@ -118,17 +143,19 @@ impl MatchAnnouncement
         var_equivalences
     }
 
-
-    // For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
-    // for faster rewriting.
-    /*fn derive_redex(&self, tp: &TermPool, arity_per_symbol: &HashMap<Symbol,usize,RandomState>) -> EnhancedMatchAnnouncement {
+    /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
+    /// for faster rewriting.
+    fn derive_redex(&self, tp: &TermPool) -> EnhancedMatchAnnouncement 
+    {
         //Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         //rhs of the rewrite rule and for lhs and rhs of each condition.
         //Also see the documentation of SemiCompressedTermTree
         let var_map = create_var_map(self.rule.lhs.clone(),arity_per_symbol);
         let sctt_rhs = SemiCompressedTermTree::from_term(self.rule.rhs.clone(), tp, &var_map);
         let mut conditions = vec![];
-        for c in &self.rule.conditions {
+
+        for c in &self.rule.conditions 
+        {
             let ema_condition = EMACondition{
                 semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.clone(), tp, &var_map),
                 semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.clone(), tp, &var_map),
@@ -136,17 +163,17 @@ impl MatchAnnouncement
             };
             conditions.push(ema_condition);
         }
+
         let is_duplicating = sctt_rhs.contains_duplicate_var_references();
-        let nf_subterms = sctt_rhs.nf_subterms();
+
         EnhancedMatchAnnouncement {
             announcement: self.clone(),
             equivalence_classes: self.derive_equivalence_classes(tp),
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,
-            nf_subterms
         }
-    }*/
+    }
 }
 
 /* 

@@ -12,7 +12,7 @@ use crate::set_automaton::{EnhancedMatchAnnouncement, State};
 #[derive(Debug)]
 pub(super) struct Configuration<'a> {
     pub state: usize,
-    pub subterm: StoredTerm,
+    pub subterm: ATerm,
     pub position: Option<&'a ExplicitPosition>
 }
 

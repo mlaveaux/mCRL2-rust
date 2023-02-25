@@ -1,0 +1,2 @@
+Result: s(s(s(s(d0))))
+Result: s(s(d0))
