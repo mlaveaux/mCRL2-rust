@@ -1,0 +1,22 @@
+identifier = @{  !("CONS") ~ (ASCII_ALPHANUMERIC ~ (ASCII_ALPHANUMERIC | "_" | "'" | "\"")*) } //@{  !("CONS") ~ (ASCII_ALPHA ~ (!(NEWLINE | WHITE_SPACE | "(" | ")" | "," | "#") ~ ANY)*) }
+term = ${identifier ~ (WHITE_SPACE* ~ args)?}
+args = {"(" ~ WHITESPACE* ~ term ~ WHITESPACE* ~ ("," ~ WHITESPACE* ~ term)*  ~ WHITESPACE* ~ ")"}
+rewrite_rule = {term ~ ("->" | "=") ~ term ~ ("if" ~ condition ~ ("and-if" ~ condition)*)?}
+condition = {term ~ comparison ~ term }
+comparison = {"=" | "<>"}
+single_rewrite_rule = {SOI ~ rewrite_rule ~ EOI}
+single_term = {SOI ~ term ~ EOI}
+cons_decl = {identifier ~ ":" ~ (identifier)* ~ "->"  ~ identifier ~ NEWLINE}
+opn_decl = {identifier ~ ":" ~ (identifier)* ~ "->"  ~ identifier ~ NEWLINE}
+var_decl = {(identifier)* ~ ":"  ~ identifier ~ NEWLINE}
+rec_spec = {SOI ~ NEWLINE* ~ header ~ sorts ~ cons ~ opns ~ vars ~ rules ~ eval? ~ "END-SPEC" ~ NEWLINE* ~ EOI}
+header = {"REC-SPEC" ~ identifier ~ (":" ~ identifier+)? ~ NEWLINE+}
+sorts = {"SORTS" ~ NEWLINE+ ~ (identifier*  ~ NEWLINE)? ~ NEWLINE*}
+cons = {"CONS" ~ NEWLINE+ ~ (cons_decl | NEWLINE)*}
+opns = {"OPNS" ~ NEWLINE+ ~ (opn_decl | NEWLINE)*}
+vars = {"VARS"  ~ NEWLINE+ ~ (var_decl  | NEWLINE)*}
+rules = {"RULES"  ~ NEWLINE+ ~ (((rewrite_rule ~ NEWLINE)  | NEWLINE))*}
+eval = {"EVAL"  ~ NEWLINE+ ~ ((term  ~ NEWLINE) | NEWLINE)*}
+
+COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)*}
+WHITESPACE = _{" " | "\t"}

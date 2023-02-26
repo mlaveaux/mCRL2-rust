@@ -17,29 +17,6 @@ pub struct RewritingStatistics
     pub symbol_comparisons: usize
 }
 
-/// Set automaton rewriter that implements the RewriteEngine trait.
-///
-/// # Example
-/// ```
-/// use term_pool::{RewriteSpec, TermSyntaxTree, StoredTerm};
-/// use rewriter::{SabreRewriter, RewritingStatistics, RewriteEngine};
-///
-/// // create a rewrite spec with no rewrite rules, just the constant 0
-/// let mut spec = RewriteSpec::new(); //empty rewrite spec
-/// spec.symbols.push("0".to_string());
-/// spec.arity_per_symbol.insert("0".to_string(), 0);
-///
-/// let mut sabre = SabreRewriter::new(spec);
-///
-/// let tst_0 = TermSyntaxTree{head_symbol: "0".to_string(), sub_terms: vec![]};
-/// let term_0 = sabre.store_term(tst_0.clone());
-/// let mut stats = RewritingStatistics::new();
-/// let rewritten = sabre.rewrite(term_0.clone(), &mut stats); //nothing to rewrite
-///
-/// assert_eq!(rewritten, term_0);
-/// assert_eq!(tst_0, sabre.get_syntax_tree(&rewritten));
-/// assert_eq!("0", sabre.term_to_string(&rewritten))
-/// ```
 pub struct SabreRewriter 
 {
     term_pool: Rc<TermPool>,

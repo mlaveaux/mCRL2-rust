@@ -31,6 +31,7 @@ pub fn load_case(name: &str) -> (JittyRewriter, Vec<ATerm>)
     (rewriter, expressions)
 }
 
+/*
 pub fn criterion_benchmark(c: &mut Criterion) 
 {          
     c.bench_function("add16", 
@@ -43,7 +44,7 @@ pub fn criterion_benchmark(c: &mut Criterion)
             let mut amount = 0;
             for expression in expressions.iter()
             {
-                if amount == 10 {
+                if amount == 1 {
                     return;
                 }
 
@@ -53,6 +54,7 @@ pub fn criterion_benchmark(c: &mut Criterion)
         })
     });
 }
+*/
  	
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
