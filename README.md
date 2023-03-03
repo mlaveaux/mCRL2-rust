@@ -8,7 +8,7 @@ First the submodules must initialised to obtain the 3rd-party libraries. Further
 
 ```bash
 git submodule update --init --recursive
-cargo build -j<number_of_cores>
+cargo build
 ```
 
 # Tests
@@ -18,6 +18,10 @@ Tests can be performed using `cargo test`.
 # Tools
 
 This directory contains prototypes to show the viability of this approach. The tool can be executed using for example `cargo run --release tools/lpsreach`.
+
+# Benchmarks
+
+For micro benchmarks we use [Criterion.rs](https://crates.io/crates/criterion) and these benchmarks can be executed using `cargo bench`. For more functionality, such as history reports instead of only comparing to the previous benchmark run, we can install `cargo-criterion` using `cargo install criterion` and then run the benchmarks using `cargo criterion`. Note that this latter option is still experimental and might not always work.
 
 # Profiling
 

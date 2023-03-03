@@ -1,25 +1,20 @@
 //! Module for parsing REC files in the REC 2019 format
 //!
-//! #Example
-//! ```no_run
-//! use std::path::PathBuf;
-//! use term_pool::parser::load_REC_from_file;
-//!
-//! let path = PathBuf::from(r"C:\some\path\recfile.rec");
-//! let (spec, terms) = load_REC_from_file(path);
-//! ```
 
 use std::fs;
+use std::path::PathBuf;
+use std::str::FromStr;
+
+use ahash::AHashMap as HashMap;
+
 use pest::Parser;
 use pest::iterators::{Pair};
 use pest_derive::Parser;
-use crate::{RewriteRuleSyntax, TermSyntaxTree, PatternSyntaxTree, RewriteSpec, ConditionSyntax};
-use std::path::PathBuf;
-use std::str::FromStr;
-use ahash::AHashMap as HashMap;
+
+use crate::syntax::{RewriteSpecificationSyntax, TermSyntaxTree, RewriteRuleSyntax, ConditionSyntax};
 
 #[derive(Parser)]
-#[grammar = "parser/grammar.pest"]
+#[grammar = "grammar.pest"]
 pub struct TermParser;
 
 /// Parses a REC specification. REC files can import other REC files.
@@ -29,10 +24,10 @@ pub struct TermParser;
 /// `contents` - A REC specification as string
 /// `path` - An optional path to a folder in which other importable REC files can be found.
 #[allow(non_snake_case)]
-fn parse_REC(contents: &str, path: Option<PathBuf>) -> (RewriteSpec, Vec<TermSyntaxTree>) 
+fn parse_REC(contents: &str, path: Option<PathBuf>) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) 
 {
-    //Initialise return result
-    let mut rewrite_spec = RewriteSpec::default();    
+    // Initialise return result
+    let mut rewrite_spec = RewriteSpecificationSyntax::new();    
     let mut terms = vec![];
 
     // Use Pest parser (generated automatically from the grammar.pest file)
@@ -49,7 +44,7 @@ fn parse_REC(contents: &str, path: Option<PathBuf>) -> (RewriteSpec, Vec<TermSyn
             let _vars = inner.next().unwrap();
             let rules = inner.next().unwrap();
             let eval = inner.next().unwrap();
-            let (_name,include_files) = parse_header(header);
+            let (_name, include_files) = parse_header(header);
 
             // REC files can import other REC files. Import all referenced by the header.
             for file in include_files 
@@ -62,7 +57,7 @@ fn parse_REC(contents: &str, path: Option<PathBuf>) -> (RewriteSpec, Vec<TermSyn
                     let contents = fs::read_to_string(load_file).unwrap();
                     let (include_spec, include_terms) = parse_REC(&contents, path.clone());
 
-                    //Add rewrite rules and terms to the result.
+                    // Add rewrite rules and terms to the result.
                     terms.extend_from_slice(&include_terms);
                     rewrite_spec.arity_per_symbol.extend(include_spec.arity_per_symbol);
                     rewrite_spec.rewrite_rules.extend_from_slice(&include_spec.rewrite_rules);
@@ -100,28 +95,28 @@ fn parse_REC(contents: &str, path: Option<PathBuf>) -> (RewriteSpec, Vec<TermSyn
     (rewrite_spec,terms)
 }
 
-///Load a REC specification from a specified file.
+/// Load a REC specification from a specified file.
 #[allow(non_snake_case)]
-pub fn load_REC_from_file(file: PathBuf) -> (RewriteSpec, Vec<TermSyntaxTree>) {
+pub fn load_REC_from_file(file: PathBuf) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) 
+{
     let contents = fs::read_to_string(file.clone()).unwrap();
     parse_REC(&contents, Some(file))
 }
 
 ///Load and join multiple REC specifications
 #[allow(non_snake_case)]
-pub fn load_REC_from_strings(specs: Vec<&str>) -> (RewriteSpec, Vec<TermSyntaxTree>) {
-    let mut rewrite_spec = RewriteSpec {
-        rewrite_rules: vec![],
-        symbols: vec![],
-        arity_per_symbol: HashMap::new()
-    };
+pub fn load_REC_from_strings(specs: Vec<&str>) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) {
+    let mut rewrite_spec = RewriteSpecificationSyntax::new();
     let mut terms = vec![];
 
-    for spec in specs {
+    for spec in specs 
+    {
         let (include_spec, include_terms) = parse_REC(spec, None);
+
         terms.extend_from_slice(&include_terms);
         rewrite_spec.arity_per_symbol.extend(include_spec.arity_per_symbol);
         rewrite_spec.rewrite_rules.extend_from_slice(&include_spec.rewrite_rules);
+        
         for s in include_spec.symbols {
             if !rewrite_spec.symbols.contains(&s) {
                 rewrite_spec.symbols.push(s);
@@ -132,15 +127,19 @@ pub fn load_REC_from_strings(specs: Vec<&str>) -> (RewriteSpec, Vec<TermSyntaxTr
     (rewrite_spec, terms)
 }
 
-///Extracts data from parsed header of REC spec. Returns name and include files.
-fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>) {
-    assert_eq!(pair.as_rule(),Rule::header);
+/// Extracts data from parsed header of REC spec. Returns name and include files.
+fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>) 
+{
+    assert_eq!(pair.as_rule(), Rule::header);
+
     let mut inner = pair.into_inner();
     let name = inner.next().unwrap().as_str().to_string();
     let mut include_files = vec![];
+
     for f in inner {
         include_files.push(f.as_str().to_string());
     }
+
     (name, include_files)
 }
 
@@ -186,7 +185,7 @@ fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax>
 }
 
 ///Extracts data from parsed EVAL section, returns a list of terms that need to be rewritten.
-fn parse_eval(pair: Pair<Rule>) -> Vec<PatternSyntaxTree> 
+fn parse_eval(pair: Pair<Rule>) -> Vec<TermSyntaxTree> 
 {
     assert_eq!(pair.as_rule(),Rule::eval);
     let mut terms = vec![];
@@ -207,7 +206,7 @@ impl TermSyntaxTree {
 }
 
 ///Extracts data from parsed term.
-fn parse_term(pair: Pair<Rule>) -> PatternSyntaxTree {
+fn parse_term(pair: Pair<Rule>) -> TermSyntaxTree {
     assert_eq!(pair.as_rule(),Rule::term);
     match pair.as_rule() {
         Rule::term => {
@@ -219,7 +218,7 @@ fn parse_term(pair: Pair<Rule>) -> PatternSyntaxTree {
                     sub_terms.push(parse_term(arg));
                 }
             }
-            PatternSyntaxTree{
+            TermSyntaxTree{
                 head_symbol,
                 sub_terms
         }}

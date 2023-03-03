@@ -10,7 +10,8 @@ use crate::set_automaton::{EnhancedMatchAnnouncement, State};
 ///         Note that it stores a reference to a position. It references the position listed on
 ///         a transition of the set automaton.
 #[derive(Debug)]
-pub(super) struct Configuration<'a> {
+pub(super) struct Configuration<'a> 
+{
     pub state: usize,
     pub subterm: ATerm,
     pub position: Option<&'a ExplicitPosition>
@@ -19,14 +20,16 @@ pub(super) struct Configuration<'a> {
 /// SideInfo stores additional information of a configuration.
 /// It stores an index of the corresponding configuration on the configuration stack.
 #[derive(Debug)]
-pub(super) struct SideInfo<'a> {
+pub(super) struct SideInfo<'a> 
+{
     pub corresponding_configuration: usize,
     pub info: SideInfoType<'a>
 }
 
 /// Three types of side information. See the stack rewriter on how they are used.
 #[derive(Debug)]
-pub(super) enum SideInfoType<'a> {
+pub(super) enum SideInfoType<'a> 
+{
     SideBranch(&'a[(ExplicitPosition,usize)]),
     DelayedRewriteRule(&'a EnhancedMatchAnnouncement),
     EquivalenceAndConditionCheck(&'a EnhancedMatchAnnouncement)
@@ -34,7 +37,8 @@ pub(super) enum SideInfoType<'a> {
 
 /// A configuration stack. The first element is the root of the configuration tree.
 #[derive(Debug)]
-pub(super) struct ConfigurationStack<'a> {
+pub(super) struct ConfigurationStack<'a> 
+{
     pub configuration_stack: Vec<Configuration<'a>>,
     //Separate stack with extra information on some configurations
     pub side_branch_stack: Vec<SideInfo<'a>>,
@@ -45,6 +49,7 @@ pub(super) struct ConfigurationStack<'a> {
     //oldest_reliable_subterm is an index to the highest configuration in the tree that is up to date.
     pub oldest_reliable_subterm: usize
 }
+
 impl<'a> ConfigurationStack<'a> {
     ///Initialise the stack with one Configuration containing 'term' and the initial state of the set automaton
     pub fn new(state: usize, term: StoredTerm) -> ConfigurationStack<'a> {

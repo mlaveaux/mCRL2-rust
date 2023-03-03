@@ -161,11 +161,13 @@ fn main() {
   build.compile("mcrl2-rust");
 
   // Only run this build script if the bridge changes.
-  cargo_emit::rerun_if_changed!(
-    "cpp/*",
-    "src/atermpp.rs",
-    "src/data.rs",
-    "src/lib.rs",
-    "src/lps.rs"
-  );
+  //cargo_emit::rerun_if_changed!(
+  //  "cpp/*",
+  //  "src/atermpp.rs",
+  //  "src/data.rs",
+  //  "src/lib.rs",
+  //  "src/lps.rs"
+  //);
+  
+  cargo_emit::rerun_if_changed!("");
 }

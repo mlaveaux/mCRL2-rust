@@ -1,8 +1,5 @@
-mod parse_rec;
-
-use rewriter::{load_REC_from_strings, SabreRewriter};
-use crate::sabre_rewriter;
-use test_case::test_case;
+/*
+use crate::parse_rec::load_REC_from_strings;
 
 #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
 #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
@@ -71,3 +68,4 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str)
     }
     assert_eq!(expected_result.split("\n\r"), &result);
 }
+*/

@@ -37,6 +37,16 @@ pub mod ffi {
     /// Returns the function symbol name
     fn get_function_symbol_arity(symbol: &function_symbol) -> usize;
 
+    /// Returns the hash for a function symbol
+    fn hash_function_symbol(symbol: &function_symbol) -> usize;
+    
+    fn equal_function_symbols(first: &function_symbol, second: &function_symbol) -> bool;
+    
+    fn less_function_symbols(first: &function_symbol, second: &function_symbol) -> bool;
+    
+    /// Makes a copy of the given function symbol
+    fn copy_function_symbol(symbol: &function_symbol) -> UniquePtr<function_symbol>;
+
     /// Returns the ith argument of this term.
     fn get_term_argument(term: &aterm, index: usize) -> UniquePtr<aterm>;
 
@@ -69,6 +79,71 @@ impl Symbol
     ffi::get_function_symbol_arity(&self.function)
   }
 }
+
+impl fmt::Display for Symbol 
+{
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.name())
+  }
+}
+
+impl fmt::Debug for Symbol 
+{
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.name())
+  }
+}
+
+impl Hash for Symbol
+{
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    state.write_usize(ffi::hash_function_symbol(&self.function));
+  }
+}
+
+impl PartialEq for Symbol
+{
+  fn eq(&self, other: &Self) -> bool
+  {
+    ffi::equal_function_symbols(&self.function, &other.function)
+  }
+}
+
+impl PartialOrd for Symbol
+{
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+  {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for Symbol 
+{
+  fn cmp(&self, other: &Self) -> Ordering
+  {
+    if ffi::less_function_symbols(&self.function, &other.function) {
+      Ordering::Less
+    } else if self == other {
+      Ordering::Equal
+    }
+    else {
+      Ordering::Greater
+    }
+  }
+
+}
+
+impl Clone for Symbol
+{
+  fn clone(&self) -> Self 
+  {
+    Symbol {
+      function: ffi::copy_function_symbol(&self.function),
+    }      
+  }
+}
+
+impl Eq for Symbol {}
 
 /// Rust representation of a atermpp::aterm
 pub struct ATerm
@@ -156,14 +231,7 @@ impl PartialOrd for ATerm
 {
   fn partial_cmp(&self, other: &Self) -> Option<Ordering>
   {
-    if ffi::less_aterm(&self.term, &other.term) {
-      Some(Ordering::Less)
-    } else if ffi::equal_aterm(&self.term, &other.term) {
-      Some(Ordering::Equal)
-    }
-    else {
-      Some(Ordering::Greater)
-    }
+    Some(self.cmp(other))
   }
 }
 
@@ -173,14 +241,13 @@ impl Ord for ATerm
   {
     if ffi::less_aterm(&self.term, &other.term) {
       Ordering::Less
-    } else if ffi::equal_aterm(&self.term, &other.term) {
+    } else if self == other {
       Ordering::Equal
     }
     else {
       Ordering::Greater
     }
   }
-
 }
 
 impl Clone for ATerm

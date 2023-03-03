@@ -61,6 +61,27 @@ std::size_t get_function_symbol_arity(const function_symbol& symbol)
   return symbol.arity();
 }
 
+std::size_t hash_function_symbol(const function_symbol& symbol)
+{
+  std::hash<function_symbol> hasher;
+  return hasher(symbol);
+}
+
+bool less_function_symbols(const function_symbol& first, const function_symbol& second)
+{
+  return first < second;
+}
+
+bool equal_function_symbols(const function_symbol& first, const function_symbol& second)
+{
+  return first == second;
+}
+
+std::unique_ptr<function_symbol> copy_function_symbol(const function_symbol& symbol)
+{
+  return std::make_unique<function_symbol>(symbol);
+}
+
 bool ffi_is_variable(const aterm& term)
 {
   return mcrl2::data::is_variable(term);

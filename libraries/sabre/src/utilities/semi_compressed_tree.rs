@@ -1,9 +1,6 @@
-use std::collections::{VecDeque, HashSet};
-use ahash::AHashMap as HashMap;
-use term_pool::{Symbol, TermPool, StoredTerm, Term0, Term1, Term2, Term3, Term4, Term5, Term6, Term7Plus};
-use term_pool::position::ExplicitPosition;
-use crate::set_automaton::State;
-use crate::InnermostRewriter;
+
+use mcrl2_rust::atermpp::{Symbol, ATerm};
+use crate::utilities::ExplicitPosition;
 
 /// A SemiCompressedTermTree (SCTT) is a mix between a StoredTerm and a TermSyntaxTree and is used
 /// to represent the rhs of rewrite rules and the lhs and rhs of conditions.
@@ -22,20 +19,21 @@ use crate::InnermostRewriter;
 /// For the rewrite rule minus(s(x), s(y)) = minus(x, y), the SCTT of the rhs will be of type
 /// Explicit, which will stored the head symbol 'minus' and two child SCTTs of type Variable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub(crate) enum SemiCompressedTermTree 
+pub enum SemiCompressedTermTree 
 {
     Explicit(ExplicitNode),
-    Compressed(StoredTerm),
+    Compressed(ATerm),
     Variable(ExplicitPosition)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub(crate) struct ExplicitNode 
+pub struct ExplicitNode 
 {
     pub head: Symbol,
     pub children: Vec<SemiCompressedTermTree>
 }
 
+/*
 impl SemiCompressedTermTree {
     fn is_compressed(&self) -> bool 
     {
@@ -258,3 +256,4 @@ mod tests {
     }
 
 }
+*/

@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use rayon::iter::IntoParallelRefIterator;
 
 use crate::set_automaton::*;
-use crate::utilities::position::{ExplicitPosition, SemiCompressedTermTree, get_position};
+use crate::utilities::{get_position, ExplicitPosition, SemiCompressedTermTree};
 use mcrl2_rust::{data::DataEquation, atermpp::ATerm};
 
 /// An equivalence class is a variable with (multiple) positions.
@@ -23,7 +23,7 @@ use mcrl2_rust::{data::DataEquation, atermpp::ATerm};
 /// The function equivalences_hold checks whether the term has the same term on those positions.
 /// For example, it will returns false on the term f(a, b) and true on the term f(a, a).
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-struct EquivalenceClass 
+pub struct EquivalenceClass 
 {
     variable: ATerm,
     positions: Vec<ExplicitPosition>
@@ -75,12 +75,12 @@ fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: Ex
 
 /// A condition for an enhanced match announcement.
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub(crate) struct EMACondition 
+pub struct EMACondition 
 {
     /// Conditions lhs and rhs are stored in the term pool as much as possible with a SemiCompressedTermTree
-    pub(crate) semi_compressed_lhs: SemiCompressedTermTree,
-    pub(crate) semi_compressed_rhs: SemiCompressedTermTree,
-    pub(crate) equality: bool //whether the lhs and rhs should be equal or different
+    pub semi_compressed_lhs: SemiCompressedTermTree,
+    pub semi_compressed_rhs: SemiCompressedTermTree,
+    pub equality: bool //whether the lhs and rhs should be equal or different
 }
 
 /// An EnhancedMatchAnnouncement is used on transitions. Besides the normal MatchAnnouncement
@@ -143,6 +143,7 @@ impl MatchAnnouncement
         var_equivalences
     }
 
+    /*
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
     fn derive_redex(&self, tp: &TermPool) -> EnhancedMatchAnnouncement 
@@ -150,7 +151,7 @@ impl MatchAnnouncement
         //Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         //rhs of the rewrite rule and for lhs and rhs of each condition.
         //Also see the documentation of SemiCompressedTermTree
-        let var_map = create_var_map(self.rule.lhs.clone(),arity_per_symbol);
+        let var_map = create_var_map(self.rule.lhs.clone());
         let sctt_rhs = SemiCompressedTermTree::from_term(self.rule.rhs.clone(), tp, &var_map);
         let mut conditions = vec![];
 
@@ -173,7 +174,7 @@ impl MatchAnnouncement
             conditions,
             is_duplicating,
         }
-    }
+    }*/
 }
 
 /* 
