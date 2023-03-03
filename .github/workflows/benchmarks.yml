@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  benchmark:
     name: Test
     strategy:
       fail-fast: false

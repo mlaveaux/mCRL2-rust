@@ -3,8 +3,6 @@ use mcrl2_rust::atermpp::ATerm;
 use smallvec::{SmallVec,smallvec};
 use core::fmt;
 
-type PositionIndex = usize;
-
 /// An ExplicitPosition stores a list of position indices. The index starts at 1.
 /// The subterm of term s(s(0)) at position 1.1 is 0.
 /// The empty position, aka the root term, is represented by the symbol ε.
@@ -14,11 +12,16 @@ type PositionIndex = usize;
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ExplicitPosition 
 {
-    pub indices: SmallVec<[PositionIndex;4]>
+    pub indices: SmallVec<[usize;4]>
 }
 
 impl ExplicitPosition 
 {
+    pub fn new(indices: &[usize]) -> ExplicitPosition
+    {
+        ExplicitPosition { indices: SmallVec::from(indices) }
+    }
+
     pub fn empty_pos() -> ExplicitPosition 
     {
         ExplicitPosition { indices: smallvec![] }
@@ -54,7 +57,7 @@ impl ExplicitPosition
     }
 }
 
-fn get_position_rec<'a>(term: &'a ATerm, queue: &[PositionIndex]) -> ATerm
+fn get_position_rec<'a>(term: &'a ATerm, queue: &[usize]) -> ATerm
 {
  if queue.is_empty() {
     term.clone()

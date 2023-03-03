@@ -1,11 +1,14 @@
+use mcrl2_rust::atermpp::{ATerm, Symbol};
+
 /// A rewrite specification contains the bare info we need for rewriting (in particular no type information).
 #[derive(Debug,Clone)]
 pub struct RewriteSpecification 
 {
-    pub rewrite_rules: Vec<RewriteRuleSyntax>,
+    pub rewrite_rules: Vec<ATerm>,
     pub symbols: Vec<Symbol>,
 }
 
+/*
 impl fmt::Display for RewriteSpec 
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -20,3 +23,4 @@ impl fmt::Display for RewriteSpec
         write!(f, "\n")
     }
 }
+*/

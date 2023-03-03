@@ -3,6 +3,12 @@ use cxx::UniquePtr;
 
 #[cxx::bridge(namespace = "atermpp")]
 pub mod ffi {
+  
+  /// This is an abstraction of unprotected_aterm that can only exist on the Rust side of code.
+  struct aterm_ref
+  {
+    index: usize
+  }
 
   unsafe extern "C++" {    
     include!("mcrl2-rust/cpp/atermpp/aterm.h");
@@ -10,8 +16,15 @@ pub mod ffi {
     type aterm;
     type function_symbol;
 
+
     /// Creates a default term.
     fn new_aterm() -> UniquePtr<aterm>;
+
+    /// Creates a term from the given function and arguments.
+    fn create_aterm(function: &function_symbol, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
+
+    /// Parses the given string and returns an aterm
+    fn aterm_from_string(text: &str) -> UniquePtr<aterm>;
 
     /// Converts an aterm to a string.
     fn print_aterm(term: &aterm) -> String;
@@ -50,15 +63,11 @@ pub mod ffi {
     /// Returns the ith argument of this term.
     fn get_term_argument(term: &aterm, index: usize) -> UniquePtr<aterm>;
 
+    /// Creates a function symbol with the given name and arity.
+    fn create_function_symbol(name: &str, arity: usize) -> UniquePtr<function_symbol>;
+
     fn ffi_is_variable(term: &aterm) -> bool;
   } 
-}
-
-
-/// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
-pub struct TermPool
-{
-
 }
 
 /// A Symbol now references to an aterm function symbol, which has a name and an arity.
@@ -261,3 +270,42 @@ impl Clone for ATerm
 }
 
 impl Eq for ATerm {}
+
+/// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
+pub struct TermPool
+{
+
+}
+
+impl TermPool
+{
+  pub fn new() -> TermPool
+  {
+    TermPool {}
+  }
+
+  pub fn from_string(&mut self, text: &str) -> Option<ATerm>
+  {
+    Some(ATerm {
+      term: ffi::aterm_from_string(text)
+    })
+  }
+
+  /// Creates an [ATerm] with the given symbol and arguments.
+  pub fn create(&mut self, symbol: &Symbol, arguments: &[ATerm]) -> ATerm
+  {
+    //let arguments = ffi::aterm_ref { index: }
+
+    ATerm {
+      term: ffi::new_aterm() // (&symbol.function, arguments.iter().collect())
+    }
+  }
+
+  pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol
+  {
+    Symbol {
+      function: ffi::create_function_symbol(name, arity)
+    }
+  }
+  
+}

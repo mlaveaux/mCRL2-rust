@@ -1,5 +1,10 @@
-/*
-use crate::parse_rec::load_REC_from_strings;
+use std::rc::Rc;
+use test_case::test_case;
+
+
+use mcrl2_rust::atermpp::TermPool;
+use sabre::SabreRewriter;
+use REC_tests::load_REC_from_strings;
 
 #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
 #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
@@ -59,13 +64,13 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str)
 
     // Test outermost rewriter
     let mut result: Vec<String> = vec![];
-    let mut sa = SabreRewriter::new(tp.clone(), spec.clone());
+    /*let mut sa = SabreRewriter::new(tp.clone(), spec.clone());
 
     for tst in &terms 
     {
         let rewritten = sa.rewrite(term);
         result.push(format!("Result: {}", &rewritten));
-    }
-    assert_eq!(expected_result.split("\n\r"), &result);
+    }*/
+
+    //assert_eq!(expected_result.split("\n\r"), &result);
 }
-*/

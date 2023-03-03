@@ -5,6 +5,7 @@
 #include "rust/cxx.h"
 
 #include "mcrl2/atermpp/aterm.h"
+#include "mcrl2/atermpp/aterm_io_text.h"
 #include "mcrl2/atermpp/detail/aterm_hash.h"
 
 #include "mcrl2/data/data_expression.h"
@@ -12,9 +13,22 @@
 namespace atermpp
 {
 
+struct aterm_ref;
+
 inline std::unique_ptr<aterm> new_aterm()
 {
   return std::make_unique<aterm>();
+}
+
+std::unique_ptr<aterm> create_aterm(const function_symbol& symbol, rust::Slice<const aterm_ref> arguments)
+{
+  //return std::make_unique<aterm>(aterm_appl(symbol, arguments.begin(), arguments.end()));
+  return new_aterm();
+}
+
+std::unique_ptr<aterm> aterm_from_string(rust::Str text)
+{
+  return std::make_unique<aterm>(atermpp::read_term_from_string(std::string(text.data())));
 }
 
 rust::String print_aterm(const aterm& term)
@@ -90,6 +104,11 @@ bool ffi_is_variable(const aterm& term)
 std::unique_ptr<aterm> get_term_argument(const aterm& term, std::size_t index)
 {
   return std::make_unique<aterm>(static_cast<const aterm_appl&>(term)[index]);
+}
+
+std::unique_ptr<function_symbol> create_function_symbol(rust::Str name, std::size_t arity)
+{
+  return std::make_unique<function_symbol>(name.data(), arity);
 }
 
 }
