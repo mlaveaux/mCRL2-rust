@@ -180,6 +180,7 @@ impl ATerm
 
   pub fn arg(&self, index: usize) -> ATerm
   {
+    assert!(index < self.get_head_symbol().arity());
     ATerm { term: ffi::get_term_argument(&self.term, index) }
   }
 

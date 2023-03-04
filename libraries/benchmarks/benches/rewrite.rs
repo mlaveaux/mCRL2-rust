@@ -12,7 +12,7 @@ pub fn criterion_benchmark(c: &mut Criterion)
     {        
         bencher.iter(
         || {          
-            for (i, expression) in expressions.iter().enumerate()
+            for expression in expressions.iter()
             {
                 black_box(rewriter.rewrite(expression));
             }

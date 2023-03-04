@@ -151,23 +151,23 @@ fn main() {
       .files(add_prefix(mcrl2_path.clone() + "libraries/process/source/", &process_source_files))
       .file(mcrl2_workarounds_path + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
 
-  // Disable assertions and other checks.
-  build.define("NDEBUG", "1");
+  // Disable assertions and other checks in release mode.  
+  let profile = std::env::var("PROFILE").expect("cargo should always set this variable");
+  match profile.as_str() {
+      "debug" => (),
+      "release" => {
+        build.define("NDEBUG", "1");
+      },
+      _ => (),
+  }
+ 
   //build.define("MCRL2_THREAD_SAFE", "1");
 
   add_platform_flags(&mut build, mcrl2_path);
   add_cpp_flags(&mut build);
 
   build.compile("mcrl2-rust");
-
-  // Only run this build script if the bridge changes.
-  //cargo_emit::rerun_if_changed!(
-  //  "cpp/*",
-  //  "src/atermpp.rs",
-  //  "src/data.rs",
-  //  "src/lib.rs",
-  //  "src/lps.rs"
-  //);
   
+  // It seems that build changes are detected properly automatically, otherwise adapt this.
   cargo_emit::rerun_if_changed!("");
 }
