@@ -1,15 +1,8 @@
-use std::cmp::min;
 use std::collections::VecDeque;
 
-use ahash::{AHashMap as HashMap, RandomState};
 use mcrl2_rust::atermpp::TermPool;
-use smallvec::SmallVec;
-use rayon::prelude::*;
-use rayon::iter::IntoParallelRefIterator;
-
-use crate::set_automaton::*;
-use crate::utilities::{get_position, ExplicitPosition, SemiCompressedTermTree};
-use mcrl2_rust::{data::DataEquation, atermpp::ATerm};
+use crate::{utilities::{get_position, ExplicitPosition, SemiCompressedTermTree, create_var_map}, rewrite_specification::Rule};
+use mcrl2_rust::{atermpp::ATerm};
 
 /// An equivalence class is a variable with (multiple) positions.
 /// This is necessary for non-linear patterns.
@@ -46,7 +39,7 @@ impl EquivalenceClass
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct MatchAnnouncement 
 {
-    pub rule: DataEquation,
+    pub rule: Rule,
     pub position: ExplicitPosition,
     pub symbols_seen: usize
 }
@@ -143,23 +136,22 @@ impl MatchAnnouncement
         var_equivalences
     }
 
-    /*
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
     fn derive_redex(&self, tp: &TermPool) -> EnhancedMatchAnnouncement 
     {
-        //Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
-        //rhs of the rewrite rule and for lhs and rhs of each condition.
-        //Also see the documentation of SemiCompressedTermTree
-        let var_map = create_var_map(self.rule.lhs.clone());
-        let sctt_rhs = SemiCompressedTermTree::from_term(self.rule.rhs.clone(), tp, &var_map);
+        // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
+        // rhs of the rewrite rule and for lhs and rhs of each condition.
+        // Also see the documentation of SemiCompressedTermTree
+        let var_map = create_var_map(&self.rule.lhs);
+        let sctt_rhs = SemiCompressedTermTree::from_term(self.rule.rhs.clone(), &var_map);
         let mut conditions = vec![];
 
         for c in &self.rule.conditions 
         {
-            let ema_condition = EMACondition{
-                semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.clone(), tp, &var_map),
-                semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.clone(), tp, &var_map),
+            let ema_condition = EMACondition {
+                semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.clone(), &var_map),
+                semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.clone(), &var_map),
                 equality: c.equality
             };
             conditions.push(ema_condition);
@@ -174,7 +166,7 @@ impl MatchAnnouncement
             conditions,
             is_duplicating,
         }
-    }*/
+    }
 }
 
 /* 

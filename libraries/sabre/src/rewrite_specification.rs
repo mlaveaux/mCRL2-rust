@@ -8,6 +8,24 @@ pub struct RewriteSpecification
     pub symbols: Vec<Symbol>,
 }
 
+#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+/// Either lhs == rhs or lhs != rhs.
+pub struct Condition
+{
+    pub lhs: ATerm,
+    pub rhs: ATerm,
+    pub equality: bool,
+}
+
+#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct Rule
+{
+    pub variables: Vec<ATerm>,
+    pub conditions: Vec<Condition>, // A conjunction of clauses.
+    pub lhs: ATerm,
+    pub rhs: ATerm
+}
+
 /*
 impl fmt::Display for RewriteSpec 
 {

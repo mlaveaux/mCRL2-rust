@@ -1,3 +1,4 @@
+// Author(s): Mark Bouwman
 
 use std::collections::{HashMap, VecDeque, HashSet};
 
@@ -42,6 +43,7 @@ use super::get_position;
 
 impl SemiCompressedTermTree 
 {
+    /// Returns true iff this tree is compressed.
     fn is_compressed(&self) -> bool 
     {
         if let Compressed(_) = self {
@@ -80,9 +82,9 @@ impl SemiCompressedTermTree
 
     /// Creates a SCTT from a term. The var_map parameter should specify where which variable can be
     /// found in the lhs of the rewrite rule.
-    pub(crate) fn from_term(t: &ATerm, tp: &TermPool, var_map: &HashMap<Symbol, ExplicitPosition>) -> SemiCompressedTermTree 
+    pub(crate) fn from_term(t: ATerm, var_map: &HashMap<Symbol, ExplicitPosition>) -> SemiCompressedTermTree 
     {
-        if t.arguments().len() == 0 
+        if t.arguments().is_empty()
         {
             if var_map.contains_key(&t.get_head_symbol()) 
             {
@@ -90,17 +92,17 @@ impl SemiCompressedTermTree
             } 
             else 
             {
-                Compressed(t.clone())
+                Compressed(t)
             }
         } 
         else 
         {
-            let children = t.arguments().iter().map(|c| SemiCompressedTermTree::from_term(c, tp, var_map)).collect();
+            let children = t.arguments().iter().map(|c| SemiCompressedTermTree::from_term(c.clone(), var_map)).collect();
             let node = ExplicitNode{ head: t.get_head_symbol(), children };
 
             if node.children.iter().all(|c| c.is_compressed()) 
             {
-                Compressed(t.clone())
+                Compressed(t)
             } 
             else 
             {
@@ -114,7 +116,9 @@ impl SemiCompressedTermTree
     {
         let references = self.get_all_var_references();
         let mut seen = HashSet::new();
-        for r in references {
+
+        for r in references 
+        {
             if seen.contains(&r) {
                 return true;
             }
@@ -156,7 +160,7 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<Symbol,ExplicitPosition>
         let (term, pos) = queue.pop_front().unwrap();
         let head = term.get_head_symbol();
 
-        if !term.is_variable() 
+        if term.is_variable() 
         {
             map.insert(head, pos.clone());
         }
@@ -176,10 +180,11 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<Symbol,ExplicitPosition>
     map
 }
 
-#[allow(unused_imports)]
-mod tests {
+#[cfg(test)]
+mod tests 
+{
     use super::*;    
-    use mcrl2_rust::atermpp::{ATerm, TermPool};
+    use mcrl2_rust::atermpp::{TermPool};
 
     #[test]
     fn test_constant() 
@@ -188,7 +193,7 @@ mod tests {
         let t = tp.from_string("a").unwrap();
 
         let map = HashMap::new();
-        let sctt = SemiCompressedTermTree::from_term(&t, &tp, &map);
+        let sctt = SemiCompressedTermTree::from_term(t.clone(),  &map);
         assert_eq!(sctt, Compressed(t));
     }
 
@@ -199,63 +204,79 @@ mod tests {
         let t = tp.from_string("f(a,a)").unwrap();
 
         let map = HashMap::new();
-        let sctt = SemiCompressedTermTree::from_term(&t, &tp, &map);
+        let sctt = SemiCompressedTermTree::from_term(t.clone(), &&map);
         assert_eq!(sctt, Compressed(t));
     }
 
     #[test]
-    fn not_compressible() 
+    fn test_not_compressible() 
     {
         let mut tp = TermPool::new();
         let t = tp.from_string("f(x,x)").unwrap();
+        let f = tp.create_symbol("f", 2);
 
-        let map = create_var_map(&t);
-        let sctt = SemiCompressedTermTree::from_term(&t, &tp, &map);
+        let mut map = HashMap::new();
+        map.insert(f.clone(), ExplicitPosition::new(&[2]));
 
+        let sctt = SemiCompressedTermTree::from_term(t, &map);
+
+        let en = Explicit(ExplicitNode{
+            head: f,
+            children: vec![
+                Variable(ExplicitPosition::new(&[2])), // Note that both point to the second occurence of x.
+                Variable(ExplicitPosition::new(&[2]))
+            ] });
+
+        assert_eq!(sctt,en);
+    }
+
+    #[test]
+    fn test_partly_compressible() 
+    {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(f(a,a), x)").unwrap();
+        let compressible = tp.from_string("f(a,a)").unwrap();
+
+        // Make a variable map with only x@2.        
+        let mut map = HashMap::new();
+        map.insert(tp.create_symbol("x", 0), ExplicitPosition::new(&[2]));
+
+        let sctt = SemiCompressedTermTree::from_term(t, &map);
         let en = Explicit(ExplicitNode{
             head: tp.create_symbol("f", 2),
             children: vec![
-                Variable(ExplicitPosition::new(&[1, 1])),
-                Variable(ExplicitPosition::new(&[1, 2]))
-            ] });
-
-        assert_eq!(sctt,en);
-    }
-
-    #[test]
-    fn partly_compressible() {
-        let mut tp = TermPool::new();
-        let tst = tp.from_string("f(f(a,a),x)").unwrap();
-        let tst_compressible = tp.from_string("f(a,a)").unwrap();
-
-        let mut map = HashMap::default();
-        let var_pos = ExplicitPosition{ indices: smallvec![1] };
-
-        
-        map.insert(*tp.string_to_symbol_index.get("x").unwrap(),var_pos.clone());
-        let sctt = SemiCompressedTermTree::from_term(t, &tp, &map);
-        let en = Explicit(ExplicitNode{
-            head: *tp.string_to_symbol_index.get("f").unwrap(),
-            children: vec![
                 Compressed(compressible),
-                Variable(var_pos.clone())
+                Variable(ExplicitPosition::new(&[2]))
             ] });
         assert_eq!(sctt,en);
     }
 
     #[test]
-    fn test_evaluation() {
+    fn test_evaluation() 
+    {
         let mut tp = TermPool::new();
-        let tst_rhs = TermSyntaxTree::from_string("f(f(a,a),x)").unwrap();
-        let t_rhs = tp.construct_term_from_scratch(tst_rhs);
-        let tst_lhs = TermSyntaxTree::from_string("g(b)").unwrap();
-        let t_lhs = tp.construct_term_from_scratch(tst_lhs);
-        let mut map = HashMap::default();
-        let var_pos = ExplicitPosition{ indices: smallvec![1] };
-        map.insert(*tp.string_to_symbol_index.get("x").unwrap(),var_pos.clone());
-        let sctt = SemiCompressedTermTree::from_term(t_rhs, &tp, &map);
-        let tst_expected= TermSyntaxTree::from_string("f(f(a,a),b)").unwrap();
-        let t_expected = tp.construct_term_from_scratch(tst_expected);
-        assert_eq!(sctt.evaluate(&t_lhs,&mut tp), t_expected);
+        let t_rhs = tp.from_string("f(f(a,a),x)").unwrap();
+        let t_lhs = tp.from_string("g(b)").unwrap();
+        
+        // Make a variable map with only x@2.       
+        let mut map = HashMap::new();
+        map.insert(tp.create_symbol("x", 0), ExplicitPosition::new(&[2]));
+
+        let sctt = SemiCompressedTermTree::from_term(t_rhs, &map);
+
+        let t_expected = tp.from_string("f(f(a,a),b)").unwrap();
+        assert_eq!(sctt.evaluate(&t_lhs, &mut tp), t_expected);
+    }
+
+    #[test]
+    fn test_create_varmap() 
+    {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(x,x)").unwrap();
+        let x = tp.create_symbol("x", 0);
+
+        let map = create_var_map(&t);
+        println!("{:?}", map);
+        assert!(map.contains_key(&x));
     }
 }

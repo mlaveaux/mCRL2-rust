@@ -63,7 +63,7 @@ fn get_position_rec<'a>(term: &'a ATerm, queue: &[usize]) -> ATerm
     term.clone()
  }
  else {
-    let arg = term.arg(queue[0]);
+    let arg = term.arg(queue[0] - 1); // Note that positions are 1 indexed.
     get_position_rec(&arg, &queue[1..]).clone()
  }
 }
@@ -86,4 +86,24 @@ impl fmt::Debug for ExplicitPosition
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_string())
     }
+}
+
+
+#[cfg(test)]
+mod tests 
+{
+    use mcrl2_rust::atermpp::TermPool;
+
+    use super::*;    
+    
+    #[test]
+    fn test_get_position()
+    {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(g(a),b)").unwrap();
+        let result = tp.from_string("a").unwrap();
+
+        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), result);
+    } 
+
 }

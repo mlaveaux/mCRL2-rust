@@ -1,6 +1,9 @@
-use term_pool::position::ExplicitPosition;
-use term_pool::{TermPool, StoredTerm};
+
+use mcrl2_rust::atermpp::{TermPool, ATerm};
+use crate::utilities::ExplicitPosition;
 use crate::set_automaton::{EnhancedMatchAnnouncement, State};
+
+use super::get_position;
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
@@ -52,7 +55,7 @@ pub(super) struct ConfigurationStack<'a>
 
 impl<'a> ConfigurationStack<'a> {
     ///Initialise the stack with one Configuration containing 'term' and the initial state of the set automaton
-    pub fn new(state: usize, term: StoredTerm) -> ConfigurationStack<'a> {
+    pub fn new(state: usize, term: ATerm) -> ConfigurationStack<'a> {
         let mut conf_list = ConfigurationStack { configuration_stack: Vec::with_capacity(8), side_branch_stack: vec![], current_node: Some(0), oldest_reliable_subterm: 0 };
         conf_list.configuration_stack.push(Configuration {
             state,
@@ -93,7 +96,7 @@ impl<'a> ConfigurationStack<'a> {
         //Create a new configuration and push it onto the stack
         let new_leaf = Configuration {
             state: *des,
-            subterm: leaf.subterm.get_position(pos).clone(),
+            subterm: get_position(&leaf.subterm, pos).clone(),
             position: Some(&pos)
         };
         self.configuration_stack.push(new_leaf);
@@ -102,7 +105,7 @@ impl<'a> ConfigurationStack<'a> {
 
     /// When rewriting prune "prunes" the configuration tree/stack to the place where the first symbol
     /// of the matching rewrite rule was observed (at index 'depth').
-    pub fn prune(&mut self, depth: usize, new_subterm: StoredTerm, tp: &mut TermPool, states: &Vec<State>) {
+    pub fn prune(&mut self, depth: usize, new_subterm: ATerm, tp: &mut TermPool, states: &Vec<State>) {
         self.current_node = Some(depth);
 
         //Reroll the configuration stack by truncating the Vec (which is a constant time operation)
@@ -112,7 +115,7 @@ impl<'a> ConfigurationStack<'a> {
 
         //Update the subterm stored at the prune point.
         //Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
-        self.configuration_stack[depth].subterm = tp.substitute(&self.configuration_stack[depth].subterm, new_subterm, &states[self.configuration_stack[depth].state].label.indices, 0);
+        //self.configuration_stack[depth].subterm = tp.substitute(&self.configuration_stack[depth].subterm, new_subterm, &states[self.configuration_stack[depth].state].label.indices, 0);
         self.oldest_reliable_subterm = depth;
     }
 
@@ -135,15 +138,16 @@ impl<'a> ConfigurationStack<'a> {
 
     /// Roll back the configuration stack to level 'depth'.
     /// This function is used exclusively when a subtree has been explored and no matches have been found.
-    pub fn jump_back(&mut self, depth: usize, tp: &mut TermPool) {
-        //Updated subterms may have to be propagated up the configuration tree
+    pub fn jump_back(&mut self, depth: usize, tp: &mut TermPool) 
+    {
+        // Updated subterms may have to be propagated up the configuration tree
         self.integrate_updated_subterms(depth, tp, true);
         let mut index = depth + 1;
-        //From the jump point the first configuration that deepens the position is guaranteed a normal form
+        // From the jump point the first configuration that deepens the position is guaranteed a normal form
         while index < self.configuration_stack.len() {
             if let Some (p) = self.configuration_stack[index].position {
                 if p.len() > 0 {
-                    self.configuration_stack[index].subterm.mark_normal_form();
+                    //self.configuration_stack[index].subterm.mark_normal_form();
                     break;
                 }
             }
@@ -169,10 +173,10 @@ impl<'a> ConfigurationStack<'a> {
         //Go over the configurations one by one until we reach 'end'
         while up_to_date > end {
             //If the position is not deepened nothing needs to be done, otherwise substitute on the position stored in the configuration.
-            subterm = match self.configuration_stack[up_to_date].position {
+            /*subterm = match self.configuration_stack[up_to_date].position {
                 None => {subterm}
                 Some(p) => {tp.substitute(&self.configuration_stack[up_to_date - 1].subterm, subterm, &p.indices, 0)}
-            };
+            };*/
             up_to_date -= 1;
             if store_intermediate {
                 self.configuration_stack[up_to_date].subterm = subterm.clone();
@@ -183,7 +187,7 @@ impl<'a> ConfigurationStack<'a> {
     }
 
     /// Final term computed by integrating all subterms up to the root configuration
-    pub fn compute_final_term(&mut self, tp: &mut TermPool) -> StoredTerm {
+    pub fn compute_final_term(&mut self, tp: &mut TermPool) -> ATerm {
         self.jump_back(0, tp);
         self.configuration_stack[0].subterm.clone()
     }
@@ -214,7 +218,7 @@ impl<'a> ConfigurationStack<'a> {
             result += &format!("Configuration {} {{\n", i);
             result += &format!("    State: {:?}\n", c.state);
             //result += &format!("    Position: {}\n", c.position.to_string());
-            result += &format!("    Subterm: {}\n", tp.get_syntax_tree(&c.subterm));
+            result += &format!("    Subterm: {}\n", &c.subterm);
             /*result += &format!("    Previous with side branch: {:?}\n", c.prev_with_side_branch);
             result += "    Side branches: ";
             match c.side_branches {
