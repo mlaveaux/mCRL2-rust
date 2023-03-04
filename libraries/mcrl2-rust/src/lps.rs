@@ -28,7 +28,7 @@ impl LinearProcessSpecification
 {
   pub fn read(filename: &str) -> LinearProcessSpecification
   {
-    return LinearProcessSpecification {
+    LinearProcessSpecification {
       lps: ffi::read_linear_process_specification(filename).expect("cannot read given lps.")
     }
   }

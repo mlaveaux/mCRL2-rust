@@ -5,9 +5,7 @@ edition = "2021"
 
 [dependencies]
 mcrl2-rust = { path="../../libraries/mcrl2-rust" }
-ahash = "0.7.4"
-slab = "0.4.4"
+ahash = "0.8.3"
 smallvec = "1.7.0"
 rayon = "1.5.1"
-criterion = "0.3"
 rustc-hash = "1.1.0"

@@ -10,7 +10,7 @@ fn add_prefix(prefix: String, paths: &[&str]) -> Vec<String>
     result.push(prefix.clone() + path);
   }
 
-  return result;
+  result
 }
 
 /// Add MSVC specific flags and definitions.
@@ -149,10 +149,10 @@ fn main() {
       .files(add_prefix(mcrl2_path.clone() + "libraries/utilities/source/", &utilities_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/core/source/", &core_source_files))
       .files(add_prefix(mcrl2_path.clone() + "libraries/process/source/", &process_source_files))
-      .file(mcrl2_workarounds_path.clone() + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
+      .file(mcrl2_workarounds_path + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
 
   // Disable assertions and other checks.
-  build.define("DNDEBUG", "1");
+  build.define("NDEBUG", "1");
   //build.define("MCRL2_THREAD_SAFE", "1");
 
   add_platform_flags(&mut build, mcrl2_path);

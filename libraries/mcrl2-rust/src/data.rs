@@ -1,5 +1,3 @@
-use std::fmt;
-
 use cxx::UniquePtr;
 
 use crate::atermpp::{ATerm, ffi::aterm};

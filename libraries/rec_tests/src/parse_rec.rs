@@ -227,8 +227,10 @@ fn parse_term(pair: Pair<Rule>) -> TermSyntaxTree {
 }
 
 ///Extracts data from parsed rewrite rule
-fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax {
+fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax 
+{
     assert!(pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule);
+
     let mut inner = match pair.as_rule() {
         Rule::single_rewrite_rule => {pair.into_inner().next().unwrap().into_inner()}
         Rule::rewrite_rule => {pair.into_inner()}
@@ -237,7 +239,7 @@ fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax {
     let lhs = parse_term(inner.next().unwrap());
     let rhs = parse_term(inner.next().unwrap());
 
-    //Extract conditions
+    // Extract conditions
     let mut conditions = vec![];
     for c in inner {
         assert_eq!(c.as_rule(),Rule::condition);
@@ -260,44 +262,50 @@ fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax {
     RewriteRuleSyntax{lhs,rhs,conditions}
 }
 
-#[test]
-fn test_raw_parsing() {
-    assert!(TermParser::parse(Rule::single_term, "f(a").is_err());
-    assert!(TermParser::parse(Rule::single_term, "f()").is_err());
-    assert!(TermParser::parse(Rule::single_term, "f(a,)").is_err());
-    assert!(TermParser::parse(Rule::single_term, "f").is_ok());
-    assert!(TermParser::parse(Rule::single_term, "f(a)").is_ok());
-    assert!(TermParser::parse(Rule::single_term, "f(a,b)").is_ok());
-    assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x)").is_ok());
-    assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x) if x = a").is_ok());
-    assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x) if x<> a").is_ok());
-    assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x) if x <= a").is_err());
-    assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = ").is_err());
-}
+#[cfg(test)]
+mod tests
+{
+    use super::*;
 
-#[test]
-fn test_parsing_rewrite_rule() {
-    let expected = RewriteRuleSyntax{
-        lhs: TermSyntaxTree::from_string("f(x,b)").unwrap(),
-        rhs: TermSyntaxTree::from_string("g(x)").unwrap(),
-        conditions: vec![ConditionSyntax{
-            lhs: TermSyntaxTree::from_string("x").unwrap(),
-            rhs: TermSyntaxTree::from_string("a").unwrap(),
-            equality: true
-        }, ConditionSyntax{
-            lhs: TermSyntaxTree::from_string("b").unwrap(),
-            rhs: TermSyntaxTree::from_string("b").unwrap(),
-            equality: true}]};
-    let actual = parse_rewrite_rule(TermParser::parse(Rule::single_rewrite_rule, "f(x,b) = g(x) if x = a and-if b = b").unwrap().next().unwrap());
-    assert_eq!(actual,expected);
-}
+    #[test]
+    fn test_raw_parsing() {
+        assert!(TermParser::parse(Rule::single_term, "f(a").is_err());
+        assert!(TermParser::parse(Rule::single_term, "f()").is_err());
+        assert!(TermParser::parse(Rule::single_term, "f(a,)").is_err());
+        assert!(TermParser::parse(Rule::single_term, "f").is_ok());
+        assert!(TermParser::parse(Rule::single_term, "f(a)").is_ok());
+        assert!(TermParser::parse(Rule::single_term, "f(a,b)").is_ok());
+        assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x)").is_ok());
+        assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x) if x = a").is_ok());
+        assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x) if x<> a").is_ok());
+        assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = g(x) if x <= a").is_err());
+        assert!(TermParser::parse(Rule::single_rewrite_rule, "f(a,b) = ").is_err());
+    }
 
-#[test]
-fn test_parsing_rec() {
-    assert!(TermParser::parse(Rule::rec_spec, include_str!("missionaries.rec")).is_ok());
-}
+    #[test]
+    fn test_parsing_rewrite_rule() {
+        let expected = RewriteRuleSyntax{
+            lhs: TermSyntaxTree::from_string("f(x,b)").unwrap(),
+            rhs: TermSyntaxTree::from_string("g(x)").unwrap(),
+            conditions: vec![ConditionSyntax{
+                lhs: TermSyntaxTree::from_string("x").unwrap(),
+                rhs: TermSyntaxTree::from_string("a").unwrap(),
+                equality: true
+            }, ConditionSyntax{
+                lhs: TermSyntaxTree::from_string("b").unwrap(),
+                rhs: TermSyntaxTree::from_string("b").unwrap(),
+                equality: true}]};
+        let actual = parse_rewrite_rule(TermParser::parse(Rule::single_rewrite_rule, "f(x,b) = g(x) if x = a and-if b = b").unwrap().next().unwrap());
+        assert_eq!(actual, expected);
+    }
 
-#[test]
-fn loading_rec() {
-    let _ = parse_REC(include_str!("missionaries.rec"), None);
+    #[test]
+    fn test_parsing_rec() {
+        assert!(TermParser::parse(Rule::rec_spec, include_str!("missionaries.rec")).is_ok());
+    }
+
+    #[test]
+    fn loading_rec() {
+        let _ = parse_REC(include_str!("missionaries.rec"), None);
+    }
 }

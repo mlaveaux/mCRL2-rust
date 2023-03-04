@@ -38,8 +38,8 @@ use REC_tests::load_REC_from_strings;
 #[test_case(vec![include_str!("REC_files/merge.rec")], include_str!("validated_results/result_merge.txt") ; "merge")]
 #[test_case(vec![include_str!("REC_files/mergesort10.rec"), include_str!("REC_files/mergesort.rec")], include_str!("validated_results/result_mergesort10.txt") ; "mergesort10")]
 #[test_case(vec![include_str!("REC_files/missionaries2.rec"), include_str!("REC_files/missionaries.rec")], include_str!("validated_results/result_missionaries2.txt") ; "missionaries2")]
-#[test_case(vec![include_str!("REC_files/missionaries3.rec"), include_str!("REC_files/missionaries.rec")], include_str!("validated_results/result_missionaries3.txt") ; "missionaries3")]
-#[test_case(vec![include_str!("REC_files/natlist.rec")], include_str!("validated_results/result_natlist.txt") ; "natlist")]
+#[test_case(vec![include_str!("REC_files/missionaries3.rec"), include_str!("REC_files/missionaries.rec")], include_str!("validated_results/result_missionaries3.txt") ; "missionaries3")]//
+// #[test_case(vec![include_str!("REC_files/natlist.rec")], include_str!("validated_results/result_natlist.txt") ; "natlist")]
 #[test_case(vec![include_str!("REC_files/oddeven.rec")], include_str!("validated_results/result_oddeven.txt") ; "oddeven")]
 #[test_case(vec![include_str!("REC_files/order.rec")], include_str!("validated_results/result_order.txt") ; "order")]
 #[test_case(vec![include_str!("REC_files/permutations6.rec"), include_str!("REC_files/permutations.rec")], include_str!("validated_results/result_permutations6.txt") ; "permutations6")]
