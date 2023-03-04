@@ -8,7 +8,7 @@ use std::hash::Hash;
 
 use ahash::AHashMap as HashMap;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
-use sabre::utilities::ExplicitPosition;
+use sabre::{utilities::ExplicitPosition, rewrite_specification::{RewriteSpecification, Rule, Condition}};
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
 /// Parsing a REC file results in a RewriteSpecificationSyntax.
@@ -29,6 +29,34 @@ impl RewriteSpecificationSyntax
             symbols: vec![],
             arity_per_symbol: HashMap::default()
         }
+    }
+
+    pub fn to_rewrite_spec(&self, tp: &mut TermPool) -> RewriteSpecification
+    {        
+      // Store the rewrite rules in the maximally shared term storage
+      let mut rewrite_rules = Vec::new();
+      for rr in &self.rewrite_rules 
+      {
+          let lhs = rr.lhs.to_term(tp);
+          let rhs  = rr.rhs.to_term(tp);
+
+          // Convert the conditions.
+          let mut conditions = vec![];
+          for c in &rr.conditions 
+          {
+              let lhs_cond = c.lhs.to_term(tp);
+              let rhs_cond = c.rhs.to_term(tp);
+              let condition = Condition {
+                  lhs: lhs_cond,
+                  rhs: rhs_cond,
+                  equality: c.equality
+              };
+              conditions.push(condition);
+          }
+          rewrite_rules.push(Rule { lhs, rhs, conditions });
+      }
+
+      RewriteSpecification { rewrite_rules, symbols: vec![] } 
     }
 }
 
@@ -113,7 +141,8 @@ impl fmt::Display for TermSyntaxTree
 
 /// Syntax tree for rewrite rules
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct RewriteRuleSyntax {
+pub struct RewriteRuleSyntax 
+{
     pub lhs: TermSyntaxTree,
     pub rhs: TermSyntaxTree,
     pub conditions: Vec<ConditionSyntax>

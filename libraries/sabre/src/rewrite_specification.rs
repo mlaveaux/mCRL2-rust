@@ -4,7 +4,7 @@ use mcrl2_rust::atermpp::{ATerm, Symbol};
 #[derive(Debug,Clone)]
 pub struct RewriteSpecification 
 {
-    pub rewrite_rules: Vec<ATerm>,
+    pub rewrite_rules: Vec<Rule>,
     pub symbols: Vec<Symbol>,
 }
 
@@ -20,7 +20,6 @@ pub struct Condition
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct Rule
 {
-    pub variables: Vec<ATerm>,
     pub conditions: Vec<Condition>, // A conjunction of clauses.
     pub lhs: ATerm,
     pub rhs: ATerm

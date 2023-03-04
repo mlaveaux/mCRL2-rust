@@ -5,7 +5,7 @@ use mcrl2_rust::lps::LinearProcessSpecification;
 /// Performs state space exploration of the given model and returns the number of states.
 pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
 {
-    let linear_process = LinearProcessSpecification::read(&config.filename);
+    let _linear_process = LinearProcessSpecification::read(&config.filename);
 
     // Initialize the ldd library.
     let mut storage = ldd::Storage::new();

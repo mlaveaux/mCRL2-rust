@@ -7,7 +7,7 @@ mod tests
     #[test]
     fn test_benchmark_case()
     {
-      let (mut rewriter, expressions,) = load_case("cases/add16", 100);
+      let (_, _) = load_case("cases/add16", 100);
 
       
     }

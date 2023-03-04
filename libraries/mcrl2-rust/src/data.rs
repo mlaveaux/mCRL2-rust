@@ -1,6 +1,6 @@
 use cxx::UniquePtr;
 
-use crate::atermpp::{ATerm, ffi::aterm};
+use crate::atermpp::ATerm;
 
 #[cxx::bridge(namespace = "mcrl2::data")]
 mod ffi {

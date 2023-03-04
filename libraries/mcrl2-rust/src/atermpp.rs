@@ -295,11 +295,13 @@ impl TermPool
   /// Creates an [ATerm] with the given symbol and arguments.
   pub fn create(&mut self, symbol: &Symbol, arguments: &[ATerm]) -> ATerm
   {
-    //let arguments = ffi::aterm_ref { index: }
+    // TODO: This part of the ffi is very slow and should be improved.
+    //let arguments = vec![arguments.iter().map(|x| ffi::aterm_ref { index: 0 })];
 
-    ATerm {
-      term: ffi::new_aterm() // (&symbol.function, arguments.iter().collect())
-    }
+    //ATerm {
+    //  term: ffi::create_aterm(&symbol.function, &arguments)
+    //}
+    ATerm::new()
   }
 
   pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol

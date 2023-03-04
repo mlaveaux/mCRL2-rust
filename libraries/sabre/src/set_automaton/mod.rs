@@ -4,7 +4,7 @@
 //! See https://arxiv.org/abs/2202.08687 for a paper on the construction of set automata.
 
 mod automaton;
-mod construction;
+mod utility;
 
 pub use automaton::*;
-pub use construction::*;
+pub use utility::*;

@@ -43,13 +43,13 @@ pub(super) enum SideInfoType<'a>
 pub(super) struct ConfigurationStack<'a> 
 {
     pub configuration_stack: Vec<Configuration<'a>>,
-    //Separate stack with extra information on some configurations
+    /// Separate stack with extra information on some configurations
     pub side_branch_stack: Vec<SideInfo<'a>>,
-    //Current node. Becomes None when the configuration tree is completed
+    /// Current node. Becomes None when the configuration tree is completed
     pub current_node: Option<usize>,
-    //Upon applying a rewrite rule we do not immediately update the subterm stored in every configuration on the stack.
-    //That would be very expensive. Instead we ensure that the subterm in the current_node is always up to date.
-    //oldest_reliable_subterm is an index to the highest configuration in the tree that is up to date.
+    /// Upon applying a rewrite rule we do not immediately update the subterm stored in every configuration on the stack.
+    /// That would be very expensive. Instead we ensure that the subterm in the current_node is always up to date.
+    /// oldest_reliable_subterm is an index to the highest configuration in the tree that is up to date.
     pub oldest_reliable_subterm: usize
 }
 
@@ -161,8 +161,9 @@ impl<'a> ConfigurationStack<'a> {
     /// When going back up the configuration tree the subterms stored in the configuration tree must be updated
     /// This function ensures that the Configuration at depth 'end' is made up to date.
     /// If store_intermediate is true, all configurations below 'end' are also up to date.
-    pub fn integrate_updated_subterms(&mut self, end: usize, tp: &mut TermPool, store_intermediate: bool) {
-        //We can probably mark normal forms here when used by jump_back
+    pub fn integrate_updated_subterms(&mut self, end: usize, tp: &mut TermPool, store_intermediate: bool) 
+    {
+        // We can probably mark normal forms here when used by jump_back
 
         //Check if there is anything to do. Start updating from self.oldest_reliable_subterm
         let mut up_to_date = self.oldest_reliable_subterm;

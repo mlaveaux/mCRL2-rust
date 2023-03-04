@@ -1,8 +1,11 @@
 use std::collections::VecDeque;
 
 use mcrl2_rust::atermpp::TermPool;
+use smallvec::SmallVec;
 use crate::{utilities::{get_position, ExplicitPosition, SemiCompressedTermTree, create_var_map}, rewrite_specification::Rule};
 use mcrl2_rust::{atermpp::ATerm};
+
+use super::MatchGoal;
 
 /// An equivalence class is a variable with (multiple) positions.
 /// This is necessary for non-linear patterns.
@@ -73,7 +76,8 @@ pub struct EMACondition
     /// Conditions lhs and rhs are stored in the term pool as much as possible with a SemiCompressedTermTree
     pub semi_compressed_lhs: SemiCompressedTermTree,
     pub semi_compressed_rhs: SemiCompressedTermTree,
-    pub equality: bool //whether the lhs and rhs should be equal or different
+    /// whether the lhs and rhs should be equal or different
+    pub equality: bool
 }
 
 /// An EnhancedMatchAnnouncement is used on transitions. Besides the normal MatchAnnouncement
@@ -170,21 +174,25 @@ impl MatchAnnouncement
 }
 
 /* 
-impl MatchGoal {
+impl MatchGoal 
+{
+
     /// Derive the greatest common prefix (gcp) of the announcement and obligation positions
     /// of a list of match goals.
-    fn greatest_common_prefix(goals: &Vec<MatchGoal>) -> ExplicitPosition {
-        //gcp is empty if there are not match goals
+    fn greatest_common_prefix(goals: &Vec<MatchGoal>) -> ExplicitPosition 
+    {
+        // gcp is empty if there are not match goals
         if goals.is_empty() {
             return ExplicitPosition::empty_pos();
         }
 
-        //Initialise the prefix with the first match goal, can only shrink afterwards
+        // Initialise the prefix with the first match goal, can only shrink afterwards
         let first_match_pos = &goals.get(0).unwrap().announcement.position;
         let mut gcp_length = first_match_pos.len();
         let prefix = &first_match_pos.clone();
 
-        for g in goals {
+        for g in goals 
+        {
             //Compare up to gcp_length or the length of the announcement position
             let compare_length = min(gcp_length,g.announcement.position.len());
             //gcp_length shrinks if they are not the same up to compare_length
@@ -200,6 +208,7 @@ impl MatchGoal {
         let greatest_common_prefix = SmallVec::from_slice(&prefix.indices[0..gcp_length]);
         ExplicitPosition {indices: greatest_common_prefix}
     }
+}
 
     //Assumes two slices are of the same length and computes to what length they are equal
     fn common_prefix_length(pos1: &[usize], pos2: &[usize]) -> usize {
@@ -488,131 +497,6 @@ impl State {
             label: label.unwrap(),
             transitions: Vec::with_capacity(num_transitions), //transitions need to be added later
             match_goals: goals
-        }
-    }
-}
-
-impl SetAutomaton {
-    /// Construct a set automaton. If 'apma' is true construct an APMA instead.
-    /// An APMA is just a set automaton that does not partition the match goals on a transition
-    /// and does not add fresh goals.
-    pub(crate) fn construct(spec: RewriteSpec, apma: bool) -> SetAutomaton {
-        //Create the initial state
-        let mut initial_state = State {
-            label: ExplicitPosition::empty_pos(),
-            transitions: Vec::with_capacity(spec.symbols.len()),
-            match_goals: vec![]
-        };
-        //States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
-        let mut state_counter:usize = 1;
-
-        //Initiate the maximally shared term storage
-        let mut term_pool = TermPool::new();
-        let mut symbols = Vec::new();
-        let mut arity_per_symbol= HashMap::new();
-
-        //Insert the symbols in the term pool, important that this is done first.
-        //A Symbol is just a usize. By inserting them first we ensure that if there are n symbols
-        //then the first n Symbol indexes that are issued are between 0 and n.
-        //We can now use a Symbol as an index for the transitions of a state.
-        for symbol in spec.symbols {
-            let s:Symbol = term_pool.get_or_insert_symbol_index(symbol.clone());
-            symbols.push(s);
-            arity_per_symbol.insert(s,spec.arity_per_symbol.get(&symbol).unwrap().clone());
-        }
-
-        //Store the rewrite rules in the maximally shared term storage
-        let mut rewrite_rules = Vec::new();
-        for rr in spec.rewrite_rules {
-            let lhs = term_pool.construct_term_from_scratch(rr.lhs);
-            let rhs  = term_pool.construct_term_from_scratch(rr.rhs);
-            let mut conditions = vec![];
-            for c in rr.conditions {
-                let lhs_cond = term_pool.construct_term_from_scratch(c.lhs);
-                let rhs_cond = term_pool.construct_term_from_scratch(c.rhs);
-                let condition = Condition{
-                    lhs: lhs_cond,
-                    rhs: rhs_cond,
-                    equality: c.equality
-                };
-                conditions.push(condition);
-            }
-            rewrite_rules.push(RewriteRule{lhs,rhs, conditions });
-        }
-
-
-        /* The initial state has a match goals for each pattern. For each pattern l there is a match goal
-        with one obligation l@ε and announcement l@ε. */
-        for rr in &rewrite_rules {
-            initial_state.match_goals.push(MatchGoal{
-                obligations: vec![MatchObligation{pattern: rr.lhs.clone(), position: ExplicitPosition::empty_pos()}],
-                announcement: MatchAnnouncement {rule: (*rr).clone(), position: ExplicitPosition::empty_pos(), symbols_seen: 0}
-            });
-        }
-        /* Match goals need to be sorted so that we can easily check whether a state with a certain
-        set of match goals already exists.*/
-        initial_state.match_goals.sort();
-
-        //HashMap from goals to state number
-        let mut map_goals_state:HashMap<Vec<MatchGoal>,usize,RandomState> = HashMap::default();
-
-        //Queue of states that still need to be explored
-        let mut queue = VecDeque::new();
-        queue.push_back(0);
-        let mut states = vec![];
-        map_goals_state.insert(initial_state.match_goals.clone(),0);
-        states.push(initial_state);
-
-        while !queue.is_empty() {
-            //Pick a state to explore
-            let s_index = queue.pop_front().unwrap();
-
-            //Compute the transitions from the state in parallel using rayon
-            let transitions_per_symbol: Vec<_> = symbols.par_iter().map(|s| {(s.clone(),states.get(s_index).unwrap()
-                .derive_transition(s.clone(), &rewrite_rules, &term_pool, &arity_per_symbol, apma))}).collect();
-            //Loop over all the possible symbols and the associated hypertransition
-            for (symbol, (outputs,destinations)) in transitions_per_symbol {
-                //Associate an EnhancedMatchAnnouncement to every transition
-                let mut announcements:SmallVec<[EnhancedMatchAnnouncement;1]> = outputs.into_iter().map(|x| {x.derive_redex(&term_pool, &arity_per_symbol)}).collect();
-                //announcements.sort_by(|ema1,ema2| {ema2.announcement.rule.rhs.get_subterms().len().cmp(&ema1.announcement.rule.rhs.get_subterms().len())});
-                announcements.sort_by(|ema1,ema2| {ema1.announcement.position.cmp(&ema2.announcement.position)});
-                //Create transition
-                let mut transition = Transition {
-                    symbol: symbol.clone(),
-                    announcements,
-                    destinations: smallvec![]
-                };
-                //For the destinations we convert the match goal destinations to states
-                let mut dest_states = smallvec![];
-                //Loop over the hypertransitions
-                for (pos,goals_or_initial) in destinations {
-                    /* Match goals need to be sorted so that we can easily check whether a state with a certain
-                    set of match goals already exists.*/
-                    if let GoalsOrInitial::Goals(goals) = goals_or_initial {
-                        if map_goals_state.contains_key(&goals) {//The destination state already exists
-                            dest_states.push((pos,map_goals_state.get(&goals).unwrap().clone()))
-                        } else if !goals.is_empty() {
-                            //The destination state does not yet exist, create it
-                            let new_state = State::new(goals.clone(), symbols.len());
-                            states.push(new_state);
-                            dest_states.push((pos, state_counter));
-                            map_goals_state.insert(goals,state_counter);
-                            queue.push_back(state_counter);
-                            state_counter += 1;
-                        }
-                    } else { //The transition is to the initial state
-                        dest_states.push((pos,0));
-                    }
-                }
-                transition.destinations = dest_states;
-                states.get_mut(s_index).unwrap().transitions.push(transition);
-            }
-        }
-
-        term_pool.mark_all_terms_as_permanent();
-        SetAutomaton{
-            states,
-            term_pool
         }
     }
 }
