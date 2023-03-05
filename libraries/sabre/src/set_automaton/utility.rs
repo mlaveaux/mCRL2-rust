@@ -1,11 +1,12 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, cmp::min};
 
+use ahash::{HashMap, HashMapExt};
 use mcrl2_rust::atermpp::TermPool;
 use smallvec::SmallVec;
 use crate::{utilities::{get_position, ExplicitPosition, SemiCompressedTermTree, create_var_map}, rewrite_specification::Rule};
 use mcrl2_rust::{atermpp::ATerm};
 
-use super::MatchGoal;
+use super::{MatchObligation};
 
 /// An equivalence class is a variable with (multiple) positions.
 /// This is necessary for non-linear patterns.
@@ -38,35 +39,12 @@ impl EquivalenceClass
     }
 }
 
-/// A struct announcing that a match has been made
-#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct MatchAnnouncement 
+#[derive(Clone,Debug,Eq,Hash,Ord,PartialEq,PartialOrd)]
+pub(crate) struct MatchAnnouncement
 {
-    pub rule: Rule,
-    pub position: ExplicitPosition,
-    pub symbols_seen: usize
-}
-
-/// Adds the position of a variable to the equivalence classes
-fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: ExplicitPosition) 
-{
-    // Check if the variable was seen before
-    if ve.iter().any(|ec| { &ec.variable == variable }) 
-    {
-        for ec in ve.iter_mut() 
-        {
-            //Find the equivalence class and add the position
-            if &ec.variable == variable && !ec.positions.iter().any(|x| { x == &pos }) 
-            {
-                ec.positions.push(pos.clone());
-            }
-        }
-    } 
-    else 
-    {
-        // If the variable was not found at another position add a new equivalence class
-        ve.push(EquivalenceClass { variable: variable.clone(), positions: vec![pos] });
-    }
+  pub rule: Rule,
+  pub position: ExplicitPosition,
+  pub symbols_seen: usize
 }
 
 /// A condition for an enhanced match announcement.
@@ -85,7 +63,7 @@ pub struct EMACondition
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct EnhancedMatchAnnouncement 
 {
-    pub announcement: MatchAnnouncement,
+    pub(crate) announcement: MatchAnnouncement,
     /// Positions in the pattern with the same variable, for non-linear patterns
     pub equivalence_classes: Vec<EquivalenceClass>,
     /// Right hand side is stored in the term pool as much as possible with a SemiCompressedTermTree
@@ -95,11 +73,10 @@ pub struct EnhancedMatchAnnouncement
     pub is_duplicating: bool,
 }
 
-
 impl MatchAnnouncement 
 {
     /// Derives the positions in a pattern with same variable (for non-linear patters)
-    fn derive_equivalence_classes(&self, tp: &TermPool) -> Vec<EquivalenceClass> 
+    pub fn derive_equivalence_classes(&self, tp: &TermPool) -> Vec<EquivalenceClass> 
     {
         // A queue is used to keep track of the positions we still need to visit in the pattern
         let mut queue = VecDeque::new();
@@ -142,7 +119,7 @@ impl MatchAnnouncement
 
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
-    fn derive_redex(&self, tp: &TermPool) -> EnhancedMatchAnnouncement 
+    pub fn derive_redex(&self, tp: &TermPool) -> EnhancedMatchAnnouncement 
     {
         // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         // rhs of the rewrite rule and for lhs and rhs of each condition.
@@ -173,13 +150,19 @@ impl MatchAnnouncement
     }
 }
 
-/* 
+#[derive(Clone,Debug,Eq,Hash,Ord,PartialEq,PartialOrd)]
+pub(crate) struct MatchGoal
+{
+  pub obligations: Vec<MatchObligation>,
+  pub announcement: MatchAnnouncement,
+}
+
 impl MatchGoal 
 {
 
     /// Derive the greatest common prefix (gcp) of the announcement and obligation positions
     /// of a list of match goals.
-    fn greatest_common_prefix(goals: &Vec<MatchGoal>) -> ExplicitPosition 
+    pub fn greatest_common_prefix(goals: &Vec<MatchGoal>) -> ExplicitPosition 
     {
         // gcp is empty if there are not match goals
         if goals.is_empty() {
@@ -193,13 +176,14 @@ impl MatchGoal
 
         for g in goals 
         {
-            //Compare up to gcp_length or the length of the announcement position
+            // Compare up to gcp_length or the length of the announcement position
             let compare_length = min(gcp_length,g.announcement.position.len());
-            //gcp_length shrinks if they are not the same up to compare_length
+            // gcp_length shrinks if they are not the same up to compare_length
             gcp_length = MatchGoal::common_prefix_length(&prefix.indices[0..compare_length], &g.announcement.position.indices[0..compare_length]);
-            for mo in &g.obligations {
+            for mo in &g.obligations 
+            {
                 //Compare up to gcp_length or the length of the match obligation position
-                let compare_length = min(gcp_length,mo.position.len());
+                let compare_length = min(gcp_length, mo.position.len());
                 //gcp_length shrinks if they are not the same up to compare_length
                 gcp_length = MatchGoal::common_prefix_length(&prefix.indices[0..compare_length], &mo.position.indices[0..compare_length]);
             }
@@ -208,24 +192,32 @@ impl MatchGoal
         let greatest_common_prefix = SmallVec::from_slice(&prefix.indices[0..gcp_length]);
         ExplicitPosition {indices: greatest_common_prefix}
     }
-}
 
-    //Assumes two slices are of the same length and computes to what length they are equal
-    fn common_prefix_length(pos1: &[usize], pos2: &[usize]) -> usize {
-        if pos1.len() != pos2.len() {panic!("Given arrays should be of the same length.")}
+    // Assumes two slices are of the same length and computes to what length they are equal
+    fn common_prefix_length(pos1: &[usize], pos2: &[usize]) -> usize 
+    {
+        assert_eq!(pos1.len(), pos2.len(), "Given arrays should be of the same length.");
+
         let mut common_length = 0;
-        for i in 0..pos1.len() {
-            if pos1.get(i).unwrap() == pos2.get(i).unwrap() {
+        for i in 0..pos1.len() 
+        {
+            if pos1.get(i).unwrap() == pos2.get(i).unwrap() 
+            {
                 common_length += 1;
-            } else {break;}
+            } 
+            else 
+            {
+                break;
+            }
         }
         common_length
     }
 
     /// Removes the first len position indices of the match goal and obligation positions
-    fn remove_prefix(mut goals: Vec<MatchGoal>, len: usize) -> Vec<MatchGoal> {
+    pub fn remove_prefix(mut goals: Vec<MatchGoal>, len: usize) -> Vec<MatchGoal> 
+    {
         for goal in &mut goals {
-            //update match announcement
+            // update match announcement
             goal.announcement.position = ExplicitPosition {indices: SmallVec::from_slice(&goal.announcement.position.indices[len..])};
             for mo_index  in 0..goal.obligations.len() {
                 let shortened = ExplicitPosition {indices: SmallVec::from_slice(&goal.obligations.get(mo_index).unwrap().position.indices[len..])};
@@ -237,7 +229,7 @@ impl MatchGoal
 
     /// Checks for two positions whether one is a subposition of the other.
     /// For example 2.2.3 and 2 are comparable. 2.2.3 and 1 are not.
-    fn pos_comparable(p1: &ExplicitPosition, p2: &ExplicitPosition) -> bool {
+    pub fn pos_comparable(p1: &ExplicitPosition, p2: &ExplicitPosition) -> bool {
         let mut index = 0;
         loop {
             if p1.len() == index || p2.len() == index {
@@ -256,7 +248,7 @@ impl MatchGoal
     /// are comparable (they are the same or one is higher), checked using pos_comparable.
     ///
     /// Returns a Vec where each element is a partition containing the goals and the positions.
-    fn partition(goals: Vec<MatchGoal>) -> Vec<(Vec<MatchGoal>,Vec<ExplicitPosition>)> {
+    pub fn partition(goals: Vec<MatchGoal>) -> Vec<(Vec<MatchGoal>,Vec<ExplicitPosition>)> {
         let mut partitions = vec![];
 
         //If one of the goals has a root position all goals are related.
@@ -271,8 +263,8 @@ impl MatchGoal
             return partitions;
         }
 
-        //Create a mapping from positions to goals, goals are represented with an index
-        //on function parameter goals
+        // Create a mapping from positions to goals, goals are represented with an index
+        // on function parameter goals
         let mut position_to_goals = HashMap::new();
         let mut all_positions = Vec::new();
         for (i,g) in goals.iter().enumerate() {
@@ -324,180 +316,24 @@ impl MatchGoal
     }
 }
 
-impl State {
-    /* Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
-    The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
-    We don't use the struct Transition as it requires that the destination is a full state, with name.
-    Since we don't yet know whether the state already exists we just return a set of match goals as 'state'.
-
-    Parameter symbol is the symbol for which the transition is computed
-     */
-    fn derive_transition(&self, symbol: Symbol, rewrite_rules: &Vec<RewriteRule>, tp: &TermPool, arity_per_symbol: &HashMap<Symbol,usize>, apma:bool)
-                         -> (Vec<MatchAnnouncement>, Vec<(ExplicitPosition, GoalsOrInitial)>) {
-        //Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(symbol, tp, arity_per_symbol);
-        //The outputs/matching patterns of the transitions are those who are completed
-        let outputs = derivative.completed.into_iter().map(|x| {x.announcement}).collect();
-        let mut new_match_goals = derivative.unchanged;
-        new_match_goals.append(&mut derivative.reduced);
-
-        let mut destinations = vec![];
-        // If we are building an APMA we do not deepen the position or create a hypertransitions
-        // with multiple endpoints
-        if apma {
-            if !new_match_goals.is_empty() {
-                destinations.push((ExplicitPosition::empty_pos(),GoalsOrInitial::Goals(new_match_goals)));
-            }
-        } else {
-            //In case we are building a set automaton we partition the match goals
-            let partitioned = MatchGoal::partition(new_match_goals);
-
-            //Get the greatest common prefix and shorten the positions
-            let mut positions_per_partition = vec![];
-            let mut gcp_length_per_partition = vec![];
-            for (p, pos) in partitioned {
-                positions_per_partition.push(pos);
-                let gcp = MatchGoal::greatest_common_prefix(&p);
-                let gcp_length = gcp.len();
-                gcp_length_per_partition.push(gcp_length);
-                let mut goals = MatchGoal::remove_prefix(p, gcp_length);
-                goals.sort_unstable();
-                destinations.push((gcp, GoalsOrInitial::Goals(goals)));
-            }
-
-            //Handle fresh match goals, they are the positions Label(state).i
-            //where i is between 1 and the arity of the function symbol of the transition
-            for i in 1..(arity_per_symbol.get(&symbol).unwrap().clone() + 1) {
-                let mut pos = self.label.clone();
-                pos.indices.push(i);
-
-                //Check if the fresh goals are related to one of the existing partitions
-                let mut partition_key = None;
-                'outer: for (i,part_pos) in positions_per_partition.iter().enumerate() {
-                    for p in part_pos {
-                        if MatchGoal::pos_comparable(p, &pos) {
-                            partition_key = Some(i);
-                            break 'outer;
-                        }
-                    }
-                }
-                if let Some(key) = partition_key {//if the fresh goals fall in an existing partition
-                    let gcp_length = gcp_length_per_partition[key];
-                    let pos = ExplicitPosition { indices: SmallVec::from_slice(&pos.indices[gcp_length..]) };
-                    //Add the fresh goals to the partition
-                    for rr in rewrite_rules {
-                        if let GoalsOrInitial::Goals(goals) = &mut destinations[key].1 {
-                            goals.push(MatchGoal {
-                                obligations: vec![MatchObligation { pattern: rr.lhs.clone(), position: pos.clone() }],
-                                announcement: MatchAnnouncement { rule: (*rr).clone(), position: pos.clone(), symbols_seen: 0 }
-                            });
-                        }
-                    }
-                } else { //the transition is simply to the initial state
-                    //GoalsOrInitial::InitialState avoids unnecessary work of creating all these fresh goals
-                    destinations.push((pos, GoalsOrInitial::InitialState));
-                }
+/// Adds the position of a variable to the equivalence classes
+fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: ExplicitPosition) 
+{
+    // Check if the variable was seen before
+    if ve.iter().any(|ec| { &ec.variable == variable }) 
+    {
+        for ec in ve.iter_mut() 
+        {
+            //Find the equivalence class and add the position
+            if &ec.variable == variable && !ec.positions.iter().any(|x| { x == &pos }) 
+            {
+                ec.positions.push(pos.clone());
             }
         }
-        //Sort so that transitions that do not deepen the position are listed first
-        destinations.sort_unstable_by(|x1, x2| {x1.0.cmp(&x2.0)});
-        (outputs, destinations)
-    }
-
-    /// For a transition 'symbol' of state 'self' this function computes which match goals are
-    /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: Symbol, tp: &TermPool, arity_per_symbol: &HashMap<Symbol,usize>) -> Derivative {
-        let mut result = Derivative {
-            completed: vec![],
-            unchanged: vec![],
-            reduced: vec![]
-        };
-        for mg in &self.match_goals {
-            //Completed match goals
-            if mg.obligations.len() == 1 && mg.obligations.iter()
-                .any(|mo| {mo.position == self.label && mo.pattern.get_head_symbol() == symbol
-                && mo.pattern.get_subterms().iter().all(|x| {!arity_per_symbol.contains_key(&x.get_head_symbol())})}) {
-                result.completed.push(mg.clone());
-            } else if mg.obligations.iter().any(|mo| {mo.position == self.label && mo.pattern.get_head_symbol() != symbol}) {
-                //discard
-            //Unchanged match goals
-            } else if !mg.obligations.iter().any(|mo| {mo.position == self.label}) {
-                let mut mg = mg.clone();
-                if mg.announcement.rule.lhs != mg.obligations.first().unwrap().pattern {
-                    mg.announcement.symbols_seen += 1;
-                }
-                result.unchanged.push(mg);
-            //Reduced match obligations
-            } else if mg.obligations.iter().any(|mo| {mo.position == self.label && mo.pattern.get_head_symbol() == symbol }) {
-                let mut mg = mg.clone();
-                //reduce obligations
-                let mut new_obligations = vec![];
-                for mo in mg.obligations {
-                    if mo.pattern.get_head_symbol() == symbol && mo.position == self.label {
-                        //reduce
-                        let mut index = 1;
-                        for t in mo.pattern.get_subterms() {
-                            if tp.get_head_symbol_string(t) != "ω" {
-                                if arity_per_symbol.contains_key(&t.get_head_symbol()) {
-                                    let mut new_pos = mo.position.clone();
-                                    new_pos.indices.push(index);
-                                    new_obligations.push(MatchObligation {
-                                        pattern: t.clone(),
-                                        position: new_pos
-                                    });
-                                } else { //variable
-                                }
-                                index += 1;
-                            }
-                        }
-                    } else {
-                        //remains unchanged
-                        new_obligations.push(mo.clone());
-                    }
-                }
-                new_obligations.sort_unstable_by(|mo1, mo2| {mo1.position.len().cmp(&mo2.position.len())});
-                mg.obligations = new_obligations;
-                mg.announcement.symbols_seen += 1;
-                result.reduced.push(mg);
-            } else {
-                println!("{:?}",mg);
-            }
-        }
-        result
-    }
-
-    /// Create a state from a set of match goals
-    fn new(goals: Vec<MatchGoal>, num_transitions: usize) -> State {
-        //The label of the state is taken from a match obligation of a root match goal.
-        let mut label : Option<ExplicitPosition>= None;
-        //Go through all match goals...
-        for g in &goals {
-            //...until a root match goal is found
-            if g.announcement.position == ExplicitPosition::empty_pos() {
-                /*
-                Find the shortest match obligation position.
-                This design decision was taken as it presumably has two advantages.
-                1. Patterns that overlap will be more quickly distinguished, potentially decreasing
-                the size of the automaton.
-                2. The average lookahead may be shorter.
-                 */
-                if label.is_none() {
-                    label = Some(g.obligations.first().unwrap().position.clone());
-                }
-                for o in &g.obligations {
-                    if let Some(l) = &label {
-                        if &o.position < &l {
-                            label = Some(o.position.clone());
-                        }
-                    }
-                }
-            }
-        }
-        State{
-            label: label.unwrap(),
-            transitions: Vec::with_capacity(num_transitions), //transitions need to be added later
-            match_goals: goals
-        }
+    } 
+    else 
+    {
+        // If the variable was not found at another position add a new equivalence class
+        ve.push(EquivalenceClass { variable: variable.clone(), positions: vec![pos] });
     }
 }
-*/

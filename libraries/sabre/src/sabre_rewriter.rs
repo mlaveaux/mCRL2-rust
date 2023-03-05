@@ -3,7 +3,7 @@ use std::rc::Rc;
 //use utilities::set_automaton;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 
-use crate::rewrite_specification::RewriteSpecification;
+use crate::{rewrite_specification::RewriteSpecification, set_automaton::SetAutomaton};
 
 /// A shared trait for all the rewriters
 trait RewriteEngine
@@ -21,7 +21,7 @@ pub struct RewritingStatistics
 pub struct SabreRewriter 
 {
     term_pool: Rc<TermPool>,
-    //automaton: SetAutomaton,
+    automaton: SetAutomaton,
 }
 
 impl RewriteEngine for SabreRewriter 
@@ -37,8 +37,8 @@ impl SabreRewriter
     fn new(tp: Rc<TermPool>, spec: RewriteSpecification) -> Self 
     {
         SabreRewriter {
-            term_pool: tp,
-            //automaton: SetAutomaton::construct(spec)
+            term_pool: tp.clone(),
+            automaton: SetAutomaton::construct(tp.clone(), spec, false)
         }
     }
 
