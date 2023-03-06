@@ -19,14 +19,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
-      id: cpu-cores
-
     - name: Checkout the repository
       uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: Run Benchmarks
-      run: cargo bench --verbose -j ${{steps.cpu-cores.outputs.count}}
+      run: cargo bench --verbose

@@ -31,10 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Get number of CPU cores
-        uses: SimenB/github-actions-cpu-cores@v1
-        id: cpu-cores
-
       - name: Checkout the repository
         uses: actions/checkout@v3
         with:
@@ -45,7 +41,7 @@ jobs:
         
       - name: Build Documentation
         run: |
-          cargo doc --no-deps --verbose -j ${{steps.cpu-cores.outputs.count}}
+          cargo doc --no-deps --verbose
           echo "<meta http-equiv=\"refresh\" content=\"0; url=mcrl2_rust\">" > target/doc/index.html
 
       - name: Upload artifact
