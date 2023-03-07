@@ -1,4 +1,4 @@
-use std::{fmt, hash::Hash, hash::Hasher, cmp::Ordering};
+use std::{fmt, hash::Hash, hash::Hasher, cmp::Ordering, collections::VecDeque};
 use cxx::UniquePtr;
 
 #[cxx::bridge(namespace = "atermpp")]
@@ -67,6 +67,11 @@ pub mod ffi {
     fn create_function_symbol(name: &str, arity: usize) -> UniquePtr<function_symbol>;
 
     fn ffi_is_variable(term: &aterm) -> bool;
+
+    fn ffi_create_variable(name: &str) -> UniquePtr<aterm>;
+
+    /// For data::function_symbol terms returns the internally known index.
+    fn ffi_get_function_symbol_index(term: &aterm) -> usize;
   } 
 }
 
@@ -310,5 +315,35 @@ impl TermPool
       function: ffi::create_function_symbol(name, arity)
     }
   }
+
+  pub fn create_variable(&mut self, name: &str) -> TermVariable
+  {
+    TermVariable {
+      term: ATerm::from(ffi::ffi_create_variable(name))
+    }
+  }
   
+}
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TermVariable
+{
+  term: ATerm,
+}
+
+impl From<ATerm> for TermVariable {
+  fn from(value: ATerm) -> Self {
+    assert!(value.is_variable(), "The given term should be a variable");
+    TermVariable { term: value }
+  }
+}
+
+impl TermVariable
+{
+  /*pub fn name(&self) -> &str
+  {
+    self.term.arg(0).get_head_symbol().name()
+  }*/
+
+  // We do not care about it's sort.
 }

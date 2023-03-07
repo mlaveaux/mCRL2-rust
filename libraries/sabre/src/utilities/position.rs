@@ -2,6 +2,7 @@
 use mcrl2_rust::atermpp::ATerm;
 use smallvec::{SmallVec,smallvec};
 use core::fmt;
+use std::collections::VecDeque;
 
 /// An ExplicitPosition stores a list of position indices. The index starts at 1.
 /// The subterm of term s(s(0)) at position 1.1 is 0.
@@ -89,6 +90,46 @@ impl fmt::Debug for ExplicitPosition
 }
 
 
+// TODO: Try to integrate the builder framework.
+
+/// An iterator over all (term, position) pairs of the given [ATerm]. 
+pub struct PositionIterator {  
+    queue: VecDeque<(ATerm, ExplicitPosition)>,  
+}
+  
+impl PositionIterator {
+    pub fn new(t: ATerm) -> PositionIterator
+    {
+        PositionIterator {
+            queue: VecDeque::from([(t, ExplicitPosition::empty_pos())])
+        }
+    }
+}
+
+impl Iterator for PositionIterator
+{
+    type Item = (ATerm, ExplicitPosition);
+
+    fn next(&mut self) -> Option<Self::Item>
+    {    
+        if self.queue.is_empty() {
+            None
+        } else {
+            // Get a subterm to inspect
+            let (term, pos) = self.queue.pop_front().unwrap();
+
+            // Put subterms in the queue
+            for (i, argument) in term.arguments().iter().enumerate() {
+                let mut new_position =  pos.clone();
+                new_position.indices.push(i+1);
+                self.queue.push_back((argument.clone(), new_position));
+            }
+
+            Some((term, pos))  
+        }    
+    }
+}
+
 #[cfg(test)]
 mod tests 
 {
@@ -105,5 +146,19 @@ mod tests
 
         assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), result);
     } 
+
+    #[test]
+    fn test_position_iterator()
+    {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(g(a),b)").unwrap();
+
+        for (term, pos) in PositionIterator::new(t.clone())
+        {
+            assert_eq!(get_position(&t, &pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
+        }
+
+        assert_eq!(PositionIterator::new(t.clone()).count(), 4, "The number of subterms doesn't match the expected value");
+    }
 
 }

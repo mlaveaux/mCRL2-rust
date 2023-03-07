@@ -13,7 +13,7 @@ cargo build
 
 # Tools
 
-The tools directory contains prototypes to show the viability of this approach. The `lpsreach` tool can for example be executed using `cargo run --release tools/lpsreach`.
+The tools directory contains prototypes to show the viability of this approach. The `lpsreach` tool can for example be executed using `cargo run --release --bin lpsreach`.
 
 # Tests
 

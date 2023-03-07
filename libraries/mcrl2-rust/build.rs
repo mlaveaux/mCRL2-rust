@@ -34,7 +34,7 @@ fn add_platform_flags(build: &mut Build, mcrl2_path: String)
 
 /// Add Linux specific flags and definitions.
 #[cfg(unix)]
-fn add_platform_flags(build: &mut Build, _mcrl2_path: String)
+fn add_platform_flags(_build: &mut Build, _mcrl2_path: String)
 {}
 
 #[cfg(windows)]

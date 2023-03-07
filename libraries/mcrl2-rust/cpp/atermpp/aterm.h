@@ -9,6 +9,9 @@
 #include "mcrl2/atermpp/detail/aterm_hash.h"
 
 #include "mcrl2/data/data_expression.h"
+#include "mcrl2/data/function_symbol.h"
+
+using namespace mcrl2::data;
 
 namespace atermpp
 {
@@ -101,6 +104,11 @@ bool ffi_is_variable(const aterm& term)
   return mcrl2::data::is_variable(term);
 }
 
+std::unique_ptr<aterm> ffi_create_variable(rust::Str name)
+{
+  return std::make_unique<aterm>(mcrl2::data::variable(name.data(), mcrl2::data::sort_expression()));
+}
+
 std::unique_ptr<aterm> get_term_argument(const aterm& term, std::size_t index)
 {
   return std::make_unique<aterm>(static_cast<const aterm_appl&>(term)[index]);
@@ -109,6 +117,16 @@ std::unique_ptr<aterm> get_term_argument(const aterm& term, std::size_t index)
 std::unique_ptr<function_symbol> create_function_symbol(rust::Str name, std::size_t arity)
 {
   return std::make_unique<function_symbol>(name.data(), arity);
+}
+
+bool ffi_is_function_symbol(const aterm& term)
+{
+  return mcrl2::data::is_function_symbol(static_cast<const aterm_appl&>(term));
+}
+
+std::size_t ffi_get_function_symbol_index(const aterm& term)
+{
+  return atermpp::detail::index_traits<mcrl2::data::function_symbol,function_symbol_key_type, 2>::index(static_cast<const mcrl2::data::function_symbol&>(term));
 }
 
 }
