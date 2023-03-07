@@ -22,8 +22,8 @@ use super::{MatchObligation};
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct EquivalenceClass 
 {
-    variable: ATerm,
-    positions: Vec<ExplicitPosition>
+    pub(crate) variable: ATerm,
+    pub(crate) positions: Vec<ExplicitPosition>
 }
 
 impl EquivalenceClass 

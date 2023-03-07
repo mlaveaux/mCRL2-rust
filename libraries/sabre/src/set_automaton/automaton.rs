@@ -1,4 +1,4 @@
-use std::{rc::Rc, collections::VecDeque};
+use std::{rc::Rc, collections::VecDeque, cell::RefCell};
 
 use ahash::HashMap;
 use mcrl2_rust::atermpp::{TermPool, Symbol, ATerm};
@@ -12,15 +12,15 @@ use super::{EnhancedMatchAnnouncement, MatchGoal, MatchAnnouncement};
 pub struct SetAutomaton
 {
   pub(crate) states: Vec<State>,
-  pub(crate) term_pool: Rc<TermPool>
+  pub(crate) term_pool: Rc<RefCell<TermPool>>
 }
 
 #[derive(Debug,Clone)]
-struct Transition
+pub struct Transition
 {
-  symbol: Symbol,
-  announcements: SmallVec<[EnhancedMatchAnnouncement;1]>,
-  destinations: SmallVec<[(ExplicitPosition, usize);1]>
+  pub(crate) symbol: Symbol,
+  pub(crate) announcements: SmallVec<[EnhancedMatchAnnouncement;1]>,
+  pub(crate) destinations: SmallVec<[(ExplicitPosition, usize);1]>
 }
 
 
@@ -43,7 +43,7 @@ impl SetAutomaton
   /// Construct a set automaton. If 'apma' is true construct an APMA instead.
   /// An APMA is just a set automaton that does not partition the match goals on a transition
   /// and does not add fresh goals.
-  pub(crate) fn construct(tp: Rc<TermPool>, spec: RewriteSpecification, apma: bool) -> SetAutomaton 
+  pub(crate) fn construct(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification, apma: bool) -> SetAutomaton 
   {
       // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
       let mut state_counter:usize = 1;
@@ -91,14 +91,15 @@ impl SetAutomaton
             |s| 
             { 
               (s.clone(), 
-               states.get(s_index).unwrap().derive_transition(s.clone(), &spec.rewrite_rules, &tp, false))}).collect();
+               states.get(s_index).unwrap().derive_transition(s.clone(), &spec.rewrite_rules, &mut tp.borrow_mut(), false))}).collect();
 
 
           // Loop over all the possible symbols and the associated hypertransition
           for (symbol, (outputs,destinations)) in transitions_per_symbol 
           {
               // Associate an EnhancedMatchAnnouncement to every transition
-              let mut announcements:SmallVec<[EnhancedMatchAnnouncement;1]> = outputs.into_iter().map(|x| { x.derive_redex(&tp) }).collect();
+              let mut announcements:SmallVec<[EnhancedMatchAnnouncement;1]> 
+                = outputs.into_iter().map(|x| { x.derive_redex(&mut tp.borrow_mut()) }).collect();
               
               announcements.sort_by(|ema1,ema2| {ema1.announcement.position.cmp(&ema2.announcement.position)});
 
@@ -159,8 +160,8 @@ pub(crate) struct State
   pub(crate) label: ExplicitPosition,
 
   /// Note that transitions are indexed by the index given by the OpId from a function symbol.
-  transitions: Vec<Transition>,
-  match_goals: Vec<MatchGoal>
+  pub(crate) transitions: Vec<Transition>,
+  pub(crate) match_goals: Vec<MatchGoal>
 }
 
 impl State 
@@ -174,7 +175,7 @@ impl State
   fn derive_transition(&self, 
     symbol: Symbol, 
     rewrite_rules: &Vec<Rule>, 
-    tp: &TermPool, 
+    tp: &mut TermPool, 
     apma:bool) -> (Vec<MatchAnnouncement>, Vec<(ExplicitPosition, GoalsOrInitial)>) 
   {
       // Computes the derivative containing the goals that are completed, unchanged and reduced
@@ -193,10 +194,10 @@ impl State
               destinations.push((ExplicitPosition::empty_pos(),GoalsOrInitial::Goals(new_match_goals)));
           }
       } else {
-          //In case we are building a set automaton we partition the match goals
+          // In case we are building a set automaton we partition the match goals
           let partitioned = MatchGoal::partition(new_match_goals);
 
-          //Get the greatest common prefix and shorten the positions
+          // Get the greatest common prefix and shorten the positions
           let mut positions_per_partition = vec![];
           let mut gcp_length_per_partition = vec![];
           for (p, pos) in partitioned {
@@ -313,19 +314,18 @@ impl State
 
   /// Create a state from a set of match goals
   fn new(goals: Vec<MatchGoal>, num_transitions: usize) -> State {
-      //The label of the state is taken from a match obligation of a root match goal.
+      // The label of the state is taken from a match obligation of a root match goal.
       let mut label : Option<ExplicitPosition>= None;
-      //Go through all match goals...
+      // Go through all match goals...
       for g in &goals {
           //...until a root match goal is found
           if g.announcement.position == ExplicitPosition::empty_pos() {
-              /*
-              Find the shortest match obligation position.
-              This design decision was taken as it presumably has two advantages.
-              1. Patterns that overlap will be more quickly distinguished, potentially decreasing
-              the size of the automaton.
-              2. The average lookahead may be shorter.
-               */
+              
+              // Find the shortest match obligation position.
+              // This design decision was taken as it presumably has two advantages.
+              // 1. Patterns that overlap will be more quickly distinguished, potentially decreasing
+              // the size of the automaton.
+              //2. The average lookahead may be shorter.
               if label.is_none() {
                   label = Some(g.obligations.first().unwrap().position.clone());
               }

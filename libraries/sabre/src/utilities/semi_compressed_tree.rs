@@ -252,7 +252,7 @@ mod tests
 
     // This test does not work yet since aterm_appl(f, [args]) doesn't work.
     //#[test]
-    /*fn test_evaluation() 
+    fn test_evaluation() 
     {
         let mut tp = TermPool::new();
         let t_rhs = tp.from_string("f(f(a,a),x)").unwrap();
@@ -266,18 +266,18 @@ mod tests
 
         let t_expected = tp.from_string("f(f(a,a),b)").unwrap();
         assert_eq!(sctt.evaluate(&t_lhs, &mut tp), t_expected);
-    }*/
+    }
 
     // This test does not work yet since create_var_map relies on Variable(x) to be present.
-    /*#[test]
+    #[test]
     fn test_create_varmap() 
     {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(x,x)").unwrap();
+        let t = tp.from_string("f(DataVarId(x,0),DataVarId(x,0))").unwrap();
         let x = tp.create_symbol("x", 0);
 
         let map = create_var_map(&t);
         println!("{:?}", map);
         assert!(map.contains_key(&x));
-    }*/
+    }
 }

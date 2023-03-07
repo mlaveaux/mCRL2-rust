@@ -1,9 +1,9 @@
 
 use mcrl2_rust::atermpp::{TermPool, ATerm};
 use crate::utilities::ExplicitPosition;
-use crate::set_automaton::{EnhancedMatchAnnouncement, State};
+use crate::set_automaton::{EnhancedMatchAnnouncement, State, SetAutomaton};
 
-use super::get_position;
+use super::{get_position, substitute};
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
@@ -13,7 +13,7 @@ use super::get_position;
 ///         Note that it stores a reference to a position. It references the position listed on
 ///         a transition of the set automaton.
 #[derive(Debug)]
-pub(super) struct Configuration<'a> 
+pub(crate) struct Configuration<'a> 
 {
     pub state: usize,
     pub subterm: ATerm,
@@ -23,7 +23,7 @@ pub(super) struct Configuration<'a>
 /// SideInfo stores additional information of a configuration.
 /// It stores an index of the corresponding configuration on the configuration stack.
 #[derive(Debug)]
-pub(super) struct SideInfo<'a> 
+pub(crate) struct SideInfo<'a> 
 {
     pub corresponding_configuration: usize,
     pub info: SideInfoType<'a>
@@ -31,7 +31,7 @@ pub(super) struct SideInfo<'a>
 
 /// Three types of side information. See the stack rewriter on how they are used.
 #[derive(Debug)]
-pub(super) enum SideInfoType<'a> 
+pub(crate) enum SideInfoType<'a> 
 {
     SideBranch(&'a[(ExplicitPosition,usize)]),
     DelayedRewriteRule(&'a EnhancedMatchAnnouncement),
@@ -40,7 +40,7 @@ pub(super) enum SideInfoType<'a>
 
 /// A configuration stack. The first element is the root of the configuration tree.
 #[derive(Debug)]
-pub(super) struct ConfigurationStack<'a> 
+pub(crate) struct ConfigurationStack<'a> 
 {
     pub configuration_stack: Vec<Configuration<'a>>,
     /// Separate stack with extra information on some configurations
@@ -53,7 +53,8 @@ pub(super) struct ConfigurationStack<'a>
     pub oldest_reliable_subterm: usize
 }
 
-impl<'a> ConfigurationStack<'a> {
+impl<'a> ConfigurationStack<'a> 
+{
     ///Initialise the stack with one Configuration containing 'term' and the initial state of the set automaton
     pub fn new(state: usize, term: ATerm) -> ConfigurationStack<'a> {
         let mut conf_list = ConfigurationStack { configuration_stack: Vec::with_capacity(8), side_branch_stack: vec![], current_node: Some(0), oldest_reliable_subterm: 0 };
@@ -66,12 +67,13 @@ impl<'a> ConfigurationStack<'a> {
 
     }
 
-    pub(super) fn get_unexplored_leaf(&self) -> Option<usize> {
+    pub(crate) fn get_unexplored_leaf(&self) -> Option<usize> 
+    {
         self.current_node
     }
 
     ///Returns the lowest configuration in the tree with SideInfo
-    pub(super) fn get_prev_with_side_info(&self) -> Option<usize> {
+    pub(crate) fn get_prev_with_side_info(&self) -> Option<usize> {
         match self.side_branch_stack.last() {
             None => {None}
             Some(si) => {
@@ -105,7 +107,8 @@ impl<'a> ConfigurationStack<'a> {
 
     /// When rewriting prune "prunes" the configuration tree/stack to the place where the first symbol
     /// of the matching rewrite rule was observed (at index 'depth').
-    pub fn prune(&mut self, depth: usize, new_subterm: ATerm, tp: &mut TermPool, states: &Vec<State>) {
+    pub fn prune(&mut self, depth: usize, new_subterm: ATerm) 
+    {
         self.current_node = Some(depth);
 
         //Reroll the configuration stack by truncating the Vec (which is a constant time operation)
@@ -113,9 +116,9 @@ impl<'a> ConfigurationStack<'a> {
         //Remove side info for the deleted configurations
         self.roll_back_side_info_stack(depth, true);
 
-        //Update the subterm stored at the prune point.
-        //Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
-        //self.configuration_stack[depth].subterm = tp.substitute(&self.configuration_stack[depth].subterm, new_subterm, &states[self.configuration_stack[depth].state].label.indices, 0);
+        // Update the subterm stored at the prune point.
+        // Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
+        // self.configuration_stack[depth].subterm = tp.substitute(&self.configuration_stack[depth].subterm, new_subterm, &states[self.configuration_stack[depth].state].label.indices, 0);
         self.oldest_reliable_subterm = depth;
     }
 
@@ -165,19 +168,23 @@ impl<'a> ConfigurationStack<'a> {
     {
         // We can probably mark normal forms here when used by jump_back
 
-        //Check if there is anything to do. Start updating from self.oldest_reliable_subterm
+        // Check if there is anything to do. Start updating from self.oldest_reliable_subterm
         let mut up_to_date = self.oldest_reliable_subterm;
         if up_to_date == 0 || end >= up_to_date {
             return;
         }
         let mut subterm = self.configuration_stack[up_to_date].subterm.clone();
-        //Go over the configurations one by one until we reach 'end'
-        while up_to_date > end {
+
+        // Go over the configurations one by one until we reach 'end'
+        while up_to_date > end 
+        {
             //If the position is not deepened nothing needs to be done, otherwise substitute on the position stored in the configuration.
-            /*subterm = match self.configuration_stack[up_to_date].position {
-                None => {subterm}
-                Some(p) => {tp.substitute(&self.configuration_stack[up_to_date - 1].subterm, subterm, &p.indices, 0)}
-            };*/
+            subterm = match self.configuration_stack[up_to_date].position {
+                None => { subterm }
+                Some(p) => { 
+                    substitute(tp, &self.configuration_stack[up_to_date - 1].subterm, subterm, &p.indices)
+                }
+            };
             up_to_date -= 1;
             if store_intermediate {
                 self.configuration_stack[up_to_date].subterm = subterm.clone();
@@ -188,13 +195,15 @@ impl<'a> ConfigurationStack<'a> {
     }
 
     /// Final term computed by integrating all subterms up to the root configuration
-    pub fn compute_final_term(&mut self, tp: &mut TermPool) -> ATerm {
+    pub fn compute_final_term(&mut self, tp: &mut TermPool) -> ATerm 
+    {
         self.jump_back(0, tp);
         self.configuration_stack[0].subterm.clone()
     }
 
     /// Returns a SideInfoType object if there is side info for the configuration with index 'leaf_index'
-    pub fn pop_side_branch_leaf(stack: &mut Vec<SideInfo<'a>>, leaf_index:usize) -> Option<SideInfoType<'a>>  {
+    pub fn pop_side_branch_leaf(stack: &mut Vec<SideInfo<'a>>, leaf_index:usize) -> Option<SideInfoType<'a>>  
+    {
         let should_pop = match stack.last() {
             None => {false}
             Some(si) => {
