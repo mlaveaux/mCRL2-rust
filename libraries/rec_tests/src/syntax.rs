@@ -1,8 +1,3 @@
-//! This crate offers several features to handle terms.
-//!
-//! REC, short for Rewriting Engine Competition, is a format for specifying rewrite systems.
-//! The parser module contains functions for loading a REC file.
-//!
 use core::fmt;
 use std::hash::Hash;
 

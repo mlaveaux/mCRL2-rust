@@ -1,6 +1,3 @@
-//! Module for parsing REC files in the REC 2019 format
-//!
-
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -103,7 +100,7 @@ pub fn load_REC_from_file(file: PathBuf) -> (RewriteSpecificationSyntax, Vec<Ter
     parse_REC(&contents, Some(file))
 }
 
-///Load and join multiple REC specifications
+/// Load and join multiple REC specifications
 #[allow(non_snake_case)]
 pub fn load_REC_from_strings(specs: Vec<&str>) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) {
     let mut rewrite_spec = RewriteSpecificationSyntax::new();
@@ -143,7 +140,7 @@ fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>)
     (name, include_files)
 }
 
-///Extracts data from parsed constructor section, derives the arity of symbols. Types are ignored.
+/// Extracts data from parsed constructor section, derives the arity of symbols. Types are ignored.
 fn parse_constructors(pair: Pair<Rule>) -> HashMap<String,usize> {
     assert_eq!(pair.as_rule(),Rule::cons);
     let mut arity_per_symbol = HashMap::new();
@@ -157,7 +154,7 @@ fn parse_constructors(pair: Pair<Rule>) -> HashMap<String,usize> {
     arity_per_symbol
 }
 
-///Extracts data from parsed operations section, derives additional arity of symbols. Types are ignored.
+/// Extracts data from parsed operations section, derives additional arity of symbols. Types are ignored.
 fn parse_operations(pair: Pair<Rule>) -> HashMap<String,usize> {
     assert_eq!(pair.as_rule(),Rule::opns);
     let mut arity_per_symbol = HashMap::new();
@@ -171,7 +168,7 @@ fn parse_operations(pair: Pair<Rule>) -> HashMap<String,usize> {
     arity_per_symbol
 }
 
-///Extracts data from parsed rewrite rules. Returns list of rewrite rules
+/// Extracts data from parsed rewrite rules. Returns list of rewrite rules
 fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> 
 {
     assert_eq!(pair.as_rule(),Rule::rules);
@@ -184,7 +181,7 @@ fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax>
     rules
 }
 
-///Extracts data from parsed EVAL section, returns a list of terms that need to be rewritten.
+/// Extracts data from parsed EVAL section, returns a list of terms that need to be rewritten.
 fn parse_eval(pair: Pair<Rule>) -> Vec<TermSyntaxTree> 
 {
     assert_eq!(pair.as_rule(),Rule::eval);
@@ -197,7 +194,7 @@ fn parse_eval(pair: Pair<Rule>) -> Vec<TermSyntaxTree>
     terms
 }
 
-///Constructs a TermSyntaxTree from a string.
+/// Constructs a TermSyntaxTree from a string.
 impl TermSyntaxTree {
     pub fn from_string(str: &str) -> Result<TermSyntaxTree, pest::error::Error<Rule>> {
         let mut pairs = TermParser::parse(Rule::single_term, str)?;
@@ -205,7 +202,7 @@ impl TermSyntaxTree {
     }
 }
 
-///Extracts data from parsed term.
+/// Extracts data from parsed term.
 fn parse_term(pair: Pair<Rule>) -> TermSyntaxTree {
     assert_eq!(pair.as_rule(),Rule::term);
     match pair.as_rule() {
@@ -226,7 +223,7 @@ fn parse_term(pair: Pair<Rule>) -> TermSyntaxTree {
     }
 }
 
-///Extracts data from parsed rewrite rule
+// /Extracts data from parsed rewrite rule
 fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax 
 {
     assert!(pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule);
@@ -241,7 +238,8 @@ fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax
 
     // Extract conditions
     let mut conditions = vec![];
-    for c in inner {
+    for c in inner 
+    {
         assert_eq!(c.as_rule(),Rule::condition);
         let mut c_inner = c.into_inner();
         let lhs_cond = parse_term(c_inner.next().unwrap());
@@ -252,7 +250,7 @@ fn parse_rewrite_rule(pair: Pair<Rule>) -> RewriteRuleSyntax
         };
         let rhs_cond = parse_term(c_inner.next().unwrap());
 
-        let condition = ConditionSyntax{
+        let condition = ConditionSyntax {
             lhs: lhs_cond,
             rhs: rhs_cond,
             equality
