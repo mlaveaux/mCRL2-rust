@@ -25,4 +25,6 @@ jobs:
         submodules: true
 
     - name: Run tests
-      run: RUST_BACKTRACE=full cargo test --verbose
+      run: cargo test --verbose
+      env:
+       RUST_BACKTRACE: full
