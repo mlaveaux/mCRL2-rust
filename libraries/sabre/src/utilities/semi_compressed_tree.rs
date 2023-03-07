@@ -72,11 +72,10 @@ impl SemiCompressedTermTree {
         var_map: &HashMap<TermVariable, ExplicitPosition>,
     ) -> SemiCompressedTermTree {
         if t.arguments().is_empty() {
-            /*match var_map.get(&t.get_head_symbol()) {
+            match var_map.get(&t.clone().into()) {
                 Some(position) => Variable(position.clone()),
                 None => Compressed(t)
-            }*/
-            Compressed(t)
+            }
         } else {
             let children = t
                 .arguments()
@@ -178,7 +177,7 @@ mod tests {
     #[test]
     fn test_not_compressible() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(x,x)").unwrap();
+        let t = tp.from_string("f(DataVarId(x, 0),DataVarId(x, 0))").unwrap();
 
         let mut map = HashMap::new();
         map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
@@ -199,7 +198,7 @@ mod tests {
     #[test]
     fn test_partly_compressible() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(f(a,a), x)").unwrap();
+        let t = tp.from_string("f(f(a,a), DataVarId(x, 0))").unwrap();
         let compressible = tp.from_string("f(a,a)").unwrap();
 
         // Make a variable map with only x@2.
@@ -221,7 +220,7 @@ mod tests {
     #[test]
     fn test_evaluation() {
         let mut tp = TermPool::new();
-        let t_rhs = tp.from_string("f(f(a,a),x)").unwrap();
+        let t_rhs = tp.from_string("f(f(a,a),DataVarId(x, 0))").unwrap();
         let t_lhs = tp.from_string("g(b)").unwrap();
 
         // Make a variable map with only x@2.
@@ -238,7 +237,7 @@ mod tests {
     #[test]
     fn test_create_varmap() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(DataVarId(x),DataVarId(x))").unwrap();
+        let t = tp.from_string("f(DataVarId(x, 0),DataVarId(x, 0))").unwrap();
         let x = tp.create_variable("x");
 
         let map = create_var_map(&t);

@@ -24,11 +24,22 @@ fn main() {
 }
 
 fn try_main() -> AnyResult<()> {
-    let task = env::args().nth(1);
+    let mut args = env::args();
+
+    // Ignore the first argument (which should be xtask)
+    args.next();
+
+    // The name of the task
+    let task = args.next();
+
+    // Take the other parameters.
+    let other_arguments: Vec<String> = args.collect();
+
+    println!("{:?}", task);
 
     match task.as_deref() {
         Some("coverage") => coverage(false)?,
-        Some("sanitizer") => sanitizer()?,
+        Some("sanitizer") => sanitizer(other_arguments)?,
         _ => print_help(),
     }
 
@@ -184,17 +195,20 @@ fn coverage(devmode: bool) -> AnyResult<()> {
 ///
 /// This only works under Linux currently and requires the nightly channel
 ///
-fn sanitizer() -> AnyResult<()> {
-    cmd!(
-        "cargo",
-        "test",
-        "-Zbuild-std",
-        "--target",
-        "x86_64-unknown-linux-gnu"
-    )
-    .env("CARGO_INCREMENTAL", "0")
-    .env("RUSTFLAGS", "-Zsanitizer=address")
-    .run()?;
+fn sanitizer(cargo_arguments: Vec<String>) -> AnyResult<()> {
+    let mut arguments: Vec<String> = vec![
+        "test".to_string(),
+        "-Zbuild-std".to_string(),
+        "--target".to_string(),
+        "x86_64-unknown-linux-gnu".to_string(),
+    ];
+
+    arguments.extend(cargo_arguments.into_iter());
+
+    cmd("cargo", arguments)
+        .env("CARGO_INCREMENTAL", "0")
+        .env("RUSTFLAGS", "-Zsanitizer=address")
+        .run()?;
     println!("ok.");
 
     Ok(())
