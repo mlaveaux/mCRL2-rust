@@ -24,7 +24,7 @@ pub mod ffi {
     fn create_aterm(function: &function_symbol, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
 
     /// Parses the given string and returns an aterm
-    fn aterm_from_string(text: &str) -> UniquePtr<aterm>;
+    fn aterm_from_string(text: String) -> UniquePtr<aterm>;
 
     /// Converts an aterm to a string.
     fn print_aterm(term: &aterm) -> String;
@@ -64,11 +64,11 @@ pub mod ffi {
     fn get_term_argument(term: &aterm, index: usize) -> UniquePtr<aterm>;
 
     /// Creates a function symbol with the given name and arity.
-    fn create_function_symbol(name: &str, arity: usize) -> UniquePtr<function_symbol>;
+    fn create_function_symbol(name: String, arity: usize) -> UniquePtr<function_symbol>;
 
     fn ffi_is_variable(term: &aterm) -> bool;
 
-    fn ffi_create_variable(name: &str) -> UniquePtr<aterm>;
+    fn ffi_create_variable(name: String) -> UniquePtr<aterm>;
 
     /// For data::function_symbol terms returns the internally known index.
     fn ffi_get_function_symbol_index(term: &aterm) -> usize;
@@ -185,7 +185,7 @@ impl ATerm
 
   pub fn arg(&self, index: usize) -> ATerm
   {
-    assert!(index < self.get_head_symbol().arity());
+    assert!(index < self.get_head_symbol().arity(), "The given index should be a valid argument");
     ATerm { term: ffi::get_term_argument(&self.term, index) }
   }
 
@@ -293,7 +293,7 @@ impl TermPool
   pub fn from_string(&mut self, text: &str) -> Option<ATerm>
   {
     Some(ATerm {
-      term: ffi::aterm_from_string(text)
+      term: ffi::aterm_from_string(String::from(text))
     })
   }
 
@@ -312,14 +312,14 @@ impl TermPool
   pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol
   {
     Symbol {
-      function: ffi::create_function_symbol(name, arity)
+      function: ffi::create_function_symbol(String::from(name), arity)
     }
   }
 
   pub fn create_variable(&mut self, name: &str) -> TermVariable
   {
     TermVariable {
-      term: ATerm::from(ffi::ffi_create_variable(name))
+      term: ATerm::from(ffi::ffi_create_variable(String::from(name)))
     }
   }
   

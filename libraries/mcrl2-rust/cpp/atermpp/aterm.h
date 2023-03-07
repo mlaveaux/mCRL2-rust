@@ -29,9 +29,9 @@ std::unique_ptr<aterm> create_aterm(const function_symbol& symbol, rust::Slice<c
   return new_aterm();
 }
 
-std::unique_ptr<aterm> aterm_from_string(rust::Str text)
+std::unique_ptr<aterm> aterm_from_string(rust::String text)
 {
-  return std::make_unique<aterm>(atermpp::read_term_from_string(std::string(text.data())));
+  return std::make_unique<aterm>(atermpp::read_term_from_string(static_cast<std::string>(text)));
 }
 
 rust::String print_aterm(const aterm& term)
@@ -104,9 +104,9 @@ bool ffi_is_variable(const aterm& term)
   return mcrl2::data::is_variable(term);
 }
 
-std::unique_ptr<aterm> ffi_create_variable(rust::Str name)
+std::unique_ptr<aterm> ffi_create_variable(rust::String name)
 {
-  return std::make_unique<aterm>(mcrl2::data::variable(name.data(), mcrl2::data::sort_expression()));
+  return std::make_unique<aterm>(mcrl2::data::variable(static_cast<std::string>(name), mcrl2::data::sort_expression()));
 }
 
 std::unique_ptr<aterm> get_term_argument(const aterm& term, std::size_t index)
@@ -114,9 +114,9 @@ std::unique_ptr<aterm> get_term_argument(const aterm& term, std::size_t index)
   return std::make_unique<aterm>(static_cast<const aterm_appl&>(term)[index]);
 }
 
-std::unique_ptr<function_symbol> create_function_symbol(rust::Str name, std::size_t arity)
+std::unique_ptr<function_symbol> create_function_symbol(rust::String name, std::size_t arity)
 {
-  return std::make_unique<function_symbol>(name.data(), arity);
+  return std::make_unique<function_symbol>(static_cast<std::string>(name), arity);
 }
 
 bool ffi_is_function_symbol(const aterm& term)

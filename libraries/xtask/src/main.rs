@@ -8,9 +8,36 @@ use dialoguer::{theme::ColorfulTheme, Confirm};
 use fs_extra as fsx;
 use fsx::dir::CopyOptions;
 use glob::glob;
-use std::{path::{Path, PathBuf}, fs::create_dir_all, env};
+use std::{
+    env,
+    fs::create_dir_all,
+    path::{Path, PathBuf},
+};
 
 pub use duct::cmd;
+
+fn main() {
+    if let Err(e) = try_main() {
+        eprintln!("{}", e);
+        std::process::exit(-1);
+    }
+}
+
+fn try_main() -> AnyResult<()> {
+    let task = env::args().nth(1);
+
+    match task.as_deref() {
+        Some("coverage") => coverage(false)?,
+        Some("sanitizer") => sanitizer()?,
+        _ => print_help(),
+    }
+
+    Ok(())
+}
+
+fn print_help() {
+    println!("Unknown task");
+}
 
 ///
 /// Remove a set of files given a glob
@@ -82,35 +109,11 @@ where
 /// # Panics
 /// Panics if input interaction fails
 ///
-pub fn confirm(question: &str) -> bool 
-{
+pub fn confirm(question: &str) -> bool {
     Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt(question)
         .interact()
         .unwrap()
-}
-
-fn main() {
-    if let Err(e) = try_main() {
-        eprintln!("{}", e);
-        std::process::exit(-1);
-    }
-}
-
-fn try_main() -> AnyResult<()> {
-    let task = env::args().nth(1);
-
-    match task.as_deref() {
-        Some("coverage") => coverage(false)?,
-        _ => print_help(),
-    }
-
-    Ok(())
-}
-
-fn print_help()
-{
-    println!("Unknown task");
 }
 
 ///
@@ -119,8 +122,7 @@ fn print_help()
 /// # Errors
 /// Fails if any command fails
 ///
-fn coverage(devmode: bool) -> AnyResult<()> 
-{
+fn coverage(devmode: bool) -> AnyResult<()> {
     remove_dir("coverage")?;
     create_dir_all("coverage")?;
 
@@ -173,6 +175,27 @@ fn coverage(devmode: bool) -> AnyResult<()>
             println!("report location: {file}");
         }
     }
+
+    Ok(())
+}
+
+///
+/// Run the tests with the address sanitizer enabled to detect memory issues in unsafe and C++ code.
+///
+/// This only works under Linux currently and requires the nightly channel
+///
+fn sanitizer() -> AnyResult<()> {
+    cmd!(
+        "cargo",
+        "test",
+        "-Zbuild-std",
+        "--target",
+        "x86_64-unknown-linux-gnu"
+    )
+    .env("CARGO_INCREMENTAL", "0")
+    .env("RUSTFLAGS", "-Zsanitizer=address")
+    .run()?;
+    println!("ok.");
 
     Ok(())
 }
