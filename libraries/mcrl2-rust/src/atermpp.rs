@@ -26,6 +26,9 @@ pub mod ffi {
     /// Parses the given string and returns an aterm
     fn aterm_from_string(text: String) -> UniquePtr<aterm>;
 
+    /// Returns the address of the given aterm. Should be used with care.
+    fn aterm_pointer(term: &aterm) -> usize;
+
     /// Converts an aterm to a string.
     fn print_aterm(term: &aterm) -> String;
 
@@ -301,12 +304,11 @@ impl TermPool
   pub fn create(&mut self, symbol: &Symbol, arguments: &[ATerm]) -> ATerm
   {
     // TODO: This part of the ffi is very slow and should be improved.
-    //let arguments = vec![arguments.iter().map(|x| ffi::aterm_ref { index: 0 })];
+    let arguments: Vec<ffi::aterm_ref> = arguments.iter().map(|x| ffi::aterm_ref { index: 0 }).collect();
 
-    //ATerm {
-    //  term: ffi::create_aterm(&symbol.function, &arguments)
-    //}
-    ATerm::new()
+    ATerm {
+      term: ffi::create_aterm(&symbol.function, &arguments)
+    }
   }
 
   pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol

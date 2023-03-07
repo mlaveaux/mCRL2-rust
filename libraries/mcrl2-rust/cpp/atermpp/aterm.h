@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "rust/cxx.h"
 
@@ -11,12 +12,12 @@
 #include "mcrl2/data/data_expression.h"
 #include "mcrl2/data/function_symbol.h"
 
+#include "mcrl2-rust/src/atermpp.rs.h"
+
 using namespace mcrl2::data;
 
 namespace atermpp
 {
-
-struct aterm_ref;
 
 inline std::unique_ptr<aterm> new_aterm()
 {
@@ -25,13 +26,24 @@ inline std::unique_ptr<aterm> new_aterm()
 
 std::unique_ptr<aterm> create_aterm(const function_symbol& symbol, rust::Slice<const aterm_ref> arguments)
 {
-  //return std::make_unique<aterm>(aterm_appl(symbol, arguments.begin(), arguments.end()));
-  return new_aterm();
+  // TODO: This is some truly horrendous code that must be removed asap.
+  std::vector<unprotected_aterm> converted_arguments;
+  for (const aterm_ref& argument : arguments)
+  {
+    converted_arguments.push_back(unprotected_aterm(reinterpret_cast<detail::_aterm*>(argument.index)));
+  }
+  
+  return std::make_unique<aterm>(aterm_appl(symbol, converted_arguments.begin(), converted_arguments.end()));
 }
 
 std::unique_ptr<aterm> aterm_from_string(rust::String text)
 {
   return std::make_unique<aterm>(atermpp::read_term_from_string(static_cast<std::string>(text)));
+}
+
+std::size_t aterm_pointer(const aterm& term)
+{
+  return reinterpret_cast<std::size_t>(detail::address(term));
 }
 
 rust::String print_aterm(const aterm& term)

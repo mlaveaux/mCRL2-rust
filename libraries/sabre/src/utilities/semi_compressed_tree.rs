@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_create_varmap() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(DataVarId(x,0),DataVarId(x,0))").unwrap();
+        let t = tp.from_string("f(DataVarId(x),DataVarId(x))").unwrap();
         let x = tp.create_variable("x");
 
         let map = create_var_map(&t);
