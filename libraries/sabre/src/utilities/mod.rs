@@ -2,6 +2,7 @@ mod configuration_stack;
 mod position;
 mod semi_compressed_tree;
 
+use ahash::HashSet;
 pub use configuration_stack::*;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 pub use position::*;
@@ -48,6 +49,26 @@ fn substitute_rec(
 
         let mut args = t.arguments();
         args[new_child_index] = new_child;
+
+        tp.create(&t.get_head_symbol(), &args)
+    }
+}
+
+/// Converts an [ATerm] to an untyped data expression.
+pub fn to_data_expression(
+    tp: &mut TermPool,
+    t: &ATerm,
+    variables: &HashSet<String>) -> ATerm
+{
+    if variables.contains(t.get_head_symbol().name()) {
+        // Convert a constant variable, for example 'x', into an untyped variable.
+        tp.create_variable(&t.get_head_symbol().name()).into()
+    } else {        
+        let mut args = Vec::with_capacity(t.arguments().len());
+
+        for i in 0..t.arguments().len() {
+            args.push(to_data_expression(tp, &t.arg(i), variables));
+        }
 
         tp.create(&t.get_head_symbol(), &args)
     }

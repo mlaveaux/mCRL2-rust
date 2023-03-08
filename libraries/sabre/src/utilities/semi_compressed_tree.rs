@@ -65,17 +65,21 @@ impl SemiCompressedTermTree {
         }
     }
 
-    /// Creates a SCTT from a term. The var_map parameter should specify where which variable can be
+    /// Creates a SCTT from a term. The var_map parameter should specify where the variable can be
     /// found in the lhs of the rewrite rule.
     pub(crate) fn from_term(
         t: ATerm,
         var_map: &HashMap<TermVariable, ExplicitPosition>,
     ) -> SemiCompressedTermTree {
-        if t.arguments().is_empty() {
-            match var_map.get(&t.clone().into()) {
-                Some(position) => Variable(position.clone()),
-                None => Compressed(t)
-            }
+        if t.is_variable() {
+            Variable(
+                var_map
+                    .get(&t.clone().into())
+                    .expect("var_map must contain all variables")
+                    .clone(),
+            )
+        } else if t.arguments().is_empty() {
+            Compressed(t)
         } else {
             let children = t
                 .arguments()
@@ -151,7 +155,10 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<TermVariable, ExplicitPositio
 
 #[cfg(test)]
 mod tests {
+    use crate::utilities::to_data_expression;
+
     use super::*;
+    use ahash::AHashSet;
     use mcrl2_rust::atermpp::TermPool;
 
     #[test]
@@ -177,12 +184,15 @@ mod tests {
     #[test]
     fn test_not_compressible() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(DataVarId(x, 0),DataVarId(x, 0))").unwrap();
+        let t = tp
+            .from_string("f(x,x)")
+            .unwrap();
+        let expression = to_data_expression(&mut tp, &t, &AHashSet::from([String::from("x")]));
 
         let mut map = HashMap::new();
         map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
 
-        let sctt = SemiCompressedTermTree::from_term(t, &map);
+        let sctt = SemiCompressedTermTree::from_term(expression, &map);
 
         let en = Explicit(ExplicitNode {
             head: tp.create_symbol("f", 2),
@@ -237,11 +247,12 @@ mod tests {
     #[test]
     fn test_create_varmap() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(DataVarId(x, 0),DataVarId(x, 0))").unwrap();
+        let t = tp.from_string("f(x,x)").unwrap();
         let x = tp.create_variable("x");
 
         let map = create_var_map(&t);
         println!("{:?}", map);
+        println!("{:?}", x);
         assert!(map.contains_key(&x));
     }
 }

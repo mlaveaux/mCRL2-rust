@@ -10,6 +10,7 @@
 #include "mcrl2/atermpp/detail/aterm_hash.h"
 
 #include "mcrl2/data/data_expression.h"
+#include "mcrl2/data/parse.h"
 #include "mcrl2/data/function_symbol.h"
 
 #include "mcrl2-rust/src/atermpp.rs.h"

@@ -23,7 +23,7 @@ pub mod ffi {
 
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
-
+        
         /// Returns the address of the given aterm. Should be used with care.
         fn aterm_pointer(term: &aterm) -> usize;
 
@@ -73,6 +73,8 @@ pub mod ffi {
 
         /// For data::function_symbol terms returns the internally known index.
         fn ffi_get_function_symbol_index(term: &aterm) -> usize;
+
+        //fn ffi_create_data_application()
     }
 }
 
@@ -253,6 +255,13 @@ impl Clone for ATerm {
 }
 
 impl Eq for ATerm {}
+
+impl From<TermVariable> for ATerm
+{
+    fn from(value: TermVariable) -> Self {
+        value.term
+    } 
+}
 
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
 pub struct TermPool {}

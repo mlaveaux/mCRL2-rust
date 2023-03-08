@@ -35,11 +35,13 @@ Code coverage can be automatically generated for the full workspace using a carg
 
 # Profiling
 
-The `lpsreach` tool can be build using the `bench` compilation profile using `cargo build --profile bench` after which the resulting executable `target/release/lpsreach` can be profiled using any standard executable profiler. This compilation profile contains debugging information to show where time is being spent, but the code is optimised the same as in a release configuration.
+The `lpsreach` tool can be build using the `bench` compilation profile using `cargo build --profile bench` after which the resulting executable `target/release/lpsreach` can be profiled using any standard executable profiler, for example `Intel VTune` or `perf`. This compilation profile contains debugging information to show where time is being spent, but the code is optimised the same as in a release configuration.
+
+Another useful technique for profiling is to generate a so-called `flamegraph`, which essentially takes the output of `perf` and produces a callgraph of time spent over time. These can be generated using the [flamegraph-rs](https://github.com/flamegraph-rs/flamegraph) tool, which can be acquired using `cargo install flamegraph`. Note that it relies on either `perf` or `dtrace` and as such is only supported on Linux and MacOS.
 
 # Formatting
 
-All source code should be formatted using `rustfmt`, which can installed using `rustup component add rustfmt`. Individual source files can then be formatted using `cargo fmt <filename>`.
+All source code should be formatted using `rustfmt`, which can installed using `rustup component add rustfmt`. Individual source files can then be formatted using `rustfmt <filename>`.
 
 # Related Work
 

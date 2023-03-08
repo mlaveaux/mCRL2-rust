@@ -38,7 +38,7 @@ fn try_main() -> AnyResult<()> {
     println!("{:?}", task);
 
     match task.as_deref() {
-        Some("coverage") => coverage(false)?,
+        Some("coverage") => coverage()?,
         Some("sanitizer") => sanitizer(other_arguments)?,
         _ => print_help(),
     }
@@ -88,72 +88,37 @@ where
 }
 
 ///
-/// Check if path exists
-///
-pub fn exists<P>(path: P) -> bool
-where
-    P: AsRef<Path>,
-{
-    std::path::Path::exists(path.as_ref())
-}
-
-///
-/// Copy entire folder contents
-///
-/// # Errors
-/// Fails if file operations fail
-///
-pub fn copy_contents<P, Q>(from: P, to: Q, overwrite: bool) -> AnyResult<u64>
-where
-    P: AsRef<Path>,
-    Q: AsRef<Path>,
-{
-    let mut opts = CopyOptions::new();
-    opts.content_only = true;
-    opts.overwrite = overwrite;
-    fsx::dir::copy(from, to, &opts).map_err(anyhow::Error::msg)
-}
-
-///
-/// Prompt the user to confirm an action
-///
-/// # Panics
-/// Panics if input interaction fails
-///
-pub fn confirm(question: &str) -> bool {
-    Confirm::with_theme(&ColorfulTheme::default())
-        .with_prompt(question)
-        .interact()
-        .unwrap()
-}
-
-///
 /// Run coverage
 ///
 /// # Errors
 /// Fails if any command fails
 ///
-fn coverage(devmode: bool) -> AnyResult<()> {
-    remove_dir("coverage")?;
-    create_dir_all("coverage")?;
+fn coverage() -> AnyResult<()> {
+    remove_dir("target/coverage")?;
+    create_dir_all("target/coverage")?;
 
     println!("=== running coverage ===");
+
+    // The path from which cargo is called.
+    let mut base_directory = env::current_dir().unwrap();
+    base_directory.push("target");
+    base_directory.push("coverage");
+
+    let mut prof_directory = base_directory.clone();
+    prof_directory.push("cargo-test-%p-%m.profraw");
+
     cmd!("cargo", "test")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", "cargo-test-%p-%m.profraw")
+        .env("LLVM_PROFILE_FILE", prof_directory)
         .run()?;
     println!("ok.");
 
     println!("=== generating report ===");
-    let (fmt, file) = if devmode {
-        ("html", "coverage/html")
-    } else {
-        ("lcov", "coverage/tests.lcov")
-    };
+    let (fmt, file) = ("html", "target/coverage/html");
     cmd!(
         "grcov",
-        ".",
+        base_directory,
         "--binary-path",
         "./target/debug/deps",
         "-s",
@@ -162,14 +127,6 @@ fn coverage(devmode: bool) -> AnyResult<()> {
         fmt,
         "--branch",
         "--ignore-not-existing",
-        "--ignore",
-        "../*",
-        "--ignore",
-        "/*",
-        "--ignore",
-        "xtask/*",
-        "--ignore",
-        "*/src/tests/*",
         "-o",
         file,
     )
@@ -179,13 +136,8 @@ fn coverage(devmode: bool) -> AnyResult<()> {
     println!("=== cleaning up ===");
     clean_files("**/*.profraw")?;
     println!("ok.");
-    if devmode {
-        if confirm("open report folder?") {
-            cmd!("open", file).run()?;
-        } else {
-            println!("report location: {file}");
-        }
-    }
+    
+    println!("report location: {file}");
 
     Ok(())
 }
