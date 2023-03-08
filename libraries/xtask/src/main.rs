@@ -4,9 +4,7 @@
 //!
 
 use anyhow::Result as AnyResult;
-use dialoguer::{theme::ColorfulTheme, Confirm};
 use fs_extra as fsx;
-use fsx::dir::CopyOptions;
 use glob::glob;
 use std::{
     env,

@@ -1,4 +1,4 @@
-use cxx::{UniquePtr, Exception};
+use cxx::{Exception, UniquePtr};
 use std::{cmp::Ordering, collections::VecDeque, fmt, hash::Hash, hash::Hasher};
 
 #[cxx::bridge(namespace = "atermpp")]
@@ -23,7 +23,7 @@ pub mod ffi {
 
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
-        
+
         /// Returns the address of the given aterm. Should be used with care.
         fn aterm_pointer(term: &aterm) -> usize;
 
@@ -163,14 +163,12 @@ impl ATerm {
 
     /// Get access to the underlying term
     pub fn get(&self) -> &ffi::aterm {
+        self.require_valid();
         &self.term
     }
 
     pub fn arg(&self, index: usize) -> ATerm {
-        assert!(
-            self.is_valid(),
-            "This function can only be called on non default terms"
-        );
+        self.require_valid();
         assert!(
             index < self.get_head_symbol().arity(),
             "The given index should be a valid argument"
@@ -181,6 +179,7 @@ impl ATerm {
     }
 
     pub fn arguments(&self) -> Vec<ATerm> {
+        self.require_valid();
         let mut result = vec![];
         for i in 0..self.get_head_symbol().arity() {
             result.push(self.arg(i));
@@ -189,18 +188,23 @@ impl ATerm {
     }
 
     pub fn is_variable(&self) -> bool {
+        self.require_valid();
         ffi::ffi_is_variable(&self.term)
     }
 
     pub fn get_head_symbol(&self) -> Symbol {
+        self.require_valid();
         Symbol {
             function: ffi::get_aterm_function_symbol(&self.term),
         }
     }
 
     /// Returns true iff the term is not default.
-    fn is_valid(&self) -> bool {
-        ffi::aterm_pointer(&self.term) != 0
+    fn require_valid(&self) {
+        assert!(
+            ffi::aterm_pointer(&self.term) != 0,
+            "This function can only be called on non default terms"
+        );
     }
 }
 
@@ -256,11 +260,10 @@ impl Clone for ATerm {
 
 impl Eq for ATerm {}
 
-impl From<TermVariable> for ATerm
-{
+impl From<TermVariable> for ATerm {
     fn from(value: TermVariable) -> Self {
         value.term
-    } 
+    }
 }
 
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
@@ -273,8 +276,8 @@ impl TermPool {
 
     pub fn from_string(&mut self, text: &str) -> Result<ATerm, Exception> {
         match ffi::aterm_from_string(String::from(text)) {
-          Ok(term) => Ok(ATerm { term }),
-          Err(exception) => Err(exception)
+            Ok(term) => Ok(ATerm { term }),
+            Err(exception) => Err(exception),
         }
     }
 
@@ -283,7 +286,9 @@ impl TermPool {
         // TODO: This part of the ffi is very slow and should be improved.
         let arguments: Vec<ffi::aterm_ref> = arguments
             .iter()
-            .map(|x| ffi::aterm_ref { index: 0 })
+            .map(|x| ffi::aterm_ref {
+                index: ffi::aterm_pointer(x.get()),
+            })
             .collect();
 
         ATerm {

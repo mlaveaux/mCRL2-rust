@@ -161,6 +161,14 @@ mod tests {
     use ahash::AHashSet;
     use mcrl2_rust::atermpp::TermPool;
 
+    /// Converts a slice of static strings into a set of owned strings
+    /// 
+    /// example:
+    ///     make_var_map(["x"])
+    fn var_map(vars: &[&str]) -> AHashSet<String> {
+        AHashSet::from_iter(vars.iter().map(|x| String::from(*x) ))
+    }
+
     #[test]
     fn test_constant() {
         let mut tp = TermPool::new();
@@ -184,15 +192,17 @@ mod tests {
     #[test]
     fn test_not_compressible() {
         let mut tp = TermPool::new();
-        let t = tp
-            .from_string("f(x,x)")
-            .unwrap();
-        let expression = to_data_expression(&mut tp, &t, &AHashSet::from([String::from("x")]));
+        let t = {
+            let tmp = tp
+                .from_string("f(x,x)")
+                .unwrap();
+            to_data_expression(&mut tp, &tmp, &var_map(&["x"]))
+        };
 
         let mut map = HashMap::new();
         map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
 
-        let sctt = SemiCompressedTermTree::from_term(expression, &map);
+        let sctt = SemiCompressedTermTree::from_term(t, &map);
 
         let en = Explicit(ExplicitNode {
             head: tp.create_symbol("f", 2),
@@ -208,7 +218,10 @@ mod tests {
     #[test]
     fn test_partly_compressible() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(f(a,a), DataVarId(x, 0))").unwrap();
+        let t = {
+            let tmp = tp.from_string("f(f(a,a),x)").unwrap();
+            to_data_expression(&mut tp, &tmp, &var_map(&["x"]))
+        };
         let compressible = tp.from_string("f(a,a)").unwrap();
 
         // Make a variable map with only x@2.
@@ -230,7 +243,10 @@ mod tests {
     #[test]
     fn test_evaluation() {
         let mut tp = TermPool::new();
-        let t_rhs = tp.from_string("f(f(a,a),DataVarId(x, 0))").unwrap();
+        let t_rhs = {
+            let tmp = tp.from_string("f(f(a,a),x)").unwrap();
+            to_data_expression(&mut tp, &tmp, &var_map(&["x"]))
+        };
         let t_lhs = tp.from_string("g(b)").unwrap();
 
         // Make a variable map with only x@2.
@@ -247,12 +263,13 @@ mod tests {
     #[test]
     fn test_create_varmap() {
         let mut tp = TermPool::new();
-        let t = tp.from_string("f(x,x)").unwrap();
+        let t =  {
+            let tmp = tp.from_string("f(x,x)").unwrap();
+            to_data_expression(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
+        };
         let x = tp.create_variable("x");
 
         let map = create_var_map(&t);
-        println!("{:?}", map);
-        println!("{:?}", x);
         assert!(map.contains_key(&x));
     }
 }
