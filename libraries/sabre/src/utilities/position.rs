@@ -81,8 +81,6 @@ impl fmt::Debug for ExplicitPosition {
     }
 }
 
-// TODO: Try to integrate the builder framework.
-
 /// An iterator over all (term, position) pairs of the given [ATerm].
 pub struct PositionIterator {
     queue: VecDeque<(ATerm, ExplicitPosition)>,

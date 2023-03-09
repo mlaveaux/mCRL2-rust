@@ -1,9 +1,10 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 use test_case::test_case;
 
-
-use mcrl2_rust::atermpp::TermPool;
-use sabre::SabreRewriter;
+use ahash::AHashSet;
+use mcrl2_rust::atermpp::{ATerm, TermPool};
+use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification};
+use sabre::utilities::to_data_expression;
 use REC_tests::load_REC_from_strings;
 
 #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
@@ -58,19 +59,23 @@ use REC_tests::load_REC_from_strings;
 #[test_case(vec![include_str!("REC_files/tricky.rec")], include_str!("validated_results/result_tricky.txt") ; "tricky")]
 fn rec_test(rec_files: Vec<&str>, expected_result: &str) 
 {
-    let (spec, terms) = load_REC_from_strings(rec_files);
+    // TODO: Enable these tests when the rewriter and spec conversion actually works.
+    /*let tp = Rc::new(RefCell::new(TermPool::new()));
+    let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
+        let (syntax_spec, syntax_terms) = load_REC_from_strings(rec_files);
+        (syntax_spec.to_rewrite_spec(&mut tp.borrow_mut()), syntax_terms.iter().map(|t| { 
+            let term = t.to_term(&mut tp.borrow_mut());
+            to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()) }).collect())
+    };
 
-    let tp = Rc::new(TermPool::new());
+    // Test Sabre rewriter
+    let mut sa = SabreRewriter::new(tp.clone(), spec.clone());
 
-    // Test outermost rewriter
-    let mut result: Vec<String> = vec![];
-    /*let mut sa = SabreRewriter::new(tp.clone(), spec.clone());
+    let mut expected = expected_result.split("\n\r");
 
-    for tst in &terms 
+    for term in &terms 
     {
-        let rewritten = sa.rewrite(term);
-        result.push(format!("Result: {}", &rewritten));
+        let result = sa.rewrite(term.clone());
+        assert_eq!(format!("Result: {}", &result), expected.next().unwrap(), "The rewrite result doesn't match the expected result");
     }*/
-
-    //assert_eq!(expected_result.split("\n\r"), &result);
 }

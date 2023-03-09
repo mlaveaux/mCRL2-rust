@@ -7,3 +7,4 @@ pub mod utilities;
 pub mod rewrite_specification;
 
 pub use sabre_rewriter::*;
+pub use rewrite_specification::*;

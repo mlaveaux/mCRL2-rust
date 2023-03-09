@@ -1,5 +1,5 @@
 use cxx::{Exception, UniquePtr};
-use std::{cmp::Ordering, collections::VecDeque, fmt, hash::Hash, hash::Hasher};
+use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
 
 #[cxx::bridge(namespace = "atermpp")]
 pub mod ffi {
@@ -197,6 +197,10 @@ impl ATerm {
         Symbol {
             function: ffi::get_aterm_function_symbol(&self.term),
         }
+    }
+
+    pub fn operation_id(&self) -> usize {
+        ffi::ffi_get_function_symbol_index(&self.term)
     }
 
     /// Returns true iff the term is not default.

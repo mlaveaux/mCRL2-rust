@@ -33,8 +33,6 @@ fn try_main() -> AnyResult<()> {
     // Take the other parameters.
     let other_arguments: Vec<String> = args.collect();
 
-    println!("{:?}", task);
-
     match task.as_deref() {
         Some("coverage") => coverage()?,
         Some("sanitizer") => sanitizer(other_arguments)?,

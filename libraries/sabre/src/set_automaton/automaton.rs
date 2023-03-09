@@ -14,7 +14,6 @@ use super::{EnhancedMatchAnnouncement, MatchAnnouncement, MatchGoal};
 // The Set Automaton used for matching based on
 pub struct SetAutomaton {
     pub(crate) states: Vec<State>,
-    pub(crate) term_pool: Rc<RefCell<TermPool>>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,11 +38,7 @@ impl SetAutomaton {
     /// Construct a set automaton. If 'apma' is true construct an APMA instead.
     /// An APMA is just a set automaton that does not partition the match goals on a transition
     /// and does not add fresh goals.
-    pub(crate) fn construct(
-        tp: Rc<RefCell<TermPool>>,
-        spec: RewriteSpecification,
-        apma: bool,
-    ) -> SetAutomaton {
+    pub(crate) fn construct(tp: &mut TermPool, spec: RewriteSpecification) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
 
@@ -100,7 +95,6 @@ impl SetAutomaton {
                         states.get(s_index).unwrap().derive_transition(
                             s.clone(),
                             &spec.rewrite_rules,
-                            &mut tp.borrow_mut(),
                             false,
                         ),
                     )
@@ -112,7 +106,7 @@ impl SetAutomaton {
                 // Associate an EnhancedMatchAnnouncement to every transition
                 let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
                     .into_iter()
-                    .map(|x| x.derive_redex(&mut tp.borrow_mut()))
+                    .map(|x| x.derive_redex(tp))
                     .collect();
 
                 announcements.sort_by(|ema1, ema2| {
@@ -131,8 +125,8 @@ impl SetAutomaton {
 
                 // Loop over the hypertransitions
                 for (pos, goals_or_initial) in destinations {
-                    /* Match goals need to be sorted so that we can easily check whether a state with a certain
-                    set of match goals already exists.*/
+                    // Match goals need to be sorted so that we can easily check whether a state with a certain
+                    // set of match goals already exists.
                     if let GoalsOrInitial::Goals(goals) = goals_or_initial {
                         if map_goals_state.contains_key(&goals) {
                             //The destination state already exists
@@ -160,10 +154,7 @@ impl SetAutomaton {
             }
         }
 
-        SetAutomaton {
-            states,
-            term_pool: tp.clone(),
-        }
+        SetAutomaton { states }
     }
 }
 
@@ -194,14 +185,13 @@ impl State {
         &self,
         symbol: Symbol,
         rewrite_rules: &Vec<Rule>,
-        tp: &mut TermPool,
         apma: bool,
     ) -> (
         Vec<MatchAnnouncement>,
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
         // Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(&symbol, tp);
+        let mut derivative = self.compute_derivative(&symbol);
 
         // The outputs/matching patterns of the transitions are those who are completed
         let outputs = derivative
@@ -291,7 +281,7 @@ impl State {
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: &Symbol, tp: &TermPool) -> Derivative {
+    fn compute_derivative(&self, symbol: &Symbol) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
@@ -313,26 +303,25 @@ impl State {
                 .iter()
                 .any(|mo| mo.position == self.label && mo.pattern.get_head_symbol() != *symbol)
             {
-                //discard
-                //Unchanged match goals
+                // discard
             } else if !mg.obligations.iter().any(|mo| mo.position == self.label) {
+                // Unchanged match goals
                 let mut mg = mg.clone();
                 if mg.announcement.rule.lhs != mg.obligations.first().unwrap().pattern {
                     mg.announcement.symbols_seen += 1;
                 }
                 result.unchanged.push(mg);
-            //Reduced match obligations
             } else if mg
                 .obligations
                 .iter()
                 .any(|mo| mo.position == self.label && mo.pattern.get_head_symbol() == *symbol)
             {
+                // Reduced match obligations
                 let mut mg = mg.clone();
-                // reduce obligations
                 let mut new_obligations = vec![];
                 for mo in mg.obligations {
                     if mo.pattern.get_head_symbol() == *symbol && mo.position == self.label {
-                        //reduce
+                        // reduce
                         let mut index = 1;
                         for t in mo.pattern.arguments() {
                             if t.get_head_symbol().name() != "ω" {
@@ -349,7 +338,7 @@ impl State {
                             }
                         }
                     } else {
-                        //remains unchanged
+                        // remains unchanged
                         new_obligations.push(mo.clone());
                     }
                 }

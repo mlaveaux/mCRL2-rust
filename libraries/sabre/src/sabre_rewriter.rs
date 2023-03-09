@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// A shared trait for all the rewriters
-trait RewriteEngine {
+pub trait RewriteEngine {
     /// Rewrites the given term into normal form.
     fn rewrite(&mut self, term: ATerm) -> ATerm;
 }
@@ -32,10 +32,10 @@ impl RewriteEngine for SabreRewriter {
 }
 
 impl SabreRewriter {
-    fn new(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> Self {
+    pub fn new(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp.clone(),
-            automaton: SetAutomaton::construct(tp.clone(), spec, false),
+            automaton: SetAutomaton::construct(&mut tp.borrow_mut(), spec),
         }
     }
 
@@ -45,12 +45,22 @@ impl SabreRewriter {
             rewrite_steps: 0,
             symbol_comparisons: 0,
         };
-        self.stack_based_normalise_aux(t, &mut stats)
+        SabreRewriter::stack_based_normalise_aux(
+            &mut self.term_pool.borrow_mut(),
+            &self.automaton,
+            t,
+            &mut stats,
+        )
     }
 
-    /// The _aux function splits the term pool and the states to make borrow checker happy.
+    /// The _aux function splits the [TermPool] pool and the [SetAutomaton] to make borrow checker happy.
     /// We can now mutate the term pool and read the state and transition information at the same time
-    fn stack_based_normalise_aux(&mut self, t: ATerm, stats: &mut RewritingStatistics) -> ATerm {
+    fn stack_based_normalise_aux(
+        tp: &mut TermPool,
+        automaton: &SetAutomaton,
+        t: ATerm,
+        stats: &mut RewritingStatistics,
+    ) -> ATerm {
         // We explore the configuration tree depth first using a ConfigurationStack
         let mut cl = ConfigurationStack::new(0, t.clone());
 
@@ -93,16 +103,13 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton
-                            let symbol = get_position(
-                                &leaf.subterm,
-                                &self.automaton.states[leaf.state].label,
-                            )
-                            .get_head_symbol();
+                            let function_symbol =
+                                get_position(&leaf.subterm, &automaton.states[leaf.state].label);
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
-                            // let tr = &states[leaf.state].transitions[symbol.operation_id()];
-                            let tr = &self.automaton.states[leaf.state].transitions[0];
+                            let tr = &automaton.states[leaf.state].transitions
+                                [function_symbol.operation_id()];
 
                             // Loop over the match announcements of the transition
                             for ema in &tr.announcements {
@@ -127,7 +134,8 @@ impl SabreRewriter {
                                     {
                                         // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
                                         SabreRewriter::apply_rewrite_rule(
-                                            &mut self.term_pool.borrow_mut(),
+                                            tp,
+                                            &automaton,
                                             ema,
                                             leaf.subterm.clone(),
                                             leaf_index,
@@ -145,17 +153,17 @@ impl SabreRewriter {
                                 }
                             }
                             if tr.destinations.is_empty() {
-                                //If there is no destination we are done matching and go back to the previous
-                                //configuration on the stack with information on the side stack.
-                                //Note, it could be that we stay at the same configuration and apply a rewrite
-                                //rule that was just discovered whilst exploring this configuration.
+                                // If there is no destination we are done matching and go back to the previous
+                                // configuration on the stack with information on the side stack.
+                                // Note, it could be that we stay at the same configuration and apply a rewrite
+                                // rule that was just discovered whilst exploring this configuration.
                                 let prev = cl.get_prev_with_side_info();
                                 cl.current_node = prev;
                                 if let Some(n) = prev {
-                                    cl.jump_back(n, &mut self.term_pool.borrow_mut());
+                                    cl.jump_back(n, tp);
                                 }
                             } else {
-                                //Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
+                                // Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
                                 let tr_slice = tr.destinations.as_slice();
                                 cl.grow(leaf_index, tr_slice);
                             }
@@ -169,7 +177,8 @@ impl SabreRewriter {
                                 SideInfoType::DelayedRewriteRule(ema) => {
                                     // apply the delayed rewrite rule
                                     SabreRewriter::apply_rewrite_rule(
-                                        &mut self.term_pool.borrow_mut(),
+                                        tp,
+                                        automaton,
                                         ema,
                                         leaf.subterm.clone(),
                                         leaf_index,
@@ -179,16 +188,19 @@ impl SabreRewriter {
                                 }
                                 SideInfoType::EquivalenceAndConditionCheck(ema) => {
                                     // Apply the delayed rewrite rule if the conditions hold
-                                    //if self.conditions_hold(ema, leaf, stats) {
-                                    SabreRewriter::apply_rewrite_rule(
-                                        &mut self.term_pool.borrow_mut(),
-                                        ema,
-                                        leaf.subterm.clone(),
-                                        leaf_index,
-                                        &mut cl,
-                                        stats,
-                                    );
-                                    //}
+                                    if SabreRewriter::conditions_hold(
+                                        tp, automaton, ema, leaf, stats,
+                                    ) {
+                                        SabreRewriter::apply_rewrite_rule(
+                                            tp,
+                                            automaton,
+                                            ema,
+                                            leaf.subterm.clone(),
+                                            leaf_index,
+                                            &mut cl,
+                                            stats,
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -199,7 +211,7 @@ impl SabreRewriter {
                 }
             }
         }
-        let final_term = cl.compute_final_term(&mut self.term_pool.borrow_mut());
+        let final_term = cl.compute_final_term(tp);
 
         return final_term;
     }
@@ -208,6 +220,7 @@ impl SabreRewriter {
     #[inline]
     fn apply_rewrite_rule(
         tp: &mut TermPool,
+        automaton: &SetAutomaton,
         ema: &EnhancedMatchAnnouncement,
         leaf_subterm: ATerm,
         leaf_index: usize,
@@ -217,41 +230,38 @@ impl SabreRewriter {
         stats.rewrite_steps += 1;
 
         // Computes the new subterm of the configuration
-        let new_subterm = {
-            let new_sub_subterm = ema
-                .semi_compressed_rhs
-                .evaluate(&get_position(&leaf_subterm, &ema.announcement.position), tp);
-            //self.term_pool.substitute(&leaf_subterm, new_sub_subterm, &ema.announcement.position.indices, ema.announcement.position.len())
-            leaf_subterm
-        };
+        let new_subterm = ema
+            .semi_compressed_rhs
+            .evaluate(&get_position(&leaf_subterm, &ema.announcement.position), tp);
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;
-        cl.prune(prune_point + 0, new_subterm);
+        cl.prune(tp, automaton, prune_point + 0, new_subterm);
     }
 
     /// Checks conditions and subterm equality of non-linear patterns.
     fn conditions_hold(
-        &mut self,
+        tp: &mut TermPool,
+        automaton: &SetAutomaton,
         ema: &EnhancedMatchAnnouncement,
         leaf: &Configuration,
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let rhs = c.semi_compressed_rhs.evaluate(
-                &get_position(&leaf.subterm, &ema.announcement.position),
-                &mut self.term_pool.borrow_mut(),
-            );
-            let lhs = c.semi_compressed_lhs.evaluate(
-                &get_position(&leaf.subterm, &ema.announcement.position),
-                &mut self.term_pool.borrow_mut(),
-            );
+            let rhs = c
+                .semi_compressed_rhs
+                .evaluate(&get_position(&leaf.subterm, &ema.announcement.position), tp);
+            let lhs = c
+                .semi_compressed_lhs
+                .evaluate(&get_position(&leaf.subterm, &ema.announcement.position), tp);
 
             if lhs == rhs && c.equality {
                 //do nothing
             } else {
-                let rhs_normal = self.stack_based_normalise_aux(rhs.clone(), stats);
-                let lhs_normal = self.stack_based_normalise_aux(lhs.clone(), stats);
+                let rhs_normal =
+                    SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs.clone(), stats);
+                let lhs_normal =
+                    SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs.clone(), stats);
 
                 if !(lhs_normal == rhs_normal && c.equality)
                     || (lhs_normal != rhs_normal && !c.equality)
