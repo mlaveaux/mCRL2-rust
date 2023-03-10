@@ -1,7 +1,7 @@
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::{collections::VecDeque};
 
 use ahash::HashMap;
-use mcrl2_rust::atermpp::{ATerm, Symbol, TermPool};
+use mcrl2_rust::atermpp::{ATerm, Symbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -38,7 +38,7 @@ impl SetAutomaton {
     /// Construct a set automaton. If 'apma' is true construct an APMA instead.
     /// An APMA is just a set automaton that does not partition the match goals on a transition
     /// and does not add fresh goals.
-    pub(crate) fn construct(tp: &mut TermPool, spec: RewriteSpecification) -> SetAutomaton {
+    pub(crate) fn construct(spec: RewriteSpecification) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
 
@@ -106,7 +106,7 @@ impl SetAutomaton {
                 // Associate an EnhancedMatchAnnouncement to every transition
                 let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
                     .into_iter()
-                    .map(|x| x.derive_redex(tp))
+                    .map(|x| x.derive_redex())
                     .collect();
 
                 announcements.sort_by(|ema1, ema2| {

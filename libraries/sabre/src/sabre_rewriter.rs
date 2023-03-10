@@ -35,7 +35,7 @@ impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp.clone(),
-            automaton: SetAutomaton::construct(&mut tp.borrow_mut(), spec),
+            automaton: SetAutomaton::construct(spec),
         }
     }
 

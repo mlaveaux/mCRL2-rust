@@ -5,7 +5,7 @@ use ahash::AHashSet;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification};
 use sabre::utilities::to_data_expression;
-use REC_tests::load_REC_from_strings;
+use rec_tests::load_REC_from_strings;
 
 #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
 #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
@@ -60,8 +60,8 @@ use REC_tests::load_REC_from_strings;
 fn rec_test(rec_files: Vec<&str>, expected_result: &str) 
 {
     // TODO: Enable these tests when the rewriter and spec conversion actually works.
-    /*let tp = Rc::new(RefCell::new(TermPool::new()));
-    let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
+    let tp = Rc::new(RefCell::new(TermPool::new()));
+    /*let (_spec, _terms): (RewriteSpecification, Vec<ATerm>) = { 
         let (syntax_spec, syntax_terms) = load_REC_from_strings(rec_files);
         (syntax_spec.to_rewrite_spec(&mut tp.borrow_mut()), syntax_terms.iter().map(|t| { 
             let term = t.to_term(&mut tp.borrow_mut());

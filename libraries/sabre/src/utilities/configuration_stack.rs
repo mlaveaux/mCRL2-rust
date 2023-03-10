@@ -217,7 +217,7 @@ impl<'a> ConfigurationStack<'a> {
 
     #[allow(dead_code)]
     //TODO: print side branch info
-    pub fn to_string(&self, tp: &TermPool) -> String {
+    pub fn to_string(&self) -> String {
         let mut result = "".to_string();
         result += &format!("Current node: {:?}\n", self.current_node);
         for (i, c) in self.configuration_stack.iter().enumerate() {

@@ -97,7 +97,7 @@ fn parse_REC(
 }
 
 /// Load a REC specification from a specified file.
-#[allow(non_snake_case)]
+#[allow(non_snake_case, dead_code)]
 pub fn load_REC_from_file(file: PathBuf) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) {
     let contents = fs::read_to_string(file.clone()).unwrap();
     parse_REC(&contents, Some(file))

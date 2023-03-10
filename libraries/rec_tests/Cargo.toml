@@ -1,5 +1,5 @@
 [package]
-name = "REC-tests"
+name = "rec-tests"
 version = "0.1.0"
 edition = "2021"
 

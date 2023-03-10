@@ -6,7 +6,6 @@ use crate::{
 };
 use ahash::{HashMap, HashMapExt};
 use mcrl2_rust::atermpp::ATerm;
-use mcrl2_rust::atermpp::TermPool;
 use smallvec::SmallVec;
 
 use super::MatchObligation;
@@ -73,7 +72,7 @@ pub struct EnhancedMatchAnnouncement {
 
 impl MatchAnnouncement {
     /// Derives the positions in a pattern with same variable (for non-linear patters)
-    pub fn derive_equivalence_classes(&self, tp: &TermPool) -> Vec<EquivalenceClass> {
+    pub fn derive_equivalence_classes(&self) -> Vec<EquivalenceClass> {
         // A queue is used to keep track of the positions we still need to visit in the pattern
         let mut queue = VecDeque::new();
         queue.push_back(ExplicitPosition::empty_pos()); //push the root position in the queue
@@ -109,7 +108,7 @@ impl MatchAnnouncement {
 
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
-    pub fn derive_redex(&self, tp: &TermPool) -> EnhancedMatchAnnouncement {
+    pub fn derive_redex(&self) -> EnhancedMatchAnnouncement {
         // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         // rhs of the rewrite rule and for lhs and rhs of each condition.
         // Also see the documentation of SemiCompressedTermTree
@@ -130,7 +129,7 @@ impl MatchAnnouncement {
 
         EnhancedMatchAnnouncement {
             announcement: self.clone(),
-            equivalence_classes: self.derive_equivalence_classes(tp),
+            equivalence_classes: self.derive_equivalence_classes(),
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,
