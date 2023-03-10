@@ -1,5 +1,6 @@
 use cxx::{Exception, UniquePtr};
 use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
+use std::collections::VecDeque;
 
 #[cxx::bridge(namespace = "atermpp")]
 pub mod ffi {
@@ -101,7 +102,7 @@ impl fmt::Display for Symbol {
 
 impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name())
+        write!(f, "{}:{} [{}]", self.name(), self.arity(), 0)
     }
 }
 
@@ -199,8 +200,14 @@ impl ATerm {
         }
     }
 
+    /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
         ffi::ffi_get_function_symbol_index(&self.term)
+    }
+
+    /// Returns an iterator over all arguments of the term.
+    pub fn iter(&self) -> TermIterator {
+        TermIterator::new(self.clone())
     }
 
     /// Returns true iff the term is not default.
@@ -220,7 +227,7 @@ impl fmt::Display for ATerm {
 
 impl fmt::Debug for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", ffi::print_aterm(&self.term))
+        write!(f, "{} [{}]", ffi::print_aterm(&self.term), ffi::aterm_pointer(&self.term))
     }
 }
 
@@ -332,4 +339,55 @@ impl TermVariable {
     }*/
 
     // We do not care about it's sort.
+}
+
+
+/// An iterator over all (term, position) pairs of the given [ATerm].
+pub struct TermIterator {
+    queue: VecDeque<ATerm>,
+}
+
+impl TermIterator {
+    pub fn new(t: ATerm) -> TermIterator {
+        TermIterator {
+            queue: VecDeque::from([t]),
+        }
+    }
+}
+
+impl Iterator for TermIterator {
+    type Item = ATerm;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.queue.is_empty() {
+            None
+        } else {
+            // Get a subterm to inspect
+            let term = self.queue.pop_front().unwrap();
+
+            // Put subterms in the queue
+            for argument in term.arguments().iter() {
+                self.queue.push_back(argument.clone());
+            }
+
+            Some(term)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_term_iterator() {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(g(a),b)").unwrap();
+
+        let mut result = t.iter();
+        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap());
+    }
 }
