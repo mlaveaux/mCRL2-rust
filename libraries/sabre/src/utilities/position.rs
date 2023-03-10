@@ -55,18 +55,15 @@ impl ExplicitPosition {
     }
 }
 
-fn get_position_rec<'a>(term: &'a ATerm, queue: &[usize]) -> ATerm {
-    if queue.is_empty() {
-        term.clone()
-    } else {
-        let arg = term.arg(queue[0] - 1); // Note that positions are 1 indexed.
-        get_position_rec(&arg, &queue[1..]).clone()
-    }
-}
-
 /// Returns the subterm at the specific position
 pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATerm {
-    get_position_rec(term, &position.indices)
+    let mut result = term.clone();
+
+    for index in &position.indices {
+        result = result.arg(index - 1); // Note that positions are 1 indexed.
+    }
+    
+    result
 }
 
 impl fmt::Display for ExplicitPosition {
@@ -126,9 +123,9 @@ mod tests {
     fn test_get_position() {
         let mut tp = TermPool::new();
         let t = tp.from_string("f(g(a),b)").unwrap();
-        let result = tp.from_string("a").unwrap();
+        let expected = tp.from_string("a").unwrap();
 
-        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), result);
+        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), expected);
     }
 
     #[test]
