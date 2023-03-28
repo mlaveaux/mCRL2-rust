@@ -25,7 +25,6 @@ inline void initialise()
 {
   // Enable debugging messages.
   mcrl2::log::mcrl2_logger::set_reporting_level(mcrl2::log::debug);
-  std::cout << "test output?" << std::endl;
 }
 
 inline std::unique_ptr<aterm> new_aterm()
