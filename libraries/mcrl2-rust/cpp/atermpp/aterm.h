@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "rust/cxx.h"
 
@@ -19,6 +20,13 @@ using namespace mcrl2::data;
 
 namespace atermpp
 {
+
+inline void initialise()
+{
+  // Enable debugging messages.
+  mcrl2::log::mcrl2_logger::set_reporting_level(mcrl2::log::debug);
+  std::cout << "test output?" << std::endl;
+}
 
 inline std::unique_ptr<aterm> new_aterm()
 {
@@ -140,6 +148,11 @@ bool ffi_is_function_symbol(const aterm& term)
 std::size_t ffi_get_function_symbol_index(const aterm& term)
 {
   return atermpp::detail::index_traits<mcrl2::data::function_symbol,function_symbol_key_type, 2>::index(static_cast<const mcrl2::data::function_symbol&>(term));
+}
+
+std::size_t function_symbol_address(const function_symbol& symbol)
+{
+  return symbol.get_address();
 }
 
 }

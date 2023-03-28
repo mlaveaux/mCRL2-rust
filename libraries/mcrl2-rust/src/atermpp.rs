@@ -1,4 +1,6 @@
 use cxx::{Exception, UniquePtr};
+use std::borrow::Borrow;
+use std::ptr;
 use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
 use std::collections::VecDeque;
 
@@ -15,6 +17,9 @@ pub mod ffi {
 
         type aterm;
         type function_symbol;
+
+        /// Initialises the library.
+        fn initialise();
 
         /// Creates a default term.
         fn new_aterm() -> UniquePtr<aterm>;
@@ -75,6 +80,8 @@ pub mod ffi {
         /// For data::function_symbol terms returns the internally known index.
         fn ffi_get_function_symbol_index(term: &aterm) -> usize;
 
+        fn function_symbol_address(symbol: &function_symbol) -> usize;
+
         //fn ffi_create_data_application()
     }
 }
@@ -102,7 +109,7 @@ impl fmt::Display for Symbol {
 
 impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{} [{}]", self.name(), self.arity(), 0)
+        write!(f, "{}:{} [{}]", self.name(), self.arity(), ffi::function_symbol_address(&self.function))
     }
 }
 
@@ -227,7 +234,11 @@ impl fmt::Display for ATerm {
 
 impl fmt::Debug for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} [{}]", ffi::print_aterm(&self.term), ffi::aterm_pointer(&self.term))
+        for term in self.iter() {
+            write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
+        }
+
+        Ok(())
     }
 }
 
@@ -282,6 +293,9 @@ pub struct TermPool {}
 
 impl TermPool {
     pub fn new() -> TermPool {
+        // Initialise the C++ aterm library.
+        ffi::initialise();
+
         TermPool {}
     }
 
