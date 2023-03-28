@@ -151,7 +151,7 @@ std::size_t ffi_get_function_symbol_index(const aterm& term)
 
 std::size_t function_symbol_address(const function_symbol& symbol)
 {
-  return symbol.get_address();
+  return reinterpret_cast<std::size_t>(&symbol.name());
 }
 
 }
