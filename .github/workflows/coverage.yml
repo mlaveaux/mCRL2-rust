@@ -1,0 +1,39 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Generate
+    strategy:
+      fail-fast: false
+      matrix:      
+        os: [ubuntu-20.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v1
+      id: cpu-cores
+
+    - name: Checkout the repository
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install nightly compiler
+       run: rustup component add llvm-tools-preview
+
+    - name: Install grcov
+       run: cargo install grcov
+
+    - name: Generating Code Coverage
+       run: cargo xtask coverage
+
