@@ -28,12 +28,12 @@ jobs:
       with:
         submodules: true
 
-    - name: Install nightly compiler
-       run: rustup component add llvm-tools-preview
+    - name: Install Rust Nightly
+      run: rustup component add llvm-tools-preview
 
     - name: Install grcov
-       run: cargo install grcov
+      run: cargo install grcov
 
     - name: Generating Code Coverage
-       run: cargo xtask coverage
+      run: cargo xtask coverage
 
