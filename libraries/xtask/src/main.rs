@@ -146,6 +146,7 @@ fn coverage() -> AnyResult<()> {
 fn sanitizer(cargo_arguments: Vec<String>) -> AnyResult<()> {
     let mut arguments: Vec<String> = vec![
         "test".to_string(),
+        "-Zbuild-std".to_string(),
         "--target".to_string(),
         "x86_64-unknown-linux-gnu".to_string(),
     ];
