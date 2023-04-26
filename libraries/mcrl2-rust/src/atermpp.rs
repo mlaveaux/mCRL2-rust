@@ -1,6 +1,4 @@
 use cxx::{Exception, UniquePtr};
-use std::borrow::Borrow;
-use std::ptr;
 use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
 use std::collections::VecDeque;
 
@@ -82,7 +80,16 @@ pub mod ffi {
 
         fn function_symbol_address(symbol: &function_symbol) -> usize;
 
-        //fn ffi_create_data_application()
+        /// For data::application
+        fn ffi_is_application(term: &aterm) -> bool;
+
+        fn ffi_create_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
+
+        /// For data::function_symbol        
+        fn ffi_is_data_function_symbol(term: &aterm) -> bool;
+
+        fn ffi_create_data_function_symbol(name: String, arity: usize) -> UniquePtr<aterm>;
+        
     }
 }
 
@@ -200,6 +207,16 @@ impl ATerm {
         ffi::ffi_is_variable(&self.term)
     }
 
+    pub fn is_application(&self) -> bool {
+        self.require_valid();
+        ffi::ffi_is_application(&self.term)
+    }
+
+    pub fn is_function_symbol(&self) -> bool {
+        self.require_valid();
+        ffi::ffi_is_data_function_symbol(&self.term)
+    }
+
     pub fn get_head_symbol(&self) -> Symbol {
         self.require_valid();
         Symbol {
@@ -209,6 +226,8 @@ impl ATerm {
 
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
+        self.require_valid();
+        assert!(self.is_function_symbol(), "this should actually be a function symbol");
         ffi::ffi_get_function_symbol_index(&self.term)
     }
 
@@ -288,6 +307,21 @@ impl From<TermVariable> for ATerm {
     }
 }
 
+impl From<TermApplication> for ATerm {
+    fn from(value: TermApplication) -> Self {
+        value.term
+    }
+}
+
+impl From<TermFunctionSymbol> for ATerm {
+    fn from(value: TermFunctionSymbol) -> Self {
+        value.term
+    }
+}
+
+
+
+
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
 pub struct TermPool {}
 
@@ -332,6 +366,25 @@ impl TermPool {
             term: ATerm::from(ffi::ffi_create_variable(String::from(name))),
         }
     }
+
+    pub fn create_application(&mut self, head: &ATerm, arguments: &[ATerm]) -> TermApplication
+    {
+        // TODO: This part of the ffi is very slow and should be improved.
+        let arguments: Vec<ffi::aterm_ref> = arguments
+            .iter()
+            .map(|x| ffi::aterm_ref {
+                index: ffi::aterm_pointer(x.get()),
+            })
+            .collect();
+
+        TermApplication { term: ATerm::from(ffi::ffi_create_application(head.get(), &arguments)) }
+    }
+
+    pub fn create_data_function_symbol(&mut self, name: &str, arity: usize) -> TermFunctionSymbol
+    {
+        TermFunctionSymbol { term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name), arity)) }
+    }
+
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -355,6 +408,29 @@ impl TermVariable {
     // We do not care about it's sort.
 }
 
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TermApplication {
+    term: ATerm,
+}
+
+impl From<ATerm> for TermApplication {
+    fn from(value: ATerm) -> Self {
+        assert!(value.is_application(), "The given term should be an application");
+        TermApplication { term: value }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TermFunctionSymbol {
+    term: ATerm,
+}
+
+impl From<ATerm> for TermFunctionSymbol {
+    fn from(value: ATerm) -> Self {
+        assert!(value.is_function_symbol(), "The given term should be a function symbol");
+        TermFunctionSymbol { term: value }
+    }
+}
 
 /// An iterator over all (term, position) pairs of the given [ATerm].
 pub struct TermIterator {

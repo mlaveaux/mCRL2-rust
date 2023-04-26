@@ -10,6 +10,7 @@
 #include "mcrl2/atermpp/aterm_io_text.h"
 #include "mcrl2/atermpp/detail/aterm_hash.h"
 
+#include "mcrl2/data/application.h"
 #include "mcrl2/data/data_expression.h"
 #include "mcrl2/data/parse.h"
 #include "mcrl2/data/function_symbol.h"
@@ -139,7 +140,7 @@ std::unique_ptr<function_symbol> create_function_symbol(rust::String name, std::
   return std::make_unique<function_symbol>(static_cast<std::string>(name), arity);
 }
 
-bool ffi_is_function_symbol(const aterm& term)
+bool ffi_is_data_function_symbol(const aterm& term)
 {
   return mcrl2::data::is_function_symbol(static_cast<const aterm_appl&>(term));
 }
@@ -154,4 +155,27 @@ std::size_t function_symbol_address(const function_symbol& symbol)
   return reinterpret_cast<std::size_t>(&symbol.name());
 }
 
+bool ffi_is_application(const aterm& term)
+{
+  return mcrl2::data::is_application(static_cast<const aterm_appl&>(term));
 }
+
+std::unique_ptr<aterm> ffi_create_application(const aterm& head, rust::Slice<const aterm_ref> arguments)
+{
+  // TODO: This is some truly horrendous code that must be removed asap.
+  std::vector<data_expression> converted_arguments;
+  for (const aterm_ref& argument : arguments)
+  {
+    converted_arguments.push_back(data_expression(aterm(reinterpret_cast<detail::_aterm*>(argument.index))));
+  }
+
+  return std::make_unique<mcrl2::data::application>(static_cast<const data_expression&>(head), converted_arguments.begin(), converted_arguments.end());
+}
+
+std::unique_ptr<aterm> ffi_create_data_function_symbol(rust::String name, std::size_t arity)
+{
+  return std::make_unique<mcrl2::data::function_symbol>(static_cast<std::string>(name), untyped_sort());
+}
+
+
+} // namespace atermpp

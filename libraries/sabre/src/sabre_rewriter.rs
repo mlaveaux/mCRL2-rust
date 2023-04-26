@@ -102,9 +102,16 @@ impl SabreRewriter {
                         leaf_index,
                     ) {
                         None => {
-                            // Observe a symbol according to the state label of the set automaton
-                            let function_symbol =
-                                get_position(&leaf.subterm, &automaton.states[leaf.state].label);
+                            // Observe a symbol according to the state label of the set automaton. 
+                            let function_symbol = {
+                                // If this is an application it is the first argument, otherwise it's the term itself
+                                let term = get_position(&leaf.subterm, &automaton.states[leaf.state].label);
+                                if term.is_application() {
+                                    term.arg(0)
+                                } else {
+                                    term
+                                }
+                            };
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
