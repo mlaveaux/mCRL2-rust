@@ -155,7 +155,7 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<TermVariable, ExplicitPositio
 
 #[cfg(test)]
 mod tests {
-    use crate::utilities::to_data_expression;
+    use crate::utilities::{to_data_expression, apply};
 
     use super::*;
     use ahash::AHashSet;
@@ -167,6 +167,18 @@ mod tests {
     ///     make_var_map(["x"])
     fn var_map(vars: &[&str]) -> AHashSet<String> {
         AHashSet::from_iter(vars.iter().map(|x| String::from(*x) ))
+    }
+    
+    /// Convert terms in variables to a [TermVariable].
+    pub fn tag_variables(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
+        apply(tp, t, &|tp, arg| {
+            if variables.contains(arg.get_head_symbol().name()) {
+                // Convert a constant variable, for example 'x', into an untyped variable.
+                Some(tp.create_variable(&arg.get_head_symbol().name()).into())
+            } else {
+                None
+            }
+        })
     }
 
     #[test]
@@ -196,7 +208,7 @@ mod tests {
             let tmp = tp
                 .from_string("f(x,x)")
                 .unwrap();
-            to_data_expression(&mut tp, &tmp, &var_map(&["x"]))
+            tag_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
 
         let mut map = HashMap::new();
@@ -220,7 +232,7 @@ mod tests {
         let mut tp = TermPool::new();
         let t = {
             let tmp = tp.from_string("f(f(a,a),x)").unwrap();
-            to_data_expression(&mut tp, &tmp, &var_map(&["x"]))
+            tag_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
         let compressible = tp.from_string("f(a,a)").unwrap();
 
@@ -239,13 +251,12 @@ mod tests {
         assert_eq!(sctt, en);
     }
 
-    // This test does not work yet since aterm_appl(f, [args]) doesn't work.
     #[test]
     fn test_evaluation() {
         let mut tp = TermPool::new();
         let t_rhs = {
             let tmp = tp.from_string("f(f(a,a),x)").unwrap();
-            to_data_expression(&mut tp, &tmp, &var_map(&["x"]))
+            tag_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
         let t_lhs = tp.from_string("g(b)").unwrap();
 
@@ -259,13 +270,12 @@ mod tests {
         assert_eq!(sctt.evaluate(&t_lhs, &mut tp), t_expected);
     }
 
-    // This test does not work yet since create_var_map relies on Variable(x) to be present.
     #[test]
     fn test_create_varmap() {
         let mut tp = TermPool::new();
         let t =  {
             let tmp = tp.from_string("f(x,x)").unwrap();
-            to_data_expression(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
+            tag_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
         };
         let x = tp.create_variable("x");
 

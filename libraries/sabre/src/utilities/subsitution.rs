@@ -1,4 +1,4 @@
-use ahash::HashSet;
+use ahash::AHashSet;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 
 /// Creates a new term where a subterm is replaced with another term.
@@ -66,7 +66,7 @@ where
 }
 
 /// Converts an [ATerm] to an untyped data expression.
-pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &HashSet<String>) -> ATerm {
+pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
     apply(tp, t, &|tp, arg| {
         if variables.contains(arg.get_head_symbol().name()) {
             // Convert a constant variable, for example 'x', into an untyped variable.
