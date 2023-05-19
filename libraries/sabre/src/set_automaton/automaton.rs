@@ -1,7 +1,7 @@
 use std::{collections::VecDeque};
 
 use ahash::HashMap;
-use mcrl2_rust::atermpp::{ATerm, Symbol};
+use mcrl2_rust::atermpp::{ATerm, Symbol, TermFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -18,7 +18,7 @@ pub struct SetAutomaton {
 
 #[derive(Debug, Clone)]
 pub struct Transition {
-    pub(crate) symbol: Symbol,
+    pub(crate) symbol: TermFunctionSymbol,
     pub(crate) announcements: SmallVec<[EnhancedMatchAnnouncement; 1]>,
     pub(crate) destinations: SmallVec<[(ExplicitPosition, usize); 1]>,
 }
@@ -29,15 +29,13 @@ pub(crate) struct MatchObligation {
     pub position: ExplicitPosition,
 }
 
+#[derive(Debug)]
 enum GoalsOrInitial {
     InitialState,
     Goals(Vec<MatchGoal>),
 }
 
 impl SetAutomaton {
-    /// Construct a set automaton. If 'apma' is true construct an APMA instead.
-    /// An APMA is just a set automaton that does not partition the match goals on a transition
-    /// and does not add fresh goals.
     pub(crate) fn construct(spec: RewriteSpecification) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
@@ -85,7 +83,7 @@ impl SetAutomaton {
             // Pick a state to explore
             let s_index = queue.pop_front().unwrap();
 
-            // Compute the transitions from the state in parallel using rayon
+            // Compute the transitions from the states
             let transitions_per_symbol: Vec<_> = spec
                 .symbols
                 .iter()
@@ -94,12 +92,15 @@ impl SetAutomaton {
                         s.clone(),
                         states.get(s_index).unwrap().derive_transition(
                             s.clone(),
+                            1,
                             &spec.rewrite_rules,
                             false,
                         ),
                     )
                 })
                 .collect();
+
+            println!("{:?}", &transitions_per_symbol);
 
             // Loop over all the possible symbols and the associated hypertransition
             for (symbol, (outputs, destinations)) in transitions_per_symbol {
@@ -183,7 +184,8 @@ impl State {
     /// Parameter symbol is the symbol for which the transition is computed
     fn derive_transition(
         &self,
-        symbol: Symbol,
+        symbol: TermFunctionSymbol,
+        arity: usize,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
     ) -> (
@@ -229,9 +231,9 @@ impl State {
                 destinations.push((gcp, GoalsOrInitial::Goals(goals)));
             }
 
-            //Handle fresh match goals, they are the positions Label(state).i
-            //where i is between 1 and the arity of the function symbol of the transition
-            for i in 1..symbol.arity() + 1 {
+            // Handle fresh match goals, they are the positions Label(state).i
+            // where i is between 1 and the arity of the function symbol of the transition
+            for i in 1..arity + 1 {
                 let mut pos = self.label.clone();
                 pos.indices.push(i);
 
@@ -281,19 +283,22 @@ impl State {
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: &Symbol) -> Derivative {
+    fn compute_derivative(&self, symbol: &TermFunctionSymbol) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
             reduced: vec![],
         };
 
+        // For DataAppl the first argument is the function symbol (make this explicit).
+        let term_symbol = <TermFunctionSymbol as Into<ATerm>>::into(symbol.clone());
+
         for mg in &self.match_goals {
             // Completed match goals
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && mo.pattern.get_head_symbol() == *symbol
+                        && mo.pattern.arg(0) == term_symbol
                         && mo.pattern.arguments().iter().all(|x| !x.is_variable())
                 })
             {
@@ -301,7 +306,7 @@ impl State {
             } else if mg
                 .obligations
                 .iter()
-                .any(|mo| mo.position == self.label && mo.pattern.get_head_symbol() != *symbol)
+                .any(|mo| mo.position == self.label && mo.pattern.arg(0) != term_symbol)
             {
                 // discard
             } else if !mg.obligations.iter().any(|mo| mo.position == self.label) {
@@ -314,17 +319,17 @@ impl State {
             } else if mg
                 .obligations
                 .iter()
-                .any(|mo| mo.position == self.label && mo.pattern.get_head_symbol() == *symbol)
+                .any(|mo| mo.position == self.label && mo.pattern.arg(0) == term_symbol)
             {
                 // Reduced match obligations
                 let mut mg = mg.clone();
                 let mut new_obligations = vec![];
                 for mo in mg.obligations {
-                    if mo.pattern.get_head_symbol() == *symbol && mo.position == self.label {
+                    if mo.pattern.arg(0) == term_symbol && mo.position == self.label {
                         // reduce
                         let mut index = 1;
                         for t in mo.pattern.arguments() {
-                            if t.get_head_symbol().name() != "ω" {
+                            if t.arg(0).arg(0).get_head_symbol().name() != "ω" {
                                 if t.is_variable() {
                                     let mut new_pos = mo.position.clone();
                                     new_pos.indices.push(index);

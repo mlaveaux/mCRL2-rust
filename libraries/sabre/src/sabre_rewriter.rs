@@ -114,6 +114,8 @@ impl SabreRewriter {
                             };
                             stats.symbol_comparisons += 1;
 
+                            println!("{:?}", function_symbol);
+
                             // Get the transition belonging to the observed symbol
                             let tr = &automaton.states[leaf.state].transitions
                                 [function_symbol.operation_id()];
