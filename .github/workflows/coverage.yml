@@ -28,8 +28,8 @@ jobs:
       with:
         submodules: true
 
-    - name: Install Rust Nightly
-      run: rustup component add llvm-tools-preview
+    - name: Install Nightly Rust
+       run: rustup component add llvm-tools-preview
 
     - name: Install grcov
       run: cargo install grcov
