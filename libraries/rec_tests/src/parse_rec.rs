@@ -41,7 +41,7 @@ fn parse_REC(
             let _sorts = inner.next().unwrap();
             let cons = inner.next().unwrap();
             let opns = inner.next().unwrap();
-            let _vars = inner.next().unwrap();
+            let vars = inner.next().unwrap();
             let rules = inner.next().unwrap();
             let eval = inner.next().unwrap();
             let (_name, include_files) = parse_header(header);
@@ -63,9 +63,9 @@ fn parse_REC(
                     rewrite_spec
                         .rewrite_rules
                         .extend_from_slice(&include_spec.rewrite_rules);
-                    for s in include_spec.symbols {
-                        if !rewrite_spec.symbols.contains(&s) {
-                            rewrite_spec.symbols.push(s);
+                    for s in include_spec.variables {
+                        if !rewrite_spec.variables.contains(&s) {
+                            rewrite_spec.variables.push(s);
                         }
                     }
                 }
@@ -79,13 +79,10 @@ fn parse_REC(
                 terms.extend_from_slice(&parse_eval(eval));
             }
 
+            rewrite_spec.variables = parse_variables(vars);
+
             rewrite_spec.arity_per_symbol.extend(arity_per_symbol_cons);
             rewrite_spec.arity_per_symbol.extend(arity_per_symbol_opns);
-            for (symbol, _) in &rewrite_spec.arity_per_symbol {
-                if !rewrite_spec.symbols.contains(&symbol) {
-                    rewrite_spec.symbols.push(symbol.clone());
-                }
-            }
         }
         Err(e) => {
             // TODO: Panic when a parse error occurs. Should probably return an error.
@@ -122,9 +119,9 @@ pub fn load_REC_from_strings(
             .rewrite_rules
             .extend_from_slice(&include_spec.rewrite_rules);
 
-        for s in include_spec.symbols {
-            if !rewrite_spec.symbols.contains(&s) {
-                rewrite_spec.symbols.push(s);
+        for s in include_spec.variables {
+            if !rewrite_spec.variables.contains(&s) {
+                rewrite_spec.variables.push(s);
             }
         }
     }
@@ -185,6 +182,21 @@ fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> {
         rules.push(rule);
     }
     rules
+}
+
+// Extracts data from the variable VARS block. Types are ignored.
+fn parse_variables(pair: Pair<Rule>) -> Vec<String> {
+    assert_eq!(pair.as_rule(), Rule::vars);
+
+    let mut variables = vec![];
+    let inner = pair.into_inner();
+    for v in inner {
+        assert_eq!(v.as_rule(), Rule::var_decl);
+
+        variables.push(String::from(v.into_inner().as_str()));
+    }
+
+    variables
 }
 
 /// Extracts data from parsed EVAL section, returns a list of terms that need to be rewritten.

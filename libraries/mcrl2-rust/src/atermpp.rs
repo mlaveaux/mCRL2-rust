@@ -116,7 +116,11 @@ impl fmt::Display for Symbol {
 
 impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{} [{}]", self.name(), self.arity(), ffi::function_symbol_address(&self.function))
+        if true {
+            write!(f, "{}", self.name())
+        } else {
+            write!(f, "{}:{} [{}]", self.name(), self.arity(), ffi::function_symbol_address(&self.function))
+        }
     }
 }
 
@@ -247,14 +251,21 @@ impl ATerm {
 
 impl fmt::Display for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.require_valid();
         write!(f, "{}", ffi::print_aterm(&self.term))
     }
 }
 
 impl fmt::Debug for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for term in self.iter() {
-            write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
+        self.require_valid();
+        
+        if true {            
+            write!(f, "{}", ffi::print_aterm(&self.term))?;
+        } else {
+            for term in self.iter() {   
+                write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
+            }
         }
 
         Ok(())
@@ -423,6 +434,17 @@ impl From<ATerm> for TermApplication {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TermFunctionSymbol {
     term: ATerm,
+}
+
+impl TermFunctionSymbol
+{
+    pub fn new() -> TermFunctionSymbol {
+        TermFunctionSymbol { term: ATerm::new() }
+    }
+
+    pub fn name(&self) -> String {
+        String::from(self.term.arg(0).get_head_symbol().name())
+    }
 }
 
 impl From<ATerm> for TermFunctionSymbol {
