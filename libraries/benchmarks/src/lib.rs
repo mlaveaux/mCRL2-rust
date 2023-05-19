@@ -10,7 +10,7 @@ pub fn load_case(name: &str, max_number_expressions: usize) -> (DataSpecificatio
     let path_expressions = String::from(name) + ".expressions";
 
     // Read the data specification
-    let data_spec_text = fs::read_to_string(&path).expect("failed to read file");
+    let data_spec_text = fs::read_to_string(path).expect("failed to read file");
     let data_spec = DataSpecification::new(&data_spec_text);
 
     // Open the file in read-only mode.

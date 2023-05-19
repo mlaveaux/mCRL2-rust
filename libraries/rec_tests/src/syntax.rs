@@ -93,15 +93,15 @@ impl RewriteSpecificationSyntax {
 
 impl fmt::Display for RewriteSpecificationSyntax {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Symbols: \n")?;
+        writeln!(f, "Symbols: ")?;
         for (symbol, arity) in &self.arity_per_symbol {
-            write!(f, "{}: {}\n", symbol, arity)?;
+            writeln!(f, "{}: {}", symbol, arity)?;
         }
-        write!(f, "Rewrite rules: \n")?;
+        writeln!(f, "Rewrite rules: ")?;
         for rule in &self.rewrite_rules {
-            write!(f, "{}\n", rule)?;
+            writeln!(f, "{}", rule)?;
         }
-        write!(f, "\n")
+        writeln!(f)
     }
 }
 
@@ -120,7 +120,7 @@ impl TermSyntaxTree {
         let mut sub_term = self;
 
         for x in &p.indices {
-            sub_term = sub_term.sub_terms.get(*x as usize - 1).unwrap();
+            sub_term = sub_term.sub_terms.get(*x - 1).unwrap();
         }
 
         sub_term

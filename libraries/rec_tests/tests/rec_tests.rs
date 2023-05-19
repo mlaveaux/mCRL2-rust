@@ -69,7 +69,7 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str)
     };
 
     // Test Sabre rewriter
-    let mut sa = SabreRewriter::new(tp.clone(), spec.clone());
+    let mut sa = SabreRewriter::new(tp, spec);
 
     let mut expected = expected_result.split("\n\r");
 

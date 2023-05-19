@@ -227,7 +227,7 @@ fn parse_term(pair: Pair<Rule>) -> TermSyntaxTree {
     match pair.as_rule() {
         Rule::term => {
             let mut inner = pair.into_inner();
-            let head_symbol = inner.next().unwrap().as_str().to_string().replace(" ", "");
+            let head_symbol = inner.next().unwrap().as_str().to_string().replace(' ', "");
             let mut sub_terms = vec![];
             if let Some(args) = inner.next() {
                 for arg in args.into_inner() {
