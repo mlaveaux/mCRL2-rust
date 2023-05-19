@@ -61,7 +61,7 @@ impl SemiCompressedTermTree {
                 tp.create(&node.head, &subterms)
             }
             Compressed(ct) => ct.clone(),
-            Variable(p) => get_position(&lhs, &p).clone(),
+            Variable(p) => get_position(&lhs, &p),
         }
     }
 
@@ -74,7 +74,7 @@ impl SemiCompressedTermTree {
         if t.is_variable() {
             Variable(
                 var_map
-                    .get(&t.clone().into())
+                    .get(&t.into())
                     .expect("var_map must contain all variables")
                     .clone(),
             )
@@ -133,11 +133,7 @@ impl SemiCompressedTermTree {
 
     /// Returns true iff this tree is compressed.
     fn is_compressed(&self) -> bool {
-        if let Compressed(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Compressed(_))
     }
 }
 
@@ -155,7 +151,7 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<TermVariable, ExplicitPositio
 
 #[cfg(test)]
 mod tests {
-    use crate::utilities::{to_data_expression, apply};
+    use crate::utilities::apply;
 
     use super::*;
     use ahash::AHashSet;

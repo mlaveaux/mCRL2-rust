@@ -96,8 +96,8 @@ impl<'a> ConfigurationStack<'a> {
         // Create a new configuration and push it onto the stack
         let new_leaf = Configuration {
             state: *des,
-            subterm: get_position(&leaf.subterm, pos).clone(),
-            position: Some(&pos),
+            subterm: get_position(&leaf.subterm, pos),
+            position: Some(pos),
         };
         self.configuration_stack.push(new_leaf);
         self.current_node = Some(c + 1);
@@ -201,11 +201,7 @@ impl<'a> ConfigurationStack<'a> {
         let should_pop = match stack.last() {
             None => false,
             Some(si) => {
-                if si.corresponding_configuration == leaf_index {
-                    true
-                } else {
-                    false
-                }
+                si.corresponding_configuration == leaf_index
             }
         };
         if should_pop {

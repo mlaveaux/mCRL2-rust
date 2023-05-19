@@ -70,7 +70,7 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
     apply(tp, t, &|tp, arg| {
         if variables.contains(arg.get_head_symbol().name()) {
             // Convert a constant variable, for example 'x', into an untyped variable.
-            Some(tp.create_variable(&arg.get_head_symbol().name()).into())
+            Some(tp.create_variable(arg.get_head_symbol().name()).into())
         } else if t.get_head_symbol().arity() == 0 {
             Some(tp.create_data_function_symbol(t.get_head_symbol().name(), 0).into())
         } else {
