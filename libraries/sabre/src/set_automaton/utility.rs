@@ -28,7 +28,7 @@ pub struct EquivalenceClass {
 }
 
 impl EquivalenceClass {
-    pub fn equivalences_hold(term: &ATerm, eqs: &Vec<EquivalenceClass>) -> bool {
+    pub fn equivalences_hold(term: &ATerm, eqs: &[EquivalenceClass]) -> bool {
         eqs.iter().all(|ec| {
             ec.positions.len() < 2 || {
                 let mut iter_pos = ec.positions.iter();
@@ -245,7 +245,7 @@ impl MatchGoal {
         let mut partitions = vec![];
 
         //If one of the goals has a root position all goals are related.
-        if goals.iter().any(|g| g.announcement.position.len() == 0) {
+        if goals.iter().any(|g| g.announcement.position.is_empty()) {
             let mut all_positions = Vec::new();
             for g in &goals {
                 if !all_positions.contains(&g.announcement.position) {
@@ -284,7 +284,7 @@ impl MatchGoal {
             let mut goals_in_partition = vec![];
 
             // put the goals with position p in the partition
-            let g = position_to_goals.get(&p).unwrap();
+            let g = position_to_goals.get(p).unwrap();
             for i in g {
                 goals_in_partition.push(goals[*i].clone());
             }

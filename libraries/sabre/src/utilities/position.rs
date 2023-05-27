@@ -28,35 +28,37 @@ impl ExplicitPosition {
         }
     }
 
-    #[inline(always)]
     pub fn len(&self) -> usize {
         self.indices.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.indices.len() == 0
+    }
+
 }
 
-impl ExplicitPosition {
-    /// Converts a position to a string for pretty printing
-    pub fn to_string(&self) -> String {
-        if self.indices.is_empty() {
-            "ε".to_string()
-        } else {
-            let mut s = "".to_string();
-            let mut first = true;
-            for p in &self.indices {
-                if first {
-                    s = s + &*p.to_string();
-                    first = false;
-                } else {
-                    s = s + "." + &*p.to_string();
-                }
+/// Converts a position to a string for pretty printing
+fn to_string(position: &ExplicitPosition) -> String {
+    if position.indices.is_empty() {
+        "ε".to_string()
+    } else {
+        let mut s = "".to_string();
+        let mut first = true;
+        for p in &position.indices {
+            if first {
+                s += &*p.to_string();
+                first = false;
+            } else {
+                s = s + "." + &*p.to_string();
             }
-            s
         }
+        s
     }
 }
 
 /// Returns the subterm at the specific position
-pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATerm {
+pub fn get_position(term: &ATerm, position: &ExplicitPosition) -> ATerm {
     let mut result = term.clone();
 
     for index in &position.indices {
@@ -68,13 +70,13 @@ pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATerm {
 
 impl fmt::Display for ExplicitPosition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", to_string(self))
     }
 }
 
 impl fmt::Debug for ExplicitPosition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", to_string(self))
     }
 }
 
@@ -121,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_get_position() {
-        let mut tp = TermPool::new();
+        let mut tp = TermPool::initialise();
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
@@ -130,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_position_iterator() {
-        let mut tp = TermPool::new();
+        let mut tp = TermPool::initialise();
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         for (term, pos) in PositionIterator::new(t.clone()) {

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
@@ -71,10 +73,7 @@ impl<'a> ConfigurationStack<'a> {
 
     /// Returns the lowest configuration in the tree with SideInfo
     pub(crate) fn get_prev_with_side_info(&self) -> Option<usize> {
-        match self.side_branch_stack.last() {
-            None => None,
-            Some(si) => Some(si.corresponding_configuration),
-        }
+        self.side_branch_stack.last().map(|si| si.corresponding_configuration)
     }
 
     /// Grow a Configuration with index c. tr_slice contains the hypertransition to possibly multiple states
@@ -210,19 +209,20 @@ impl<'a> ConfigurationStack<'a> {
             None
         }
     }
+}
 
-    #[allow(dead_code)]
-    //TODO: print side branch info
-    pub fn to_string(&self) -> String {
-        let mut result = "".to_string();
-        result += &format!("Current node: {:?}\n", self.current_node);
+impl<'a> fmt::Display for ConfigurationStack<'a>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: print side branch info
+        writeln!(f, "Current node: {:?}", self.current_node)?;
         for (i, c) in self.configuration_stack.iter().enumerate() {
-            result += &format!("Configuration {} {{\n", i);
-            result += &format!("    State: {:?}\n", c.state);
-            //result += &format!("    Position: {}\n", c.position.to_string());
-            result += &format!("    Subterm: {}\n", &c.subterm);
-            /*result += &format!("    Previous with side branch: {:?}\n", c.prev_with_side_branch);
-            result += "    Side branches: ";
+            writeln!(f, "Configuration {} {{", i)?;
+            writeln!(f, "    State: {:?}", c.state)?;
+            //writeln!(f, "    Position: {}", c.position.to_string());
+            writeln!(f, "    Subterm: {}", &c.subterm)?;
+            /*writeln(f, "    Previous with side branch: {:?}", c.prev_with_side_branch);
+            writeln!(f, "    Side branches: ");
             match c.side_branches {
                 None => {result += "None\n";}
                 Some(sb) => {
@@ -235,6 +235,6 @@ impl<'a> ConfigurationStack<'a> {
             }
             result += "}\n";*/
         }
-        result
+        Ok(())
     }
 }

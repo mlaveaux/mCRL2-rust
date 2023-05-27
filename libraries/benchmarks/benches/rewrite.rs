@@ -11,7 +11,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     // Create a jitty rewriter;
     let mut jitty_rewriter = JittyRewriter::new(&data_spec);
 
-    let _term_pool = Rc::new(RefCell::new(TermPool::new()));
+    let _term_pool = Rc::new(RefCell::new(TermPool::initialise()));
     //let sabre_rewriter = SabreRewriter::new(term_pool, );
 
     c.bench_function("add16", |bencher| {

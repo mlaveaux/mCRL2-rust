@@ -9,7 +9,7 @@ use super::Transition;
 
 impl fmt::Debug for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self)
     }
 }
 
@@ -27,7 +27,7 @@ impl fmt::Display for Transition {
 
         write!(f, "] Destinations: [")?;
         for (pos, s) in &self.destinations {
-            write!(f, "({},{})  ", pos.to_string(), s)?;
+            write!(f, "({},{})  ", pos, s)?;
         }
         write!(f, "]}}")
     }
@@ -40,7 +40,7 @@ impl fmt::Display for EnhancedMatchAnnouncement {
             f,
             "{}@{}, [",
             &self.announcement.rule.lhs,
-            self.announcement.position.to_string()
+            self.announcement.position
         )?;
 
         for ec in &self.equivalence_classes {
@@ -48,10 +48,10 @@ impl fmt::Display for EnhancedMatchAnnouncement {
             let mut first = true;
             for p in &ec.positions {
                 if first {
-                    write!(f, "{}", p.to_string())?;
+                    write!(f, "{}", p)?;
                     first = false;
                 } else {
-                    write!(f, ",{}", p.to_string())?;
+                    write!(f, ",{}", p)?;
                 }
             }
             write!(f, "}} ")?;
@@ -72,33 +72,34 @@ impl fmt::Display for EnhancedMatchAnnouncement {
 /// Implement display for a state with a term pool
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
+        writeln!(
             f,
-            "State {{Label: {}, \n Transitions: [",
-            self.label.to_string()
+            "State {{Label: {}, ",
+            self.label
         )?;
+        writeln!(f, "Transitions: [")?;
         for t in &self.transitions {
-            write!(f, "{}\n", t)?;
+            writeln!(f, "{}", t)?;
         }
-        write!(f, "],\n Match goals: [\n")?;
+        writeln!(f, "],\n Match goals: [")?;
         for m in &self.match_goals {
             write!(f, "\t Obligations:")?;
             for mo in &m.obligations {
-                write!(f, "{}@{}  ", &mo.pattern, mo.position.to_string())?;
+                write!(f, "{}@{}  ", &mo.pattern, mo.position)?;
             }
 
             write!(
                 f,
                 "Announcement: {}@{}, ",
                 &m.announcement.rule.lhs,
-                m.announcement.position.to_string()
+                m.announcement.position
             )?;
             write!(f, "Conditions: ")?;
             for c in &m.announcement.rule.conditions {
                 let comparison_symbol = if c.equality { "==" } else { "<>" };
                 write!(f, "{} {} {}", &c.lhs, comparison_symbol, &c.rhs)?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
         write!(f, "]}}")
     }
@@ -106,14 +107,11 @@ impl fmt::Display for State {
 
 impl fmt::Display for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "States: {{\n")?;
-
-        let mut state_index = 0;
-        for s in &self.states {
-            write!(f, "State {}: {} \n", state_index, s)?;
-            state_index += 1;
+        writeln!(f, "States: {{")?;
+        for (state_index, s) in self.states.iter().enumerate() {
+            writeln!(f, "State {}: {}", state_index, s)?;
         }
-        write!(f, "}}\n")
+        writeln!(f, "}}")
     }
 }
 
@@ -148,7 +146,7 @@ impl SetAutomaton {
                 "  s{}[shape=record label=\"{{{{s{} | {}}} | {}}}\"]",
                 i,
                 i,
-                s.label.to_string(),
+                s.label,
                 match_goals
             )
             .unwrap();
@@ -186,7 +184,7 @@ impl SetAutomaton {
                             i,
                             symbol,
                             des,
-                            pos.to_string()
+                            pos
                         )
                         .unwrap();
                     }

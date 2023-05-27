@@ -10,7 +10,7 @@ use sabre::{
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
 /// Parsing a REC file results in a RewriteSpecificationSyntax.
-#[derive(Debug, Clone)]
+#[derive(Clone, Default, Debug)]
 pub struct RewriteSpecificationSyntax {
     pub rewrite_rules: Vec<RewriteRuleSyntax>,
     pub variables: Vec<String>,
@@ -18,13 +18,6 @@ pub struct RewriteSpecificationSyntax {
 }
 
 impl RewriteSpecificationSyntax {
-    pub fn new() -> Self {
-        RewriteSpecificationSyntax {
-            rewrite_rules: vec![],
-            variables: vec![],
-            arity_per_symbol: HashMap::default(),
-        }
-    }
 
     pub fn to_rewrite_spec(&self, tp: &mut TermPool) -> RewriteSpecification {
         println!("specification: {}", self);
@@ -76,7 +69,7 @@ impl RewriteSpecificationSyntax {
             for subterm in iter {
                 if subterm.is_function_symbol() {
                     let index = subterm.operation_id();
-                    symbols.resize(index + 1, TermFunctionSymbol::new());
+                    symbols.resize(index + 1, TermFunctionSymbol::default());
                     symbols[index] = subterm.into();
                 }
             }

@@ -28,7 +28,7 @@ fn parse_REC(
     path: Option<PathBuf>,
 ) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) {
     // Initialise return result
-    let mut rewrite_spec = RewriteSpecificationSyntax::new();
+    let mut rewrite_spec = RewriteSpecificationSyntax::default();
     let mut terms = vec![];
 
     // Use Pest parser (generated automatically from the grammar.pest file)
@@ -105,7 +105,7 @@ pub fn load_REC_from_file(file: PathBuf) -> (RewriteSpecificationSyntax, Vec<Ter
 pub fn load_REC_from_strings(
     specs: Vec<&str>,
 ) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) {
-    let mut rewrite_spec = RewriteSpecificationSyntax::new();
+    let mut rewrite_spec = RewriteSpecificationSyntax::default();
     let mut terms = vec![];
 
     for spec in specs {

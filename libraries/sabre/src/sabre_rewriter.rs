@@ -34,7 +34,7 @@ impl RewriteEngine for SabreRewriter {
 impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> Self {
         SabreRewriter {
-            term_pool: tp.clone(),
+            term_pool: tp,
             automaton: SetAutomaton::construct(spec),
         }
     }
@@ -62,7 +62,7 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> ATerm {
         // We explore the configuration tree depth first using a ConfigurationStack
-        let mut cl = ConfigurationStack::new(0, t.clone());
+        let mut cl = ConfigurationStack::new(0, t);
 
         // Big loop until we know we have a normal form
         'outer: loop {
@@ -129,36 +129,34 @@ impl SabreRewriter {
                                     {
                                         cl.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
-                                            info: SideInfoType::DelayedRewriteRule(&ema),
+                                            info: SideInfoType::DelayedRewriteRule(ema),
                                         });
                                     } else {
                                         cl.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
-                                            info: SideInfoType::EquivalenceAndConditionCheck(&ema),
+                                            info: SideInfoType::EquivalenceAndConditionCheck(ema),
                                         });
                                     }
-                                } else {
-                                    if ema.conditions.is_empty()
+                                } else if ema.conditions.is_empty()
                                         && ema.equivalence_classes.is_empty()
-                                    {
-                                        // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
-                                        SabreRewriter::apply_rewrite_rule(
-                                            tp,
-                                            &automaton,
-                                            ema,
-                                            leaf.subterm.clone(),
-                                            leaf_index,
-                                            &mut cl,
-                                            stats,
-                                        );
-                                        break 'skip_point;
-                                    } else {
-                                        // We delay the condition checks
-                                        cl.side_branch_stack.push(SideInfo {
-                                            corresponding_configuration: leaf_index,
-                                            info: SideInfoType::EquivalenceAndConditionCheck(&ema),
-                                        });
-                                    }
+                                {
+                                    // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
+                                    SabreRewriter::apply_rewrite_rule(
+                                        tp,
+                                        automaton,
+                                        ema,
+                                        leaf.subterm.clone(),
+                                        leaf_index,
+                                        &mut cl,
+                                        stats,
+                                    );
+                                    break 'skip_point;
+                                } else {
+                                    // We delay the condition checks
+                                    cl.side_branch_stack.push(SideInfo {
+                                        corresponding_configuration: leaf_index,
+                                        info: SideInfoType::EquivalenceAndConditionCheck(ema),
+                                    });
                                 }
                             }
                             if tr.destinations.is_empty() {
@@ -220,9 +218,7 @@ impl SabreRewriter {
                 }
             }
         }
-        let final_term = cl.compute_final_term(tp);
-
-        return final_term;
+         cl.compute_final_term(tp)
     }
 
     /// Apply a rewrite rule and prune back
@@ -245,7 +241,7 @@ impl SabreRewriter {
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;
-        cl.prune(tp, automaton, prune_point + 0, new_subterm);
+        cl.prune(tp, automaton, prune_point, new_subterm);
     }
 
     /// Checks conditions and subterm equality of non-linear patterns.
@@ -272,8 +268,7 @@ impl SabreRewriter {
                 let lhs_normal =
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs.clone(), stats);
 
-                if !(lhs_normal == rhs_normal && c.equality)
-                    || (lhs_normal != rhs_normal && !c.equality)
+                if lhs_normal != rhs_normal || !c.equality
                 {
                     return EquivalenceClass::equivalences_hold(
                         &leaf.subterm,

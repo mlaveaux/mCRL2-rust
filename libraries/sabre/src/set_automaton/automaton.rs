@@ -1,7 +1,7 @@
 use std::{collections::VecDeque};
 
 use ahash::HashMap;
-use mcrl2_rust::atermpp::{ATerm, Symbol, TermFunctionSymbol};
+use mcrl2_rust::atermpp::{ATerm, TermFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -130,10 +130,10 @@ impl SetAutomaton {
                     // set of match goals already exists.
                     if let GoalsOrInitial::Goals(goals) = goals_or_initial {
                         if map_goals_state.contains_key(&goals) {
-                            //The destination state already exists
-                            dest_states.push((pos, map_goals_state.get(&goals).unwrap().clone()))
+                            // The destination state already exists
+                            dest_states.push((pos, *map_goals_state.get(&goals).unwrap()))
                         } else if !goals.is_empty() {
-                            //The destination state does not yet exist, create it
+                            // The destination state does not yet exist, create it
                             let new_state = State::new(goals.clone(), spec.symbols.len());
                             states.push(new_state);
                             dest_states.push((pos, state_counter));
@@ -377,7 +377,7 @@ impl State {
                 }
                 for o in &g.obligations {
                     if let Some(l) = &label {
-                        if &o.position < &l {
+                        if &o.position < l {
                             label = Some(o.position.clone());
                         }
                     }

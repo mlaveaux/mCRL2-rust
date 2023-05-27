@@ -170,12 +170,6 @@ pub struct ATerm {
 }
 
 impl ATerm {
-    pub fn new() -> Self {
-        ATerm {
-            term: ffi::new_aterm(),
-        }
-    }
-
     pub fn from(term: UniquePtr<ffi::aterm>) -> Self {
         ATerm { term }
     }
@@ -246,6 +240,14 @@ impl ATerm {
             ffi::aterm_pointer(&self.term) != 0,
             "This function can only be called on non default terms"
         );
+    }
+}
+
+impl Default for ATerm {
+    fn default() -> Self {
+        ATerm {
+            term: ffi::new_aterm(),
+        }
     }
 }
 
@@ -337,7 +339,7 @@ impl From<TermFunctionSymbol> for ATerm {
 pub struct TermPool {}
 
 impl TermPool {
-    pub fn new() -> TermPool {
+    pub fn initialise() -> TermPool {
         // Initialise the C++ aterm library.
         ffi::initialise();
 
@@ -431,17 +433,14 @@ impl From<ATerm> for TermApplication {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TermFunctionSymbol {
     term: ATerm,
 }
 
+
 impl TermFunctionSymbol
 {
-    pub fn new() -> TermFunctionSymbol {
-        TermFunctionSymbol { term: ATerm::new() }
-    }
-
     pub fn name(&self) -> String {
         String::from(self.term.arg(0).get_head_symbol().name())
     }
@@ -493,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_term_iterator() {
-        let mut tp = TermPool::new();
+        let mut tp = TermPool::initialise();
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         let mut result = t.iter();
