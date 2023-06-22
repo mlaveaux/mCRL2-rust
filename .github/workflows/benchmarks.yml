@@ -8,10 +8,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: on
 
 jobs:
   benchmark:
-    name: Test
+    name: Run
     strategy:
       fail-fast: false
       matrix:      
@@ -19,10 +20,15 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.3
+      
     - name: Checkout the repository
       uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: Run Benchmarks
-      run: cargo bench --verbose
+      run: cargo bench --verbose     
+      env:
+        RUSTC_WRAPPER: sccache

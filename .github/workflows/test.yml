@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: on
 
 jobs:
   test:
@@ -18,9 +19,9 @@ jobs:
         os: [ubuntu-20.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
-    steps:
-    
-    - uses: mozilla-actions/sccache-action@v0.0.3
+    steps:    
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.3
       
     - name: Checkout the repository
       uses: actions/checkout@v3
@@ -30,5 +31,5 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
       env:
-       RUST_BACKTRACE: full
-       RUSTC_WRAPPER: sccache
+        RUST_BACKTRACE: full
+        RUSTC_WRAPPER: sccache

@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: on
 
 jobs:
   test:
@@ -19,12 +20,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
+    - uses: SimenB/github-actions-cpu-cores@v1
       id: cpu-cores
 
-    - name: Checkout the repository
-      uses: actions/checkout@v3
+    - uses: mozilla-actions/sccache-action@v0.0.3
+
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -35,5 +36,7 @@ jobs:
       run: cargo install grcov
 
     - name: Generating Code Coverage
-      run: cargo xtask coverage
+      run: cargo xtask coverage        
+      env:
+        RUSTC_WRAPPER: sccache
 
