@@ -45,7 +45,8 @@ jobs:
                 
       - name: Build Documentation
         run: |
-          cargo doc --no-deps --verbose
+          cargo doc --no-deps
+          rm target/doc/.lock
           echo "<meta http-equiv=\"refresh\" content=\"0; url=mcrl2_rust\">" > target/doc/index.html
         env:
           RUSTC_WRAPPER: sccache
@@ -58,4 +59,4 @@ jobs:
           
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v2
