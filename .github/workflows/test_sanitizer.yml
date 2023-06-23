@@ -1,4 +1,4 @@
-name: Build and Test
+name: Test AddressSanitizer
 
 on:
   push:
@@ -12,7 +12,6 @@ env:
 
 jobs:
   test:
-    name: Test
     strategy:
       fail-fast: false
       matrix:      
@@ -37,7 +36,7 @@ jobs:
       if: matrix.os == 'macos-latest'  
 
     - name: Install Nightly Rust
-      run: rustup component add llvm-tools-preview
+      run: rustup toolchain install nightly
 
     - name: Checkout the repository
       uses: actions/checkout@v3

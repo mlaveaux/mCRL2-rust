@@ -1,4 +1,4 @@
-name: Build and Test
+name: Test
 
 on:
   push:
@@ -12,7 +12,6 @@ env:
 
 jobs:
   test:
-    name: Test
     strategy:
       fail-fast: false
       matrix:      

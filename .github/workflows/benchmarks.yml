@@ -12,7 +12,6 @@ env:
 
 jobs:
   benchmark:
-    name: Run
     strategy:
       fail-fast: false
       matrix:      
