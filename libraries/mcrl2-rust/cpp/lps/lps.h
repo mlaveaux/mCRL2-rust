@@ -12,14 +12,14 @@ namespace mcrl2::lps
 
 std::unique_ptr<specification> read_linear_process_specification(rust::Str filename)
 {
-  return std::make_unique<specification>(detail::load_lps(std::string(filename)));
+    return std::make_unique<specification>(detail::load_lps(std::string(filename)));
 }
 
 rust::String print_linear_process_specification(const specification& spec)
 {
-  std::stringstream str;
-  str << spec;
-  return str.str();
+    std::stringstream str;
+    str << spec;
+    return str.str();
 }
 
 } // namespace mcrl2::lps

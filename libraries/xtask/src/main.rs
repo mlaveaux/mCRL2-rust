@@ -139,7 +139,7 @@ fn coverage() -> AnyResult<()> {
 }
 
 #[cfg(not(unix))]
-fn add_target_flag(arguments: &mut Vec<String>) {}
+fn add_target_flag(_arguments: &mut Vec<String>) {}
 
 #[cfg(target_os = "linux")]
 fn add_target_flag(arguments: &mut Vec<String>) {
