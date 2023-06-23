@@ -141,7 +141,7 @@ fn coverage() -> AnyResult<()> {
 ///
 /// Run the tests with the address sanitizer enabled to detect memory issues in unsafe and C++ code.
 ///
-/// This only works under Linux currently and requires the nightly channel
+/// This only works under Linux currently and requires the nightly toolchain
 ///
 fn sanitizer(cargo_arguments: Vec<String>) -> AnyResult<()> {
     let mut arguments: Vec<String> = vec![

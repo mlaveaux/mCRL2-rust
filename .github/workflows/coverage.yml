@@ -12,7 +12,6 @@ env:
 
 jobs:
   test:
-    name: Generate
     strategy:
       fail-fast: false
       matrix:      

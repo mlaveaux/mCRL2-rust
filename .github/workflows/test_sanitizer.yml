@@ -35,8 +35,9 @@ jobs:
         brew install llvm    
       if: matrix.os == 'macos-latest'  
 
-    - name: Install Nightly Rust
-      run: rustup toolchain install nightly
+    - name: Install Nightly Rust and Sources
+      run: rustup toolchain install nightly 
+           rustup component add rust-src
 
     - name: Checkout the repository
       uses: actions/checkout@v3
