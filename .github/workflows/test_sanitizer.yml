@@ -36,9 +36,7 @@ jobs:
       if: matrix.os == 'macos-latest'  
 
     - name: Install Nightly Rust and Sources
-      run: |
-        rustup toolchain install nightly 
-        rustup component add rust-src
+      run: rustup toolchain install nightly --component rust-src
 
     - name: Checkout the repository
       uses: actions/checkout@v3
