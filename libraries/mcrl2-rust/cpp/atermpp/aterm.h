@@ -172,7 +172,7 @@ std::unique_ptr<aterm> ffi_create_application(const aterm& head, rust::Slice<con
   return std::make_unique<mcrl2::data::application>(static_cast<const data_expression&>(head), converted_arguments.begin(), converted_arguments.end());
 }
 
-std::unique_ptr<aterm> ffi_create_data_function_symbol(rust::String name, std::size_t arity)
+std::unique_ptr<aterm> ffi_create_data_function_symbol(rust::String name)
 {
   return std::make_unique<mcrl2::data::function_symbol>(static_cast<std::string>(name), untyped_sort());
 }

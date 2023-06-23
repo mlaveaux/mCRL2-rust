@@ -1,17 +1,19 @@
 use std::fmt;
 
-use mcrl2_rust::atermpp::{ATerm, TermFunctionSymbol};
+use mcrl2_rust::atermpp::{ATerm};
+
+use crate::set_automaton::FunctionSymbol;
 
 /// A rewrite specification contains the bare info we need for rewriting (in particular no type information).
 #[derive(Debug,Clone)]
 pub struct RewriteSpecification 
 {
     pub rewrite_rules: Vec<Rule>,
-    pub symbols: Vec<TermFunctionSymbol>,
+    pub symbols: Vec<FunctionSymbol>,
 }
 
 /// Either lhs == rhs or lhs != rhs depending on equality being true.
-#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Condition
 {
     pub lhs: ATerm,
@@ -19,7 +21,7 @@ pub struct Condition
     pub equality: bool,
 }
 
-#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Rule
 {
     /// A conjunction of clauses
@@ -35,7 +37,7 @@ impl fmt::Display for RewriteSpecification
         writeln!(f, "Symbols: ")?;
         for symbol in &self.symbols 
         {
-            writeln!(f, "{}", symbol.name())?;
+            writeln!(f, "{:?}", symbol)?;
         }
 
         writeln!(f, "Rewrite rules: ")?;
@@ -51,7 +53,6 @@ impl fmt::Display for Rule
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
     {
-        //write!(f, "{}: {}\n", symbol, symbol.arity())?;
-        write!(f, "")
+        write!(f, "{:?} -> {} = {}\n", self.conditions, self.lhs, self.rhs)
     }
 }

@@ -72,10 +72,10 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
             // Convert a constant variable, for example 'x', into an untyped variable.
             Some(tp.create_variable(arg.get_head_symbol().name()).into())
         } else if t.get_head_symbol().arity() == 0 {
-            Some(tp.create_data_function_symbol(t.get_head_symbol().name(), 0).into())
+            Some(tp.create_data_function_symbol(t.get_head_symbol().name()).into())
         } else {
             // This is a function symbol applied to a number of arguments (higher order terms not allowed)
-            let head = tp.create_data_function_symbol(t.get_head_symbol().name(), t.get_head_symbol().arity());
+            let head = tp.create_data_function_symbol(t.get_head_symbol().name());
             
             // The function did not change the term, so apply on its arguments.
             let mut args = Vec::with_capacity(t.arguments().len());

@@ -2,10 +2,11 @@ use core::fmt;
 use std::hash::Hash;
 
 use ahash::{AHashMap as HashMap, AHashSet};
-use mcrl2_rust::atermpp::{ATerm, TermFunctionSymbol, TermPool};
+use mcrl2_rust::atermpp::{ATerm, TermPool};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
     utilities::{to_data_expression, ExplicitPosition},
+    set_automaton::FunctionSymbol,
 };
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
@@ -20,7 +21,6 @@ pub struct RewriteSpecificationSyntax {
 impl RewriteSpecificationSyntax {
 
     pub fn to_rewrite_spec(&self, tp: &mut TermPool) -> RewriteSpecification {
-        println!("specification: {}", self);
 
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
@@ -67,15 +67,19 @@ impl RewriteSpecificationSyntax {
             }
 
             for subterm in iter {
-                if subterm.is_function_symbol() {
-                    let index = subterm.operation_id();
-                    symbols.resize(index + 1, TermFunctionSymbol::default());
-                    symbols[index] = subterm.into();
+                if subterm.is_application() {
+                    let args = subterm.arguments();
+
+                    // REC specifications should never contain this so it can be a debug error.
+                    assert!(args[0].is_function_symbol(), "Higher order term rewrite systems are not supported");
+                    let index = args[0].operation_id();
+                    symbols.resize(index + 1, FunctionSymbol::default());
+                    
+                    assert!(symbols[index] == FunctionSymbol::default() || symbols[index].arity() == args.len() - 1, "Function symbol {} occurs with arity {} and {}", args[0], args.len() - 1, &symbols[index].arity());
+                    symbols[index] = FunctionSymbol::new(args[0].clone().into(), args.len() - 1);
                 }
             }
         }
-
-        println!("symbols: {:?}", symbols);
 
         RewriteSpecification {
             rewrite_rules,

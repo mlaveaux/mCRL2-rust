@@ -1,4 +1,4 @@
-use std::{collections::VecDeque};
+use std::collections::VecDeque;
 
 use ahash::HashMap;
 use mcrl2_rust::atermpp::{ATerm, TermFunctionSymbol};
@@ -16,7 +16,7 @@ pub struct SetAutomaton {
     pub(crate) states: Vec<State>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Transition {
     pub(crate) symbol: TermFunctionSymbol,
     pub(crate) announcements: SmallVec<[EnhancedMatchAnnouncement; 1]>,
@@ -33,6 +33,27 @@ pub(crate) struct MatchObligation {
 enum GoalsOrInitial {
     InitialState,
     Goals(Vec<MatchGoal>),
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct FunctionSymbol
+{
+    function: TermFunctionSymbol,
+    arity: usize,
+}
+
+impl FunctionSymbol {
+    pub fn new(function: TermFunctionSymbol, arity: usize) -> FunctionSymbol {
+        FunctionSymbol { function, arity }
+    }
+
+    pub fn function(&self) -> &TermFunctionSymbol {
+        &self.function
+    }
+
+    pub fn arity(&self) -> usize {
+        self.arity
+    }
 }
 
 impl SetAutomaton {
@@ -71,7 +92,7 @@ impl SetAutomaton {
         // HashMap from goals to state number
         let mut map_goals_state = HashMap::default();
 
-        //Queue of states that still need to be explored
+        // Queue of states that still need to be explored
         let mut queue = VecDeque::new();
         queue.push_back(0);
 
@@ -92,7 +113,6 @@ impl SetAutomaton {
                         s.clone(),
                         states.get(s_index).unwrap().derive_transition(
                             s.clone(),
-                            1,
                             &spec.rewrite_rules,
                             false,
                         ),
@@ -100,7 +120,7 @@ impl SetAutomaton {
                 })
                 .collect();
 
-            println!("{:?}", &transitions_per_symbol);
+            println!("state: {:?}, transitions:{:?}", &s_index, &transitions_per_symbol);
 
             // Loop over all the possible symbols and the associated hypertransition
             for (symbol, (outputs, destinations)) in transitions_per_symbol {
@@ -116,7 +136,7 @@ impl SetAutomaton {
 
                 // Create transition
                 let mut transition = Transition {
-                    symbol: symbol.clone(),
+                    symbol: symbol.function.clone(),
                     announcements,
                     destinations: smallvec![],
                 };
@@ -184,8 +204,7 @@ impl State {
     /// Parameter symbol is the symbol for which the transition is computed
     fn derive_transition(
         &self,
-        symbol: TermFunctionSymbol,
-        arity: usize,
+        symbol: FunctionSymbol,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
     ) -> (
@@ -233,7 +252,7 @@ impl State {
 
             // Handle fresh match goals, they are the positions Label(state).i
             // where i is between 1 and the arity of the function symbol of the transition
-            for i in 1..arity + 1 {
+            for i in 1..symbol.arity + 1 {
                 let mut pos = self.label.clone();
                 pos.indices.push(i);
 
@@ -283,16 +302,16 @@ impl State {
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: &TermFunctionSymbol) -> Derivative {
+    fn compute_derivative(&self, symbol: &FunctionSymbol) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
             reduced: vec![],
         };
 
-        // For DataAppl the first argument is the function symbol (make this explicit).
-        let term_symbol = <TermFunctionSymbol as Into<ATerm>>::into(symbol.clone());
+        let term_symbol = <TermFunctionSymbol as Into<ATerm>>::into(symbol.function.clone());
 
+        // For DataAppl the first argument is the function symbol (make this explicit).
         for mg in &self.match_goals {
             // Completed match goals
             if mg.obligations.len() == 1

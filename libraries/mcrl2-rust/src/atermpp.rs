@@ -88,7 +88,7 @@ pub mod ffi {
         /// For data::function_symbol        
         fn ffi_is_data_function_symbol(term: &aterm) -> bool;
 
-        fn ffi_create_data_function_symbol(name: String, arity: usize) -> UniquePtr<aterm>;
+        fn ffi_create_data_function_symbol(name: String) -> UniquePtr<aterm>;
         
     }
 }
@@ -200,6 +200,10 @@ impl ATerm {
         result
     }
 
+    pub fn is_default(&self) -> bool {
+        ffi::aterm_pointer(&self.term) == 0 
+    }
+
     pub fn is_variable(&self) -> bool {
         self.require_valid();
         ffi::ffi_is_variable(&self.term)
@@ -237,8 +241,8 @@ impl ATerm {
     /// Returns true iff the term is not default.
     fn require_valid(&self) {
         assert!(
-            ffi::aterm_pointer(&self.term) != 0,
-            "This function can only be called on non default terms"
+            !self.is_default(),
+            "This function can only be called on valid terms, i.e., not default terms"
         );
     }
 }
@@ -260,14 +264,14 @@ impl fmt::Display for ATerm {
 
 impl fmt::Debug for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.require_valid();
-        
-        if true {            
+
+        if self.is_default() {
+            write!(f, "<default>")?;
+        } else {                
             write!(f, "{}", ffi::print_aterm(&self.term))?;
-        } else {
-            for term in self.iter() {   
-                write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
-            }
+            //for term in self.iter() {   
+            //   write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
+            //}
         }
 
         Ok(())
@@ -332,9 +336,6 @@ impl From<TermFunctionSymbol> for ATerm {
     }
 }
 
-
-
-
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
 pub struct TermPool {}
 
@@ -393,9 +394,9 @@ impl TermPool {
         TermApplication { term: ATerm::from(ffi::ffi_create_application(head.get(), &arguments)) }
     }
 
-    pub fn create_data_function_symbol(&mut self, name: &str, arity: usize) -> TermFunctionSymbol
+    pub fn create_data_function_symbol(&mut self, name: &str) -> TermFunctionSymbol
     {
-        TermFunctionSymbol { term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name), arity)) }
+        TermFunctionSymbol { term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name))) }
     }
 
 }
