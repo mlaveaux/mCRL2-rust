@@ -1,4 +1,4 @@
-identifier = @{  !("CONS") ~ (ASCII_ALPHANUMERIC ~ (ASCII_ALPHANUMERIC | "_" | "'" | "\"")*) } //@{  !("CONS") ~ (ASCII_ALPHA ~ (!(NEWLINE | WHITE_SPACE | "(" | ")" | "," | "#") ~ ANY)*) }
+identifier = @{  !("CONS") ~ (ASCII_ALPHANUMERIC ~ (ASCII_ALPHANUMERIC | "_" | "'" | "\"")*) }
 term = ${identifier ~ (WHITE_SPACE* ~ args)?}
 args = {"(" ~ WHITESPACE* ~ term ~ WHITESPACE* ~ ("," ~ WHITESPACE* ~ term)*  ~ WHITESPACE* ~ ")"}
 rewrite_rule = {term ~ ("->" | "=") ~ term ~ ("if" ~ condition ~ ("and-if" ~ condition)*)?}
@@ -8,7 +8,7 @@ single_rewrite_rule = {SOI ~ rewrite_rule ~ EOI}
 single_term = {SOI ~ term ~ EOI}
 cons_decl = {identifier ~ ":" ~ (identifier)* ~ "->"  ~ identifier ~ NEWLINE}
 opn_decl = {identifier ~ ":" ~ (identifier)* ~ "->"  ~ identifier ~ NEWLINE}
-var_decl = {(identifier)* ~ ":"  ~ identifier ~ NEWLINE}
+var_decl = {(identifier)* ~ ":"  ~ identifier}
 rec_spec = {SOI ~ NEWLINE* ~ header ~ sorts ~ cons ~ opns ~ vars ~ rules ~ eval? ~ "END-SPEC" ~ NEWLINE* ~ EOI}
 header = {"REC-SPEC" ~ identifier ~ (":" ~ identifier+)? ~ NEWLINE+}
 sorts = {"SORTS" ~ NEWLINE+ ~ (identifier*  ~ NEWLINE)? ~ NEWLINE*}

@@ -2,8 +2,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use ahash::AHashMap as HashMap;
-
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -171,6 +169,9 @@ fn parse_var_decl(pair: Pair<Rule>) -> Vec<String> {
 
         variables.push(String::from(v.as_str()));
     }
+
+    // There might be a better way, but the last identifier is the type.
+    variables.pop();
 
     variables
 }

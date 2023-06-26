@@ -1,12 +1,11 @@
 use core::fmt;
 use std::hash::Hash;
 
-use ahash::{AHashMap as HashMap, AHashSet};
+use ahash::AHashSet;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
     utilities::{to_data_expression, ExplicitPosition},
-    set_automaton::FunctionSymbol,
 };
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
@@ -23,8 +22,6 @@ impl RewriteSpecificationSyntax {
 
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
-
-        println!("{:?}", variables);
 
         // Store the rewrite rules in the maximally shared term storage
         let mut rewrite_rules = Vec::new();
