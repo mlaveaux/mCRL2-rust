@@ -28,7 +28,7 @@ jobs:
         submodules: true
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache

@@ -32,12 +32,12 @@ jobs:
         submodules: true
 
     - name: Run tests
-      run: cargo test --release --verbose -j ${{steps.cpu-cores.outputs.count}}
+      run: cargo test --release -j ${{steps.cpu-cores.outputs.count}}
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
 
     - name: Build Release
-      run: cargo build --release --verbose -j ${{steps.cpu-cores.outputs.count}}
+      run: cargo build --release -j ${{steps.cpu-cores.outputs.count}}
       env:        
         RUSTC_WRAPPER: sccache
