@@ -5,7 +5,7 @@ use core::fmt;
 use std::fs::File;
 use std::io::Write;
 
-use super::Transition;
+use super::{Transition, MatchAnnouncement};
 
 impl fmt::Debug for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -34,15 +34,22 @@ impl fmt::Display for Transition {
 }
 
 /// Implement display for a match announcement
-impl fmt::Display for EnhancedMatchAnnouncement {
+impl fmt::Display for MatchAnnouncement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}@{}, [",
-            &self.announcement.rule.lhs,
-            self.announcement.position
-        )?;
+            "{}@{}",
+            &self.rule.lhs,
+            self.position
+        )
+    }
+}
 
+impl fmt::Display for EnhancedMatchAnnouncement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &self.announcement)?;
+
+        write!(f, ", [")?;
         for ec in &self.equivalence_classes {
             write!(f, "{}{{", ec.variable)?;
             let mut first = true;

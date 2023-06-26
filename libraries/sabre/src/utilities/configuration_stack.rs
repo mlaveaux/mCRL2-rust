@@ -214,26 +214,21 @@ impl<'a> ConfigurationStack<'a> {
 impl<'a> fmt::Display for ConfigurationStack<'a>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO: print side branch info
         writeln!(f, "Current node: {:?}", self.current_node)?;
         for (i, c) in self.configuration_stack.iter().enumerate() {
-            writeln!(f, "Configuration {} {{", i)?;
+            writeln!(f, "Configuration {} ", i)?;
             writeln!(f, "    State: {:?}", c.state)?;
-            //writeln!(f, "    Position: {}", c.position.to_string());
+            writeln!(f, "    Position: {}", 
+                match c.position { 
+                    Some(x) => x.to_string(),
+                    None => "None".to_string()
+                })?;
             writeln!(f, "    Subterm: {}", &c.subterm)?;
-            /*writeln(f, "    Previous with side branch: {:?}", c.prev_with_side_branch);
-            writeln!(f, "    Side branches: ");
-            match c.side_branches {
-                None => {result += "None\n";}
-                Some(sb) => {
-                    result += "[";
-                    for b in sb {
-                        result += &format!("(Position {}, State {})", b.0.to_string(),b.1);
-                    }
-                    result += "]\n";
-                }
-            }
-            result += "}\n";*/
+        }
+        
+        for side_branch in &self.side_branch_stack {            
+            writeln!(f, "Side branch for {} ", side_branch.corresponding_configuration)?;
+            writeln!(f, "   Info: {:?} ", side_branch.info)?;
         }
         Ok(())
     }

@@ -443,7 +443,11 @@ pub struct TermFunctionSymbol {
 impl TermFunctionSymbol
 {
     pub fn name(&self) -> String {
-        String::from(self.term.arg(0).get_head_symbol().name())
+        if !self.term.is_default() {
+            String::from(self.term.arg(0).get_head_symbol().name())
+        } else {
+            "<default>".to_string()
+        }
     }
 }
 
