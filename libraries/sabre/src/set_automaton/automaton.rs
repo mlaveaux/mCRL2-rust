@@ -371,19 +371,15 @@ impl State {
                 for mo in mg.obligations {
                     if mo.pattern.arg(0) == term_symbol && mo.position == self.label {
                         // reduce
-                        let mut index = 1;
-                        for t in mo.pattern.arguments() {
-                            if t.arg(0).arg(0).get_head_symbol().name() != "ω" {
-                                if t.is_variable() {
-                                    let mut new_pos = mo.position.clone();
-                                    new_pos.indices.push(index);
-                                    new_obligations.push(MatchObligation {
-                                        pattern: t.clone(),
-                                        position: new_pos,
-                                    });
-                                } else { //variable
-                                }
-                                index += 1;
+                        for (index, t) in mo.pattern.arguments().iter().enumerate() {
+                            if !t.is_variable() {
+                                let mut new_pos = mo.position.clone();
+                                new_pos.indices.push(index);
+                                new_obligations.push(MatchObligation {
+                                    pattern: t.clone(),
+                                    position: new_pos,
+                                });
+                            } else { // this is a variable
                             }
                         }
                     } else {

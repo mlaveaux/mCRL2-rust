@@ -83,20 +83,16 @@ impl MatchAnnouncement {
             let pos = queue.pop_front().unwrap();
             let term = get_position(&self.rule.lhs, &pos);
 
-            // The symbol "ω" was used early in development to indicate an abstract variable, not used in REC
-            // We need to discard this option because it is not a concrete variable whose position we must match
-            if term.get_head_symbol().name() != "ω" {
-                // If arity_per_symbol does not contain the head symbol it is a variable
-                if term.is_variable() {
-                    // Register the position of the variable
-                    update_equivalences(&mut var_equivalences, &term, pos);
-                } else {
-                    // Put all subterms in the queue for exploration
-                    for i in 1..term.arguments().len() + 1 {
-                        let mut sub_term_pos = pos.clone();
-                        sub_term_pos.indices.push(i);
-                        queue.push_back(sub_term_pos);
-                    }
+            // If arity_per_symbol does not contain the head symbol it is a variable
+            if term.is_variable() {
+                // Register the position of the variable
+                update_equivalences(&mut var_equivalences, &term, pos);
+            } else {
+                // Put all subterms in the queue for exploration
+                for i in 1..term.arguments().len() + 1 {
+                    let mut sub_term_pos = pos.clone();
+                    sub_term_pos.indices.push(i);
+                    queue.push_back(sub_term_pos);
                 }
             }
         }
