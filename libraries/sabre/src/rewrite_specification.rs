@@ -1,15 +1,12 @@
 use std::fmt;
 
-use mcrl2_rust::atermpp::{ATerm};
-
-use crate::set_automaton::FunctionSymbol;
+use mcrl2_rust::atermpp::ATerm;
 
 /// A rewrite specification contains the bare info we need for rewriting (in particular no type information).
 #[derive(Debug,Clone)]
 pub struct RewriteSpecification 
 {
     pub rewrite_rules: Vec<Rule>,
-    pub symbols: Vec<FunctionSymbol>,
 }
 
 /// Either lhs == rhs or lhs != rhs depending on equality being true.
@@ -34,12 +31,6 @@ impl fmt::Display for RewriteSpecification
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
     {
-        writeln!(f, "Symbols: ")?;
-        for symbol in &self.symbols 
-        {
-            writeln!(f, "{:?}", symbol)?;
-        }
-
         writeln!(f, "Rewrite rules: ")?;
         for rule in &self.rewrite_rules 
         {

@@ -39,8 +39,8 @@ fn parse_REC(
             let mut inner = pair.into_inner();
             let header = inner.next().unwrap();
             let _sorts = inner.next().unwrap();
-            let cons = inner.next().unwrap();
-            let opns = inner.next().unwrap();
+            let _cons = inner.next().unwrap();
+            let _opns = inner.next().unwrap();
             let vars = inner.next().unwrap();
             let rules = inner.next().unwrap();
             let eval = inner.next().unwrap();
@@ -58,9 +58,6 @@ fn parse_REC(
                     // Add rewrite rules and terms to the result.
                     terms.extend_from_slice(&include_terms);
                     rewrite_spec
-                        .arity_per_symbol
-                        .extend(include_spec.arity_per_symbol);
-                    rewrite_spec
                         .rewrite_rules
                         .extend_from_slice(&include_spec.rewrite_rules);
                     for s in include_spec.variables {
@@ -70,8 +67,7 @@ fn parse_REC(
                     }
                 }
             }
-            let arity_per_symbol_cons = parse_constructors(cons);
-            let arity_per_symbol_opns = parse_operations(opns);
+
             rewrite_spec
                 .rewrite_rules
                 .extend_from_slice(&parse_rewrite_rules(rules));
@@ -79,10 +75,7 @@ fn parse_REC(
                 terms.extend_from_slice(&parse_eval(eval));
             }
 
-            rewrite_spec.variables = parse_variables(vars);
-
-            rewrite_spec.arity_per_symbol.extend(arity_per_symbol_cons);
-            rewrite_spec.arity_per_symbol.extend(arity_per_symbol_opns);
+            rewrite_spec.variables = parse_vars(vars);
         }
         Err(e) => {
             // TODO: Panic when a parse error occurs. Should probably return an error.
@@ -113,9 +106,6 @@ pub fn load_REC_from_strings(
 
         terms.extend_from_slice(&include_terms);
         rewrite_spec
-            .arity_per_symbol
-            .extend(include_spec.arity_per_symbol);
-        rewrite_spec
             .rewrite_rules
             .extend_from_slice(&include_spec.rewrite_rules);
 
@@ -144,34 +134,6 @@ fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>) {
     (name, include_files)
 }
 
-/// Extracts data from parsed constructor section, derives the arity of symbols. Types are ignored.
-fn parse_constructors(pair: Pair<Rule>) -> HashMap<String, usize> {
-    assert_eq!(pair.as_rule(), Rule::cons);
-    let mut arity_per_symbol = HashMap::new();
-    for decl in pair.into_inner() {
-        assert_eq!(decl.as_rule(), Rule::cons_decl);
-        let mut inner = decl.into_inner();
-        let symbol = inner.next().unwrap().as_str().to_string();
-        let arity = inner.count() - 1;
-        arity_per_symbol.insert(symbol, arity);
-    }
-    arity_per_symbol
-}
-
-/// Extracts data from parsed operations section, derives additional arity of symbols. Types are ignored.
-fn parse_operations(pair: Pair<Rule>) -> HashMap<String, usize> {
-    assert_eq!(pair.as_rule(), Rule::opns);
-    let mut arity_per_symbol = HashMap::new();
-    for decl in pair.into_inner() {
-        assert_eq!(decl.as_rule(), Rule::opn_decl);
-        let mut inner = decl.into_inner();
-        let symbol = inner.next().unwrap().as_str().to_string();
-        let arity = inner.count() - 1;
-        arity_per_symbol.insert(symbol, arity);
-    }
-    arity_per_symbol
-}
-
 /// Extracts data from parsed rewrite rules. Returns list of rewrite rules
 fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> {
     assert_eq!(pair.as_rule(), Rule::rules);
@@ -185,15 +147,29 @@ fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> {
 }
 
 // Extracts data from the variable VARS block. Types are ignored.
-fn parse_variables(pair: Pair<Rule>) -> Vec<String> {
+fn parse_vars(pair: Pair<Rule>) -> Vec<String> {
     assert_eq!(pair.as_rule(), Rule::vars);
-
+    
     let mut variables = vec![];
     let inner = pair.into_inner();
     for v in inner {
         assert_eq!(v.as_rule(), Rule::var_decl);
 
-        variables.push(String::from(v.into_inner().as_str()));
+        variables.extend(parse_var_decl(v));
+    }
+
+    variables
+}
+
+fn parse_var_decl(pair: Pair<Rule>) -> Vec<String> {
+    assert_eq!(pair.as_rule(), Rule::var_decl);
+
+    let mut variables = vec![];
+    let inner = pair.into_inner();
+    for v in inner {
+        assert_eq!(v.as_rule(), Rule::identifier);
+
+        variables.push(String::from(v.as_str()));
     }
 
     variables
@@ -335,6 +311,13 @@ mod tests {
             .unwrap(),
         );
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_variable_parsing() {
+        let mut pairs = TermParser::parse(Rule::var_decl, "X Y Val Max : Nat").unwrap();
+        assert_eq!(parse_var_decl(pairs.next().unwrap()), vec!["X", "Y", "Val", "Max"]);
+
     }
 
     #[test]

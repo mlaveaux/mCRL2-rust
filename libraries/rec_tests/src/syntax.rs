@@ -15,7 +15,6 @@ use sabre::{
 pub struct RewriteSpecificationSyntax {
     pub rewrite_rules: Vec<RewriteRuleSyntax>,
     pub variables: Vec<String>,
-    pub arity_per_symbol: HashMap<String, usize>,
 }
 
 impl RewriteSpecificationSyntax {
@@ -24,6 +23,8 @@ impl RewriteSpecificationSyntax {
 
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
+
+        println!("{:?}", variables);
 
         // Store the rewrite rules in the maximally shared term storage
         let mut rewrite_rules = Vec::new();
@@ -55,44 +56,17 @@ impl RewriteSpecificationSyntax {
             });
         }
 
-        // Find the indices of all the function symbols.
-        let mut symbols = vec![];
-
-        for rule in &rewrite_rules {
-
-            let mut iter: Box<dyn Iterator<Item = ATerm>> =
-                Box::new(rule.lhs.iter().chain(rule.rhs.iter()));
-            for cond in &rule.conditions {
-                iter = Box::new(iter.chain(cond.rhs.iter().chain(cond.lhs.iter())));
-            }
-
-            for subterm in iter {
-                if subterm.is_application() {
-                    let args = subterm.arguments();
-
-                    // REC specifications should never contain this so it can be a debug error.
-                    assert!(args[0].is_function_symbol(), "Higher order term rewrite systems are not supported");
-                    let index = args[0].operation_id();
-                    symbols.resize(index + 1, FunctionSymbol::default());
-                    
-                    assert!(symbols[index] == FunctionSymbol::default() || symbols[index].arity() == args.len() - 1, "Function symbol {} occurs with arity {} and {}", args[0], args.len() - 1, &symbols[index].arity());
-                    symbols[index] = FunctionSymbol::new(args[0].clone().into(), args.len() - 1);
-                }
-            }
-        }
-
         RewriteSpecification {
             rewrite_rules,
-            symbols,
         }
     }
 }
 
 impl fmt::Display for RewriteSpecificationSyntax {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Symbols: ")?;
-        for (symbol, arity) in &self.arity_per_symbol {
-            writeln!(f, "{}: {}", symbol, arity)?;
+        writeln!(f, "Variables: ")?;
+        for variable in &self.variables {
+            writeln!(f, "{}", variable)?;
         }
         writeln!(f, "Rewrite rules: ")?;
         for rule in &self.rewrite_rules {
@@ -104,7 +78,6 @@ impl fmt::Display for RewriteSpecificationSyntax {
 
 /// A TermSyntaxTrees stores a term in a tree structure. They are not used in expensive computations.
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-#[repr(C)]
 pub struct TermSyntaxTree {
     pub head_symbol: String,
     pub sub_terms: Vec<TermSyntaxTree>,

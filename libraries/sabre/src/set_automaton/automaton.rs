@@ -60,6 +60,32 @@ impl SetAutomaton {
     pub(crate) fn construct(spec: RewriteSpecification) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
+        
+        // Find the indices of all the function symbols.
+        let mut symbols = vec![];
+
+        for rule in &spec.rewrite_rules {
+
+            let mut iter: Box<dyn Iterator<Item = ATerm>> =
+                Box::new(rule.lhs.iter().chain(rule.rhs.iter()));
+            for cond in &rule.conditions {
+                iter = Box::new(iter.chain(cond.rhs.iter().chain(cond.lhs.iter())));
+            }
+
+            for subterm in iter {
+                if subterm.is_application() {
+                    let args = subterm.arguments();
+
+                    // REC specifications should never contain this so it can be a debug error.
+                    assert!(args[0].is_function_symbol(), "Higher order term rewrite systems are not supported");
+                    let index = args[0].operation_id();
+                    symbols.resize(index + 1, FunctionSymbol::default());
+                    
+                    assert!(symbols[index] == FunctionSymbol::default() || symbols[index].arity() == args.len() - 1, "Function symbol {} occurs with arity {} and {}", args[0], args.len() - 1, &symbols[index].arity());
+                    symbols[index] = FunctionSymbol::new(args[0].clone().into(), args.len() - 1);
+                }
+            }
+        }
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
         // with one obligation l@ε and announcement l@ε.
@@ -85,7 +111,7 @@ impl SetAutomaton {
         // Create the initial state
         let initial_state = State {
             label: ExplicitPosition::empty_pos(),
-            transitions: Vec::with_capacity(spec.symbols.len()),
+            transitions: Vec::with_capacity(symbols.len()),
             match_goals: match_goals.clone(),
         };
 
@@ -105,8 +131,7 @@ impl SetAutomaton {
             let s_index = queue.pop_front().unwrap();
 
             // Compute the transitions from the states
-            let transitions_per_symbol: Vec<_> = spec
-                .symbols
+            let transitions_per_symbol: Vec<_> = symbols
                 .iter()
                 .map(|s| {
                     (
@@ -154,7 +179,7 @@ impl SetAutomaton {
                             dest_states.push((pos, *map_goals_state.get(&goals).unwrap()))
                         } else if !goals.is_empty() {
                             // The destination state does not yet exist, create it
-                            let new_state = State::new(goals.clone(), spec.symbols.len());
+                            let new_state = State::new(goals.clone(), symbols.len());
                             states.push(new_state);
                             dest_states.push((pos, state_counter));
                             map_goals_state.insert(goals, state_counter);
