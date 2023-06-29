@@ -3,7 +3,10 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::utilities::ExplicitPosition;
-use mcrl2_rust::atermpp::{ATerm, Symbol, TermPool, TermVariable};
+use mcrl2_rust::{
+    atermpp::{ATerm, Symbol, TermPool},
+    data::DataVariable
+};
 
 /// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a TermSyntaxTree and is used
 /// to represent the rhs of rewrite rules and the lhs and rhs of conditions.
@@ -69,9 +72,9 @@ impl SemiCompressedTermTree {
     /// found in the lhs of the rewrite rule.
     pub(crate) fn from_term(
         t: ATerm,
-        var_map: &HashMap<TermVariable, ExplicitPosition>,
+        var_map: &HashMap<DataVariable, ExplicitPosition>,
     ) -> SemiCompressedTermTree {
-        if t.is_variable() {
+        if t.is_data_variable() {
             Variable(
                 var_map
                     .get(&t.into())
@@ -138,11 +141,11 @@ impl SemiCompressedTermTree {
 }
 
 /// Create a mapping of variables to their position in the given term
-pub(crate) fn create_var_map(t: &ATerm) -> HashMap<TermVariable, ExplicitPosition> {
+pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
     let mut result = HashMap::new();
 
     for (term, position) in PositionIterator::new(t.clone()) {
-        if term.is_variable() {
+        if term.is_data_variable() {
             result.insert(term.into(), position.clone());
         }
     }

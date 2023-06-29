@@ -84,7 +84,7 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
                 args.push(to_data_expression(tp, &t.arg(i), variables));
             }
 
-            Some(tp.create_application(&head.into(), &args).into())
+            Some(tp.create_data_application(&head.into(), &args).into())
         }
     })
 }

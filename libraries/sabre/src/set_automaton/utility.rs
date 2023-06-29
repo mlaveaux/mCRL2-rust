@@ -84,7 +84,7 @@ impl MatchAnnouncement {
             let term = get_position(&self.rule.lhs, &pos);
 
             // If arity_per_symbol does not contain the head symbol it is a variable
-            if term.is_variable() {
+            if term.is_data_variable() {
                 // Register the position of the variable
                 update_equivalences(&mut var_equivalences, &term, pos);
             } else {
