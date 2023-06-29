@@ -3,6 +3,7 @@
 
 #include "rust/cxx.h"
 
+#include "mcrl2/atermpp/aterm.h"
 #include "mcrl2/data/parse.h"
 #include "mcrl2/data/detail/rewrite/jitty.h"
 //#include "mcrl2/data/detail/rewrite/jittyc.h"
@@ -38,6 +39,11 @@ std::unique_ptr<atermpp::aterm> ffi_rewrite(detail::RewriterJitty& rewriter, con
     detail::RewriterJitty::substitution_type subsitution;
     data_expression result = rewriter.rewrite(static_cast<const data_expression&>(term), subsitution);
     return std::make_unique<atermpp::aterm>(static_cast<const atermpp::aterm&>(result));
+}
+
+std::size_t ffi_get_data_function_symbol_index(const atermpp::aterm& term)
+{
+  return atermpp::detail::index_traits<mcrl2::data::function_symbol,function_symbol_key_type, 2>::index(static_cast<const mcrl2::data::function_symbol&>(term));
 }
 
 }

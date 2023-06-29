@@ -120,16 +120,6 @@ std::unique_ptr<function_symbol> copy_function_symbol(const function_symbol& sym
   return std::make_unique<function_symbol>(symbol);
 }
 
-bool ffi_is_variable(const aterm& term)
-{
-  return mcrl2::data::is_variable(term);
-}
-
-std::unique_ptr<aterm> ffi_create_variable(rust::String name)
-{
-  return std::make_unique<aterm>(mcrl2::data::variable(static_cast<std::string>(name), mcrl2::data::sort_expression()));
-}
-
 std::unique_ptr<aterm> get_term_argument(const aterm& term, std::size_t index)
 {
   return std::make_unique<aterm>(static_cast<const aterm_appl&>(term)[index]);
@@ -140,27 +130,29 @@ std::unique_ptr<function_symbol> create_function_symbol(rust::String name, std::
   return std::make_unique<function_symbol>(static_cast<std::string>(name), arity);
 }
 
+// For the data namespace
+
 bool ffi_is_data_function_symbol(const aterm& term)
 {
   return mcrl2::data::is_function_symbol(static_cast<const aterm_appl&>(term));
 }
 
-std::size_t ffi_get_function_symbol_index(const aterm& term)
+bool ffi_is_data_variable(const aterm& term)
 {
-  return atermpp::detail::index_traits<mcrl2::data::function_symbol,function_symbol_key_type, 2>::index(static_cast<const mcrl2::data::function_symbol&>(term));
+  return mcrl2::data::is_variable(term);
 }
 
-std::size_t function_symbol_address(const function_symbol& symbol)
+std::unique_ptr<aterm> ffi_create_data_variable(rust::String name)
 {
-  return reinterpret_cast<std::size_t>(&symbol.name());
+  return std::make_unique<aterm>(mcrl2::data::variable(static_cast<std::string>(name), mcrl2::data::sort_expression()));
 }
 
-bool ffi_is_application(const aterm& term)
+bool ffi_is_data_application(const aterm& term)
 {
   return mcrl2::data::is_application(static_cast<const aterm_appl&>(term));
 }
 
-std::unique_ptr<aterm> ffi_create_application(const aterm& head, rust::Slice<const aterm_ref> arguments)
+std::unique_ptr<aterm> ffi_create_data_application(const aterm& head, rust::Slice<const aterm_ref> arguments)
 {
   // TODO: This is some truly horrendous code that must be removed asap.
   std::vector<data_expression> converted_arguments;
@@ -175,6 +167,11 @@ std::unique_ptr<aterm> ffi_create_application(const aterm& head, rust::Slice<con
 std::unique_ptr<aterm> ffi_create_data_function_symbol(rust::String name)
 {
   return std::make_unique<mcrl2::data::function_symbol>(static_cast<std::string>(name), untyped_sort());
+}
+
+std::size_t function_symbol_address(const function_symbol& symbol)
+{
+  return reinterpret_cast<std::size_t>(&symbol.name());
 }
 
 

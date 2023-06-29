@@ -2,6 +2,8 @@ use cxx::{Exception, UniquePtr};
 use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
 use std::collections::VecDeque;
 
+use crate::data::{DataVariable, DataApplication, DataFunctionSymbol};
+
 #[cxx::bridge(namespace = "atermpp")]
 pub mod ffi {
 
@@ -71,25 +73,23 @@ pub mod ffi {
         /// Creates a function symbol with the given name and arity.
         fn create_function_symbol(name: String, arity: usize) -> UniquePtr<function_symbol>;
 
-        fn ffi_is_variable(term: &aterm) -> bool;
-
-        fn ffi_create_variable(name: String) -> UniquePtr<aterm>;
-
-        /// For data::function_symbol terms returns the internally known index.
-        fn ffi_get_function_symbol_index(term: &aterm) -> usize;
-
         fn function_symbol_address(symbol: &function_symbol) -> usize;
 
-        /// For data::application
-        fn ffi_is_application(term: &aterm) -> bool;
+        /// For data::variable
+        fn ffi_is_data_variable(term: &aterm) -> bool;
 
-        fn ffi_create_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
+        fn ffi_create_data_variable(name: String) -> UniquePtr<aterm>;
+
+        /// For data::application
+        fn ffi_is_data_application(term: &aterm) -> bool;
+
+        fn ffi_create_data_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
 
         /// For data::function_symbol        
         fn ffi_is_data_function_symbol(term: &aterm) -> bool;
 
         fn ffi_create_data_function_symbol(name: String) -> UniquePtr<aterm>;
-        
+
     }
 }
 
@@ -166,7 +166,7 @@ impl Eq for Symbol {}
 
 /// Rust representation of a atermpp::aterm
 pub struct ATerm {
-    term: UniquePtr<ffi::aterm>,
+    pub(crate) term: UniquePtr<ffi::aterm>,
 }
 
 impl ATerm {
@@ -203,34 +203,12 @@ impl ATerm {
     pub fn is_default(&self) -> bool {
         ffi::aterm_pointer(&self.term) == 0 
     }
-
-    pub fn is_variable(&self) -> bool {
-        self.require_valid();
-        ffi::ffi_is_variable(&self.term)
-    }
-
-    pub fn is_application(&self) -> bool {
-        self.require_valid();
-        ffi::ffi_is_application(&self.term)
-    }
-
-    pub fn is_function_symbol(&self) -> bool {
-        self.require_valid();
-        ffi::ffi_is_data_function_symbol(&self.term)
-    }
-
+    
     pub fn get_head_symbol(&self) -> Symbol {
         self.require_valid();
         Symbol {
             function: ffi::get_aterm_function_symbol(&self.term),
         }
-    }
-
-    /// Returns the internal id known for every [aterm] that is a data::function_symbol.
-    pub fn operation_id(&self) -> usize {
-        self.require_valid();
-        assert!(self.is_function_symbol(), "this should actually be a function symbol");
-        ffi::ffi_get_function_symbol_index(&self.term)
     }
 
     /// Returns an iterator over all arguments of the term.
@@ -244,6 +222,22 @@ impl ATerm {
             !self.is_default(),
             "This function can only be called on valid terms, i.e., not default terms"
         );
+    }
+    
+    // Recognizers for the data library
+    pub fn is_data_variable(&self) -> bool {
+        self.require_valid();
+        ffi::ffi_is_data_variable(&self.term)
+    }
+
+    pub fn is_data_application(&self) -> bool {
+        self.require_valid();
+        ffi::ffi_is_data_application(&self.term)
+    }
+
+    pub fn is_data_function_symbol(&self) -> bool {
+        self.require_valid();
+        ffi::ffi_is_data_function_symbol(&self.term)
     }
 }
 
@@ -318,20 +312,20 @@ impl Clone for ATerm {
 
 impl Eq for ATerm {}
 
-impl From<TermVariable> for ATerm {
-    fn from(value: TermVariable) -> Self {
+impl From<DataVariable> for ATerm {
+    fn from(value: DataVariable) -> Self {
         value.term
     }
 }
 
-impl From<TermApplication> for ATerm {
-    fn from(value: TermApplication) -> Self {
+impl From<DataApplication> for ATerm {
+    fn from(value: DataApplication) -> Self {
         value.term
     }
 }
 
-impl From<TermFunctionSymbol> for ATerm {
-    fn from(value: TermFunctionSymbol) -> Self {
+impl From<DataFunctionSymbol> for ATerm {
+    fn from(value: DataFunctionSymbol) -> Self {
         value.term
     }
 }
@@ -375,13 +369,7 @@ impl TermPool {
         }
     }
 
-    pub fn create_variable(&mut self, name: &str) -> TermVariable {
-        TermVariable {
-            term: ATerm::from(ffi::ffi_create_variable(String::from(name))),
-        }
-    }
-
-    pub fn create_application(&mut self, head: &ATerm, arguments: &[ATerm]) -> TermApplication
+    pub fn create_data_application(&mut self, head: &ATerm, arguments: &[ATerm]) -> DataApplication
     {
         // TODO: This part of the ffi is very slow and should be improved.
         let arguments: Vec<ffi::aterm_ref> = arguments
@@ -391,70 +379,18 @@ impl TermPool {
             })
             .collect();
 
-        TermApplication { term: ATerm::from(ffi::ffi_create_application(head.get(), &arguments)) }
+        DataApplication { term: ATerm::from(ffi::ffi_create_data_application(head.get(), &arguments)) }
     }
 
-    pub fn create_data_function_symbol(&mut self, name: &str) -> TermFunctionSymbol
-    {
-        TermFunctionSymbol { term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name))) }
-    }
-
-}
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TermVariable {
-    term: ATerm,
-}
-
-impl From<ATerm> for TermVariable {
-    fn from(value: ATerm) -> Self {
-        assert!(value.is_variable(), "The given term should be a variable");
-        TermVariable { term: value }
-    }
-}
-
-impl TermVariable {
-    /*pub fn name(&self) -> &str
-    {
-      self.term.arg(0).get_head_symbol().name()
-    }*/
-
-    // We do not care about it's sort.
-}
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TermApplication {
-    term: ATerm,
-}
-
-impl From<ATerm> for TermApplication {
-    fn from(value: ATerm) -> Self {
-        assert!(value.is_application(), "The given term should be an application");
-        TermApplication { term: value }
-    }
-}
-
-#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TermFunctionSymbol {
-    term: ATerm,
-}
-
-
-impl TermFunctionSymbol
-{
-    pub fn name(&self) -> String {
-        if !self.term.is_default() {
-            String::from(self.term.arg(0).get_head_symbol().name())
-        } else {
-            "<default>".to_string()
+    pub fn create_variable(&mut self, name: &str) -> DataVariable {
+        DataVariable {
+            term: ATerm::from(ffi::ffi_create_data_variable(String::from(name))),
         }
     }
-}
 
-impl From<ATerm> for TermFunctionSymbol {
-    fn from(value: ATerm) -> Self {
-        assert!(value.is_function_symbol(), "The given term should be a function symbol");
-        TermFunctionSymbol { term: value }
+    pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol
+    {
+        DataFunctionSymbol { term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name))) }
     }
 }
 

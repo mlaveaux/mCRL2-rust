@@ -1,3 +1,5 @@
+use core::fmt;
+
 use cxx::UniquePtr;
 
 use crate::atermpp::ATerm;
@@ -34,7 +36,9 @@ mod ffi {
         //fn ffi_create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJitty>Compiling;
 
         /// Rewrites the given term to normal form.
-        fn ffi_rewrite(rewriter: Pin<&mut RewriterJitty>, term: &aterm) -> UniquePtr<aterm>;
+        fn ffi_rewrite(rewriter: Pin<&mut RewriterJitty>, term: &aterm) -> UniquePtr<aterm>;        
+        
+        fn ffi_get_data_function_symbol_index(term: &aterm) -> usize;
     }
 }
 
@@ -86,6 +90,110 @@ impl JittyRewriter {
 
     pub fn rewrite(&mut self, term: &ATerm) -> ATerm {
         ATerm::from(ffi::ffi_rewrite(self.rewriter.pin_mut(), term.get()))
+    }
+}
+
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct DataVariable {
+    pub(crate) term: ATerm,
+}
+
+impl DataVariable {
+    pub fn name(&self) -> String {
+        String::from(self.term.arg(1).get_head_symbol().name())
+    }
+}
+
+impl From<ATerm> for DataVariable {
+    fn from(value: ATerm) -> Self {
+        assert!(value.is_data_variable(), "The given term should be a variable");
+        DataVariable { term: value }
+    }
+}
+
+impl fmt::Display for DataVariable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct DataApplication {
+    pub(crate) term: ATerm,
+}
+
+impl From<ATerm> for DataApplication {
+    fn from(value: ATerm) -> Self {
+        assert!(value.is_data_application(), "The given term should be an application");
+        DataApplication { term: value }
+    }
+}
+
+impl fmt::Display for DataApplication {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut args = self.term.arguments().into_iter();
+
+        write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(args.next().unwrap().clone()))?;
+
+        let mut first = true;
+        for arg in args {
+            if !first {
+                write!(f, ", ")?;
+            } else {
+                write!(f, "(")?;
+            }
+            if arg.is_data_function_symbol() {
+                write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(arg))?;
+            } else if arg.is_data_application() {
+                write!(f, "{}", <ATerm as Into<DataApplication>>::into(arg))?;
+            } else if arg.is_data_variable() {
+                write!(f, "{}", <ATerm as Into<DataVariable>>::into(arg))?;
+            }
+
+            first = false;
+        }
+
+        if !first {
+            write!(f, ")")?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct DataFunctionSymbol {
+    pub(crate) term: ATerm,
+}
+
+impl DataFunctionSymbol
+{
+    pub fn name(&self) -> String {
+        String::from(self.term.arg(0).get_head_symbol().name())
+    }
+    
+    /// Returns the internal id known for every [aterm] that is a data::function_symbol.
+    pub fn operation_id(&self) -> usize {
+        assert!(self.term.is_data_function_symbol(), "this should actually be a function symbol");
+        ffi::ffi_get_data_function_symbol_index(&self.term.term)
+    }
+}
+
+impl From<ATerm> for DataFunctionSymbol {
+    fn from(value: ATerm) -> Self {
+        assert!(value.is_data_function_symbol(), "The given term should be a function symbol");
+        DataFunctionSymbol { term: value }
+    }
+}
+
+impl fmt::Display for DataFunctionSymbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {        
+        if !self.term.is_default() {
+            write!(f, "{}", &self.name())
+        } else {
+            write!(f, "<default>")
+        }
     }
 }
 
