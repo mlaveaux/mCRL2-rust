@@ -88,10 +88,6 @@ impl SetAutomaton {
             }
         }
 
-        for (symbol, arity) in &symbols {
-            println!("{}: {}", symbol, arity);
-        }
-
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
         // with one obligation l@ε and announcement l@ε.
         let mut match_goals = Vec::<MatchGoal>::new();
@@ -206,7 +202,15 @@ impl SetAutomaton {
             }
         }
 
-        SetAutomaton { states }
+        // Clear the match goals since they are only for debugging purposes.
+        //for state in &mut states {
+        //    state.match_goals.clear();
+        //}
+
+        let result = SetAutomaton { states };
+        println!("{}", result);
+
+        result
     }
 }
 
@@ -346,14 +350,14 @@ impl State {
 
         let term_symbol = <DataFunctionSymbol as Into<ATerm>>::into(symbol.clone());
 
-        // For DataAppl the first argument is the function symbol (make this explicit).
+        // For DataAppl the first argument is the function symbol (TODO: This should be done with the proper type).
         for mg in &self.match_goals {
             // Completed match goals
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
                         && mo.pattern.arg(0) == term_symbol
-                        && mo.pattern.arguments().iter().all(|x| !x.is_data_variable())
+                        && mo.pattern.arguments().iter().skip(1).all(|x| x.is_data_variable()) // Again skip the first function symbol
                 })
             {
                 result.completed.push(mg.clone());
@@ -382,10 +386,10 @@ impl State {
                 for mo in mg.obligations {
                     if mo.pattern.arg(0) == term_symbol && mo.position == self.label {
                         // Reduced match obligation
-                        for (index, t) in mo.pattern.arguments().iter().enumerate() {
+                        for (index, t) in mo.pattern.arguments().iter().skip(1).enumerate() {
                             assert!(index <= arity, "This pattern associates function symbol {:?} with different arities", symbol);
-                            // The first index is the function symbol
-                            if index != 0 && !t.is_data_variable() {
+
+                            if !t.is_data_variable() {
                                 let mut new_pos = mo.position.clone();
                                 new_pos.indices.push(index);
                                 new_obligations.push(MatchObligation {
@@ -440,6 +444,7 @@ impl State {
                 }
             }
         }
+
         State {
             label: label.unwrap(),
             transitions: Vec::with_capacity(num_transitions), //transitions need to be added later

@@ -20,7 +20,6 @@ pub struct RewriteSpecificationSyntax {
 impl RewriteSpecificationSyntax {
 
     pub fn to_rewrite_spec(&self, tp: &mut TermPool) -> RewriteSpecification {
-
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
 

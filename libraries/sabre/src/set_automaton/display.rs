@@ -33,7 +33,7 @@ impl fmt::Display for Transition {
             first = false;
         }
 
-        write!(f, "] Destinations: [")?;
+        write!(f, "], Destinations: [")?;
         first = true;
         for (pos, s) in &self.destinations {
             if !first {
@@ -42,7 +42,7 @@ impl fmt::Display for Transition {
             write!(f, "({},{})", pos, s)?;
             first = false;
         }
-        write!(f, "]}}")
+        write!(f, "] }}")
     }
 }
 
@@ -55,15 +55,35 @@ impl fmt::Display for MatchAnnouncement {
                 "{}@{}",
                 <ATerm as Into<DataFunctionSymbol>>::into(self.rule.lhs.clone()),
                 self.position
-            )
+            )?;
         } else {
             write!(
                 f,
                 "{}@{}",
                 <ATerm as Into<DataApplication>>::into(self.rule.lhs.clone()),
                 self.position
-            )
+            )?;
         }
+
+        if !self.rule.conditions.is_empty() {   
+            write!(f, "[")?;
+
+            let mut first = true;
+            for c in &self.rule.conditions {
+                if !first { 
+                    write!(f, ", ")?;
+                }
+
+                let comparison_symbol = if c.equality { "==" } else { "<>" };
+                write!(f, "{} {} {}", &c.lhs, comparison_symbol, &c.rhs)?;
+
+                first = false;
+            } 
+
+            write!(f, "]")?;
+        }
+
+        Ok(())
     }
 }
 
@@ -123,34 +143,19 @@ impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "State {{Label: {}, ",
+            "Label: {}, ",
             self.label
         )?;
         writeln!(f, "Transitions: [")?;
         for t in &self.transitions {
-            writeln!(f, "{}", t)?;
+            writeln!(f, "\t {}", t)?;
         }
-        writeln!(f, "],\n Match goals: [")?;
+        writeln!(f, "],")?;
+        writeln!(f, "Match goals: [")?;
         for m in &self.match_goals {
-            write!(f, "\t Obligations:")?;
-            for mo in &m.obligations {
-                write!(f, "{}@{}  ", &mo.pattern, mo.position)?;
-            }
-
-            write!(
-                f,
-                "Announcement: {}@{}, ",
-                &m.announcement.rule.lhs,
-                m.announcement.position
-            )?;
-            write!(f, "Conditions: ")?;
-            for c in &m.announcement.rule.conditions {
-                let comparison_symbol = if c.equality { "==" } else { "<>" };
-                write!(f, "{} {} {}", &c.lhs, comparison_symbol, &c.rhs)?;
-            }
-            writeln!(f)?;
+            writeln!(f, "\t {}", m)?;
         }
-        write!(f, "]}}")
+        write!(f, "]")
     }
 }
 
@@ -158,7 +163,7 @@ impl fmt::Display for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "States: {{")?;
         for (state_index, s) in self.states.iter().enumerate() {
-            writeln!(f, "State {}: {}", state_index, s)?;
+            writeln!(f, "State {}\n{{\n{}\n}}", state_index, s)?;
         }
         writeln!(f, "}}")
     }

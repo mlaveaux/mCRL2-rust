@@ -101,7 +101,7 @@ pub struct DataVariable {
 
 impl DataVariable {
     pub fn name(&self) -> String {
-        String::from(self.term.arg(1).get_head_symbol().name())
+        String::from(self.term.arg(0).get_head_symbol().name())
     }
 }
 
