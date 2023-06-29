@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use ahash::HashMap;
-use mcrl2_rust::atermpp::{ATerm, TermFunctionSymbol};
+use mcrl2_rust::{atermpp::ATerm, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -18,7 +18,7 @@ pub struct SetAutomaton {
 
 #[derive(Clone, Debug)]
 pub struct Transition {
-    pub(crate) symbol: TermFunctionSymbol,
+    pub(crate) symbol: DataFunctionSymbol,
     pub(crate) announcements: SmallVec<[EnhancedMatchAnnouncement; 1]>,
     pub(crate) destinations: SmallVec<[(ExplicitPosition, usize); 1]>,
 }
@@ -33,27 +33,6 @@ pub(crate) struct MatchObligation {
 enum GoalsOrInitial {
     InitialState,
     Goals(Vec<MatchGoal>),
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct FunctionSymbol
-{
-    function: TermFunctionSymbol,
-    arity: usize,
-}
-
-impl FunctionSymbol {
-    pub fn new(function: TermFunctionSymbol, arity: usize) -> FunctionSymbol {
-        FunctionSymbol { function, arity }
-    }
-
-    pub fn function(&self) -> &TermFunctionSymbol {
-        &self.function
-    }
-
-    pub fn arity(&self) -> usize {
-        self.arity
-    }
 }
 
 impl SetAutomaton {
@@ -73,24 +52,44 @@ impl SetAutomaton {
             }
 
             for subterm in iter {
-                if subterm.is_application() {
+
+                if subterm.is_data_application() {
                     let args = subterm.arguments();
 
                     // REC specifications should never contain this so it can be a debug error.
-                    assert!(args[0].is_function_symbol(), "Higher order term rewrite systems are not supported");
-                    let index = args[0].operation_id();
+                    assert!(args[0].is_data_function_symbol(), "Higher order term rewrite systems are not supported");
+                    let function_symbol: DataFunctionSymbol = args[0].clone().into();
+                    let index = function_symbol.operation_id();
 
                     if index >= symbols.len() {
-                        symbols.resize(index + 1, FunctionSymbol::default());
+                        symbols.resize(index + 1, Default::default());
                     }
 
-                    if symbols[index] == FunctionSymbol::default() {                        
-                        symbols[index] = FunctionSymbol::new(args[0].clone().into(), args.len() - 1);
+                    if symbols[index] == Default::default() {                        
+                        symbols[index] = (function_symbol, args.len() - 1);
                     } else {                        
-                        assert!(symbols[index].arity() == args.len() - 1, "Function symbol {} occurs with arity {} and {}", args[0], args.len() - 1, &symbols[index].arity());                        
+                        assert!(symbols[index].1 == args.len() - 1, "Function symbol {} occurs with arity {} and {}", args[0], args.len() - 1, &symbols[index].1);                        
                     }
                 }
             }
+        }
+
+        for (symbol, arity) in &spec.constructors {
+            let index = symbol.operation_id();
+
+            if index >= symbols.len() {
+                symbols.resize(index + 1, Default::default());
+            }
+
+            if symbols[index] == Default::default() {                        
+                symbols[index] = (symbol.clone(), *arity);
+            } else {                        
+                assert!(symbols[index].1 == *arity, "Function symbol {:?} occurs with arity {} and {}", symbol, arity, &symbols[index].1);                        
+            }
+        }
+
+        for (symbol, arity) in &symbols {
+            println!("{}: {}", symbol, arity);
         }
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
@@ -139,19 +138,18 @@ impl SetAutomaton {
             // Compute the transitions from the states
             let transitions_per_symbol: Vec<_> = symbols
                 .iter()
-                .map(|s| {
+                .map(|(symbol, arity)| {
                     (
-                        s.clone(),
+                        symbol.clone(),
                         states.get(s_index).unwrap().derive_transition(
-                            s.clone(),
+                            symbol.clone(),
+                            *arity,
                             &spec.rewrite_rules,
                             false,
                         ),
                     )
                 })
                 .collect();
-
-            println!("state: {:?}, transitions:{:?}", &s_index, &transitions_per_symbol);
 
             // Loop over all the possible symbols and the associated hypertransition
             for (symbol, (outputs, destinations)) in transitions_per_symbol {
@@ -167,7 +165,7 @@ impl SetAutomaton {
 
                 // Create transition
                 let mut transition = Transition {
-                    symbol: symbol.function.clone(),
+                    symbol: symbol.clone(),
                     announcements,
                     destinations: smallvec![],
                 };
@@ -193,10 +191,12 @@ impl SetAutomaton {
                             state_counter += 1;
                         }
                     } else {
-                        //The transition is to the initial state
+                        // The transition is to the initial state
                         dest_states.push((pos, 0));
                     }
                 }
+
+                // Add the resulting transition to the state
                 transition.destinations = dest_states;
                 states
                     .get_mut(s_index)
@@ -212,9 +212,9 @@ impl SetAutomaton {
 
 #[derive(Debug)]
 pub struct Derivative {
-    completed: Vec<MatchGoal>,
-    unchanged: Vec<MatchGoal>,
-    reduced: Vec<MatchGoal>,
+    pub(crate) completed: Vec<MatchGoal>,
+    pub(crate) unchanged: Vec<MatchGoal>,
+    pub(crate) reduced: Vec<MatchGoal>,
 }
 
 #[derive(Debug)]
@@ -235,7 +235,8 @@ impl State {
     /// Parameter symbol is the symbol for which the transition is computed
     fn derive_transition(
         &self,
-        symbol: FunctionSymbol,
+        symbol: DataFunctionSymbol,
+        arity: usize,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
     ) -> (
@@ -243,7 +244,7 @@ impl State {
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
         // Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(&symbol);
+        let mut derivative = self.compute_derivative(&symbol, arity);
 
         // The outputs/matching patterns of the transitions are those who are completed
         let outputs = derivative
@@ -251,6 +252,8 @@ impl State {
             .into_iter()
             .map(|x| x.announcement)
             .collect();
+
+        // The new match goals are the unchanged and reduced match goals.
         let mut new_match_goals = derivative.unchanged;
         new_match_goals.append(&mut derivative.reduced);
 
@@ -283,7 +286,7 @@ impl State {
 
             // Handle fresh match goals, they are the positions Label(state).i
             // where i is between 1 and the arity of the function symbol of the transition
-            for i in 1..symbol.arity + 1 {
+            for i in 1..arity + 1 {
                 let mut pos = self.label.clone();
                 pos.indices.push(i);
 
@@ -320,12 +323,13 @@ impl State {
                         }
                     }
                 } else {
-                    //the transition is simply to the initial state
-                    //GoalsOrInitial::InitialState avoids unnecessary work of creating all these fresh goals
+                    // The transition is simply to the initial state
+                    // GoalsOrInitial::InitialState avoids unnecessary work of creating all these fresh goals
                     destinations.push((pos, GoalsOrInitial::InitialState));
                 }
             }
         }
+
         //Sort so that transitions that do not deepen the position are listed first
         destinations.sort_unstable_by(|x1, x2| x1.0.cmp(&x2.0));
         (outputs, destinations)
@@ -333,14 +337,14 @@ impl State {
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: &FunctionSymbol) -> Derivative {
+    fn compute_derivative(&self, symbol: &DataFunctionSymbol, arity: usize) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
             reduced: vec![],
         };
 
-        let term_symbol = <TermFunctionSymbol as Into<ATerm>>::into(symbol.function.clone());
+        let term_symbol = <DataFunctionSymbol as Into<ATerm>>::into(symbol.clone());
 
         // For DataAppl the first argument is the function symbol (make this explicit).
         for mg in &self.match_goals {
@@ -349,7 +353,7 @@ impl State {
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
                         && mo.pattern.arg(0) == term_symbol
-                        && mo.pattern.arguments().iter().all(|x| !x.is_variable())
+                        && mo.pattern.arguments().iter().all(|x| !x.is_data_variable())
                 })
             {
                 result.completed.push(mg.clone());
@@ -358,7 +362,7 @@ impl State {
                 .iter()
                 .any(|mo| mo.position == self.label && mo.pattern.arg(0) != term_symbol)
             {
-                // discard
+                // Match goal is discarded since head symbol does not match.
             } else if !mg.obligations.iter().any(|mo| mo.position == self.label) {
                 // Unchanged match goals
                 let mut mg = mg.clone();
@@ -371,21 +375,23 @@ impl State {
                 .iter()
                 .any(|mo| mo.position == self.label && mo.pattern.arg(0) == term_symbol)
             {
-                // Reduced match obligations
+                // Reduce match obligations
                 let mut mg = mg.clone();
                 let mut new_obligations = vec![];
+
                 for mo in mg.obligations {
                     if mo.pattern.arg(0) == term_symbol && mo.position == self.label {
-                        // reduce
+                        // Reduced match obligation
                         for (index, t) in mo.pattern.arguments().iter().enumerate() {
-                            if !t.is_variable() {
+                            assert!(index <= arity, "This pattern associates function symbol {:?} with different arities", symbol);
+                            // The first index is the function symbol
+                            if index != 0 && !t.is_data_variable() {
                                 let mut new_pos = mo.position.clone();
                                 new_pos.indices.push(index);
                                 new_obligations.push(MatchObligation {
                                     pattern: t.clone(),
                                     position: new_pos,
                                 });
-                            } else { // this is a variable
                             }
                         }
                     } else {
@@ -393,15 +399,19 @@ impl State {
                         new_obligations.push(mo.clone());
                     }
                 }
+
                 new_obligations
                     .sort_unstable_by(|mo1, mo2| mo1.position.len().cmp(&mo2.position.len()));
                 mg.obligations = new_obligations;
                 mg.announcement.symbols_seen += 1;
+
                 result.reduced.push(mg);
             } else {
-                println!("{:?}", mg);
+                panic!("The match goal {:?} is unhandled", mg);
             }
         }
+
+        print!("For function symbol {}, derived {}", symbol, result);
         result
     }
 

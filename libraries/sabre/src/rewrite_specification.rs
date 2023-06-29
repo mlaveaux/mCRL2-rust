@@ -1,12 +1,16 @@
 use std::fmt;
 
-use mcrl2_rust::atermpp::ATerm;
+use mcrl2_rust::{
+    atermpp::ATerm,
+    data::DataFunctionSymbol
+};
 
 /// A rewrite specification contains the bare info we need for rewriting (in particular no type information).
 #[derive(Debug,Clone)]
 pub struct RewriteSpecification 
 {
     pub rewrite_rules: Vec<Rule>,
+    pub constructors: Vec<(DataFunctionSymbol, usize)>,
 }
 
 /// Either lhs == rhs or lhs != rhs depending on equality being true.

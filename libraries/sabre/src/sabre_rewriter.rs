@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 //use utilities::set_automaton;
-use mcrl2_rust::atermpp::{ATerm, TermPool};
+use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 
 use crate::{
     rewrite_specification::RewriteSpecification,
@@ -103,13 +103,13 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton. 
-                            let function_symbol = {
+                            let function_symbol: DataFunctionSymbol = {
                                 // If this is an application it is the first argument, otherwise it's the term itself
                                 let term = get_position(&leaf.subterm, &automaton.states[leaf.state].label);
-                                if term.is_application() {
-                                    term.arg(0)
+                                if term.is_data_application() {
+                                    term.arg(0).into()
                                 } else {
-                                    term
+                                    term.into()
                                 }
                             };
                             stats.symbol_comparisons += 1;
