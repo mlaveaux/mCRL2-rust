@@ -126,7 +126,6 @@ impl SetAutomaton {
         map_goals_state.insert(match_goals, 0);
 
         let mut states = vec![initial_state];
-
         while !queue.is_empty() {
             // Pick a state to explore
             let s_index = queue.pop_front().unwrap();
@@ -152,7 +151,7 @@ impl SetAutomaton {
                 // Associate an EnhancedMatchAnnouncement to every transition
                 let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
                     .into_iter()
-                    .map(|x| x.derive_redex())
+                    .map(|x| EnhancedMatchAnnouncement::new(x))
                     .collect();
 
                 announcements.sort_by(|ema1, ema2| {
@@ -294,7 +293,7 @@ impl State {
                 let mut pos = self.label.clone();
                 pos.indices.push(i);
 
-                //Check if the fresh goals are related to one of the existing partitions
+                // Check if the fresh goals are related to one of the existing partitions
                 let mut partition_key = None;
                 'outer: for (i, part_pos) in positions_per_partition.iter().enumerate() {
                     for p in part_pos {
@@ -334,8 +333,8 @@ impl State {
             }
         }
 
-        //Sort so that transitions that do not deepen the position are listed first
-        destinations.sort_unstable_by(|x1, x2| x1.0.cmp(&x2.0));
+        // Sort the destination such that transitions which do not deepen the position are listed first
+        destinations.sort_unstable_by(|(pos1, _), (pos2, _)| pos1.cmp(&pos2));
         (outputs, destinations)
     }
 
@@ -387,11 +386,12 @@ impl State {
                     if mo.pattern.arg(0) == term_symbol && mo.position == self.label {
                         // Reduced match obligation
                         for (index, t) in mo.pattern.arguments().iter().skip(1).enumerate() {
-                            assert!(index <= arity, "This pattern associates function symbol {:?} with different arities", symbol);
+                            // Skipping one does still enumerate at 0.
+                            assert!(index + 1 <= arity, "This pattern associates function symbol {:?} with different arities", symbol);
 
                             if !t.is_data_variable() {
                                 let mut new_pos = mo.position.clone();
-                                new_pos.indices.push(index);
+                                new_pos.indices.push(index + 1);
                                 new_obligations.push(MatchObligation {
                                     pattern: t.clone(),
                                     position: new_pos,
@@ -423,22 +423,21 @@ impl State {
     fn new(goals: Vec<MatchGoal>, num_transitions: usize) -> State {
         // The label of the state is taken from a match obligation of a root match goal.
         let mut label: Option<ExplicitPosition> = None;
-        // Go through all match goals...
-        for g in &goals {
-            // ...until a root match goal is found
-            if g.announcement.position == ExplicitPosition::empty_pos() {
+        // Go through all match goals until a root match goal is found
+        for goal in &goals {
+            if goal.announcement.position == ExplicitPosition::empty_pos() {
                 // Find the shortest match obligation position.
                 // This design decision was taken as it presumably has two advantages.
                 // 1. Patterns that overlap will be more quickly distinguished, potentially decreasing
                 // the size of the automaton.
                 // 2. The average lookahead may be shorter.
                 if label.is_none() {
-                    label = Some(g.obligations.first().unwrap().position.clone());
+                    label = Some(goal.obligations.first().unwrap().position.clone());
                 }
-                for o in &g.obligations {
+                for obligation in &goal.obligations {
                     if let Some(l) = &label {
-                        if &o.position < l {
-                            label = Some(o.position.clone());
+                        if &obligation.position < l {
+                            label = Some(obligation.position.clone());
                         }
                     }
                 }

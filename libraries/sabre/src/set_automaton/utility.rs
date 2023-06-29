@@ -101,18 +101,21 @@ impl MatchAnnouncement {
         var_equivalences.retain(|x| x.positions.len() > 1);
         var_equivalences
     }
+}
 
+impl EnhancedMatchAnnouncement {
+    
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
-    pub fn derive_redex(&self) -> EnhancedMatchAnnouncement {
+    pub(crate) fn new(announcement: MatchAnnouncement) -> EnhancedMatchAnnouncement {
         // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         // rhs of the rewrite rule and for lhs and rhs of each condition.
         // Also see the documentation of SemiCompressedTermTree
-        let var_map = create_var_map(&self.rule.lhs);
-        let sctt_rhs = SemiCompressedTermTree::from_term(self.rule.rhs.clone(), &var_map);
+        let var_map = create_var_map(&announcement.rule.lhs);
+        let sctt_rhs = SemiCompressedTermTree::from_term(announcement.rule.rhs.clone(), &var_map);
         let mut conditions = vec![];
 
-        for c in &self.rule.conditions {
+        for c in &announcement.rule.conditions {
             let ema_condition = EMACondition {
                 semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.clone(), &var_map),
                 semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.clone(), &var_map),
@@ -122,10 +125,11 @@ impl MatchAnnouncement {
         }
 
         let is_duplicating = sctt_rhs.contains_duplicate_var_references();
+        let equivalence_classes = announcement.derive_equivalence_classes();
 
         EnhancedMatchAnnouncement {
-            announcement: self.clone(),
-            equivalence_classes: self.derive_equivalence_classes(),
+            announcement: announcement,
+            equivalence_classes: equivalence_classes,
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,
