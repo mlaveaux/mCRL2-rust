@@ -108,6 +108,9 @@ pub fn load_REC_from_strings(
         rewrite_spec
             .rewrite_rules
             .extend_from_slice(&include_spec.rewrite_rules);
+        rewrite_spec
+            .constructors
+            .extend_from_slice(&include_spec.constructors);
 
         for s in include_spec.variables {
             if !rewrite_spec.variables.contains(&s) {
