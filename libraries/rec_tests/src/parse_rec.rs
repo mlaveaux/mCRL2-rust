@@ -37,12 +37,20 @@ fn parse_REC(
             let mut inner = pair.into_inner();
             let header = inner.next().unwrap();
             let _sorts = inner.next().unwrap();
-            let _cons = inner.next().unwrap();
+            let cons = inner.next().unwrap();
             let _opns = inner.next().unwrap();
             let vars = inner.next().unwrap();
             let rules = inner.next().unwrap();
             let eval = inner.next().unwrap();
             let (_name, include_files) = parse_header(header);
+
+            rewrite_spec.rewrite_rules = parse_rewrite_rules(rules);
+            rewrite_spec.constructors = parse_constructors(cons);
+            if eval.as_rule() == Rule::eval {
+                terms.extend_from_slice(&parse_eval(eval));
+            }
+
+            rewrite_spec.variables = parse_vars(vars);
 
             // REC files can import other REC files. Import all referenced by the header.
             for file in include_files {
@@ -58,6 +66,9 @@ fn parse_REC(
                     rewrite_spec
                         .rewrite_rules
                         .extend_from_slice(&include_spec.rewrite_rules);
+                    rewrite_spec
+                        .constructors
+                        .extend_from_slice(&include_spec.constructors);
                     for s in include_spec.variables {
                         if !rewrite_spec.variables.contains(&s) {
                             rewrite_spec.variables.push(s);
@@ -65,15 +76,6 @@ fn parse_REC(
                     }
                 }
             }
-
-            rewrite_spec
-                .rewrite_rules
-                .extend_from_slice(&parse_rewrite_rules(rules));
-            if eval.as_rule() == Rule::eval {
-                terms.extend_from_slice(&parse_eval(eval));
-            }
-
-            rewrite_spec.variables = parse_vars(vars);
         }
         Err(e) => {
             // TODO: Panic when a parse error occurs. Should probably return an error.
@@ -132,6 +134,20 @@ fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>) {
     (name, include_files)
 }
 
+/// Extracts data from parsed constructor section, derives the arity of symbols. Types are ignored.
+fn parse_constructors(pair: Pair<Rule>) -> Vec<(String, usize)> {
+    assert_eq!(pair.as_rule(), Rule::cons);
+    let mut constructors = Vec::new();
+    for decl in pair.into_inner() {
+        assert_eq!(decl.as_rule(), Rule::cons_decl);
+        let mut inner = decl.into_inner();
+        let symbol = inner.next().unwrap().as_str().to_string();        
+        let arity = inner.count() - 1;
+        constructors.push((symbol, arity));
+    }
+    constructors
+}
+
 /// Extracts data from parsed rewrite rules. Returns list of rewrite rules
 fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> {
     assert_eq!(pair.as_rule(), Rule::rules);
@@ -147,7 +163,7 @@ fn parse_rewrite_rules(pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> {
 // Extracts data from the variable VARS block. Types are ignored.
 fn parse_vars(pair: Pair<Rule>) -> Vec<String> {
     assert_eq!(pair.as_rule(), Rule::vars);
-    
+
     let mut variables = vec![];
     let inner = pair.into_inner();
     for v in inner {
@@ -317,8 +333,10 @@ mod tests {
     #[test]
     fn test_variable_parsing() {
         let mut pairs = TermParser::parse(Rule::var_decl, "X Y Val Max : Nat").unwrap();
-        assert_eq!(parse_var_decl(pairs.next().unwrap()), vec!["X", "Y", "Val", "Max"]);
-
+        assert_eq!(
+            parse_var_decl(pairs.next().unwrap()),
+            vec!["X", "Y", "Val", "Max"]
+        );
     }
 
     #[test]

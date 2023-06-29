@@ -7,10 +7,11 @@ use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification};
 use sabre::utilities::to_data_expression;
 use rec_tests::load_REC_from_strings;
 
-#[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
+// #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
 // #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
 // #[test_case(vec![include_str!("REC_files/benchsym10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym10.txt") ; "benchsym10")]
 // #[test_case(vec![include_str!("REC_files/benchsym20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym20.txt") ; "benchsym20")]
+#[test_case(vec![include_str!("REC_files/bit.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "bit")]
 // #[test_case(vec![include_str!("REC_files/bubblesort10.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort10.txt") ; "bubblesort10")]
 // #[test_case(vec![include_str!("REC_files/bubblesort20.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort20.txt") ; "bubblesort20")]
 // #[test_case(vec![include_str!("REC_files/bubblesort100.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort100.txt") ; "bubblesort100")]

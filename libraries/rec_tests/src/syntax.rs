@@ -13,6 +13,7 @@ use sabre::{
 #[derive(Clone, Default, Debug)]
 pub struct RewriteSpecificationSyntax {
     pub rewrite_rules: Vec<RewriteRuleSyntax>,
+    pub constructors: Vec<(String,usize)>,
     pub variables: Vec<String>,
 }
 
@@ -23,13 +24,19 @@ impl RewriteSpecificationSyntax {
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
 
+        // Store the constructors
+        let mut constructors = Vec::new();
+        for (name, arity) in &self.constructors {
+            constructors.push((tp.create_data_function_symbol(name), *arity));
+        }
+
         // Store the rewrite rules in the maximally shared term storage
         let mut rewrite_rules = Vec::new();
-        for rr in &self.rewrite_rules {
+        for rule in &self.rewrite_rules {
 
             // Convert the conditions.
             let mut conditions = vec![];
-            for c in &rr.conditions {
+            for c in &rule.conditions {
                 let lhs_term = c.lhs.to_term(tp);
                 let rhs_term = c.rhs.to_term(tp);
 
@@ -43,8 +50,8 @@ impl RewriteSpecificationSyntax {
                 conditions.push(condition);
             }
             
-            let lhs = rr.lhs.to_term(tp);
-            let rhs = rr.rhs.to_term(tp);
+            let lhs = rule.lhs.to_term(tp);
+            let rhs = rule.rhs.to_term(tp);
 
             rewrite_rules.push(Rule {
                 lhs: to_data_expression(tp, &lhs, &variables),
@@ -55,6 +62,7 @@ impl RewriteSpecificationSyntax {
 
         RewriteSpecification {
             rewrite_rules,
+            constructors,
         }
     }
 }
