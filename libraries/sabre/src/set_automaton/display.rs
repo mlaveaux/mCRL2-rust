@@ -1,11 +1,13 @@
 use std::process::Command;
 
+use mcrl2_rust::{data::{DataFunctionSymbol, DataApplication}, atermpp::ATerm};
+
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, State};
 use core::fmt;
 use std::fs::File;
 use std::io::Write;
 
-use super::{Transition, MatchAnnouncement};
+use super::{Transition, MatchAnnouncement, MatchGoal, Derivative, MatchObligation};
 
 impl fmt::Debug for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -19,15 +21,26 @@ impl fmt::Display for Transition {
         write!(
             f,
             "Transition {{ Symbol: {}, Outputs: [",
-            self.symbol.name()
+            self.symbol
         )?;
+
+        let mut first = true;
         for r in &self.announcements {
+            if !first {
+                write!(f, ", ")?;
+            }
             write!(f, "{}", r)?;
+            first = false;
         }
 
         write!(f, "] Destinations: [")?;
+        first = true;
         for (pos, s) in &self.destinations {
-            write!(f, "({},{})  ", pos, s)?;
+            if !first {
+                write!(f, " ")?;
+            }
+            write!(f, "({},{})", pos, s)?;
+            first = false;
         }
         write!(f, "]}}")
     }
@@ -36,12 +49,42 @@ impl fmt::Display for Transition {
 /// Implement display for a match announcement
 impl fmt::Display for MatchAnnouncement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}@{}",
-            &self.rule.lhs,
-            self.position
-        )
+        if self.rule.lhs.is_data_function_symbol() {
+            write!(
+                f,
+                "{}@{}",
+                <ATerm as Into<DataFunctionSymbol>>::into(self.rule.lhs.clone()),
+                self.position
+            )
+        } else {
+            write!(
+                f,
+                "{}@{}",
+                <ATerm as Into<DataApplication>>::into(self.rule.lhs.clone()),
+                self.position
+            )
+        }
+    }
+}
+
+impl fmt::Display for MatchObligation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.pattern.is_data_function_symbol() {
+            write!(
+                f,
+                "{}@{}",
+                <ATerm as Into<DataFunctionSymbol>>::into(self.pattern.clone()),
+                self.position
+            )
+        } else {
+            write!(
+                f,
+                "{}@{}",
+                <ATerm as Into<DataApplication>>::into(self.pattern.clone()),
+                self.position
+            )
+        }
+
     }
 }
 
@@ -54,12 +97,11 @@ impl fmt::Display for EnhancedMatchAnnouncement {
             write!(f, "{}{{", ec.variable)?;
             let mut first = true;
             for p in &ec.positions {
-                if first {
-                    write!(f, "{}", p)?;
-                    first = false;
-                } else {
-                    write!(f, ",{}", p)?;
-                }
+                if !first {
+                    write!(f, ", ")?;
+                } 
+                write!(f, "{}", p)?;
+                first = false;
             }
             write!(f, "}} ")?;
         }
@@ -161,7 +203,6 @@ impl SetAutomaton {
 
         for (i, s) in self.states.iter().enumerate() {
             for tr in s.transitions.iter() {
-                let symbol = tr.symbol.name();
                 let mut announcements = "".to_string();
 
                 for a in &tr.announcements {
@@ -173,15 +214,15 @@ impl SetAutomaton {
                     writeln!(
                         &mut f,
                         "  s{}-> final [label=\"{}{}\"]",
-                        i, symbol, announcements
+                        i, tr.symbol, announcements
                     )
                     .unwrap();
                 } else {
-                    writeln!(&mut f, "  s{}{}[shape=point]", i, symbol).unwrap();
+                    writeln!(&mut f, "  s{}{}[shape=point]", i, tr.symbol).unwrap();
                     writeln!(
                         &mut f,
                         "  s{}->s{}{}[label=\"{}{}\"]",
-                        i, i, symbol, symbol, announcements
+                        i, i, tr.symbol, tr.symbol, announcements
                     )
                     .unwrap();
                     for (pos, des) in &tr.destinations {
@@ -189,7 +230,7 @@ impl SetAutomaton {
                             &mut f,
                             "  s{}{}->s{} [label =\"{}\"]",
                             i,
-                            symbol,
+                            tr.symbol,
                             des,
                             pos
                         )
@@ -212,4 +253,44 @@ fn dot2svg(f_name: &str) {
         ])
         .output()
         .expect("failed to execute process");
+}
+
+/// Implement display for a match announcement
+impl fmt::Display for Derivative {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "completed: ")?;
+        for mg in &self.completed {
+            writeln!(f, "{}", mg)?;
+        }
+
+        writeln!(f, "")?;
+        writeln!(f, "unchanged: ")?;
+        for mg in &self.unchanged {
+            writeln!(f, "{}", mg)?;
+        }
+
+        writeln!(f, "")?;
+        writeln!(f, "reduced: ")?;
+        for mg in &self.reduced {
+            writeln!(f, "{}", mg)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for MatchGoal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+
+        let mut first = true;
+        for obligation in &self.obligations {
+            if !first {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", obligation)?;
+            first = false;
+        }
+
+        write!(f, " ↪ {}", self.announcement)
+    }
 }
