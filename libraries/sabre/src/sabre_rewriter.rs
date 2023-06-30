@@ -1,11 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
-//use utilities::set_automaton;
 use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 
 use crate::{
     rewrite_specification::RewriteSpecification,
-    set_automaton::{EnhancedMatchAnnouncement, EquivalenceClass, SetAutomaton},
+    set_automaton::{EnhancedMatchAnnouncement, EquivalenceClass, SetAutomaton, get_data_function_symbol, get_data_position},
     utilities::{get_position, Configuration, ConfigurationStack, SideInfo, SideInfoType},
 };
 
@@ -15,6 +14,7 @@ pub trait RewriteEngine {
     fn rewrite(&mut self, term: ATerm) -> ATerm;
 }
 
+#[derive(Default)]
 pub struct RewritingStatistics {
     pub rewrite_steps: usize,
     pub symbol_comparisons: usize,
@@ -35,7 +35,7 @@ impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp,
-            automaton: SetAutomaton::construct(spec),
+            automaton: SetAutomaton::construct(spec, false, false),
         }
     }
 
@@ -45,6 +45,7 @@ impl SabreRewriter {
             rewrite_steps: 0,
             symbol_comparisons: 0,
         };
+
         SabreRewriter::stack_based_normalise_aux(
             &mut self.term_pool.borrow_mut(),
             &self.automaton,
@@ -103,18 +104,10 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton. 
-                            let function_symbol: DataFunctionSymbol = {
-                                // If this is an application it is the first argument, otherwise it's the term itself
-                                let term = get_position(&leaf.subterm, &automaton.states[leaf.state].label);
-                                if term.is_data_application() {
-                                    term.arg(0).into()
-                                } else {
-                                    term.into()
-                                }
-                            };
+                            let function_symbol: DataFunctionSymbol = get_data_function_symbol(&get_data_position(&leaf.subterm, &automaton.states[leaf.state].label));
                             stats.symbol_comparisons += 1;
 
-                            println!("matching: {:?}", function_symbol);
+                            println!("matching: {}", function_symbol);
 
                             // Get the transition belonging to the observed symbol
                             let tr = &automaton.states[leaf.state].transitions
@@ -122,7 +115,7 @@ impl SabreRewriter {
 
                             // Loop over the match announcements of the transition
                             for ema in &tr.announcements {
-                                println!("announcing: {:?}", ema);
+                                println!("announcing: {}", ema);
 
                                 if ema.conditions.is_empty()
                                     && ema.equivalence_classes.is_empty()
@@ -168,6 +161,8 @@ impl SabreRewriter {
                                     cs.jump_back(n, tp);
                                 }
                             } else {
+                                println!("growing buds matching!");
+
                                 // Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
                                 let tr_slice = tr.destinations.as_slice();
                                 cs.grow(leaf_index, tr_slice);

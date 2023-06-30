@@ -128,8 +128,8 @@ impl EnhancedMatchAnnouncement {
         let equivalence_classes = announcement.derive_equivalence_classes();
 
         EnhancedMatchAnnouncement {
-            announcement: announcement,
-            equivalence_classes: equivalence_classes,
+            announcement,
+            equivalence_classes,
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,

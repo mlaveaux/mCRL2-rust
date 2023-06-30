@@ -36,7 +36,7 @@ enum GoalsOrInitial {
 }
 
 impl SetAutomaton {
-    pub(crate) fn construct(spec: RewriteSpecification) -> SetAutomaton {
+    pub(crate) fn construct(spec: RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
         
@@ -140,7 +140,8 @@ impl SetAutomaton {
                             symbol.clone(),
                             *arity,
                             &spec.rewrite_rules,
-                            false,
+                            apma,
+                            debug
                         ),
                     )
                 })
@@ -151,7 +152,7 @@ impl SetAutomaton {
                 // Associate an EnhancedMatchAnnouncement to every transition
                 let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
                     .into_iter()
-                    .map(|x| EnhancedMatchAnnouncement::new(x))
+                    .map(EnhancedMatchAnnouncement::new)
                     .collect();
 
                 announcements.sort_by(|ema1, ema2| {
@@ -202,12 +203,16 @@ impl SetAutomaton {
         }
 
         // Clear the match goals since they are only for debugging purposes.
-        //for state in &mut states {
-        //    state.match_goals.clear();
-        //}
+        if !debug {
+            for state in &mut states {
+                state.match_goals.clear();
+            }
+        }
 
         let result = SetAutomaton { states };
-        println!("{}", result);
+        if debug {
+            println!("{}", result);
+        }
 
         result
     }
@@ -229,6 +234,39 @@ pub(crate) struct State {
     pub(crate) match_goals: Vec<MatchGoal>,
 }
 
+/// Returns the data function symbol of the given term
+pub fn get_data_function_symbol(term: &ATerm) -> DataFunctionSymbol {
+    // If this is an application it is the first argument, otherwise it's the term itself
+    if term.is_data_application() {
+        term.arg(0).into()
+    } else {
+        term.clone().into()
+    }
+}
+
+/// Returns the data arguments of the term
+pub fn get_data_arguments(term: &ATerm) -> Vec<ATerm> {
+    if term.is_data_application() {
+        let mut result = term.arguments();
+        result.remove(0);
+        result
+    } else {
+        vec![]
+    }
+}
+
+/// Returns the subterm at the specific position
+pub fn get_data_position(term: &ATerm, position: &ExplicitPosition) -> ATerm {
+    let mut result = term.clone();
+
+    for index in &position.indices {
+        result = result.arg(*index); // Note that positions are 1 indexed, but the head is the application.
+    }
+    
+    result
+}
+
+
 impl State {
     /// Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
     /// The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
@@ -242,12 +280,13 @@ impl State {
         arity: usize,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
+        debug: bool,
     ) -> (
         Vec<MatchAnnouncement>,
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
         // Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(&symbol, arity);
+        let mut derivative = self.compute_derivative(&symbol, arity, debug);
 
         // The outputs/matching patterns of the transitions are those who are completed
         let outputs = derivative
@@ -303,6 +342,7 @@ impl State {
                         }
                     }
                 }
+
                 if let Some(key) = partition_key {
                     // If the fresh goals fall in an existing partition
                     let gcp_length = gcp_length_per_partition[key];
@@ -334,60 +374,56 @@ impl State {
         }
 
         // Sort the destination such that transitions which do not deepen the position are listed first
-        destinations.sort_unstable_by(|(pos1, _), (pos2, _)| pos1.cmp(&pos2));
+        destinations.sort_unstable_by(|(pos1, _), (pos2, _)| pos1.cmp(pos2));
         (outputs, destinations)
     }
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: &DataFunctionSymbol, arity: usize) -> Derivative {
+    fn compute_derivative(&self, symbol: &DataFunctionSymbol, arity: usize, debug: bool) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
             reduced: vec![],
         };
 
-        let term_symbol = <DataFunctionSymbol as Into<ATerm>>::into(symbol.clone());
-
-        // For DataAppl the first argument is the function symbol (TODO: This should be done with the proper type).
         for mg in &self.match_goals {
+            assert!(!mg.obligations.is_empty(), "The obligations should never be empty, should be completed then");
+
             // Completed match goals
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && mo.pattern.arg(0) == term_symbol
-                        && mo.pattern.arguments().iter().skip(1).all(|x| x.is_data_variable()) // Again skip the first function symbol
+                        && &get_data_function_symbol(&mo.pattern) == symbol
+                        && get_data_arguments(&mo.pattern).iter().all(|x| x.is_data_variable()) // Again skip the first function symbol
                 })
             {
                 result.completed.push(mg.clone());
             } else if mg
                 .obligations
                 .iter()
-                .any(|mo| mo.position == self.label && mo.pattern.arg(0) != term_symbol)
+                .any(|mo| mo.position == self.label && &get_data_function_symbol(&mo.pattern) != symbol)
             {
                 // Match goal is discarded since head symbol does not match.
-            } else if !mg.obligations.iter().any(|mo| mo.position == self.label) {
+            } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
                 // Unchanged match goals
                 let mut mg = mg.clone();
                 if mg.announcement.rule.lhs != mg.obligations.first().unwrap().pattern {
                     mg.announcement.symbols_seen += 1;
                 }
+
                 result.unchanged.push(mg);
-            } else if mg
-                .obligations
-                .iter()
-                .any(|mo| mo.position == self.label && mo.pattern.arg(0) == term_symbol)
-            {
+            } else {
                 // Reduce match obligations
                 let mut mg = mg.clone();
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if mo.pattern.arg(0) == term_symbol && mo.position == self.label {
+                    if &get_data_function_symbol(&mo.pattern) == symbol && mo.position == self.label {
                         // Reduced match obligation
-                        for (index, t) in mo.pattern.arguments().iter().skip(1).enumerate() {
+                        for (index, t) in get_data_arguments(&mo.pattern).iter().enumerate() {
                             // Skipping one does still enumerate at 0.
-                            assert!(index + 1 <= arity, "This pattern associates function symbol {:?} with different arities", symbol);
+                            assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
                             if !t.is_data_variable() {
                                 let mut new_pos = mo.position.clone();
@@ -410,12 +446,36 @@ impl State {
                 mg.announcement.symbols_seen += 1;
 
                 result.reduced.push(mg);
-            } else {
-                panic!("The match goal {:?} is unhandled", mg);
             }
         }
 
-        print!("For function symbol {}, derived {}", symbol, result);
+        if debug {
+            println!("compute_derivative(symbol {}, label {})", symbol, self.label);
+            println!("Match goals: {{");
+            for mg in &self.match_goals {
+                println!("\t {}", mg);
+            }
+            
+            println!("}}");
+            println!("Completed: {{");
+            for mg in &result.completed {
+                println!("\t {}", mg);
+            }
+
+            println!("}}");
+            println!("Unchanged: {{");
+            for mg in &result.unchanged {
+                println!("\t {}", mg);
+            }
+
+            println!("}}");
+            println!("Reduced: {{");
+            for mg in &result.reduced {
+                println!("\t {}", mg);
+            }
+            println!("}}");
+        }
+
         result
     }
 

@@ -7,7 +7,7 @@ use core::fmt;
 use std::fs::File;
 use std::io::Write;
 
-use super::{Transition, MatchAnnouncement, MatchGoal, Derivative, MatchObligation};
+use super::{Transition, MatchAnnouncement, MatchGoal, MatchObligation};
 
 impl fmt::Debug for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -258,30 +258,6 @@ fn dot2svg(f_name: &str) {
         ])
         .output()
         .expect("failed to execute process");
-}
-
-/// Implement display for a match announcement
-impl fmt::Display for Derivative {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "completed: ")?;
-        for mg in &self.completed {
-            writeln!(f, "{}", mg)?;
-        }
-
-        writeln!(f, "")?;
-        writeln!(f, "unchanged: ")?;
-        for mg in &self.unchanged {
-            writeln!(f, "{}", mg)?;
-        }
-
-        writeln!(f, "")?;
-        writeln!(f, "reduced: ")?;
-        for mg in &self.reduced {
-            writeln!(f, "{}", mg)?;
-        }
-
-        Ok(())
-    }
 }
 
 impl fmt::Display for MatchGoal {

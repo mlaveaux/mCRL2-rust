@@ -43,7 +43,7 @@ use SemiCompressedTermTree::*;
 use super::{get_position, PositionIterator};
 
 impl SemiCompressedTermTree {
-    /// Given a [ATerm] left hand side and a term pool this function instantiates the SCTT and computes a [ATerm].
+    /// Given an [ATerm] and a term pool this function instantiates the SCTT and computes a [ATerm].
     ///
     /// # Example
     /// For the SCTT belonging to the rewrite rule minus(s(x), s(y)) = minus(x, y)
@@ -51,20 +51,20 @@ impl SemiCompressedTermTree {
     /// evaluate will encounter an ExplicitNode and make two recursive calls to get the subterms.
     /// Both these recursive calls will return the term '0'.
     /// The term pool will be used to construct the term minus(0, 0).
-    pub fn evaluate(&self, lhs: &ATerm, tp: &mut TermPool) -> ATerm {
+    pub fn evaluate(&self, t: &ATerm, tp: &mut TermPool) -> ATerm {
         match self {
             Explicit(node) => {
                 // Create an ATerm with as arguments all the evaluated semi compressed term trees.
                 let mut subterms = Vec::with_capacity(node.children.len());
 
                 for i in 0..node.children.len() {
-                    subterms.push(node.children[i].evaluate(lhs, tp));
+                    subterms.push(node.children[i].evaluate(t, tp));
                 }
 
                 tp.create(&node.head, &subterms)
             }
             Compressed(ct) => ct.clone(),
-            Variable(p) => get_position(lhs, p),
+            Variable(p) => get_position(t, p),
         }
     }
 
