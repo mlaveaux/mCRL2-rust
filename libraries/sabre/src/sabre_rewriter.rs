@@ -107,15 +107,12 @@ impl SabreRewriter {
                             let function_symbol: DataFunctionSymbol = get_data_function_symbol(&get_data_position(&leaf.subterm, &automaton.states[leaf.state].label));
                             stats.symbol_comparisons += 1;
 
-                            println!("matching: {}", function_symbol);
-
                             // Get the transition belonging to the observed symbol
                             let tr = &automaton.states[leaf.state].transitions
                                 [function_symbol.operation_id()];
 
                             // Loop over the match announcements of the transition
                             for ema in &tr.announcements {
-                                println!("announcing: {}", ema);
 
                                 if ema.conditions.is_empty()
                                     && ema.equivalence_classes.is_empty()
@@ -134,12 +131,12 @@ impl SabreRewriter {
                                             ema,
                                             leaf.subterm.clone(),
                                             leaf_index,
-                                            &mut cs,
+                                            cs,
                                             stats,
                                         );
                                         break 'skip_point;
                                     }
-                                } else {
+                                } else {                   
                                     // We delay the condition checks
                                     cs.side_branch_stack.push(SideInfo {
                                         corresponding_configuration: leaf_index,
@@ -149,7 +146,6 @@ impl SabreRewriter {
                             }
 
                             if tr.destinations.is_empty() {
-                                println!("done matching!");
 
                                 // If there is no destination we are done matching and go back to the previous
                                 // configuration on the stack with information on the side stack.
@@ -161,8 +157,6 @@ impl SabreRewriter {
                                     cs.jump_back(n, tp);
                                 }
                             } else {
-                                println!("growing buds matching!");
-
                                 // Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
                                 let tr_slice = tr.destinations.as_slice();
                                 cs.grow(leaf_index, tr_slice);
@@ -211,7 +205,8 @@ impl SabreRewriter {
                 }
             }
         }
-         cs.compute_final_term(tp)
+        
+        cs.compute_final_term(tp)
     }
 
     /// Apply a rewrite rule and prune back
@@ -221,7 +216,7 @@ impl SabreRewriter {
         ema: &EnhancedMatchAnnouncement,
         leaf_subterm: ATerm,
         leaf_index: usize,
-        cl: &mut ConfigurationStack,
+        cs: &mut ConfigurationStack,
         stats: &mut RewritingStatistics,
     ) {
         stats.rewrite_steps += 1;
@@ -229,11 +224,13 @@ impl SabreRewriter {
         // Computes the new subterm of the configuration
         let new_subterm = ema
             .semi_compressed_rhs
-            .evaluate(&get_position(&leaf_subterm, &ema.announcement.position), tp);
+            .evaluate_data(&get_data_position(&leaf_subterm, &ema.announcement.position), tp);
+                                 
+        println!("rewrote {} to {} using rule {}", &leaf_subterm, &new_subterm, ema.announcement.rule);
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;
-        cl.prune(tp, automaton, prune_point, new_subterm);
+        cs.prune(tp, automaton, prune_point, new_subterm);
     }
 
     /// Checks conditions and subterm equality of non-linear patterns.
@@ -247,10 +244,10 @@ impl SabreRewriter {
         for c in &ema.conditions {
             let rhs = c
                 .semi_compressed_rhs
-                .evaluate(&get_position(&leaf.subterm, &ema.announcement.position), tp);
+                .evaluate_data(&get_data_position(&leaf.subterm, &ema.announcement.position), tp);
             let lhs = c
                 .semi_compressed_lhs
-                .evaluate(&get_position(&leaf.subterm, &ema.announcement.position), tp);
+                .evaluate_data(&get_data_position(&leaf.subterm, &ema.announcement.position), tp);
 
             if lhs == rhs && c.equality {
                 // condition is satisfied

@@ -107,7 +107,7 @@ impl DataVariable {
 
 impl From<ATerm> for DataVariable {
     fn from(value: ATerm) -> Self {
-        assert!(value.is_data_variable(), "The given term should be a variable");
+        assert!(value.is_data_variable(), "Term {value} is not a data variable");
         DataVariable { term: value }
     }
 }
@@ -125,7 +125,7 @@ pub struct DataApplication {
 
 impl From<ATerm> for DataApplication {
     fn from(value: ATerm) -> Self {
-        assert!(value.is_data_application(), "The given term should be an application");
+        assert!(value.is_data_application(), "Term {value} is not a data application");
         DataApplication { term: value }
     }
 }
@@ -143,14 +143,8 @@ impl fmt::Display for DataApplication {
             } else {
                 write!(f, "(")?;
             }
-            if arg.is_data_function_symbol() {
-                write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(arg))?;
-            } else if arg.is_data_application() {
-                write!(f, "{}", <ATerm as Into<DataApplication>>::into(arg))?;
-            } else if arg.is_data_variable() {
-                write!(f, "{}", <ATerm as Into<DataVariable>>::into(arg))?;
-            }
 
+            write!(f, "{}", arg)?;
             first = false;
         }
 
@@ -175,14 +169,14 @@ impl DataFunctionSymbol
     
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
-        assert!(self.term.is_data_function_symbol(), "this should actually be a function symbol");
+        assert!(self.term.is_data_function_symbol(), "term {} is not a data function symbol", self.term);
         ffi::ffi_get_data_function_symbol_index(&self.term.term)
     }
 }
 
 impl From<ATerm> for DataFunctionSymbol {
     fn from(value: ATerm) -> Self {
-        assert!(value.is_data_function_symbol(), "The given term should be a function symbol");
+        assert!(value.is_data_function_symbol(), "Term {value} is not a data function symbol");
         DataFunctionSymbol { term: value }
     }
 }

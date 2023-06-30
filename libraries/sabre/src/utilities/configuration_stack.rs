@@ -215,7 +215,7 @@ impl<'a> fmt::Display for ConfigurationStack<'a>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Current node: {:?}", self.current_node)?;
-        for (i, c) in self.configuration_stack.iter().enumerate() {
+        for (i, c) in self.stack.iter().enumerate() {
             writeln!(f, "Configuration {} ", i)?;
             writeln!(f, "    State: {:?}", c.state)?;
             writeln!(f, "    Position: {}", 
@@ -224,12 +224,42 @@ impl<'a> fmt::Display for ConfigurationStack<'a>
                     None => "None".to_string()
                 })?;
             writeln!(f, "    Subterm: {}", &c.subterm)?;
+            
+            for side_branch in &self.side_branch_stack {
+                if i == side_branch.corresponding_configuration {
+                    writeln!(f, "   Side branch: {} ", side_branch.info)?;
+                }
+            }
         }
-        
-        for side_branch in &self.side_branch_stack {            
-            writeln!(f, "Side branch for {} ", side_branch.corresponding_configuration)?;
-            writeln!(f, "   Info: {:?} ", side_branch.info)?;
+
+        Ok(())
+    }
+}
+
+
+impl<'a> fmt::Display for SideInfoType<'a>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SideInfoType::SideBranch(tr_slice) => {
+                let mut first = true;
+                for (position, index) in tr_slice.iter() {
+                    if !first {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{} {}", position, *index)?;
+                    first = false;
+                }
+
+            },
+            SideInfoType::DelayedRewriteRule(ema) => {
+                write!(f, "delayed rule: {}", ema)?; 
+            },
+            SideInfoType::EquivalenceAndConditionCheck(ema) => {
+                write!(f, "equivalence {}", ema)?; 
+            },
         }
+
         Ok(())
     }
 }

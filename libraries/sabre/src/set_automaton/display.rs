@@ -126,7 +126,7 @@ impl fmt::Display for EnhancedMatchAnnouncement {
             write!(f, "}} ")?;
         }
 
-        write!(f, "] [")?;
+        write!(f, "], [")?;
         for (i, c) in self.announcement.rule.conditions.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;

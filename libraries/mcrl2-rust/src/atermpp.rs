@@ -252,7 +252,16 @@ impl Default for ATerm {
 impl fmt::Display for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.require_valid();
-        write!(f, "{}", ffi::print_aterm(&self.term))
+
+        if self.is_data_function_symbol() {
+            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(self.clone()))
+        } else if self.is_data_application() {
+            write!(f, "{}", <ATerm as Into<DataApplication>>::into(self.clone()))
+        } else if self.is_data_variable() {
+            write!(f, "{}", <ATerm as Into<DataVariable>>::into(self.clone()))
+        } else {
+            write!(f, "{:?}", self)
+        }
     }
 }
 

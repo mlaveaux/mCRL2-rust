@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::utilities::ExplicitPosition;
+use crate::{utilities::ExplicitPosition, set_automaton::get_data_position};
 use mcrl2_rust::{
     atermpp::{ATerm, Symbol, TermPool},
     data::DataVariable
@@ -65,6 +65,23 @@ impl SemiCompressedTermTree {
             }
             Compressed(ct) => ct.clone(),
             Variable(p) => get_position(t, p),
+        }
+    }
+
+    pub fn evaluate_data(&self, t: &ATerm, tp: &mut TermPool) -> ATerm {
+        match self {
+            Explicit(node) => {
+                // Create an ATerm with as arguments all the evaluated semi compressed term trees.
+                let mut subterms = Vec::with_capacity(node.children.len());
+
+                for i in 0..node.children.len() {
+                    subterms.push(node.children[i].evaluate(t, tp));
+                }
+
+                tp.create(&node.head, &subterms)
+            }
+            Compressed(ct) => ct.clone(),
+            Variable(p) => get_data_position(t, p),
         }
     }
 

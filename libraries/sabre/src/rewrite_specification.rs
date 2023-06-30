@@ -48,6 +48,6 @@ impl fmt::Display for Rule
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
     {
-        writeln!(f, "{:?} -> {} = {}", self.conditions, self.lhs, self.rhs)
+        write!(f, "{:?} -> {} = {}", self.conditions, self.lhs, self.rhs)
     }
 }
