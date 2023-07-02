@@ -1,10 +1,16 @@
 use std::{cell::RefCell, rc::Rc};
 
-use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
+use mcrl2_rust::{
+    atermpp::{ATerm, TermPool},
+    data::DataFunctionSymbol,
+};
 
 use crate::{
     rewrite_specification::RewriteSpecification,
-    set_automaton::{EnhancedMatchAnnouncement, EquivalenceClass, SetAutomaton, get_data_function_symbol, get_data_position},
+    set_automaton::{
+        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement, EquivalenceClass,
+        SetAutomaton,
+    },
     utilities::{Configuration, ConfigurationStack, SideInfo, SideInfoType},
 };
 
@@ -105,8 +111,12 @@ impl SabreRewriter {
                         leaf_index,
                     ) {
                         None => {
-                            // Observe a symbol according to the state label of the set automaton. 
-                            let function_symbol: DataFunctionSymbol = get_data_function_symbol(&get_data_position(&leaf.subterm, &automaton.states[leaf.state].label));
+                            // Observe a symbol according to the state label of the set automaton.
+                            let function_symbol: DataFunctionSymbol =
+                                get_data_function_symbol(&get_data_position(
+                                    &leaf.subterm,
+                                    &automaton.states[leaf.state].label,
+                                ));
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
@@ -115,10 +125,7 @@ impl SabreRewriter {
 
                             // Loop over the match announcements of the transition
                             for ema in &tr.announcements {
-
-                                if ema.conditions.is_empty()
-                                    && ema.equivalence_classes.is_empty()
-                                {
+                                if ema.conditions.is_empty() && ema.equivalence_classes.is_empty() {
                                     if ema.is_duplicating {
                                         // We do not want to apply duplicating rules straight away
                                         cs.side_branch_stack.push(SideInfo {
@@ -138,7 +145,7 @@ impl SabreRewriter {
                                         );
                                         break 'skip_point;
                                     }
-                                } else {                   
+                                } else {
                                     // We delay the condition checks
                                     cs.side_branch_stack.push(SideInfo {
                                         corresponding_configuration: leaf_index,
@@ -148,7 +155,6 @@ impl SabreRewriter {
                             }
 
                             if tr.destinations.is_empty() {
-
                                 // If there is no destination we are done matching and go back to the previous
                                 // configuration on the stack with information on the side stack.
                                 // Note, it could be that we stay at the same configuration and apply a rewrite
@@ -207,7 +213,7 @@ impl SabreRewriter {
                 }
             }
         }
-        
+
         cs.compute_final_term(tp)
     }
 
@@ -224,11 +230,15 @@ impl SabreRewriter {
         stats.rewrite_steps += 1;
 
         // Computes the new subterm of the configuration
-        let new_subterm = ema
-            .semi_compressed_rhs
-            .evaluate_data(&get_data_position(&leaf_subterm, &ema.announcement.position), tp);
-                                 
-        println!("rewrote {} to {} using rule {}", &leaf_subterm, &new_subterm, ema.announcement.rule);
+        let new_subterm = ema.semi_compressed_rhs.evaluate_data(
+            &get_data_position(&leaf_subterm, &ema.announcement.position),
+            tp,
+        );
+
+        println!(
+            "rewrote {} to {} using rule {}",
+            &leaf_subterm, &new_subterm, ema.announcement.rule
+        );
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;
@@ -244,12 +254,14 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let rhs = c
-                .semi_compressed_rhs
-                .evaluate_data(&get_data_position(&leaf.subterm, &ema.announcement.position), tp);
-            let lhs = c
-                .semi_compressed_lhs
-                .evaluate_data(&get_data_position(&leaf.subterm, &ema.announcement.position), tp);
+            let rhs = c.semi_compressed_rhs.evaluate_data(
+                &get_data_position(&leaf.subterm, &ema.announcement.position),
+                tp,
+            );
+            let lhs = c.semi_compressed_lhs.evaluate_data(
+                &get_data_position(&leaf.subterm, &ema.announcement.position),
+                tp,
+            );
 
             if lhs != rhs || !c.equality {
                 let rhs_normal =
@@ -257,8 +269,7 @@ impl SabreRewriter {
                 let lhs_normal =
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs.clone(), stats);
 
-                if lhs_normal != rhs_normal || !c.equality
-                {
+                if lhs_normal != rhs_normal || !c.equality {
                     return EquivalenceClass::equivalences_hold(
                         &leaf.subterm,
                         &ema.equivalence_classes,
