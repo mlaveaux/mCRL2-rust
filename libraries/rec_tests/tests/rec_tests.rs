@@ -3,7 +3,7 @@ use test_case::test_case;
 
 use ahash::AHashSet;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
-use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification};
+use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
 use sabre::utilities::to_data_expression;
 use rec_tests::load_REC_from_strings;
 
@@ -70,13 +70,16 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str)
     };
 
     // Test Sabre rewriter
-    let mut sa = SabreRewriter::new(tp, spec);
+    let mut sa = SabreRewriter::new(tp.clone(), spec.clone());
+    let mut inner = InnermostRewriter::new(tp, spec);
 
     let mut expected = expected_result.split("\n\r");
 
-    for term in &terms 
-    {
+    for term in &terms {
+        let result = inner.rewrite(term.clone());
+        assert_eq!(format!("Result: {}", &result), expected.next().unwrap(), "The inner rewrite result doesn't match the expected result");
+
         let result = sa.rewrite(term.clone());
-        assert_eq!(format!("Result: {}", &result), expected.next().unwrap(), "The rewrite result doesn't match the expected result");
+        assert_eq!(format!("Result: {}", &result), expected.next().unwrap(), "The sabre rewrite result doesn't match the expected result");
     }
 }

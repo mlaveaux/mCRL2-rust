@@ -5,7 +5,7 @@ use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 use crate::{
     rewrite_specification::RewriteSpecification,
     set_automaton::{EnhancedMatchAnnouncement, EquivalenceClass, SetAutomaton, get_data_function_symbol, get_data_position},
-    utilities::{get_position, Configuration, ConfigurationStack, SideInfo, SideInfoType},
+    utilities::{Configuration, ConfigurationStack, SideInfo, SideInfoType},
 };
 
 /// A shared trait for all the rewriters
@@ -69,9 +69,11 @@ impl SabreRewriter {
         'outer: loop {
             // Inner loop so that we can easily break; to the next iteration
             'skip_point: loop {
+                println!("{}", cs);
+
                 // Check if there is any configuration leaf left to explore, if not we have found a normal form
                 if let Some(leaf_index) = cs.get_unexplored_leaf() {
-                    let leaf = &mut cs.configuration_stack[leaf_index];
+                    let leaf = &mut cs.stack[leaf_index];
 
                     // A "side stack" is used besides the configuration stack to remember a couple of things.
                     // There are 4 options.
@@ -131,7 +133,7 @@ impl SabreRewriter {
                                             ema,
                                             leaf.subterm.clone(),
                                             leaf_index,
-                                            cs,
+                                            &mut cs,
                                             stats,
                                         );
                                         break 'skip_point;
@@ -249,9 +251,7 @@ impl SabreRewriter {
                 .semi_compressed_lhs
                 .evaluate_data(&get_data_position(&leaf.subterm, &ema.announcement.position), tp);
 
-            if lhs == rhs && c.equality {
-                // condition is satisfied
-            } else {
+            if lhs != rhs || !c.equality {
                 let rhs_normal =
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs.clone(), stats);
                 let lhs_normal =

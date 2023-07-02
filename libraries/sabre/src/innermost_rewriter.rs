@@ -22,7 +22,7 @@ impl RewriteEngine for InnermostRewriter {
 }
 
 impl InnermostRewriter {
-    pub(crate) fn new(term_pool: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> InnermostRewriter {
+    pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> InnermostRewriter {
         InnermostRewriter {
             term_pool,
             apma: SetAutomaton::construct(spec.clone(), true, false)
@@ -34,21 +34,20 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton, t: ATerm, stats: &mut RewritingStatistics) -> ATerm {
-
-        // Case distinction on the number of subterms.
-        // Recursively call rewrite_aux on all the subterms.
-        // Rewriting is continued with a specialised function for the arity.
-        let subterms = t.arguments();
         let symbol = get_data_function_symbol(&t);
 
-        //for t in subterms.() {
-        //    t = InnermostRewriter::rewrite_aux(tp, automaton, t, stats);
-        //}
+        // Recursively call rewrite_aux on all the subterms.
+        let mut result = vec![];
+        for t in  t.arguments().into_iter() {
+            result.push(InnermostRewriter::rewrite_aux(tp, automaton, t, stats));
+        }
 
-        match InnermostRewriter::find_match(tp, automaton, &t, stats) {
-            None => { t }
+        let result = tp.create_data_application(&symbol.into(), &result).into();
+
+        match InnermostRewriter::find_match(tp, automaton, &result, stats) {
+            None => { result }
             Some(ema) => {
-                ema.semi_compressed_rhs.evaluate(&t, tp)
+                ema.semi_compressed_rhs.evaluate_data(&result, tp)
             }
         }
     }

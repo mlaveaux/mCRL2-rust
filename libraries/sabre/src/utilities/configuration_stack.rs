@@ -1,10 +1,10 @@
 use std::fmt;
 
-use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
+use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, get_data_position};
 use crate::utilities::ExplicitPosition;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 
-use super::{get_position, substitute};
+use super::{substitute, substitute_data};
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
@@ -39,7 +39,7 @@ pub(crate) enum SideInfoType<'a> {
 /// A configuration stack. The first element is the root of the configuration tree.
 #[derive(Debug)]
 pub(crate) struct ConfigurationStack<'a> {
-    pub configuration_stack: Vec<Configuration<'a>>,
+    pub stack: Vec<Configuration<'a>>,
     /// Separate stack with extra information on some configurations
     pub side_branch_stack: Vec<SideInfo<'a>>,
     /// Current node. Becomes None when the configuration tree is completed
@@ -54,12 +54,12 @@ impl<'a> ConfigurationStack<'a> {
     /// Initialise the stack with one Configuration containing 'term' and the initial state of the set automaton
     pub fn new(state: usize, term: ATerm) -> ConfigurationStack<'a> {
         let mut conf_list = ConfigurationStack {
-            configuration_stack: Vec::with_capacity(8),
+            stack: Vec::with_capacity(8),
             side_branch_stack: vec![],
             current_node: Some(0),
             oldest_reliable_subterm: 0,
         };
-        conf_list.configuration_stack.push(Configuration {
+        conf_list.stack.push(Configuration {
             state,
             subterm: term,
             position: None,
@@ -79,7 +79,7 @@ impl<'a> ConfigurationStack<'a> {
     /// Grow a Configuration with index c. tr_slice contains the hypertransition to possibly multiple states
     pub fn grow(&mut self, c: usize, tr_slice: &'a [(ExplicitPosition, usize)]) {
         // Get the configuration at index c
-        let leaf: &mut Configuration = &mut self.configuration_stack[c];
+        let leaf: &mut Configuration = &mut self.stack[c];
         // Pick the first transition to grow the stack
         let (pos, des) = tr_slice.first().unwrap();
 
@@ -95,10 +95,10 @@ impl<'a> ConfigurationStack<'a> {
         // Create a new configuration and push it onto the stack
         let new_leaf = Configuration {
             state: *des,
-            subterm: get_position(&leaf.subterm, pos),
+            subterm: get_data_position(&leaf.subterm, pos),
             position: Some(pos),
         };
-        self.configuration_stack.push(new_leaf);
+        self.stack.push(new_leaf);
         self.current_node = Some(c + 1);
     }
 
@@ -108,13 +108,13 @@ impl<'a> ConfigurationStack<'a> {
         self.current_node = Some(depth);
 
         // Reroll the configuration stack by truncating the Vec (which is a constant time operation)
-        self.configuration_stack.truncate(depth + 1);
+        self.stack.truncate(depth + 1);
         // Remove side info for the deleted configurations
         self.roll_back_side_info_stack(depth, true);
 
         // Update the subterm stored at the prune point.
         // Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
-        self.configuration_stack[depth].subterm = substitute(tp, &self.configuration_stack[depth].subterm, new_subterm, &automaton.states[self.configuration_stack[depth].state].label.indices);
+        self.stack[depth].subterm = substitute_data(tp, &self.stack[depth].subterm, new_subterm, &automaton.states[self.stack[depth].state].label.indices);
         self.oldest_reliable_subterm = depth;
     }
 
@@ -145,7 +145,7 @@ impl<'a> ConfigurationStack<'a> {
         // Updated subterms may have to be propagated up the configuration tree
         self.integrate_updated_subterms(depth, tp, true);
         self.current_node = Some(depth);
-        self.configuration_stack.truncate(depth + 1);
+        self.stack.truncate(depth + 1);
         self.roll_back_side_info_stack(depth, false);
     }
 
@@ -163,33 +163,33 @@ impl<'a> ConfigurationStack<'a> {
         if up_to_date == 0 || end >= up_to_date {
             return;
         }
-        let mut subterm = self.configuration_stack[up_to_date].subterm.clone();
+        let mut subterm = self.stack[up_to_date].subterm.clone();
 
         // Go over the configurations one by one until we reach 'end'
         while up_to_date > end {
-            //If the position is not deepened nothing needs to be done, otherwise substitute on the position stored in the configuration.
-            subterm = match self.configuration_stack[up_to_date].position {
+            // If the position is not deepened nothing needs to be done, otherwise substitute on the position stored in the configuration.
+            subterm = match self.stack[up_to_date].position {
                 None => subterm,
-                Some(p) => substitute(
+                Some(p) => substitute_data(
                     tp,
-                    &self.configuration_stack[up_to_date - 1].subterm,
+                    &self.stack[up_to_date - 1].subterm,
                     subterm,
                     &p.indices,
                 ),
             };
             up_to_date -= 1;
             if store_intermediate {
-                self.configuration_stack[up_to_date].subterm = subterm.clone();
+                self.stack[up_to_date].subterm = subterm.clone();
             }
         }
         self.oldest_reliable_subterm = up_to_date;
-        self.configuration_stack[up_to_date].subterm = subterm;
+        self.stack[up_to_date].subterm = subterm;
     }
 
     /// Final term computed by integrating all subterms up to the root configuration
     pub fn compute_final_term(&mut self, tp: &mut TermPool) -> ATerm {
         self.jump_back(0, tp);
-        self.configuration_stack[0].subterm.clone()
+        self.stack[0].subterm.clone()
     }
 
     /// Returns a SideInfoType object if there is side info for the configuration with index 'leaf_index'
@@ -227,7 +227,7 @@ impl<'a> fmt::Display for ConfigurationStack<'a>
             
             for side_branch in &self.side_branch_stack {
                 if i == side_branch.corresponding_configuration {
-                    writeln!(f, "   Side branch: {} ", side_branch.info)?;
+                    writeln!(f, "    Side branch: {} ", side_branch.info)?;
                 }
             }
         }
