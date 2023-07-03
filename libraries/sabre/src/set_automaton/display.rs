@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{path::Path, io};
 
 use mcrl2_rust::{data::{DataFunctionSymbol, DataApplication}, atermpp::ATerm};
 
@@ -171,13 +171,11 @@ impl fmt::Display for SetAutomaton {
 
 impl SetAutomaton {
     /// Create a .dot file and convert it to a .svg using the dot command
-    pub fn to_dot_graph(&self, f_base_name: &str) {
-        let mut f_dot_name = f_base_name.to_string();
-        f_dot_name += ".dot";
-        let mut f = File::create(f_dot_name.clone()).unwrap();
+    pub fn to_dot_graph(&self, filename: &Path) -> io::Result<()>{
+        let mut f = File::create(filename)?;
 
-        writeln!(&mut f, "digraph{{").unwrap();
-        writeln!(&mut f, "  final[label=\"💩\"];").unwrap();
+        writeln!(&mut f, "digraph{{")?;
+        writeln!(&mut f, "  final[label=\"💩\"];")?;
         for (i, s) in self.states.iter().enumerate() {
             let mut match_goals = "".to_string();
             for mg in &s.match_goals {
@@ -202,8 +200,7 @@ impl SetAutomaton {
                 i,
                 s.label,
                 match_goals
-            )
-            .unwrap();
+            )?;
         }
 
         for (i, s) in self.states.iter().enumerate() {
@@ -220,16 +217,15 @@ impl SetAutomaton {
                         &mut f,
                         "  s{}-> final [label=\"{}{}\"]",
                         i, tr.symbol, announcements
-                    )
-                    .unwrap();
+                    )?;
                 } else {
                     writeln!(&mut f, "  s{}{}[shape=point]", i, tr.symbol).unwrap();
                     writeln!(
                         &mut f,
                         "  s{}->s{}{}[label=\"{}{}\"]",
                         i, i, tr.symbol, tr.symbol, announcements
-                    )
-                    .unwrap();
+                    )?;
+
                     for (pos, des) in &tr.destinations {
                         writeln!(
                             &mut f,
@@ -238,26 +234,13 @@ impl SetAutomaton {
                             tr.symbol,
                             des,
                             pos
-                        )
-                        .unwrap();
+                        )?;
                     }
                 }
             }
         }
-        writeln!(&mut f, "}}").unwrap();
-        dot2svg(f_base_name);
+        writeln!(&mut f, "}}")
     }
-}
-
-fn dot2svg(f_name: &str) {
-    let _ = Command::new("dot")
-        .args([
-            "-Tsvg",
-            &format!("{}.dot", f_name),
-            &format!("-o {}.svg", f_name),
-        ])
-        .output()
-        .expect("failed to execute process");
 }
 
 impl fmt::Display for MatchGoal {

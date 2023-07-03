@@ -27,10 +27,10 @@ impl RewriteEngine for InnermostRewriter {
 }
 
 impl InnermostRewriter {
-    pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> InnermostRewriter {
+    pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
         InnermostRewriter {
             term_pool,
-            apma: SetAutomaton::construct(spec.clone(), true, false),
+            apma: SetAutomaton::construct(spec, true, false),
         }
     }
 
@@ -60,7 +60,7 @@ impl InnermostRewriter {
             None => nf,
             Some(ema) => {
                 let result = ema.semi_compressed_rhs.evaluate_data(&nf, tp);
-                println!("rewrote {} to {} using rule {}", nf, result, ema.announcement.rule);
+                //println!("rewrote {} to {} using rule {}", nf, result, ema.announcement.rule);
                 InnermostRewriter::rewrite_aux(tp, automaton, result, stats)
             },
         }
@@ -73,23 +73,29 @@ impl InnermostRewriter {
         t: &ATerm,
         stats: &mut RewritingStatistics,
     ) -> Option<&'a EnhancedMatchAnnouncement> {
+        //println!("term {}", t);
+
         // Start at the initial state
         let mut state_index = 0;
         loop {
             let state = &automaton.states[state_index];
 
             // Get the symbol at the position state.label
-            let symbol = get_data_function_symbol(&get_data_position(&t, &state.label));
+            let symbol = get_data_function_symbol(&get_data_position(t, &state.label));
+
+            //println!("matching: {}", symbol);
 
             // Get the transition for the label and check if there is a pattern match
             let transition = &state.transitions[symbol.operation_id()];
             for ema in &transition.announcements {
+                //println!("announcing {}", ema);
+
                 let mut conditions_hold = true;
 
                 // Check conditions if there are any
                 if !ema.conditions.is_empty() {
                     conditions_hold =
-                        InnermostRewriter::check_conditions(tp, automaton, &t, ema, stats);
+                        InnermostRewriter::check_conditions(tp, automaton, t, ema, stats);
                 }
 
                 // Check equivalence of subterms for non-linear patterns
@@ -97,10 +103,10 @@ impl InnermostRewriter {
                     if ec.positions.len() > 1 {
                         let mut iter_pos = ec.positions.iter();
                         let first_pos = iter_pos.next().unwrap();
-                        let first_term = get_data_position(&t, first_pos);
+                        let first_term = get_data_position(t, first_pos);
 
                         for other_pos in iter_pos {
-                            let other_term = get_data_position(&t, other_pos);
+                            let other_term = get_data_position(t, other_pos);
                             if first_term != other_term {
                                 conditions_hold = false;
                                 break 'ec_check;
@@ -116,13 +122,14 @@ impl InnermostRewriter {
             }
 
             // If there is no pattern match we check if the transition has a destination state
-            if !transition.destinations.is_empty() {
-                // If there is we continue matching in that state
-                state_index = transition.destinations.first().unwrap().1;
-            } else {
+            if transition.destinations.is_empty() {
                 // If there is no destination state there is no pattern match
+                //println!("no match");
                 return None;
-            }
+            } else {
+                // Continue matching in the next state
+                state_index = transition.destinations.first().unwrap().1;
+            } 
         }
     }
 

@@ -35,8 +35,39 @@ enum GoalsOrInitial {
     Goals(Vec<MatchGoal>),
 }
 
+fn add_symbol(function_symbol: DataFunctionSymbol, arity: usize, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+    let index = function_symbol.operation_id();
+
+    if index >= symbols.len() {
+        symbols.resize(index + 1, Default::default());
+    }
+
+    if symbols[index] == Default::default() {                        
+        symbols[index] = (function_symbol, arity);
+    } else {                        
+        assert!(symbols[index].1 == arity, "Function symbol {} occurs with arity {} and {}", function_symbol, arity, &symbols[index].1);                        
+    }
+}
+
+fn find_symbols(t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+    if t.is_data_function_symbol() {
+        add_symbol(t.clone().into(), 0, symbols);
+    }
+
+    for subterm in t.iter() {
+        if subterm.is_data_application() {
+            let args = subterm.arguments();
+
+            // REC specifications should never contain this so it can be a debug error.
+            assert!(args[0].is_data_function_symbol(), "Higher order term rewrite systems are not supported");
+            let function_symbol: DataFunctionSymbol = args[0].clone().into();
+            add_symbol(function_symbol, args.len() - 1, symbols);
+        }
+    }
+}
+
 impl SetAutomaton {
-    pub(crate) fn construct(spec: RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
+    pub(crate) fn construct(spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
         
@@ -44,48 +75,17 @@ impl SetAutomaton {
         let mut symbols = vec![];
 
         for rule in &spec.rewrite_rules {
+            find_symbols(&rule.lhs, &mut symbols);
+            find_symbols(&rule.rhs, &mut symbols);
 
-            let mut iter: Box<dyn Iterator<Item = ATerm>> =
-                Box::new(rule.lhs.iter().chain(rule.rhs.iter()));
-            for cond in &rule.conditions {
-                iter = Box::new(iter.chain(cond.rhs.iter().chain(cond.lhs.iter())));
-            }
-
-            for subterm in iter {
-
-                if subterm.is_data_application() {
-                    let args = subterm.arguments();
-
-                    // REC specifications should never contain this so it can be a debug error.
-                    assert!(args[0].is_data_function_symbol(), "Higher order term rewrite systems are not supported");
-                    let function_symbol: DataFunctionSymbol = args[0].clone().into();
-                    let index = function_symbol.operation_id();
-
-                    if index >= symbols.len() {
-                        symbols.resize(index + 1, Default::default());
-                    }
-
-                    if symbols[index] == Default::default() {                        
-                        symbols[index] = (function_symbol, args.len() - 1);
-                    } else {                        
-                        assert!(symbols[index].1 == args.len() - 1, "Function symbol {} occurs with arity {} and {}", args[0], args.len() - 1, &symbols[index].1);                        
-                    }
-                }
+            for cond in&rule.conditions {   
+                find_symbols(&cond.lhs, &mut symbols);
+                find_symbols(&cond.rhs, &mut symbols);
             }
         }
 
         for (symbol, arity) in &spec.constructors {
-            let index = symbol.operation_id();
-
-            if index >= symbols.len() {
-                symbols.resize(index + 1, Default::default());
-            }
-
-            if symbols[index] == Default::default() {                        
-                symbols[index] = (symbol.clone(), *arity);
-            } else {                        
-                assert!(symbols[index].1 == *arity, "Function symbol {:?} occurs with arity {} and {}", symbol, arity, &symbols[index].1);                        
-            }
+            add_symbol(symbol.clone(), *arity, &mut symbols);
         }
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal

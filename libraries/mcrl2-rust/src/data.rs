@@ -134,7 +134,7 @@ impl fmt::Display for DataApplication {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut args = self.term.arguments().into_iter();
 
-        write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(args.next().unwrap().clone()))?;
+        write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(args.next().unwrap()))?;
 
         let mut first = true;
         for arg in args {

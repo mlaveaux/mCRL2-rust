@@ -4,7 +4,7 @@ use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, get_data_pos
 use crate::utilities::ExplicitPosition;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 
-use super::{substitute, substitute_data};
+use super::substitute_data;
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:

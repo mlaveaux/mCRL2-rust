@@ -38,7 +38,7 @@ impl RewriteEngine for SabreRewriter {
 }
 
 impl SabreRewriter {
-    pub fn new(tp: Rc<RefCell<TermPool>>, spec: RewriteSpecification) -> Self {
+    pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp,
             automaton: SetAutomaton::construct(spec, false, false),
