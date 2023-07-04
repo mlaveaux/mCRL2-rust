@@ -30,7 +30,7 @@ impl InnermostRewriter {
     pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
         InnermostRewriter {
             term_pool,
-            apma: SetAutomaton::construct(spec, true, false),
+            apma: SetAutomaton::new(spec, true, false),
         }
     }
 

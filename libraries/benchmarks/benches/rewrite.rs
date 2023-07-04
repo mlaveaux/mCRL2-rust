@@ -2,10 +2,43 @@ use std::{cell::RefCell, rc::Rc};
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use mcrl2_benchmarks::load_case;
-use mcrl2_rust::{atermpp::TermPool, data::JittyRewriter};
+use ahash::AHashSet;
 
-pub fn criterion_benchmark(c: &mut Criterion) {
+use mcrl2_rust::atermpp::{ATerm, TermPool};
+use sabre::set_automaton::SetAutomaton;
+use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
+use sabre::utilities::to_data_expression;
+use rec_tests::load_REC_from_strings;
+use mcrl2_rust::{data::JittyRewriter};
+
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader};
+
+use mcrl2_rust::data::DataSpecification;
+
+/// Creates a rewriter and a vector of ATerm expressions for the given case.
+pub fn load_case(name: &str, max_number_expressions: usize) -> (DataSpecification, Vec<ATerm>) {
+    let path = String::from(name) + ".dataspec";
+    let path_expressions = String::from(name) + ".expressions";
+
+    // Read the data specification
+    let data_spec_text = fs::read_to_string(path).expect("failed to read file");
+    let data_spec = DataSpecification::new(&data_spec_text);
+
+    // Open the file in read-only mode.
+    let file = File::open(path_expressions).unwrap();
+
+    // Read the file line by line, and return an iterator of the lines of the file.
+    let expressions: Vec<ATerm> = BufReader::new(file)
+        .lines()
+        .take(max_number_expressions)
+        .map(|x| data_spec.parse(&x.unwrap()))
+        .collect();
+
+    (data_spec, expressions)
+}
+
+pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     let (data_spec, expressions) = load_case("cases/add16", 100);
     
     // Create a jitty rewriter;
@@ -23,5 +56,51 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, criterion_benchmark);
+pub fn criterion_benchmark_sabre(c: &mut Criterion) 
+{    
+    let tp = Rc::new(RefCell::new(TermPool::initialise()));
+
+    for entry in  fs::read_dir("../rec-tests/tests/REC_files/").expect("Cannot find directory") {
+        match entry {
+            Ok(dir) => {
+                let file =  std::fs::read_to_string(dir.path()).expect("Cannot open benchmark specification");
+                let input = vec![&file as &str];
+
+                let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
+                    let (syntax_spec, syntax_terms) = load_REC_from_strings(&input);
+                    let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
+                    (result, syntax_terms.iter().map(|t| { 
+                        let term = t.to_term(&mut tp.borrow_mut());
+                        to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()) }).collect())
+                };
+
+                // Benchmark the set automaton construction                
+                c.bench_function(&format!("construct set automaton {:?}", dir.file_name()), 
+                |bencher| 
+                    {
+                        bencher.iter(|| {
+                            let _ = black_box(SetAutomaton::new(&spec, false, false));
+                        });
+                    });
+
+                let mut inner = InnermostRewriter::new(tp, &spec);
+                
+                c.bench_function(&format!("innermost benchmark {:?}", dir.file_name()),
+                |bencher|
+                {
+                    for term in &terms {
+                        bencher.iter(|| {
+                            let _ = black_box(inner.rewrite(term.clone()));
+                        });
+                    }
+                });
+            },
+            Err(x) => {
+                println!("Failed to construct DirEntry {}", x);
+            }
+        }
+    }
+}
+
+criterion_group!(benches, criterion_benchmark_jitty, criterion_benchmark_sabre);
 criterion_main!(benches);

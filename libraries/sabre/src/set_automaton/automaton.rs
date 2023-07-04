@@ -67,7 +67,7 @@ fn find_symbols(t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
 }
 
 impl SetAutomaton {
-    pub(crate) fn construct(spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
+    pub fn new(spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
         

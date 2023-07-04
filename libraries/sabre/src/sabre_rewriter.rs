@@ -41,7 +41,7 @@ impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp,
-            automaton: SetAutomaton::construct(spec, false, false),
+            automaton: SetAutomaton::new(spec, false, false),
         }
     }
 
