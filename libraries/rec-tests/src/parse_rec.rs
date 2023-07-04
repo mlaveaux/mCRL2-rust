@@ -96,7 +96,7 @@ pub fn load_REC_from_file(file: PathBuf) -> (RewriteSpecificationSyntax, Vec<Ter
 /// Load and join multiple REC specifications
 #[allow(non_snake_case)]
 pub fn load_REC_from_strings(
-    specs: Vec<&str>,
+    specs: &[&str],
 ) -> (RewriteSpecificationSyntax, Vec<TermSyntaxTree>) {
     let mut rewrite_spec = RewriteSpecificationSyntax::default();
     let mut terms = vec![];
