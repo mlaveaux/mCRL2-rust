@@ -187,7 +187,9 @@ impl ATerm {
         self.require_valid();
         assert!(
             index < self.get_head_symbol().arity(),
-            "The given index should be a valid argument"
+            "arg({index}) is not defined for a function symbol {} with arity {}",
+            self.get_head_symbol(),
+            self.get_head_symbol().arity()
         );
         ATerm {
             term: ffi::get_term_argument(&self.term, index),
