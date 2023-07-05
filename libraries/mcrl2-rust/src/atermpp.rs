@@ -343,7 +343,7 @@ impl From<DataFunctionSymbol> for ATerm {
 pub struct TermPool {}
 
 impl TermPool {
-    pub fn initialise() -> TermPool {
+    pub fn new() -> TermPool {
         // Initialise the C++ aterm library.
         ffi::initialise();
 
@@ -442,7 +442,7 @@ mod tests {
 
     #[test]
     fn test_term_iterator() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         let mut result = t.iter();

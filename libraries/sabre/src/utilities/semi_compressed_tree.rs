@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_constant() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = tp.from_string("a").unwrap();
 
         let map = HashMap::new();
@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_compressible() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = tp.from_string("f(a,a)").unwrap();
 
         let map = HashMap::new();
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_not_compressible() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = {
             let tmp = tp
                 .from_string("f(x,x)")
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_partly_compressible() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = {
             let tmp = tp.from_string("f(f(a,a),x)").unwrap();
             tag_variables(&mut tp, &tmp, &var_map(&["x"]))
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn test_evaluation() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t_rhs = {
             let tmp = tp.from_string("f(f(a,a),x)").unwrap();
             tag_variables(&mut tp, &tmp, &var_map(&["x"]))
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_create_varmap() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t =  {
             let tmp = tp.from_string("f(x,x)").unwrap();
             tag_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))

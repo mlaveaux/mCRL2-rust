@@ -62,7 +62,7 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/tricky.rec")], include_str!("validated_results/result_tricky.txt") ; "tricky")]
     fn rec_test(rec_files: Vec<&str>, expected_result: &str) 
     {
-        let tp = Rc::new(RefCell::new(TermPool::initialise()));
+        let tp = Rc::new(RefCell::new(TermPool::new()));
         let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
             let (syntax_spec, syntax_terms) = load_REC_from_strings(&rec_files);
             let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());

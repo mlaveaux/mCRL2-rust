@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_substitute() {
-        let mut term_pool = TermPool::initialise();
+        let mut term_pool = TermPool::new();
 
         let t = term_pool.from_string("s(s(a))").unwrap();
         let t0 = term_pool.from_string("0").unwrap();

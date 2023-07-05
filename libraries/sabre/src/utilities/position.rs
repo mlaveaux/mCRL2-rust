@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_get_position() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_position_iterator() {
-        let mut tp = TermPool::initialise();
+        let mut tp = TermPool::new();
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         for (term, pos) in PositionIterator::new(t.clone()) {

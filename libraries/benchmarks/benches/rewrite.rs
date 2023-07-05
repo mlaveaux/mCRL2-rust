@@ -44,7 +44,7 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     // Create a jitty rewriter;
     let mut jitty_rewriter = JittyRewriter::new(&data_spec);
 
-    let _term_pool = Rc::new(RefCell::new(TermPool::initialise()));
+    let _term_pool = Rc::new(RefCell::new(TermPool::new()));
     //let sabre_rewriter = SabreRewriter::new(term_pool, );
 
     c.bench_function("add16", |bencher| {
@@ -58,7 +58,7 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 
 pub fn criterion_benchmark_sabre(c: &mut Criterion) 
 {    
-    let tp = Rc::new(RefCell::new(TermPool::initialise()));
+    let tp = Rc::new(RefCell::new(TermPool::new()));
 
     for entry in  fs::read_dir("../rec-tests/tests/REC_files/").expect("Cannot find directory") {
         match entry {
@@ -83,7 +83,7 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion)
                         });
                     });
 
-                let mut inner = InnermostRewriter::new(tp, &spec);
+                let mut inner = InnermostRewriter::new(tp.clone(), &spec);
                 
                 c.bench_function(&format!("innermost benchmark {:?}", dir.file_name()),
                 |bencher|
