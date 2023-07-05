@@ -60,45 +60,40 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion)
 {    
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    for entry in  fs::read_dir("../rec-tests/tests/REC_files/").expect("Cannot find directory") {
-        match entry {
-            Ok(dir) => {
-                let file =  std::fs::read_to_string(dir.path()).expect("Cannot open benchmark specification");
-                let input = vec![&file as &str];
+    let cases = vec![
+        (vec![include_str!("../../rec-tests/tests/REC_files/benchexpr10.rec"), include_str!("../../rec-tests/tests/REC_files/asfsdfbenchmark.rec")], "benchexpr10")
+    ];
 
-                let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
-                    let (syntax_spec, syntax_terms) = load_REC_from_strings(&input);
-                    let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
-                    (result, syntax_terms.iter().map(|t| { 
-                        let term = t.to_term(&mut tp.borrow_mut());
-                        to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()) }).collect())
-                };
+    for (input, name) in cases {
 
-                // Benchmark the set automaton construction                
-                c.bench_function(&format!("construct set automaton {:?}", dir.file_name()), 
-                |bencher| 
-                    {
-                        bencher.iter(|| {
-                            let _ = black_box(SetAutomaton::new(&spec, false, false));
-                        });
-                    });
+            let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
+                let (syntax_spec, syntax_terms) = load_REC_from_strings(&input);
+                let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
+                (result, syntax_terms.iter().map(|t| { 
+                    let term = t.to_term(&mut tp.borrow_mut());
+                    to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()) }).collect())
+            };
 
-                let mut inner = InnermostRewriter::new(tp.clone(), &spec);
-                
-                c.bench_function(&format!("innermost benchmark {:?}", dir.file_name()),
-                |bencher|
+            // Benchmark the set automaton construction                
+            c.bench_function(&format!("construct set automaton {:?}", name), 
+            |bencher| 
                 {
-                    for term in &terms {
-                        bencher.iter(|| {
-                            let _ = black_box(inner.rewrite(term.clone()));
-                        });
-                    }
+                    bencher.iter(|| {
+                        let _ = black_box(SetAutomaton::new(&spec, false, false));
+                    });
                 });
-            },
-            Err(x) => {
-                println!("Failed to construct DirEntry {}", x);
-            }
-        }
+
+            let mut inner = InnermostRewriter::new(tp.clone(), &spec);
+            
+            c.bench_function(&format!("innermost benchmark {:?}", name),
+            |bencher|
+            {
+                for term in &terms {
+                    bencher.iter(|| {
+                        let _ = black_box(inner.rewrite(term.clone()));
+                    });
+                }
+            });
     }
 }
 
