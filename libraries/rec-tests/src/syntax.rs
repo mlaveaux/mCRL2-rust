@@ -39,11 +39,9 @@ impl RewriteSpecificationSyntax {
                 let lhs_term = c.lhs.to_term(tp);
                 let rhs_term = c.rhs.to_term(tp);
 
-                let lhs_cond = to_data_expression(tp, &lhs_term, &variables);
-                let rhs_cond = to_data_expression(tp, &rhs_term, &variables);
                 let condition = Condition {
-                    lhs: to_data_expression(tp, &lhs_cond, &variables),
-                    rhs: to_data_expression(tp, &rhs_cond, &variables),
+                    lhs: to_data_expression(tp, &lhs_term, &variables),
+                    rhs: to_data_expression(tp, &rhs_term, &variables),
                     equality: c.equality,
                 };
                 conditions.push(condition);

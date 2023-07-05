@@ -30,6 +30,9 @@ pub mod ffi {
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
 
+        /// Returns true iff the term is an aterm_int.
+        fn ffi_is_int(term: &aterm) -> bool;
+
         /// Returns the address of the given aterm. Should be used with care.
         fn aterm_pointer(term: &aterm) -> usize;
 
@@ -202,6 +205,10 @@ impl ATerm {
 
     pub fn is_default(&self) -> bool {
         ffi::aterm_pointer(&self.term) == 0 
+    }
+
+    pub fn is_int(&self) -> bool {
+        ffi::ffi_is_int(&self.term)
     }
     
     pub fn get_head_symbol(&self) -> Symbol {

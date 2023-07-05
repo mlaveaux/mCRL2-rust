@@ -55,6 +55,11 @@ std::size_t aterm_pointer(const aterm& term)
   return reinterpret_cast<std::size_t>(detail::address(term));
 }
 
+bool ffi_is_int(const aterm& term)
+{
+  return term.type_is_int();
+}
+
 rust::String print_aterm(const aterm& term)
 {
   std::stringstream str;
