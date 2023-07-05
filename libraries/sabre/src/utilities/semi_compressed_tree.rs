@@ -68,23 +68,6 @@ impl SemiCompressedTermTree {
         }
     }
 
-    pub fn evaluate_data(&self, t: &ATerm, tp: &mut TermPool) -> ATerm {
-        match self {
-            Explicit(node) => {
-                // Create an ATerm with as arguments all the evaluated semi compressed term trees.
-                let mut subterms = Vec::with_capacity(node.children.len());
-
-                for i in 0..node.children.len() {
-                    subterms.push(node.children[i].evaluate(t, tp));
-                }
-
-                tp.create(&node.head, &subterms)
-            }
-            Compressed(ct) => ct.clone(),
-            Variable(p) => get_data_position(t, p),
-        }
-    }
-
     /// Creates a SCTT from a term. The var_map parameter should specify where the variable can be
     /// found in the lhs of the rewrite rule.
     pub(crate) fn from_term(

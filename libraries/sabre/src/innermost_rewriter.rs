@@ -59,7 +59,7 @@ impl InnermostRewriter {
         match InnermostRewriter::find_match(tp, automaton, &nf, stats) {
             None => nf,
             Some(ema) => {
-                let result = ema.semi_compressed_rhs.evaluate_data(&nf, tp);
+                let result = ema.semi_compressed_rhs.evaluate(&nf, tp);
                 //println!("rewrote {} to {} using rule {}", nf, result, ema.announcement.rule);
                 InnermostRewriter::rewrite_aux(tp, automaton, result, stats)
             },

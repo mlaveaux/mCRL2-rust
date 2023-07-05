@@ -230,7 +230,7 @@ impl SabreRewriter {
         stats.rewrite_steps += 1;
 
         // Computes the new subterm of the configuration
-        let new_subterm = ema.semi_compressed_rhs.evaluate_data(
+        let new_subterm = ema.semi_compressed_rhs.evaluate(
             &get_data_position(&leaf_subterm, &ema.announcement.position),
             tp,
         );
@@ -254,11 +254,11 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let rhs = c.semi_compressed_rhs.evaluate_data(
+            let rhs = c.semi_compressed_rhs.evaluate(
                 &get_data_position(&leaf.subterm, &ema.announcement.position),
                 tp,
             );
-            let lhs = c.semi_compressed_lhs.evaluate_data(
+            let lhs = c.semi_compressed_lhs.evaluate(
                 &get_data_position(&leaf.subterm, &ema.announcement.position),
                 tp,
             );
