@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use mcrl2_rust::atermpp::{ATerm, TermPool};
+use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 
 use crate::{
     set_automaton::{
@@ -8,6 +8,30 @@ use crate::{
     },
     RewriteEngine, RewriteSpecification, RewritingStatistics,
 };
+
+enum Config {
+    Rewrite(),
+    Result(DataFunctionSymbol, usize),
+}
+
+#[derive(Default)]
+struct InnerStack
+{
+    configs: Vec<Config>,
+    terms: Vec<ATerm>,
+}
+
+impl InnerStack
+{
+    fn add_result(&mut self, symbol: DataFunctionSymbol, arity: usize) {
+        self.configs.push(Config::Result(symbol, arity));
+    }
+
+    fn add_rewrite(&mut self, term: ATerm) {
+        self.configs.push(Config::Rewrite());
+        self.terms.push(term);
+    }
+}
 
 /// Innermost Adaptive Pattern Matching Automaton (APMA) rewrite engine.
 /// Implements the RewriteEngine trait. An APMA uses a modified SetAutomaton.
@@ -22,6 +46,7 @@ pub struct InnermostRewriter {
 impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: ATerm) -> ATerm {
         let mut stats = RewritingStatistics::default();
+
         InnermostRewriter::rewrite_aux(&mut self.term_pool.borrow_mut(), &self.apma, t, &mut stats)
     }
 }
@@ -39,31 +64,61 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton,
-        t: ATerm,
+        term: ATerm,
         stats: &mut RewritingStatistics,
     ) -> ATerm {
-        let symbol = get_data_function_symbol(&t);
+        let mut stack = InnerStack::default();
+        stack.add_rewrite(term);
 
-        // Recursively call rewrite_aux on all the subterms.
-        let mut arguments = vec![];
-        for t in get_data_arguments(&t).into_iter() {
-            arguments.push(InnermostRewriter::rewrite_aux(tp, automaton, t, stats));
+        loop {
+            match stack.configs.pop() {
+                Some(config) => {
+                    match config {
+                        Config::Rewrite() => {
+                            let term = stack.terms.pop().expect("There should be a last element");
+                            
+                            // Rewrite all the subterms.
+                            let symbol = get_data_function_symbol(&term);
+                            let arguments = get_data_arguments(&term);
+                            
+                            stack.add_result(symbol, arguments.len());
+                            for arg in arguments.into_iter() {
+                                stack.add_rewrite(arg);
+                            }
+                        }
+                        Config::Result(symbol, arity) => {
+                            // Take the last arity arguments.
+                            let arguments = &stack.terms[stack.terms.len() - arity..stack.terms.len()];
+                            
+                            let term: ATerm = if arguments.is_empty() {
+                                symbol.into()
+                            } else {
+                                tp.create_data_application(&symbol.into(), &arguments).into()
+                            };
+
+                            // Remove the arguments from the stack
+                            stack.terms.drain(stack.terms.len() - arity..);
+                            
+                            match InnermostRewriter::find_match(tp, automaton, &term, stats) {
+                                Some(ema) =>  {
+                                    let result = ema.semi_compressed_rhs.evaluate(&term, tp);
+                                    // println!("rewrote {} to {} using rule {}", term, result, ema.announcement.rule);
+                                    stack.add_rewrite(result);
+                                },
+                                None => {
+                                    // Add the term on the stack.
+                                    stack.terms.push(term);
+                                }
+                            }
+                        }
+                    }
+                }
+                None => { break; }
+            }
         }
-
-        let nf: ATerm = if arguments.is_empty() {
-            symbol.into()
-        } else {
-            tp.create_data_application(&symbol.into(), &arguments).into()
-        };
-
-        match InnermostRewriter::find_match(tp, automaton, &nf, stats) {
-            None => nf,
-            Some(ema) => {
-                let result = ema.semi_compressed_rhs.evaluate(&nf, tp);
-                //println!("rewrote {} to {} using rule {}", nf, result, ema.announcement.rule);
-                InnermostRewriter::rewrite_aux(tp, automaton, result, stats)
-            },
-        }
+        
+        assert!(stack.terms.len() == 1, "Expect exactly one term on the result stack");
+        return stack.terms.pop().expect("The result should be the last element on the stack");
     }
 
     /// Use the APMA to find a match for the given term.

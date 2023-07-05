@@ -84,8 +84,9 @@ mod tests
             let str_result: String = format!("Result: {}", &result).split_whitespace().collect();
             assert_eq!(str_result, expected_result, "The inner rewrite result doesn't match the expected result");
 
-            //let result = sa.rewrite(term.clone());
-            //assert_eq!(format!("Result: {}", &result), expected_result, "The sabre rewrite result doesn't match the expected result");
+            let result = sa.rewrite(term.clone());
+            let str_result: String = format!("Result: {}", &result).split_whitespace().collect();
+            assert_eq!(str_result, expected_result, "The sabre rewrite result doesn't match the expected result");
         }
     }
 }

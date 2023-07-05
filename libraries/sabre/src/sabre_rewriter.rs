@@ -75,7 +75,7 @@ impl SabreRewriter {
         'outer: loop {
             // Inner loop so that we can easily break; to the next iteration
             'skip_point: loop {
-                println!("{}", cs);
+                // println!("{}", cs);
 
                 // Check if there is any configuration leaf left to explore, if not we have found a normal form
                 if let Some(leaf_index) = cs.get_unexplored_leaf() {
@@ -235,10 +235,10 @@ impl SabreRewriter {
             tp,
         );
 
-        println!(
-            "rewrote {} to {} using rule {}",
-            &leaf_subterm, &new_subterm, ema.announcement.rule
-        );
+        // println!(
+        //     "rewrote {} to {} using rule {}",
+        //     &leaf_subterm, &new_subterm, ema.announcement.rule
+        // );
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;

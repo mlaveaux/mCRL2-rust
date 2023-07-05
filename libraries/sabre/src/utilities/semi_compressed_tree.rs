@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{utilities::ExplicitPosition, set_automaton::get_data_position};
+use crate::{utilities::ExplicitPosition};
 use mcrl2_rust::{
     atermpp::{ATerm, Symbol, TermPool},
     data::DataVariable
