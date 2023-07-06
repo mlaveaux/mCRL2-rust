@@ -61,7 +61,7 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion)
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     let cases = vec![
-        (vec![include_str!("../../rec-tests/tests/REC_files/benchexpr10.rec"), include_str!("../../rec-tests/tests/REC_files/asfsdfbenchmark.rec")], "benchexpr10")
+        (vec![include_str!("../../rec-tests/tests/REC_files/factorial5.rec"), include_str!("../../rec-tests/tests/REC_files/factorial.rec")], "factorial5")
     ];
 
     for (input, name) in cases {
