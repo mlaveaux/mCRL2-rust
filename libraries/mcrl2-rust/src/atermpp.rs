@@ -219,7 +219,7 @@ impl ATerm {
         }
     }
 
-    /// Returns an iterator over all arguments of the term.
+    /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
     pub fn iter(&self) -> TermIterator {
         TermIterator::new(self.clone())
     }
@@ -259,9 +259,9 @@ impl Default for ATerm {
 
 impl fmt::Display for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.require_valid();
-
-        if self.is_data_function_symbol() {
+        if self.is_default() {
+            write!(f, "{:?}", self)
+        } else if self.is_data_function_symbol() {
             write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(self.clone()))
         } else if self.is_data_application() {
             write!(f, "{}", <ATerm as Into<DataApplication>>::into(self.clone()))
@@ -411,7 +411,7 @@ impl TermPool {
     }
 }
 
-/// An iterator over all (term, position) pairs of the given [ATerm].
+/// An iterator over all subterms of the given [ATerm].
 pub struct TermIterator {
     queue: VecDeque<ATerm>,
 }
@@ -432,10 +432,10 @@ impl Iterator for TermIterator {
             None
         } else {
             // Get a subterm to inspect
-            let term = self.queue.pop_front().unwrap();
+            let term = self.queue.pop_back().unwrap();
 
             // Put subterms in the queue
-            for argument in term.arguments().iter() {
+            for argument in term.arguments().iter().rev() {
                 self.queue.push_back(argument.clone());
             }
 

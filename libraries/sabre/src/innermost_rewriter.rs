@@ -1,17 +1,18 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, fmt};
 
 use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 
 use crate::{
     set_automaton::{
-        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement, SetAutomaton, get_data_arguments,
+        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement, SetAutomaton, get_data_arguments, check_equivalence_classes,
     },
-    RewriteEngine, RewriteSpecification, RewritingStatistics,
+    RewriteEngine, RewriteSpecification, RewritingStatistics, utilities::get_position,
 };
 
-enum Config {
-    Rewrite(),
-    Result(DataFunctionSymbol, usize),
+#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub enum Config {
+    Rewrite(usize),
+    Construct(DataFunctionSymbol, usize, usize), // Constructs f with arity at the given index.
 }
 
 #[derive(Default)]
@@ -21,23 +22,47 @@ struct InnerStack
     terms: Vec<ATerm>,
 }
 
+impl fmt::Display for InnerStack
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {        
+        writeln!(f, "Terms: [")?;
+        for (i, term) in self.terms.iter().enumerate() {                  
+            writeln!(f, "{}\t{}", i, term)?;
+        }     
+        writeln!(f, "]")?;  
+
+        writeln!(f, "Configs: [")?;
+        for config in &self.configs {                  
+            writeln!(f, "\t{}", config)?;
+        }     
+        write!(f, "]")
+    }
+}
+
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {            
+            Config::Rewrite(index) => write!(f, "Rewrite({})", index),
+            Config::Construct(symbol, arity, index) => write!(f, "Construct({}, {}, {})", symbol, arity, index)
+        }
+    }
+
+}
+
 impl InnerStack
 {
-    fn add_result(&mut self, symbol: DataFunctionSymbol, arity: usize) {
-        self.configs.push(Config::Result(symbol, arity));
+    fn add_result(&mut self, symbol: DataFunctionSymbol, arity: usize, index: usize) {
+        self.configs.push(Config::Construct(symbol, arity, index));
     }
 
     fn add_rewrite(&mut self, term: ATerm) {
-        self.configs.push(Config::Rewrite());
+        self.configs.push(Config::Rewrite(self.terms.len()));
+        self.terms.push(ATerm::default());
         self.terms.push(term);
     }
 }
 
 /// Innermost Adaptive Pattern Matching Automaton (APMA) rewrite engine.
-/// Implements the RewriteEngine trait. An APMA uses a modified SetAutomaton.
-/// The SetAutomaton::construct function has an 'apma' parameter. If it is set to true.
-/// An APMA is created. Construction is almost identical with the difference that no fresh goals are created.
-/// It only matches on the root position.
 pub struct InnermostRewriter {
     term_pool: Rc<RefCell<TermPool>>,
     apma: SetAutomaton,
@@ -71,24 +96,26 @@ impl InnermostRewriter {
         stack.add_rewrite(term);
 
         loop {
+            // println!("{}", stack);
+
             match stack.configs.pop() {
                 Some(config) => {
                     match config {
-                        Config::Rewrite() => {
+                        Config::Rewrite(index) => {
                             let term = stack.terms.pop().expect("There should be a last element");
                             
                             // Rewrite all the subterms.
                             let symbol = get_data_function_symbol(&term);
-                            let arguments = get_data_arguments(&term);
+                            let arguments = get_data_arguments(&term);                          
+                            stack.add_result(symbol, arguments.len(), index);
                             
-                            stack.add_result(symbol, arguments.len());
                             for arg in arguments.into_iter() {
                                 stack.add_rewrite(arg);
                             }
                         }
-                        Config::Result(symbol, arity) => {
+                        Config::Construct(symbol, arity, index) => {
                             // Take the last arity arguments.
-                            let arguments = &stack.terms[stack.terms.len() - arity..stack.terms.len()];
+                            let arguments = &stack.terms[stack.terms.len() - arity..];
                             
                             let term: ATerm = if arguments.is_empty() {
                                 symbol.into()
@@ -96,18 +123,48 @@ impl InnermostRewriter {
                                 tp.create_data_application(&symbol.into(), &arguments).into()
                             };
 
-                            // Remove the arguments from the stack
-                            stack.terms.drain(stack.terms.len() - arity..);
+                            // Remove the arguments from the stack.
+                            if arity > 0 {
+                                stack.terms.drain(stack.terms.len() - arity..);
+                            }
                             
                             match InnermostRewriter::find_match(tp, automaton, &term, stats) {
-                                Some(ema) =>  {
-                                    let result = ema.semi_compressed_rhs.evaluate(&term, tp);
-                                    // println!("rewrote {} to {} using rule {}", term, result, ema.announcement.rule);
-                                    stack.add_rewrite(result);
+                                Some(ema) =>  {                                    
+                                    let top_of_stack = stack.terms.len() - 1; // We replace the result term
+                                    stack.terms.reserve(ema.stack_size - 1);
+                                    for _ in 0..ema.stack_size - 1 {
+                                        stack.terms.push(ATerm::default());
+                                    }
+
+                                    let mut first = true;
+                                    for config in &ema.innermost_stack {
+                                        match config {
+                                            Config::Construct(symbol, arity, offset) => {
+                                                if first {
+                                                    // The first result must be placed on the original result.
+                                                    stack.add_result(symbol.clone(), *arity, index); 
+                                                } else {
+                                                    // Otherwise, we put it on the end of the stack.
+                                                    stack.add_result(symbol.clone(), *arity, top_of_stack + offset);
+                                                }
+                                            },
+                                            Config::Rewrite(_) => {
+                                                panic!("This case should not happen");
+                                            }
+                                        }
+                                        first = false;
+                                    }
+
+                                    for (position, index) in &ema.positions {
+                                        // Add the positions to the stack.
+                                        stack.terms[top_of_stack + index] = get_position(&term, position);
+                                    }
+
+                                    // println!("applying rule {}", ema.announcement.rule);
                                 },
                                 None => {
                                     // Add the term on the stack.
-                                    stack.terms.push(term);
+                                    stack.terms[index] = term;
                                 }
                             }
                         }
@@ -145,32 +202,7 @@ impl InnermostRewriter {
             for ema in &transition.announcements {
                 //println!("announcing {}", ema);
 
-                let mut conditions_hold = true;
-
-                // Check conditions if there are any
-                if !ema.conditions.is_empty() {
-                    conditions_hold =
-                        InnermostRewriter::check_conditions(tp, automaton, t, ema, stats);
-                }
-
-                // Check equivalence of subterms for non-linear patterns
-                'ec_check: for ec in &ema.equivalence_classes {
-                    if ec.positions.len() > 1 {
-                        let mut iter_pos = ec.positions.iter();
-                        let first_pos = iter_pos.next().unwrap();
-                        let first_term = get_data_position(t, first_pos);
-
-                        for other_pos in iter_pos {
-                            let other_term = get_data_position(t, other_pos);
-                            if first_term != other_term {
-                                conditions_hold = false;
-                                break 'ec_check;
-                            }
-                        }
-                    }
-                }
-
-                if conditions_hold {
+                if check_equivalence_classes(&t, &ema.equivalence_classes) && InnermostRewriter::check_conditions(tp, automaton, t, ema, stats) {
                     // We found a matching pattern
                     return Some(ema);
                 }
@@ -204,9 +236,7 @@ impl InnermostRewriter {
             let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
             let lhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats);
 
-            let holds = (lhs_normal == rhs_normal && c.equality)
-                || (lhs_normal != rhs_normal && !c.equality);
-            if !holds {
+            if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {
                 return false;
             }
         }

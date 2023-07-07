@@ -112,7 +112,7 @@ impl fmt::Display for EnhancedMatchAnnouncement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", &self.announcement)?;
 
-        write!(f, ", [")?;
+        write!(f, ", equivalences: [")?;
         for ec in &self.equivalence_classes {
             write!(f, "{}{{", ec.variable)?;
             let mut first = true;
@@ -126,7 +126,7 @@ impl fmt::Display for EnhancedMatchAnnouncement {
             write!(f, "}} ")?;
         }
 
-        write!(f, "], [")?;
+        write!(f, "], conditions: [")?;
         for (i, c) in self.announcement.rule.conditions.iter().enumerate() {
             if i != 0 {
                 write!(f, ", ")?;

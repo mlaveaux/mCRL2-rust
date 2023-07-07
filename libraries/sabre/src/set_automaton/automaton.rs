@@ -395,7 +395,7 @@ impl State {
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
                         && &get_data_function_symbol(&mo.pattern) == symbol
-                        && get_data_arguments(&mo.pattern).iter().all(|x| x.is_data_variable()) // Again skip the first function symbol
+                        && get_data_arguments(&mo.pattern).iter().all(|x| x.is_data_variable()) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
@@ -494,6 +494,7 @@ impl State {
                 if label.is_none() {
                     label = Some(goal.obligations.first().unwrap().position.clone());
                 }
+
                 for obligation in &goal.obligations {
                     if let Some(l) = &label {
                         if &obligation.position < l {
@@ -506,7 +507,7 @@ impl State {
 
         State {
             label: label.unwrap(),
-            transitions: Vec::with_capacity(num_transitions), //transitions need to be added later
+            transitions: Vec::with_capacity(num_transitions), // Transitions need to be added later
             match_goals: goals,
         }
     }

@@ -68,7 +68,8 @@ mod tests
             let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
             (result, syntax_terms.iter().map(|t| { 
                 let term = t.to_term(&mut tp.borrow_mut());
-                to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()) }).collect())
+                to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new())
+            }).collect())
         };
 
         // Test Sabre rewriter

@@ -8,8 +8,8 @@ use mcrl2_rust::{
 use crate::{
     rewrite_specification::RewriteSpecification,
     set_automaton::{
-        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement, EquivalenceClass,
-        SetAutomaton,
+        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement,
+        SetAutomaton, check_equivalence_classes,
     },
     utilities::{Configuration, ConfigurationStack, SideInfo, SideInfoType},
 };
@@ -270,7 +270,7 @@ impl SabreRewriter {
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs.clone(), stats);
 
                 if lhs_normal != rhs_normal || !c.equality {
-                    return EquivalenceClass::equivalences_hold(
+                    return check_equivalence_classes(
                         &leaf.subterm,
                         &ema.equivalence_classes,
                     );
