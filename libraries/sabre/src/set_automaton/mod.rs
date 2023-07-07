@@ -4,9 +4,9 @@
 //! See https://arxiv.org/abs/2202.08687 for a paper on the construction of set automata.
 
 mod automaton;
-mod utility;
+mod announcement;
 mod display;
 
 pub use automaton::*;
-pub use utility::*;
+pub use announcement::*;
 pub use display::*;

@@ -2,13 +2,13 @@ use std::{cmp::min, collections::VecDeque};
 
 use crate::{
     rewrite_specification::Rule,
-    utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree},
+    utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
 use mcrl2_rust::atermpp::ATerm;
 use smallvec::SmallVec;
 
-use super::MatchObligation;
+use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
 
 /// An equivalence class is a variable with (multiple) positions.
 /// This is necessary for non-linear patterns.
@@ -27,16 +27,52 @@ pub struct EquivalenceClass {
     pub(crate) positions: Vec<ExplicitPosition>,
 }
 
-impl EquivalenceClass {
-    pub fn equivalences_hold(term: &ATerm, eqs: &[EquivalenceClass]) -> bool {
-        eqs.iter().all(|ec| {
-            ec.positions.len() < 2 || {
-                let mut iter_pos = ec.positions.iter();
-                let first = iter_pos.next().unwrap();
-                iter_pos.all(|other_pos| get_position(term, first) == get_position(term, other_pos))
+/// Checks if the equivalence classes hold for the given term.
+pub fn check_equivalence_classes(term: &ATerm, eqs: &[EquivalenceClass]) -> bool {
+    eqs.iter().all(|ec| {
+        assert!(ec.positions.len() >= 2, "An equivalence class must contain at least two positions");
+
+        // The term at the first position must be equivalent to all other positions.
+        let mut iter_pos = ec.positions.iter();
+        let first = iter_pos.next().unwrap();
+        iter_pos.all(|other_pos| get_position(term, first) == get_position(term, other_pos))
+    })
+}
+
+/// Adds the position of a variable to the equivalence classes
+fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: ExplicitPosition) {
+    // Check if the variable was seen before
+    if ve.iter().any(|ec| &ec.variable == variable) {
+        for ec in ve.iter_mut() {
+            // Find the equivalence class and add the position
+            if &ec.variable == variable && !ec.positions.iter().any(|x| x == &pos) {
+                ec.positions.push(pos);
+                break;
             }
-        })
+        }
+    } else {
+        // If the variable was not found at another position add a new equivalence class
+        ve.push(EquivalenceClass {
+            variable: variable.clone(),
+            positions: vec![pos],
+        });
     }
+}
+
+/// Derives the positions in a pattern with same variable (for non-linear patters)
+fn derive_equivalence_classes(announcement: &MatchAnnouncement) -> Vec<EquivalenceClass> {
+    let mut var_equivalences = vec![];
+
+    for (term, pos) in PositionIterator::new(announcement.rule.lhs.clone()) {
+        if term.is_data_variable() {
+            // Register the position of the variable
+            update_equivalences(&mut var_equivalences, &term, pos);
+        }
+    }
+
+    // Discard variables that only occur once
+    var_equivalences.retain(|x| x.positions.len() > 1);
+    var_equivalences
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -63,44 +99,20 @@ pub struct EnhancedMatchAnnouncement {
     pub(crate) announcement: MatchAnnouncement,
     /// Positions in the pattern with the same variable, for non-linear patterns
     pub equivalence_classes: Vec<EquivalenceClass>,
+    /// Conditions for the left hand side.
+    pub conditions: Vec<EMACondition>,
+
+    // TODO: This information is rewriter specific and should be delegated.
+
     /// Right hand side is stored in the term pool as much as possible with a SemiCompressedTermTree
     pub semi_compressed_rhs: SemiCompressedTermTree,
-    pub conditions: Vec<EMACondition>,
     /// Whether the rewrite rule duplicates subterms, e.g. times(s(x), y) = plus(y, times(x, y))
     pub is_duplicating: bool,
-}
 
-impl MatchAnnouncement {
-    /// Derives the positions in a pattern with same variable (for non-linear patters)
-    pub fn derive_equivalence_classes(&self) -> Vec<EquivalenceClass> {
-        // A queue is used to keep track of the positions we still need to visit in the pattern
-        let mut queue = VecDeque::new();
-        queue.push_back(ExplicitPosition::empty_pos()); //push the root position in the queue
-        let mut var_equivalences = vec![];
-
-        while !queue.is_empty() {
-            // Select a position to inspect
-            let pos = queue.pop_front().unwrap();
-            let term = get_position(&self.rule.lhs, &pos);
-
-            // If arity_per_symbol does not contain the head symbol it is a variable
-            if term.is_data_variable() {
-                // Register the position of the variable
-                update_equivalences(&mut var_equivalences, &term, pos);
-            } else {
-                // Put all subterms in the queue for exploration
-                for i in 1..term.arguments().len() + 1 {
-                    let mut sub_term_pos = pos.clone();
-                    sub_term_pos.indices.push(i);
-                    queue.push_back(sub_term_pos);
-                }
-            }
-        }
-
-        // Discard variables that only occur once
-        var_equivalences.retain(|x| x.positions.len() > 1);
-        var_equivalences
-    }
+    /// The innermost rewrite stack for the right hand side and the positions that must be added to the stack.
+    pub innermost_stack: Vec<Config>,
+    pub positions: Vec<(ExplicitPosition, usize)>,
+    pub stack_size: usize,
 }
 
 impl EnhancedMatchAnnouncement {
@@ -108,6 +120,8 @@ impl EnhancedMatchAnnouncement {
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
     pub(crate) fn new(announcement: MatchAnnouncement) -> EnhancedMatchAnnouncement {
+        
+        // Compute the extra information for the InnermostRewriter.
         // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         // rhs of the rewrite rule and for lhs and rhs of each condition.
         // Also see the documentation of SemiCompressedTermTree
@@ -125,7 +139,29 @@ impl EnhancedMatchAnnouncement {
         }
 
         let is_duplicating = sctt_rhs.contains_duplicate_var_references();
-        let equivalence_classes = announcement.derive_equivalence_classes();
+        let equivalence_classes = derive_equivalence_classes(&announcement);
+
+        // Compute the extra information for the InnermostRewriter.
+        let mut innermost_stack = vec![];
+        let mut positions = vec![];
+        let mut stack_size = 0;
+
+        for (term, position) in PositionIterator::new(announcement.rule.rhs.clone()) {
+            if let Some(index) = position.indices.last() {
+                if *index == 1 {
+                    continue; // Skip the function symbol.
+                }
+            }
+
+            if term.is_data_variable() {
+                positions.push((var_map.get(&term.into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
+                stack_size += 1;
+            } else if term.is_data_application() || term.is_data_function_symbol() {
+                let arity = get_data_arguments(&term).len();
+                innermost_stack.push(Config::Construct(get_data_function_symbol(&term), arity, stack_size));
+                stack_size += 1;
+            }
+        }
 
         EnhancedMatchAnnouncement {
             announcement,
@@ -133,6 +169,9 @@ impl EnhancedMatchAnnouncement {
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,
+            positions,
+            innermost_stack,
+            stack_size,
         }
     }
 }
@@ -147,7 +186,7 @@ impl MatchGoal {
     /// Derive the greatest common prefix (gcp) of the announcement and obligation positions
     /// of a list of match goals.
     pub fn greatest_common_prefix(goals: &Vec<MatchGoal>) -> ExplicitPosition {
-        // gcp is empty if there are not match goals
+        // gcp is empty if there are no match goals
         if goals.is_empty() {
             return ExplicitPosition::empty_pos();
         }
@@ -165,6 +204,7 @@ impl MatchGoal {
                 &prefix.indices[0..compare_length],
                 &g.announcement.position.indices[0..compare_length],
             );
+
             for mo in &g.obligations {
                 //Compare up to gcp_length or the length of the match obligation position
                 let compare_length = min(gcp_length, mo.position.len());
@@ -244,7 +284,7 @@ impl MatchGoal {
     pub fn partition(goals: Vec<MatchGoal>) -> Vec<(Vec<MatchGoal>, Vec<ExplicitPosition>)> {
         let mut partitions = vec![];
 
-        //If one of the goals has a root position all goals are related.
+        // If one of the goals has a root position all goals are related.
         if goals.iter().any(|g| g.announcement.position.is_empty()) {
             let mut all_positions = Vec::new();
             for g in &goals {
@@ -271,11 +311,12 @@ impl MatchGoal {
                 vec.push(i);
             }
         }
-        //Sort the positions. They are now in depth first order.
+
+        // Sort the positions. They are now in depth first order.
         all_positions.sort_unstable();
 
-        //compute the partitions, finished when all positions are processed
-        let mut p_index = 0; //position index
+        // Compute the partitions, finished when all positions are processed
+        let mut p_index = 0; // position index
         while p_index < all_positions.len() {
             // Start the partition with a position
             let p = &all_positions[p_index];
@@ -298,7 +339,7 @@ impl MatchGoal {
                 && MatchGoal::pos_comparable(p, &all_positions[p_index])
             {
                 pos_in_partition.push(all_positions[p_index].clone());
-                //Put the goals with position all_positions[p_index] in the partition
+                // Put the goals with position all_positions[p_index] in the partition
                 let g = position_to_goals.get(&all_positions[p_index]).unwrap();
                 for i in g {
                     goals_in_partition.push(goals[*i].clone());
@@ -311,21 +352,82 @@ impl MatchGoal {
     }
 }
 
-/// Adds the position of a variable to the equivalence classes
-fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: ExplicitPosition) {
-    // Check if the variable was seen before
-    if ve.iter().any(|ec| &ec.variable == variable) {
-        for ec in ve.iter_mut() {
-            //Find the equivalence class and add the position
-            if &ec.variable == variable && !ec.positions.iter().any(|x| x == &pos) {
-                ec.positions.push(pos.clone());
-            }
+#[cfg(test)]
+mod tests {
+    use ahash::AHashSet;
+    use mcrl2_rust::atermpp::TermPool;
+
+    use crate::utilities::to_data_expression;
+
+    use super::*;
+
+    /// Create a rewrite rule lhs -> rhs with the given names being variables.
+    fn create_rewrite_rule(tp: &mut TermPool, lhs: &str, rhs: &str, variables: &[&str]) -> Rule {
+        let lhs = tp.from_string(lhs).unwrap();
+        let rhs  = tp.from_string(rhs).unwrap();
+        let mut vars = AHashSet::new();
+        for var in variables {
+            vars.insert(var.to_string());
         }
-    } else {
-        // If the variable was not found at another position add a new equivalence class
-        ve.push(EquivalenceClass {
-            variable: variable.clone(),
-            positions: vec![pos],
-        });
+        
+        Rule {
+            conditions: vec![],
+            lhs: to_data_expression(tp, &lhs, &vars),
+            rhs: to_data_expression(tp, &rhs, &vars)
+        }
+    }
+
+    #[test]
+    fn test_derive_equivalence_classes()
+    {                
+        let mut tp = TermPool::new();
+        let announcement = MatchAnnouncement {
+            rule: create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]),
+            position: ExplicitPosition::default(),
+            symbols_seen: 0,
+        };
+
+        let eq: Vec<EquivalenceClass> = derive_equivalence_classes(&announcement);
+
+        assert_eq!(eq,
+            vec![
+                EquivalenceClass {
+                    variable: tp.create_variable("x").into(),
+                    positions: vec![ExplicitPosition::new(&[2]), ExplicitPosition::new(&[3, 2])]
+                },
+            ], "The resulting config stack is not as expected");
+
+        // Check the equivalence class for an example
+        let term = tp.from_string("f(a(b), h(a(b)))").unwrap();
+        let expression = to_data_expression(&mut tp, &term, &AHashSet::new());
+
+        assert!(check_equivalence_classes(&expression, &eq), "The equivalence classes are not checked correctly, equivalences: {:?} and term {}", &eq, &expression);
+    }
+    
+    #[test]
+    fn test_enhanced_match_announcement() {
+        let mut tp = TermPool::new();
+
+        let announcement = MatchAnnouncement {
+            rule: create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]),
+            position: ExplicitPosition::default(),
+            symbols_seen: 0,
+        };
+
+        let ema = EnhancedMatchAnnouncement::new(announcement);
+
+        // Check if the resulting construction succeeded.
+        assert_eq!(ema.innermost_stack, 
+            vec![
+                Config::Construct(tp.create_data_function_symbol("times"), 2, 0),
+                Config::Construct(tp.create_data_function_symbol("s"), 1, 1),
+                Config::Construct(tp.create_data_function_symbol("fact"), 1, 2),
+            ]
+        , "The resulting config stack is not as expected");
+
+        assert_eq!(ema.stack_size, 5, "The stack size does not match");
+
+
+
     }
 }

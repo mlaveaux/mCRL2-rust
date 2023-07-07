@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 /// Indices are stored in a SmallVec, which is configured to store 4 elements.
 /// If the position contains a maximum of 4 elements it is stored on the stack.
 /// If the position is longer a heap allocation is made.
-#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Hash, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ExplicitPosition {
     pub indices: SmallVec<[usize; 4]>,
 }
@@ -35,7 +35,6 @@ impl ExplicitPosition {
     pub fn is_empty(&self) -> bool {
         self.indices.len() == 0
     }
-
 }
 
 /// Converts a position to a string for pretty printing
