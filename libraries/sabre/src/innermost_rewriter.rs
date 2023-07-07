@@ -4,7 +4,7 @@ use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 
 use crate::{
     set_automaton::{
-        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement, SetAutomaton, get_data_arguments, check_equivalence_classes,
+        get_data_function_symbol, EnhancedMatchAnnouncement, SetAutomaton, get_data_arguments, check_equivalence_classes,
     },
     RewriteEngine, RewriteSpecification, RewritingStatistics, utilities::get_position,
 };
@@ -160,6 +160,7 @@ impl InnermostRewriter {
                                         stack.terms[top_of_stack + index] = get_position(&term, position);
                                     }
 
+                                    stats.rewrite_steps += 1;
                                     // println!("applying rule {}", ema.announcement.rule);
                                 },
                                 None => {
@@ -185,23 +186,18 @@ impl InnermostRewriter {
         t: &ATerm,
         stats: &mut RewritingStatistics,
     ) -> Option<&'a EnhancedMatchAnnouncement> {
-        //println!("term {}", t);
-
         // Start at the initial state
         let mut state_index = 0;
         loop {
             let state = &automaton.states[state_index];
 
             // Get the symbol at the position state.label
-            let symbol = get_data_function_symbol(&get_data_position(t, &state.label));
-
-            //println!("matching: {}", symbol);
+            stats.symbol_comparisons += 1;
+            let symbol = get_data_function_symbol(&get_position(t, &state.label));
 
             // Get the transition for the label and check if there is a pattern match
             let transition = &state.transitions[symbol.operation_id()];
             for ema in &transition.announcements {
-                //println!("announcing {}", ema);
-
                 if check_equivalence_classes(&t, &ema.equivalence_classes) && InnermostRewriter::check_conditions(tp, automaton, t, ema, stats) {
                     // We found a matching pattern
                     return Some(ema);
@@ -211,7 +207,6 @@ impl InnermostRewriter {
             // If there is no pattern match we check if the transition has a destination state
             if transition.destinations.is_empty() {
                 // If there is no destination state there is no pattern match
-                //println!("no match");
                 return None;
             } else {
                 // Continue matching in the next state

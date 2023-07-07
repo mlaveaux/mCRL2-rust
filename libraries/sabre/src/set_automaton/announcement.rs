@@ -1,4 +1,4 @@
-use std::{cmp::min, collections::VecDeque};
+use std::cmp::min;
 
 use crate::{
     rewrite_specification::Rule,

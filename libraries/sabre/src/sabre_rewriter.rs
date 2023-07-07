@@ -8,10 +8,10 @@ use mcrl2_rust::{
 use crate::{
     rewrite_specification::RewriteSpecification,
     set_automaton::{
-        get_data_function_symbol, get_data_position, EnhancedMatchAnnouncement,
+        get_data_function_symbol, EnhancedMatchAnnouncement,
         SetAutomaton, check_equivalence_classes,
     },
-    utilities::{Configuration, ConfigurationStack, SideInfo, SideInfoType},
+    utilities::{Configuration, ConfigurationStack, SideInfo, SideInfoType, get_position},
 };
 
 /// A shared trait for all the rewriters
@@ -113,7 +113,7 @@ impl SabreRewriter {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
                             let function_symbol: DataFunctionSymbol =
-                                get_data_function_symbol(&get_data_position(
+                                get_data_function_symbol(&get_position(
                                     &leaf.subterm,
                                     &automaton.states[leaf.state].label,
                                 ));
@@ -231,7 +231,7 @@ impl SabreRewriter {
 
         // Computes the new subterm of the configuration
         let new_subterm = ema.semi_compressed_rhs.evaluate(
-            &get_data_position(&leaf_subterm, &ema.announcement.position),
+            &get_position(&leaf_subterm, &ema.announcement.position),
             tp,
         );
 
@@ -255,11 +255,11 @@ impl SabreRewriter {
     ) -> bool {
         for c in &ema.conditions {
             let rhs = c.semi_compressed_rhs.evaluate(
-                &get_data_position(&leaf.subterm, &ema.announcement.position),
+                &get_position(&leaf.subterm, &ema.announcement.position),
                 tp,
             );
             let lhs = c.semi_compressed_lhs.evaluate(
-                &get_data_position(&leaf.subterm, &ema.announcement.position),
+                &get_position(&leaf.subterm, &ema.announcement.position),
                 tp,
             );
 
