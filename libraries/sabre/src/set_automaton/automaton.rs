@@ -255,18 +255,6 @@ pub fn get_data_arguments(term: &ATerm) -> Vec<ATerm> {
     }
 }
 
-/// Returns the subterm at the specific position
-pub fn get_data_position(term: &ATerm, position: &ExplicitPosition) -> ATerm {
-    let mut result = term.clone();
-
-    for index in &position.indices {
-        result = result.arg(*index); // Note that positions are 1 indexed, but the head is the application.
-    }
-    
-    result
-}
-
-
 impl State {
     /// Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
     /// The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
@@ -327,8 +315,9 @@ impl State {
             }
 
             // Handle fresh match goals, they are the positions Label(state).i
-            // where i is between 1 and the arity of the function symbol of the transition
-            for i in 1..arity + 1 {
+            // where i is between 2 and the arity + 2 of the function symbol of
+            // the transition. Position 1 is the function symbol.
+            for i in 2..arity + 2 {
                 let mut pos = self.label.clone();
                 pos.indices.push(i);
 
@@ -422,12 +411,11 @@ impl State {
                     if &get_data_function_symbol(&mo.pattern) == symbol && mo.position == self.label {
                         // Reduced match obligation
                         for (index, t) in get_data_arguments(&mo.pattern).iter().enumerate() {
-                            // Skipping one does still enumerate at 0.
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
                             if !t.is_data_variable() {
                                 let mut new_pos = mo.position.clone();
-                                new_pos.indices.push(index + 1);
+                                new_pos.indices.push(index + 2);
                                 new_obligations.push(MatchObligation {
                                     pattern: t.clone(),
                                     position: new_pos,

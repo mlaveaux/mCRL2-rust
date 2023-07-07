@@ -1,10 +1,10 @@
 use std::fmt;
 
-use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, get_data_position};
+use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
 use mcrl2_rust::atermpp::{ATerm, TermPool};
 
-use super::substitute_data;
+use super::{substitute, get_position};
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
@@ -95,7 +95,7 @@ impl<'a> ConfigurationStack<'a> {
         // Create a new configuration and push it onto the stack
         let new_leaf = Configuration {
             state: *des,
-            subterm: get_data_position(&leaf.subterm, pos),
+            subterm: get_position(&leaf.subterm, pos),
             position: Some(pos),
         };
         self.stack.push(new_leaf);
@@ -114,7 +114,7 @@ impl<'a> ConfigurationStack<'a> {
 
         // Update the subterm stored at the prune point.
         // Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
-        self.stack[depth].subterm = substitute_data(tp, &self.stack[depth].subterm, new_subterm, &automaton.states[self.stack[depth].state].label.indices);
+        self.stack[depth].subterm = substitute(tp, &self.stack[depth].subterm, new_subterm, &automaton.states[self.stack[depth].state].label.indices);
         self.oldest_reliable_subterm = depth;
     }
 
@@ -170,7 +170,7 @@ impl<'a> ConfigurationStack<'a> {
             // If the position is not deepened nothing needs to be done, otherwise substitute on the position stored in the configuration.
             subterm = match self.stack[up_to_date].position {
                 None => subterm,
-                Some(p) => substitute_data(
+                Some(p) => substitute(
                     tp,
                     &self.stack[up_to_date - 1].subterm,
                     subterm,

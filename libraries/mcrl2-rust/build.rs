@@ -119,6 +119,8 @@ fn main() {
     // Additional files needed to compile the bridge, basically to build mCRL2 itself.
     build
         .cpp(true)
+        .define("MCRL2_NO_RECURSIVE_SOUNDNESS_CHECKS", "1") // These checks overflow the stack, and are extremely slow.
+        .define("LPS_NO_RECURSIVE_SOUNDNESS_CHECKS", "1")
         .includes(add_prefix(
             mcrl2_path.clone(),
             &[

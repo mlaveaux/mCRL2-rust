@@ -45,32 +45,6 @@ fn substitute_rec(
     }
 }
 
-pub fn substitute_data(tp: &mut TermPool, t: &ATerm, new_subterm: ATerm, p: &[usize]) -> ATerm {
-    substitute_data_rec(tp, t, new_subterm, p, 0)
-}
-
-fn substitute_data_rec(
-    tp: &mut TermPool,
-    t: &ATerm,
-    new_subterm: ATerm,
-    p: &[usize],
-    depth: usize,
-) -> ATerm {
-    if p.len() == depth {
-        // in this case we have arrived at the place where 'new_subterm' needs to be injected
-        new_subterm
-    } else {
-        // else recurse deeper into 't'
-        let new_child_index = p[depth] - 1;
-        let new_child = substitute_data_rec(tp, &t.arg(new_child_index), new_subterm, p, depth + 1);
-
-        let mut args = t.arguments();
-        args[new_child_index+1] = new_child;
-
-        tp.create(&t.get_head_symbol(), &args)
-    }
-}
-
 /// Applies the given function to every subterm of the given term.
 pub fn apply<F>(tp: &mut TermPool, t: &ATerm, function: &F) -> ATerm
 where
