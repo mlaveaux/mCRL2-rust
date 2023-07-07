@@ -35,6 +35,12 @@ jobs:
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.3
 
+      - name: Install LLVM Tools for Rust
+        run: rustup component add llvm-tools-preview
+  
+      - name: Install grcov
+        run: cargo install grcov
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
@@ -43,10 +49,17 @@ jobs:
         with:
           submodules: true
                 
+  
+      - name: Generating Code Coverage
+        run: cargo xtask coverage        
+        env:
+          RUSTC_WRAPPER: sccache
+
       - name: Build Documentation
         run: |
           cargo doc --no-deps
           rm target/doc/.lock
+          cp -r /target/coverage/html /target/doc/coverage/
           echo "<meta http-equiv=\"refresh\" content=\"0; url=mcrl2_rust\">" > target/doc/index.html
         env:
           RUSTC_WRAPPER: sccache
