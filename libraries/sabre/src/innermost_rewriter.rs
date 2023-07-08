@@ -275,17 +275,17 @@ mod tests {
     use mcrl2_rust::atermpp::TermPool;
 
     use crate::{
-        test_utility::{random_term, create_rewrite_rule}, InnermostRewriter, RewriteEngine, RewriteSpecification, utilities::to_data_expression,
+        test_utility::{random_term}, InnermostRewriter, RewriteSpecification, utilities::to_data_expression, RewriteEngine,
     };
 
     #[test]
     fn test_innermost_simple() {
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        let variables = [];
+        let variables = ["test"];
 
         let spec = RewriteSpecification {
-            rewrite_rules: vec![create_rewrite_rule(&mut tp.borrow_mut(), "a", "b", &variables)],
+            rewrite_rules: vec![],
             constructors: vec![],
         };
         let mut inner = InnermostRewriter::new(tp.clone(), &spec);
@@ -298,6 +298,6 @@ mod tests {
         );
         let term = to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new());
 
-        //assert_eq!(inner.rewrite(term.clone()), term, "Should be in normal form for no rewrite rules");
+        assert_eq!(inner.rewrite(term.clone()), term, "Should be in normal form for no rewrite rules");
     }
 }
