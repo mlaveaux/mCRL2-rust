@@ -375,6 +375,8 @@ impl TermPool {
             })
             .collect();
 
+        assert_eq!(symbol.arity(), arguments.len(), "Not enough arguments provided to create term");
+
         ATerm {
             term: ffi::create_aterm(&symbol.function, &arguments),
         }

@@ -7,6 +7,9 @@ pub mod sabre_rewriter;
 pub mod utilities;
 pub mod rewrite_specification;
 
+#[cfg(test)]
+pub mod test_utility;
+
 pub use innermost_rewriter::*;
 pub use sabre_rewriter::*;
 pub use rewrite_specification::*;

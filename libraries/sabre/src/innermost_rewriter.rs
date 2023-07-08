@@ -1,63 +1,65 @@
-use std::{cell::RefCell, rc::Rc, fmt};
+use std::{cell::RefCell, fmt, rc::Rc};
 
-use mcrl2_rust::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
+use mcrl2_rust::{
+    atermpp::{ATerm, TermPool},
+    data::DataFunctionSymbol,
+};
 
 use crate::{
     set_automaton::{
-        get_data_function_symbol, EnhancedMatchAnnouncement, SetAutomaton, get_data_arguments, check_equivalence_classes,
+        check_equivalence_classes, get_data_arguments, get_data_function_symbol,
+        EnhancedMatchAnnouncement, SetAutomaton,
     },
-    RewriteEngine, RewriteSpecification, RewritingStatistics, utilities::get_position,
+    utilities::get_position,
+    RewriteEngine, RewriteSpecification, RewritingStatistics,
 };
 
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum Config {
-    Rewrite(usize),
+    Rewrite(usize), // Rewrite the top of the stack and put result at the given index.
     Construct(DataFunctionSymbol, usize, usize), // Constructs f with arity at the given index.
 }
 
 #[derive(Default)]
-struct InnerStack
-{
+struct InnerStack {
     configs: Vec<Config>,
     terms: Vec<ATerm>,
 }
 
-impl fmt::Display for InnerStack
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {        
+impl fmt::Display for InnerStack {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Terms: [")?;
-        for (i, term) in self.terms.iter().enumerate() {                  
+        for (i, term) in self.terms.iter().enumerate() {
             writeln!(f, "{}\t{}", i, term)?;
-        }     
-        writeln!(f, "]")?;  
+        }
+        writeln!(f, "]")?;
 
         writeln!(f, "Configs: [")?;
-        for config in &self.configs {                  
+        for config in &self.configs {
             writeln!(f, "\t{}", config)?;
-        }     
+        }
         write!(f, "]")
     }
 }
 
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {            
-            Config::Rewrite(index) => write!(f, "Rewrite({})", index),
-            Config::Construct(symbol, arity, index) => write!(f, "Construct({}, {}, {})", symbol, arity, index)
+        match self {
+            Config::Rewrite(result) => write!(f, "Rewrite({})", result),
+            Config::Construct(symbol, arity, result) => {
+                write!(f, "Construct({}, {}, {})", symbol, arity, result)
+            }
         }
     }
-
 }
 
-impl InnerStack
-{
+impl InnerStack {
     fn add_result(&mut self, symbol: DataFunctionSymbol, arity: usize, index: usize) {
         self.configs.push(Config::Construct(symbol, arity, index));
     }
 
-    fn add_rewrite(&mut self, term: ATerm) {
-        self.configs.push(Config::Rewrite(self.terms.len()));
-        self.terms.push(ATerm::default());
+    fn add_rewrite(&mut self, term: ATerm, index: usize) {
+        self.configs.push(Config::Rewrite(index));
         self.terms.push(term);
     }
 }
@@ -93,45 +95,51 @@ impl InnermostRewriter {
         stats: &mut RewritingStatistics,
     ) -> ATerm {
         let mut stack = InnerStack::default();
-        stack.add_rewrite(term);
+        stack.terms.push(ATerm::default());
+        stack.add_rewrite(term, 0);
 
         loop {
-            // println!("{}", stack);
+            //println!("{}", stack);
 
             match stack.configs.pop() {
                 Some(config) => {
                     match config {
-                        Config::Rewrite(index) => {
-                            let term = stack.terms.pop().expect("There should be a last element");
-                            
-                            // Rewrite all the subterms.
+                        Config::Rewrite(result) => {
+                            let term = stack.terms.pop().unwrap();
+
                             let symbol = get_data_function_symbol(&term);
-                            let arguments = get_data_arguments(&term);                          
-                            stack.add_result(symbol, arguments.len(), index);
+                            let arguments = get_data_arguments(&term);
                             
-                            for arg in arguments.into_iter() {
-                                stack.add_rewrite(arg);
+                            // For all the argument we reserve space on the stack.
+                            let top_of_stack = stack.terms.len(); 
+                            for _ in 0..arguments.len() {
+                                stack.terms.push(ATerm::default());
+                            }
+
+                            stack.add_result(symbol, arguments.len(), result);
+                            for (offset, arg) in arguments.into_iter().enumerate() {
+                                stack.add_rewrite(arg, top_of_stack + offset);
                             }
                         }
                         Config::Construct(symbol, arity, index) => {
                             // Take the last arity arguments.
                             let arguments = &stack.terms[stack.terms.len() - arity..];
-                            
+
                             let term: ATerm = if arguments.is_empty() {
                                 symbol.into()
                             } else {
-                                tp.create_data_application(&symbol.into(), &arguments).into()
+                                tp.create_data_application(&symbol.into(), &arguments)
+                                    .into()
                             };
 
                             // Remove the arguments from the stack.
-                            if arity > 0 {
-                                stack.terms.drain(stack.terms.len() - arity..);
-                            }
-                            
+                            stack.terms.drain(stack.terms.len() - arity..);
+
                             match InnermostRewriter::find_match(tp, automaton, &term, stats) {
-                                Some(ema) =>  {                                    
-                                    let top_of_stack = stack.terms.len() - 1; // We replace the result term
-                                    stack.terms.reserve(ema.stack_size - 1);
+                                Some(ema) => {
+                                    // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
+                                    let top_of_stack = stack.terms.len();
+                                    stack.terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
                                     for _ in 0..ema.stack_size - 1 {
                                         stack.terms.push(ATerm::default());
                                     }
@@ -142,12 +150,16 @@ impl InnermostRewriter {
                                             Config::Construct(symbol, arity, offset) => {
                                                 if first {
                                                     // The first result must be placed on the original result.
-                                                    stack.add_result(symbol.clone(), *arity, index); 
+                                                    stack.add_result(symbol.clone(), *arity, index);
                                                 } else {
                                                     // Otherwise, we put it on the end of the stack.
-                                                    stack.add_result(symbol.clone(), *arity, top_of_stack + offset);
+                                                    stack.add_result(
+                                                        symbol.clone(),
+                                                        *arity,
+                                                        top_of_stack + offset - 1,
+                                                    );
                                                 }
-                                            },
+                                            }
                                             Config::Rewrite(_) => {
                                                 panic!("This case should not happen");
                                             }
@@ -157,12 +169,13 @@ impl InnermostRewriter {
 
                                     for (position, index) in &ema.positions {
                                         // Add the positions to the stack.
-                                        stack.terms[top_of_stack + index] = get_position(&term, position);
+                                        stack.terms[top_of_stack + index - 1] =
+                                            get_position(&term, position);
                                     }
 
                                     stats.rewrite_steps += 1;
                                     // println!("applying rule {}", ema.announcement.rule);
-                                },
+                                }
                                 None => {
                                     // Add the term on the stack.
                                     stack.terms[index] = term;
@@ -171,12 +184,20 @@ impl InnermostRewriter {
                         }
                     }
                 }
-                None => { break; }
+                None => {
+                    break;
+                }
             }
         }
-        
-        assert!(stack.terms.len() == 1, "Expect exactly one term on the result stack");
-        return stack.terms.pop().expect("The result should be the last element on the stack");
+
+        assert!(
+            stack.terms.len() == 1,
+            "Expect exactly one term on the result stack"
+        );
+        return stack
+            .terms
+            .pop()
+            .expect("The result should be the last element on the stack");
     }
 
     /// Use the APMA to find a match for the given term.
@@ -196,22 +217,28 @@ impl InnermostRewriter {
             let symbol = get_data_function_symbol(&get_position(t, &state.label));
 
             // Get the transition for the label and check if there is a pattern match
-            let transition = &state.transitions[symbol.operation_id()];
-            for ema in &transition.announcements {
-                if check_equivalence_classes(&t, &ema.equivalence_classes) && InnermostRewriter::check_conditions(tp, automaton, t, ema, stats) {
-                    // We found a matching pattern
-                    return Some(ema);
+            if let Some(transition) = state.transitions.get(symbol.operation_id()) {
+                for ema in &transition.announcements {
+                    if check_equivalence_classes(&t, &ema.equivalence_classes)
+                        && InnermostRewriter::check_conditions(tp, automaton, t, ema, stats)
+                    {
+                        // We found a matching pattern
+                        return Some(ema);
+                    }
                 }
-            }
 
-            // If there is no pattern match we check if the transition has a destination state
-            if transition.destinations.is_empty() {
-                // If there is no destination state there is no pattern match
-                return None;
+                // If there is no pattern match we check if the transition has a destination state
+                if transition.destinations.is_empty() {
+                    // If there is no destination state there is no pattern match
+                    return None;
+                } else {
+                    // Continue matching in the next state
+                    state_index = transition.destinations.first().unwrap().1;
+                }
             } else {
-                // Continue matching in the next state
-                state_index = transition.destinations.first().unwrap().1;
-            } 
+                // Function symbol does not occur in the set automaton, so cannot match.
+                return None;
+            }
         }
     }
 
@@ -237,5 +264,40 @@ impl InnermostRewriter {
         }
 
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, rc::Rc};
+
+    use ahash::AHashSet;
+    use mcrl2_rust::atermpp::TermPool;
+
+    use crate::{
+        test_utility::{random_term, create_rewrite_rule}, InnermostRewriter, RewriteEngine, RewriteSpecification, utilities::to_data_expression,
+    };
+
+    #[test]
+    fn test_innermost_simple() {
+        let tp = Rc::new(RefCell::new(TermPool::new()));
+
+        let variables = [];
+
+        let spec = RewriteSpecification {
+            rewrite_rules: vec![create_rewrite_rule(&mut tp.borrow_mut(), "a", "b", &variables)],
+            constructors: vec![],
+        };
+        let mut inner = InnermostRewriter::new(tp.clone(), &spec);
+
+        let term = random_term(
+            &mut tp.borrow_mut(),
+            &[("f".to_string(), 2)],
+            &["a".to_string(), "b".to_string()],
+            5,
+        );
+        let term = to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new());
+
+        //assert_eq!(inner.rewrite(term.clone()), term, "Should be in normal form for no rewrite rules");
     }
 }

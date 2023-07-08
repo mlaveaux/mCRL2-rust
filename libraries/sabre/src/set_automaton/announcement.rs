@@ -171,7 +171,7 @@ impl EnhancedMatchAnnouncement {
             is_duplicating,
             positions,
             innermost_stack,
-            stack_size,
+            stack_size: stack_size,
         }
     }
 }
@@ -357,25 +357,9 @@ mod tests {
     use ahash::AHashSet;
     use mcrl2_rust::atermpp::TermPool;
 
-    use crate::utilities::to_data_expression;
+    use crate::{utilities::to_data_expression, test_utility::create_rewrite_rule};
 
     use super::*;
-
-    /// Create a rewrite rule lhs -> rhs with the given names being variables.
-    fn create_rewrite_rule(tp: &mut TermPool, lhs: &str, rhs: &str, variables: &[&str]) -> Rule {
-        let lhs = tp.from_string(lhs).unwrap();
-        let rhs  = tp.from_string(rhs).unwrap();
-        let mut vars = AHashSet::new();
-        for var in variables {
-            vars.insert(var.to_string());
-        }
-        
-        Rule {
-            conditions: vec![],
-            lhs: to_data_expression(tp, &lhs, &vars),
-            rhs: to_data_expression(tp, &rhs, &vars)
-        }
-    }
 
     #[test]
     fn test_derive_equivalence_classes()
