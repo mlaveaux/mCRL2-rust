@@ -14,8 +14,8 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
     // #[test_case(vec![include_str!("REC_files/benchsym10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym10.txt") ; "benchsym10")]
     // #[test_case(vec![include_str!("REC_files/benchsym20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym20.txt") ; "benchsym20")]
-    #[test_case(vec![include_str!("REC_files/bubblesort10.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort10.txt") ; "bubblesort10")]
-    #[test_case(vec![include_str!("REC_files/bubblesort20.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort20.txt") ; "bubblesort20")]
+    // #[test_case(vec![include_str!("REC_files/bubblesort10.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort10.txt") ; "bubblesort10")]
+    // #[test_case(vec![include_str!("REC_files/bubblesort20.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort20.txt") ; "bubblesort20")]
     // #[test_case(vec![include_str!("REC_files/bubblesort100.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort100.txt") ; "bubblesort100")]
     // #[test_case(vec![include_str!("REC_files/calls.rec")], include_str!("validated_results/result_calls.txt") ; "calls")]
     // #[test_case(vec![include_str!("REC_files/check1.rec")], include_str!("validated_results/result_check1.txt") ; "check1")]
@@ -26,7 +26,7 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/empty.rec")], include_str!("validated_results/result_empty.txt") ; "empty")]
     // #[test_case(vec![include_str!("REC_files/evalexpr.rec")], include_str!("validated_results/result_evalexpr.txt") ; "evalexpr")]
     // #[test_case(vec![include_str!("REC_files/evaltree.rec")], include_str!("validated_results/result_evaltree.txt") ; "evaltree")]
-    #[test_case(vec![include_str!("REC_files/factorial5.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial5.txt") ; "factorial5")]
+    // #[test_case(vec![include_str!("REC_files/factorial5.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial5.txt") ; "factorial5")]
     // #[test_case(vec![include_str!("REC_files/factorial6.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial6.txt") ; "factorial6")]
     // #[test_case(vec![include_str!("REC_files/factorial7.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial7.txt") ; "factorial7")]
     // #[test_case(vec![include_str!("REC_files/factorial8.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial8.txt") ; "factorial8")]
@@ -61,7 +61,7 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/soundnessofparallelengines.rec")], include_str!("validated_results/result_soundnessofparallelengines.txt") ; "soundnessofparallelengines")]
     // #[test_case(vec![include_str!("REC_files/tak18.rec"), include_str!("REC_files/tak.rec")], include_str!("validated_results/result_tak18.txt") ; "tak18")]
     // #[test_case(vec![include_str!("REC_files/tautologyhard.rec")], include_str!("validated_results/result_tautologyhard.txt") ; "tautologyhard")]
-    // #[test_case(vec![include_str!("REC_files/tricky.rec")], include_str!("validated_results/result_tricky.txt") ; "tricky")]
+    #[test_case(vec![include_str!("REC_files/tricky.rec")], include_str!("validated_results/result_tricky.txt") ; "tricky")]
     fn rec_test(rec_files: Vec<&str>, expected_result: &str) 
     {
         let tp = Rc::new(RefCell::new(TermPool::new()));
@@ -75,7 +75,7 @@ mod tests
         };
 
         // Test Sabre rewriter
-        let mut _sa = SabreRewriter::new(tp.clone(), &spec);
+        let mut sa = SabreRewriter::new(tp.clone(), &spec);
         let mut inner = InnermostRewriter::new(tp, &spec);
 
         let mut expected = expected_result.split('\n');

@@ -120,54 +120,53 @@ impl SabreRewriter {
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
-                            let tr = &automaton.states[leaf.state].transitions
-                                [function_symbol.operation_id()];
-
-                            // Loop over the match announcements of the transition
-                            for ema in &tr.announcements {
-                                if ema.conditions.is_empty() && ema.equivalence_classes.is_empty() {
-                                    if ema.is_duplicating {
-                                        // We do not want to apply duplicating rules straight away
+                            if let Some(tr) = &automaton.states[leaf.state].transitions.get(function_symbol.operation_id()) {
+                                // Loop over the match announcements of the transition
+                                for ema in &tr.announcements {
+                                    if ema.conditions.is_empty() && ema.equivalence_classes.is_empty() {
+                                        if ema.is_duplicating {
+                                            // We do not want to apply duplicating rules straight away
+                                            cs.side_branch_stack.push(SideInfo {
+                                                corresponding_configuration: leaf_index,
+                                                info: SideInfoType::DelayedRewriteRule(ema),
+                                            });
+                                        } else {
+                                            // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
+                                            SabreRewriter::apply_rewrite_rule(
+                                                tp,
+                                                automaton,
+                                                ema,
+                                                leaf.subterm.clone(),
+                                                leaf_index,
+                                                &mut cs,
+                                                stats,
+                                            );
+                                            break 'skip_point;
+                                        }
+                                    } else {
+                                        // We delay the condition checks
                                         cs.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
-                                            info: SideInfoType::DelayedRewriteRule(ema),
+                                            info: SideInfoType::EquivalenceAndConditionCheck(ema),
                                         });
-                                    } else {
-                                        // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
-                                        SabreRewriter::apply_rewrite_rule(
-                                            tp,
-                                            automaton,
-                                            ema,
-                                            leaf.subterm.clone(),
-                                            leaf_index,
-                                            &mut cs,
-                                            stats,
-                                        );
-                                        break 'skip_point;
+                                    }
+                                }
+
+                                if tr.destinations.is_empty() {
+                                    // If there is no destination we are done matching and go back to the previous
+                                    // configuration on the stack with information on the side stack.
+                                    // Note, it could be that we stay at the same configuration and apply a rewrite
+                                    // rule that was just discovered whilst exploring this configuration.
+                                    let prev = cs.get_prev_with_side_info();
+                                    cs.current_node = prev;
+                                    if let Some(n) = prev {
+                                        cs.jump_back(n, tp);
                                     }
                                 } else {
-                                    // We delay the condition checks
-                                    cs.side_branch_stack.push(SideInfo {
-                                        corresponding_configuration: leaf_index,
-                                        info: SideInfoType::EquivalenceAndConditionCheck(ema),
-                                    });
+                                    // Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
+                                    let tr_slice = tr.destinations.as_slice();
+                                    cs.grow(leaf_index, tr_slice);
                                 }
-                            }
-
-                            if tr.destinations.is_empty() {
-                                // If there is no destination we are done matching and go back to the previous
-                                // configuration on the stack with information on the side stack.
-                                // Note, it could be that we stay at the same configuration and apply a rewrite
-                                // rule that was just discovered whilst exploring this configuration.
-                                let prev = cs.get_prev_with_side_info();
-                                cs.current_node = prev;
-                                if let Some(n) = prev {
-                                    cs.jump_back(n, tp);
-                                }
-                            } else {
-                                // Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
-                                let tr_slice = tr.destinations.as_slice();
-                                cs.grow(leaf_index, tr_slice);
                             }
                         }
                         Some(sit) => {
