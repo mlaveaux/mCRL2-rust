@@ -31,7 +31,12 @@ fn add_platform_flags(build: &mut Build, mcrl2_path: String) {
 
 /// Add Linux specific flags and definitions.
 #[cfg(unix)]
-fn add_platform_flags(_build: &mut Build, _mcrl2_path: String) {}
+fn add_platform_flags(build: &mut Build, _mcrl2_path: String) {
+    build
+        .flag_if_supported("-Wall")
+        .flag_if_supported("-pipe")
+        .flag_if_supported("-pedantic");
+}
 
 #[cfg(windows)]
 fn add_cpp_flags(build: &mut Build) {
