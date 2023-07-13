@@ -32,8 +32,8 @@ jobs:
     - name: Install MacOS Dependencies
       run: |
         brew update
-        brew install --force python@3.11
-        brew install llvm
+        brew install llvm || echo "This step will fail because of python@3.11 so we force link and ignore the error"
+        brew link --overwrite python@3.11
       if: matrix.os == 'macos-latest'  
 
     - name: Install Nightly Rust and Sources
