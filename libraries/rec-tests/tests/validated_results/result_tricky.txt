@@ -1,5 +1,5 @@
-Result: Ncons
-Result: Ucons(d0)
-Result: succ(d0)
-Result: d0
-Result: succ(d0)
+Ncons
+Ucons(d0)
+succ(d0)
+d0
+succ(d0)

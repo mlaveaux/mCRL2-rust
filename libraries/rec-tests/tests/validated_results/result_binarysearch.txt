@@ -1,1 +1,1 @@
-Result: cNat(cDub(F,cDub(T,cDub(F,cDub(F,One)))))
+cNat(cDub(F,cDub(T,cDub(F,cDub(F,One)))))

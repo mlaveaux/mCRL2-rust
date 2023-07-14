@@ -1,1 +1,1 @@
-Result: s(d0)
+s(d0)
