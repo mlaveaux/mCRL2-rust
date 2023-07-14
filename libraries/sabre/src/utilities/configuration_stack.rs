@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
-use mcrl2_rust::atermpp::{ATerm, TermPool};
+use mcrl2_sys::atermpp::{ATerm, TermPool};
 
 use super::{substitute, get_position};
 

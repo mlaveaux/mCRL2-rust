@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use mcrl2_rust::{
+use mcrl2_sys::{
     atermpp::{ATerm, TermPool},
     data::DataFunctionSymbol,
 };

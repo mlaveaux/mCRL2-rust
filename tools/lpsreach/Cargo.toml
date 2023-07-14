@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mcrl2-rust = { path="../../libraries/mcrl2-rust" }
+mcrl2-sys = { path="../../libraries/mcrl2-sys" }
 ldd = { path="../../libraries/ldd-library/ldd" }

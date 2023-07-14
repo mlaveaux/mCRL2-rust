@@ -1,6 +1,6 @@
 use std::fmt;
 
-use mcrl2_rust::{
+use mcrl2_sys::{
     atermpp::ATerm,
     data::DataFunctionSymbol
 };

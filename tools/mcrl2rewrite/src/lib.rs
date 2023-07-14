@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 
-use mcrl2_rust::data::{DataSpecification, JittyRewriter};
+use mcrl2_sys::data::{DataSpecification, JittyRewriter};
 //use sabre::set_automaton::SetAutomaton;
 
 /// Performs state space exploration of the given model and returns the number of states.

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mcrl2-rust = { path="../../libraries/mcrl2-rust" }
+mcrl2-sys = { path="../../libraries/mcrl2-sys" }
 ahash = "0.8.3"
 smallvec = "1.10.0"
 rand = "0.8.4"

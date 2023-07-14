@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 ahash = "0.8.3"
-mcrl2-rust = { path="../mcrl2-rust" }
+mcrl2-sys = { path="../mcrl2-sys" }
 rec-tests = { path="../rec-tests" }
 rand = "0.8.4"
 sabre = { path="../sabre" }

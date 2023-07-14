@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{utilities::ExplicitPosition};
-use mcrl2_rust::{
+use mcrl2_sys::{
     atermpp::{ATerm, Symbol, TermPool},
     data::DataVariable
 };
@@ -158,7 +158,7 @@ mod tests {
 
     use super::*;
     use ahash::AHashSet;
-    use mcrl2_rust::atermpp::TermPool;
+    use mcrl2_sys::atermpp::TermPool;
 
     /// Converts a slice of static strings into a set of owned strings
     /// 

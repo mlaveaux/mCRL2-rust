@@ -83,8 +83,7 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion)
                     });
                 });
 
-            let mut inner = InnermostRewriter::new(tp.clone(), &spec);
-            
+            let mut inner = InnermostRewriter::new(tp.clone(), &spec);            
             c.bench_function(&format!("innermost benchmark {:?}", name),
             |bencher|
             {

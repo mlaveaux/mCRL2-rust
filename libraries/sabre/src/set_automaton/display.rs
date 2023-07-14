@@ -1,6 +1,6 @@
 use std::{path::Path, io};
 
-use mcrl2_rust::{data::{DataFunctionSymbol, DataApplication}, atermpp::ATerm};
+use mcrl2_sys::{data::{DataFunctionSymbol, DataApplication}, atermpp::ATerm};
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, State};
 use core::fmt;

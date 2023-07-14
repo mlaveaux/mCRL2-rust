@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use mcrl2_rust::lps::LinearProcessSpecification;
+use mcrl2_sys::lps::LinearProcessSpecification;
 
 /// Performs state space exploration of the given model and returns the number of states.
 pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>

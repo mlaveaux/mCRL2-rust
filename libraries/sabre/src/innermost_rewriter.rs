@@ -1,6 +1,6 @@
 use std::{cell::RefCell, fmt, rc::Rc};
 
-use mcrl2_rust::{
+use mcrl2_sys::{
     atermpp::{ATerm, TermPool},
     data::DataFunctionSymbol,
 };
@@ -272,17 +272,16 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use ahash::AHashSet;
-    use mcrl2_rust::atermpp::TermPool;
+    use mcrl2::random_term;
+    use mcrl2_sys::atermpp::TermPool;
 
     use crate::{
-        test_utility::{random_term}, InnermostRewriter, RewriteSpecification, utilities::to_data_expression, RewriteEngine,
+        InnermostRewriter, RewriteSpecification, utilities::to_data_expression, RewriteEngine,
     };
 
     #[test]
     fn test_innermost_simple() {
         let tp = Rc::new(RefCell::new(TermPool::new()));
-
-        let variables = ["test"];
 
         let spec = RewriteSpecification {
             rewrite_rules: vec![],
