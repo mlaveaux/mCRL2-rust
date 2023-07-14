@@ -104,7 +104,7 @@ impl ATerm {
 
     pub fn arg(&self, index: usize) -> ATerm {
         self.require_valid();
-        assert!(
+        debug_assert!(
             index < self.get_head_symbol().arity(),
             "arg({index}) is not defined for term {:?}",
             self
@@ -128,7 +128,7 @@ impl ATerm {
     }
 
     pub fn is_int(&self) -> bool {
-        ffi::ffi_is_int(&self.term)
+        ffi::aterm_is_int(&self.term)
     }
 
     pub fn get_head_symbol(&self) -> Symbol {
@@ -145,7 +145,7 @@ impl ATerm {
 
     /// Returns true iff the term is not default.
     fn require_valid(&self) {
-        assert!(
+        debug_assert!(
             !self.is_default(),
             "This function can only be called on valid terms, i.e., not default terms"
         );
@@ -154,17 +154,17 @@ impl ATerm {
     // Recognizers for the data library
     pub fn is_data_variable(&self) -> bool {
         self.require_valid();
-        ffi::ffi_is_data_variable(&self.term)
+        ffi::is_data_variable(&self.term)
     }
 
     pub fn is_data_application(&self) -> bool {
         self.require_valid();
-        ffi::ffi_is_data_application(&self.term)
+        ffi::is_data_application(&self.term)
     }
 
     pub fn is_data_function_symbol(&self) -> bool {
         self.require_valid();
-        ffi::ffi_is_data_function_symbol(&self.term)
+        ffi::is_data_function_symbol(&self.term)
     }
 }
 
@@ -275,7 +275,7 @@ impl From<DataFunctionSymbol> for ATerm {
 
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
 pub struct TermPool {
-    
+    arguments: Vec<ffi::aterm_ref>,
 }
 
 impl TermPool {
@@ -283,7 +283,9 @@ impl TermPool {
         // Initialise the C++ aterm library.
         ffi::initialise();
 
-        TermPool {}
+        TermPool {
+            arguments: vec![],
+        }
     }
 
     /// Trigger a garbage collection
@@ -291,6 +293,7 @@ impl TermPool {
         ffi::collect_garbage();
     }
 
+    /// Creates an ATerm from a string.
     pub fn from_string(&mut self, text: &str) -> Result<ATerm, Exception> {
         match ffi::aterm_from_string(String::from(text)) {
             Ok(term) => Ok(ATerm { term }),
@@ -300,22 +303,16 @@ impl TermPool {
 
     /// Creates an [ATerm] with the given symbol and arguments.
     pub fn create(&mut self, symbol: &Symbol, arguments: &[ATerm]) -> ATerm {
-        // TODO: This part of the ffi is very slow and should be improved.
-        let arguments: Vec<ffi::aterm_ref> = arguments
-            .iter()
-            .map(|x| ffi::aterm_ref {
-                index: ffi::aterm_pointer(x.get()),
-            })
-            .collect();
+        let arguments = self.tmp_arguments(arguments);
 
-        assert_eq!(
+        debug_assert_eq!(
             symbol.arity(),
             arguments.len(),
             "Not enough arguments provided to create term"
         );
 
         ATerm {
-            term: ffi::create_aterm(&symbol.function, &arguments),
+            term: ffi::create_aterm(&symbol.function, arguments),
         }
     }
 
@@ -330,29 +327,42 @@ impl TermPool {
         head: &ATerm,
         arguments: &[ATerm],
     ) -> DataApplication {
-        // TODO: This part of the ffi is very slow and should be improved.
-        let arguments: Vec<ffi::aterm_ref> = arguments
-            .iter()
-            .map(|x| ffi::aterm_ref {
-                index: ffi::aterm_pointer(x.get()),
-            })
-            .collect();
 
         DataApplication {
-            term: ATerm::from(ffi::ffi_create_data_application(head.get(), &arguments)),
+            term: ATerm::from(ffi::create_data_application(head.get(), self.tmp_arguments(arguments))),
         }
     }
 
     pub fn create_variable(&mut self, name: &str) -> DataVariable {
         DataVariable {
-            term: ATerm::from(ffi::ffi_create_data_variable(String::from(name))),
+            term: ATerm::from(ffi::create_data_variable(String::from(name))),
         }
     }
 
     pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol {
         DataFunctionSymbol {
-            term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name))),
+            term: ATerm::from(ffi::create_data_function_symbol(String::from(name))),
         }
+    }
+
+    /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
+    fn tmp_arguments(&mut self, arguments: &[ATerm]) -> &[ffi::aterm_ref] {        
+        // Make the temp vector sufficient length.
+        while self.arguments.len() < arguments.len() {
+            self.arguments.push(ffi::aterm_ref{
+                index: 0
+            });
+        }
+
+        // TODO: This part of the ffi is very slow and should be improved.
+        self.arguments.clear();
+        for arg in arguments {
+            self.arguments.push(ffi::aterm_ref {
+                index: ffi::aterm_pointer(arg.get()),
+            });
+        }
+
+        &self.arguments
     }
 }
 
@@ -389,6 +399,12 @@ impl Iterator for TermIterator {
     }
 }
 
+impl Default for TermPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 enum Config<I> {
     Apply(I, usize),
     Construct(Symbol, usize),
@@ -408,6 +424,7 @@ impl<'a, I> TermArgs<'a, I> {
 }
 
 /// Can be used to construct a term bottom up using an iterative approach
+#[derive(Default)]
 pub struct TermBuilder<I>
 {
     // The stack of terms
@@ -464,63 +481,64 @@ impl<I> TermBuilder<I> {
 
         self.configs.push(Config::Apply(input, 0));
         
-        loop {
+        while let Some(config) = self.configs.pop() {
             //println!("{}", self);
 
-            match self.configs.pop() {
-                Some(config) => {
-                    match config {
-                        Config::Apply(input, result) => {
-                            // Applies the given function to this input, and obtain a number of symbol and arguments.
-                            let top_of_stack = self.terms.len();
-                            let mut args = TermArgs {
-                                terms: &mut self.terms,
-                                tmp: &mut self.tmp,
-                                top_of_stack,
-                            };
+            match config {
+                Config::Apply(input, result) => {
+                    // Applies the given function to this input, and obtain a number of symbol and arguments.
+                    let top_of_stack = self.terms.len();
+                    let mut args = TermArgs {
+                        terms: &mut self.terms,
+                        tmp: &mut self.tmp,
+                        top_of_stack,
+                    };
 
-                            let symbol = function(tp, &mut args, input)?;
+                    let symbol = function(tp, &mut args, input)?;
 
-                            let arity =  symbol.arity();
-                            self.configs.push(Config::Construct(symbol, result));
-                            self.configs.append(&mut self.tmp);
+                    let arity =  symbol.arity();
+                    self.configs.push(Config::Construct(symbol, result));
+                    self.configs.append(&mut self.tmp);
 
-                            assert_eq!(top_of_stack, self.terms.len() - arity, "Function should have added {arity} arguments");
+                    assert_eq!(top_of_stack, self.terms.len() - arity, "Function should have added {arity} arguments");
 
+                },
+                Config::Construct(symbol, result) => {
+                    let arguments = &self.terms[self.terms.len() - symbol.arity()..];                    
+
+                    let t = tp.create(&symbol, arguments);
+
+                    // Remove elements from the stack.
+                    self.terms.drain(self.terms.len() - symbol.arity()..);
+
+                    match result.cmp(&self.terms.len()) {
+                        Ordering::Equal => {
+                            // Special case where the result is placed on the first argument.
+                            self.terms.push(ATerm::default());
                         },
-                        Config::Construct(symbol, result) => {
-                            let arguments = &self.terms[self.terms.len() - symbol.arity()..];                    
-
-                            let t = tp.create(&symbol, arguments);
-
-                            // Remove elements from the stack.
-                            self.terms.drain(self.terms.len() - symbol.arity()..);
-
-                            if result == self.terms.len() {
-                                // Special case where the result is placed on the first argument.
-                                self.terms.push(ATerm::default());
-                            } else if result > self.terms.len() {
-                                panic!("The result can only replace the first argument.")
-                            }
-
-                            self.terms[result] = t;
+                        Ordering::Greater => {                            
+                            panic!("The result can only replace the first argument.")
+                        },
+                        Ordering::Less => {
+                            // This is acceptable.
                         }
                     }
-                },
-                None => {
-                    break;
+
+
+                    self.terms[result] = t;
                 }
             }
         }
 
-        assert!(
+        debug_assert!(
             self.terms.len() == 1,
             "Expect exactly one term on the result stack"
         );
 
-        return Ok(self
+        Ok(self
             .terms
-            .pop().unwrap())
+            .pop().
+            expect("There should be at last one result"))
 
     }
 }
@@ -536,7 +554,7 @@ pub fn random_term(
 ) -> ATerm {
     use rand::prelude::IteratorRandom;
 
-    assert!(
+    debug_assert!(
         !constants.is_empty(),
         "We need constants to be able to create a term"
     );

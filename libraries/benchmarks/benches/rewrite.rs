@@ -4,17 +4,16 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use ahash::AHashSet;
 
-use mcrl2_rust::atermpp::{ATerm, TermPool};
-use sabre::set_automaton::SetAutomaton;
-use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
-use sabre::utilities::to_data_expression;
+use mcrl2_sys::atermpp::{ATerm, TermPool};
+use mcrl2_sys::data::{DataSpecification, JittyRewriter};
 use rec_tests::load_REC_from_strings;
-use mcrl2_rust::{data::JittyRewriter};
+use sabre::set_automaton::SetAutomaton;
+use sabre::utilities::to_data_expression;
+use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewriter};
 
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 
-use mcrl2_rust::data::DataSpecification;
 
 /// Creates a rewriter and a vector of ATerm expressions for the given case.
 pub fn load_case(name: &str, max_number_expressions: usize) -> (DataSpecification, Vec<ATerm>) {
@@ -40,7 +39,7 @@ pub fn load_case(name: &str, max_number_expressions: usize) -> (DataSpecificatio
 
 pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     let (data_spec, expressions) = load_case("cases/add16", 100);
-    
+
     // Create a jitty rewriter;
     let mut jitty_rewriter = JittyRewriter::new(&data_spec);
 
@@ -56,45 +55,60 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     });
 }
 
-pub fn criterion_benchmark_sabre(c: &mut Criterion) 
-{    
+pub fn criterion_benchmark_sabre(c: &mut Criterion) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    let cases = vec![
-        (vec![include_str!("../../rec-tests/tests/REC_files/factorial5.rec"), include_str!("../../rec-tests/tests/REC_files/factorial.rec")], "factorial5")
-    ];
+    let cases = vec![(
+        vec![
+            include_str!("../../rec-tests/tests/REC_files/factorial5.rec"),
+            include_str!("../../rec-tests/tests/REC_files/factorial.rec"),
+        ],
+        "factorial5",
+    )];
 
     for (input, name) in cases {
+        let (spec, terms): (RewriteSpecification, Vec<ATerm>) = {
+            let (syntax_spec, syntax_terms) = load_REC_from_strings(&mut tp.borrow_mut(), &input);
+            let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
+            (
+                result,
+                syntax_terms
+                    .iter()
+                    .map(|term| to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()))
+                    .collect(),
+            )
+        };
 
-            let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
-                let (syntax_spec, syntax_terms) = load_REC_from_strings(&input);
-                let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
-                (result, syntax_terms.iter().map(|t| { 
-                    let term = t.to_term(&mut tp.borrow_mut());
-                    to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()) }).collect())
-            };
-
-            // Benchmark the set automaton construction                
-            c.bench_function(&format!("construct set automaton {:?}", name), 
-            |bencher| 
-                {
-                    bencher.iter(|| {
-                        let _ = black_box(SetAutomaton::new(&spec, false, false));
-                    });
-                });
-
-            let mut inner = InnermostRewriter::new(tp.clone(), &spec);            
-            c.bench_function(&format!("innermost benchmark {:?}", name),
-            |bencher|
-            {
-                for term in &terms {
-                    bencher.iter(|| {
-                        let _ = black_box(inner.rewrite(term.clone()));
-                    });
-                }
+        // Benchmark the set automaton construction
+        c.bench_function(&format!("construct set automaton {:?}", name), |bencher| {
+            bencher.iter(|| {
+                let _ = black_box(SetAutomaton::new(&spec, false, false));
             });
+        });
+
+        let mut inner = InnermostRewriter::new(tp.clone(), &spec);
+        c.bench_function(&format!("innermost benchmark {:?}", name), |bencher| {
+            for term in &terms {
+                bencher.iter(|| {
+                    let _ = black_box(inner.rewrite(term.clone()));
+                });
+            }
+        });
+        
+        let mut sabre = SabreRewriter::new(tp.clone(), &spec);
+        c.bench_function(&format!("sabre benchmark {:?}", name), |bencher| {
+            for term in &terms {
+                bencher.iter(|| {
+                    let _ = black_box(sabre.rewrite(term.clone()));
+                });
+            }
+        });
     }
 }
 
-criterion_group!(benches, criterion_benchmark_jitty, criterion_benchmark_sabre);
+criterion_group!(
+    benches,
+    criterion_benchmark_jitty,
+    criterion_benchmark_sabre
+);
 criterion_main!(benches);

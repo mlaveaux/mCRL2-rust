@@ -98,94 +98,87 @@ impl InnermostRewriter {
         stack.terms.push(ATerm::default());
         stack.add_rewrite(term, 0);
 
-        loop {
-            //println!("{}", stack);
+        while let Some(config) = stack.configs.pop() {
+                //println!("{}", stack);
 
-            match stack.configs.pop() {
-                Some(config) => {
-                    match config {
-                        Config::Rewrite(result) => {
-                            let term = stack.terms.pop().unwrap();
+            match config {
+                Config::Rewrite(result) => {
+                    let term = stack.terms.pop().unwrap();
 
-                            let symbol = get_data_function_symbol(&term);
-                            let arguments = get_data_arguments(&term);
-                            
-                            // For all the argument we reserve space on the stack.
-                            let top_of_stack = stack.terms.len(); 
-                            for _ in 0..arguments.len() {
+                    let symbol = get_data_function_symbol(&term);
+                    let arguments = get_data_arguments(&term);
+                    
+                    // For all the argument we reserve space on the stack.
+                    let top_of_stack = stack.terms.len(); 
+                    for _ in 0..arguments.len() {
+                        stack.terms.push(ATerm::default());
+                    }
+
+                    stack.add_result(symbol, arguments.len(), result);
+                    for (offset, arg) in arguments.into_iter().enumerate() {
+                        stack.add_rewrite(arg, top_of_stack + offset);
+                    }
+                }
+                Config::Construct(symbol, arity, index) => {
+                    // Take the last arity arguments.
+                    let arguments = &stack.terms[stack.terms.len() - arity..];
+
+                    let term: ATerm = if arguments.is_empty() {
+                        symbol.into()
+                    } else {
+                        tp.create_data_application(&symbol.into(), arguments)
+                            .into()
+                    };
+
+                    // Remove the arguments from the stack.
+                    stack.terms.drain(stack.terms.len() - arity..);
+
+                    match InnermostRewriter::find_match(tp, automaton, &term, stats) {
+                        Some(ema) => {
+                            // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
+                            let top_of_stack = stack.terms.len();
+                            stack.terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
+                            for _ in 0..ema.stack_size - 1 {
                                 stack.terms.push(ATerm::default());
                             }
 
-                            stack.add_result(symbol, arguments.len(), result);
-                            for (offset, arg) in arguments.into_iter().enumerate() {
-                                stack.add_rewrite(arg, top_of_stack + offset);
-                            }
-                        }
-                        Config::Construct(symbol, arity, index) => {
-                            // Take the last arity arguments.
-                            let arguments = &stack.terms[stack.terms.len() - arity..];
-
-                            let term: ATerm = if arguments.is_empty() {
-                                symbol.into()
-                            } else {
-                                tp.create_data_application(&symbol.into(), &arguments)
-                                    .into()
-                            };
-
-                            // Remove the arguments from the stack.
-                            stack.terms.drain(stack.terms.len() - arity..);
-
-                            match InnermostRewriter::find_match(tp, automaton, &term, stats) {
-                                Some(ema) => {
-                                    // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
-                                    let top_of_stack = stack.terms.len();
-                                    stack.terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
-                                    for _ in 0..ema.stack_size - 1 {
-                                        stack.terms.push(ATerm::default());
-                                    }
-
-                                    let mut first = true;
-                                    for config in &ema.innermost_stack {
-                                        match config {
-                                            Config::Construct(symbol, arity, offset) => {
-                                                if first {
-                                                    // The first result must be placed on the original result.
-                                                    stack.add_result(symbol.clone(), *arity, index);
-                                                } else {
-                                                    // Otherwise, we put it on the end of the stack.
-                                                    stack.add_result(
-                                                        symbol.clone(),
-                                                        *arity,
-                                                        top_of_stack + offset - 1,
-                                                    );
-                                                }
-                                            }
-                                            Config::Rewrite(_) => {
-                                                panic!("This case should not happen");
-                                            }
+                            let mut first = true;
+                            for config in &ema.innermost_stack {
+                                match config {
+                                    Config::Construct(symbol, arity, offset) => {
+                                        if first {
+                                            // The first result must be placed on the original result.
+                                            stack.add_result(symbol.clone(), *arity, index);
+                                        } else {
+                                            // Otherwise, we put it on the end of the stack.
+                                            stack.add_result(
+                                                symbol.clone(),
+                                                *arity,
+                                                top_of_stack + offset - 1,
+                                            );
                                         }
-                                        first = false;
                                     }
-
-                                    for (position, index) in &ema.positions {
-                                        // Add the positions to the stack.
-                                        stack.terms[top_of_stack + index - 1] =
-                                            get_position(&term, position);
+                                    Config::Rewrite(_) => {
+                                        panic!("This case should not happen");
                                     }
-
-                                    stats.rewrite_steps += 1;
-                                    // println!("applying rule {}", ema.announcement.rule);
                                 }
-                                None => {
-                                    // Add the term on the stack.
-                                    stack.terms[index] = term;
-                                }
+                                first = false;
                             }
+
+                            for (position, index) in &ema.positions {
+                                // Add the positions to the stack.
+                                stack.terms[top_of_stack + index - 1] =
+                                    get_position(&term, position);
+                            }
+
+                            stats.rewrite_steps += 1;
+                            // println!("applying rule {}", ema.announcement.rule);
+                        }
+                        None => {
+                            // Add the term on the stack.
+                            stack.terms[index] = term;
                         }
                     }
-                }
-                None => {
-                    break;
                 }
             }
         }
@@ -194,10 +187,11 @@ impl InnermostRewriter {
             stack.terms.len() == 1,
             "Expect exactly one term on the result stack"
         );
-        return stack
+
+        stack
             .terms
             .pop()
-            .expect("The result should be the last element on the stack");
+            .expect("The result should be the last element on the stack")
     }
 
     /// Use the APMA to find a match for the given term.
@@ -219,7 +213,7 @@ impl InnermostRewriter {
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = state.transitions.get(symbol.operation_id()) {
                 for ema in &transition.announcements {
-                    if check_equivalence_classes(&t, &ema.equivalence_classes)
+                    if check_equivalence_classes(t, &ema.equivalence_classes)
                         && InnermostRewriter::check_conditions(tp, automaton, t, ema, stats)
                     {
                         // We found a matching pattern

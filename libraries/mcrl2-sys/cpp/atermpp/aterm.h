@@ -40,14 +40,9 @@ inline std::unique_ptr<aterm> new_aterm()
 
 std::unique_ptr<aterm> create_aterm(const function_symbol& symbol, rust::Slice<const aterm_ref> arguments)
 {
-  // TODO: This is some truly horrendous code that must be removed asap.
-  std::vector<unprotected_aterm> converted_arguments;
-  for (const aterm_ref& argument : arguments)
-  {
-    converted_arguments.push_back(unprotected_aterm(reinterpret_cast<detail::_aterm*>(argument.index)));
-  }
-  
-  return std::make_unique<aterm>(aterm_appl(symbol, converted_arguments.begin(), converted_arguments.end()));
+  // Since aterm_ref and aterm have the same layout they can be transmuted. And honestly who is going to prevent that anyway.
+  rust::Slice<aterm> aterm_slice(const_cast<aterm*>(reinterpret_cast<const aterm*>(arguments.data())), arguments.length());
+  return std::make_unique<aterm>(aterm_appl(symbol, aterm_slice.begin(), aterm_slice.end()));
 }
 
 std::unique_ptr<aterm> aterm_from_string(rust::String text)
@@ -60,7 +55,7 @@ std::size_t aterm_pointer(const aterm& term)
   return reinterpret_cast<std::size_t>(detail::address(term));
 }
 
-bool ffi_is_int(const aterm& term)
+bool aterm_is_int(const aterm& term)
 {
   return term.type_is_int();
 }
@@ -142,39 +137,34 @@ std::unique_ptr<function_symbol> create_function_symbol(rust::String name, std::
 
 // For the data namespace
 
-bool ffi_is_data_function_symbol(const aterm& term)
+bool is_data_function_symbol(const aterm& term)
 {
   return mcrl2::data::is_function_symbol(static_cast<const aterm_appl&>(term));
 }
 
-bool ffi_is_data_variable(const aterm& term)
+bool is_data_variable(const aterm& term)
 {
   return mcrl2::data::is_variable(term);
 }
 
-std::unique_ptr<aterm> ffi_create_data_variable(rust::String name)
+std::unique_ptr<aterm> create_data_variable(rust::String name)
 {
   return std::make_unique<aterm>(mcrl2::data::variable(static_cast<std::string>(name), mcrl2::data::sort_expression()));
 }
 
-bool ffi_is_data_application(const aterm& term)
+bool is_data_application(const aterm& term)
 {
   return mcrl2::data::is_application(static_cast<const aterm_appl&>(term));
 }
 
-std::unique_ptr<aterm> ffi_create_data_application(const aterm& head, rust::Slice<const aterm_ref> arguments)
+std::unique_ptr<aterm> create_data_application(const aterm& head, rust::Slice<const aterm_ref> arguments)
 {
-  // TODO: This is some truly horrendous code that must be removed asap.
-  std::vector<data_expression> converted_arguments;
-  for (const aterm_ref& argument : arguments)
-  {
-    converted_arguments.push_back(data_expression(aterm(reinterpret_cast<detail::_aterm*>(argument.index))));
-  }
+  rust::Slice<data_expression> aterm_slice(const_cast<data_expression*>(reinterpret_cast<const data_expression*>(arguments.data())), arguments.length());
 
-  return std::make_unique<mcrl2::data::application>(static_cast<const data_expression&>(head), converted_arguments.begin(), converted_arguments.end());
+  return std::make_unique<mcrl2::data::application>(static_cast<const data_expression&>(head), aterm_slice.begin(), aterm_slice.end());
 }
 
-std::unique_ptr<aterm> ffi_create_data_function_symbol(rust::String name)
+std::unique_ptr<aterm> create_data_function_symbol(rust::String name)
 {
   return std::make_unique<mcrl2::data::function_symbol>(static_cast<std::string>(name), untyped_sort());
 }

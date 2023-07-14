@@ -8,7 +8,7 @@ mod tests
     use mcrl2_sys::atermpp::{ATerm, TermPool};
     use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
     use sabre::utilities::to_data_expression;
-    use rec_tests::load_REC_from_strings;
+    use rec_tests::{load_REC_from_strings, from_string};
 
     // #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
     // #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
@@ -26,8 +26,8 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/empty.rec")], include_str!("validated_results/result_empty.txt") ; "empty")]
     // #[test_case(vec![include_str!("REC_files/evalexpr.rec")], include_str!("validated_results/result_evalexpr.txt") ; "evalexpr")]
     // #[test_case(vec![include_str!("REC_files/evaltree.rec")], include_str!("validated_results/result_evaltree.txt") ; "evaltree")]
-    // #[test_case(vec![include_str!("REC_files/factorial5.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial5.txt") ; "factorial5")]
-    // #[test_case(vec![include_str!("REC_files/factorial6.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial6.txt") ; "factorial6")]
+    #[test_case(vec![include_str!("REC_files/factorial5.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial5.txt") ; "factorial5")]
+    #[test_case(vec![include_str!("REC_files/factorial6.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial6.txt") ; "factorial6")]
     // #[test_case(vec![include_str!("REC_files/factorial7.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial7.txt") ; "factorial7")]
     // #[test_case(vec![include_str!("REC_files/factorial8.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial8.txt") ; "factorial8")]
     // #[test_case(vec![include_str!("REC_files/factorial9.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial9.txt") ; "factorial9")]

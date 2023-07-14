@@ -28,7 +28,7 @@ pub(crate) mod ffi {
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
 
         /// Returns true iff the term is an aterm_int.
-        fn ffi_is_int(term: &aterm) -> bool;
+        fn aterm_is_int(term: &aterm) -> bool;
 
         /// Returns the address of the given aterm. Should be used with care.
         fn aterm_pointer(term: &aterm) -> usize;
@@ -76,18 +76,18 @@ pub(crate) mod ffi {
         fn function_symbol_address(symbol: &function_symbol) -> usize;
 
         /// For data::variable
-        fn ffi_is_data_variable(term: &aterm) -> bool;
+        fn is_data_variable(term: &aterm) -> bool;
 
-        fn ffi_create_data_variable(name: String) -> UniquePtr<aterm>;
+        fn create_data_variable(name: String) -> UniquePtr<aterm>;
 
         /// For data::application
-        fn ffi_is_data_application(term: &aterm) -> bool;
+        fn is_data_application(term: &aterm) -> bool;
 
-        fn ffi_create_data_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
+        fn create_data_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
 
         /// For data::function_symbol        
-        fn ffi_is_data_function_symbol(term: &aterm) -> bool;
+        fn is_data_function_symbol(term: &aterm) -> bool;
 
-        fn ffi_create_data_function_symbol(name: String) -> UniquePtr<aterm>;
+        fn create_data_function_symbol(name: String) -> UniquePtr<aterm>;
     }
 }

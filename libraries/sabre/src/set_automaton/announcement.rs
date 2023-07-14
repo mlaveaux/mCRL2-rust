@@ -171,7 +171,7 @@ impl EnhancedMatchAnnouncement {
             is_duplicating,
             positions,
             innermost_stack,
-            stack_size: stack_size,
+            stack_size,
         }
     }
 }
