@@ -1,5 +1,5 @@
 [package]
-name = "mcrl2-rust"
+name = "mcrl2-sys"
 version = "0.1.0"
 edition = "2021"
 

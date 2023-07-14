@@ -182,7 +182,7 @@ fn main() {
     add_platform_flags(&mut build, mcrl2_path);
     add_cpp_flags(&mut build);
 
-    build.compile("mcrl2-rust");
+    build.compile("mcrl2-sys");
 
     // It seems that build changes are detected properly automatically, otherwise adapt this.
     cargo_emit::rerun_if_changed!("");

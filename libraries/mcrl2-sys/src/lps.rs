@@ -5,7 +5,7 @@ use std::fmt;
 mod ffi {
 
     unsafe extern "C++" {
-        include!("mcrl2-rust/cpp/lps/lps.h");
+        include!("mcrl2-sys/cpp/lps/lps.h");
 
         type specification;
 

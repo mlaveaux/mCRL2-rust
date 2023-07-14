@@ -8,7 +8,7 @@ use crate::atermpp::ATerm;
 mod ffi {
 
     unsafe extern "C++" {
-        include!("mcrl2-rust/cpp/data/data.h");
+        include!("mcrl2-sys/cpp/data/data.h");
 
         type data_specification;
 

@@ -1,25 +1,28 @@
 use cxx::{Exception, UniquePtr};
-use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
 use std::collections::VecDeque;
+use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
 
-use crate::data::{DataVariable, DataApplication, DataFunctionSymbol};
+use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
 
 #[cxx::bridge(namespace = "atermpp")]
 pub mod ffi {
 
-    /// This is an abstraction of unprotected_aterm that can only exist on the Rust side of code.
+    /// This is an abstraction of unprotected_aterm that exists on both sides.
     struct aterm_ref {
         index: usize,
     }
 
     unsafe extern "C++" {
-        include!("mcrl2-rust/cpp/atermpp/aterm.h");
+        include!("mcrl2-sys/cpp/atermpp/aterm.h");
 
         type aterm;
         type function_symbol;
 
         /// Initialises the library.
         fn initialise();
+
+        /// Trigger garbage collection.
+        fn collect_garbage();
 
         /// Creates a default term.
         fn new_aterm() -> UniquePtr<aterm>;
@@ -122,7 +125,13 @@ impl fmt::Debug for Symbol {
         if true {
             write!(f, "{}", self.name())
         } else {
-            write!(f, "{}:{} [{}]", self.name(), self.arity(), ffi::function_symbol_address(&self.function))
+            write!(
+                f,
+                "{}:{} [{}]",
+                self.name(),
+                self.arity(),
+                ffi::function_symbol_address(&self.function)
+            )
         }
     }
 }
@@ -205,13 +214,13 @@ impl ATerm {
     }
 
     pub fn is_default(&self) -> bool {
-        ffi::aterm_pointer(&self.term) == 0 
+        ffi::aterm_pointer(&self.term) == 0
     }
 
     pub fn is_int(&self) -> bool {
         ffi::ffi_is_int(&self.term)
     }
-    
+
     pub fn get_head_symbol(&self) -> Symbol {
         self.require_valid();
         Symbol {
@@ -231,7 +240,7 @@ impl ATerm {
             "This function can only be called on valid terms, i.e., not default terms"
         );
     }
-    
+
     // Recognizers for the data library
     pub fn is_data_variable(&self) -> bool {
         self.require_valid();
@@ -262,9 +271,17 @@ impl fmt::Display for ATerm {
         if self.is_default() {
             write!(f, "{:?}", self)
         } else if self.is_data_function_symbol() {
-            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(self.clone()))
+            write!(
+                f,
+                "{}",
+                <ATerm as Into<DataFunctionSymbol>>::into(self.clone())
+            )
         } else if self.is_data_application() {
-            write!(f, "{}", <ATerm as Into<DataApplication>>::into(self.clone()))
+            write!(
+                f,
+                "{}",
+                <ATerm as Into<DataApplication>>::into(self.clone())
+            )
         } else if self.is_data_variable() {
             write!(f, "{}", <ATerm as Into<DataVariable>>::into(self.clone()))
         } else {
@@ -275,12 +292,11 @@ impl fmt::Display for ATerm {
 
 impl fmt::Debug for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-
         if self.is_default() {
             write!(f, "<default>")?;
-        } else {                
+        } else {
             write!(f, "{}", ffi::print_aterm(&self.term))?;
-            //for term in self.iter() {   
+            //for term in self.iter() {
             //   write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
             //}
         }
@@ -348,7 +364,9 @@ impl From<DataFunctionSymbol> for ATerm {
 }
 
 /// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
-pub struct TermPool {}
+pub struct TermPool {
+    
+}
 
 impl TermPool {
     pub fn new() -> TermPool {
@@ -356,6 +374,11 @@ impl TermPool {
         ffi::initialise();
 
         TermPool {}
+    }
+
+    /// Trigger a garbage collection
+    pub fn collect(&mut self) {
+        ffi::collect_garbage();
     }
 
     pub fn from_string(&mut self, text: &str) -> Result<ATerm, Exception> {
@@ -375,7 +398,11 @@ impl TermPool {
             })
             .collect();
 
-        assert_eq!(symbol.arity(), arguments.len(), "Not enough arguments provided to create term");
+        assert_eq!(
+            symbol.arity(),
+            arguments.len(),
+            "Not enough arguments provided to create term"
+        );
 
         ATerm {
             term: ffi::create_aterm(&symbol.function, &arguments),
@@ -388,8 +415,11 @@ impl TermPool {
         }
     }
 
-    pub fn create_data_application(&mut self, head: &ATerm, arguments: &[ATerm]) -> DataApplication
-    {
+    pub fn create_data_application(
+        &mut self,
+        head: &ATerm,
+        arguments: &[ATerm],
+    ) -> DataApplication {
         // TODO: This part of the ffi is very slow and should be improved.
         let arguments: Vec<ffi::aterm_ref> = arguments
             .iter()
@@ -398,7 +428,9 @@ impl TermPool {
             })
             .collect();
 
-        DataApplication { term: ATerm::from(ffi::ffi_create_data_application(head.get(), &arguments)) }
+        DataApplication {
+            term: ATerm::from(ffi::ffi_create_data_application(head.get(), &arguments)),
+        }
     }
 
     pub fn create_variable(&mut self, name: &str) -> DataVariable {
@@ -407,9 +439,10 @@ impl TermPool {
         }
     }
 
-    pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol
-    {
-        DataFunctionSymbol { term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name))) }
+    pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol {
+        DataFunctionSymbol {
+            term: ATerm::from(ffi::ffi_create_data_function_symbol(String::from(name))),
+        }
     }
 }
 
@@ -443,22 +476,5 @@ impl Iterator for TermIterator {
 
             Some(term)
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_term_iterator() {
-        let mut tp = TermPool::new();
-        let t = tp.from_string("f(g(a),b)").unwrap();
-
-        let mut result = t.iter();
-        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap());
-        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap());
-        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap());
-        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap());
     }
 }

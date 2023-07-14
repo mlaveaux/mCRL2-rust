@@ -15,7 +15,7 @@
 #include "mcrl2/data/parse.h"
 #include "mcrl2/data/function_symbol.h"
 
-#include "mcrl2-rust/src/atermpp.rs.h"
+#include "mcrl2-sys/src/atermpp.rs.h"
 
 using namespace mcrl2::data;
 
@@ -26,6 +26,11 @@ inline void initialise()
 {
   // Enable debugging messages.
   mcrl2::log::mcrl2_logger::set_reporting_level(mcrl2::log::debug);
+}
+
+inline void collect_garbage()
+{
+  detail::g_term_pool().collect();
 }
 
 inline std::unique_ptr<aterm> new_aterm()
