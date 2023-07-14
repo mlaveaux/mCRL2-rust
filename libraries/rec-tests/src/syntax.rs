@@ -1,11 +1,10 @@
 use core::fmt;
-use std::hash::Hash;
 
 use ahash::AHashSet;
-use mcrl2_rust::atermpp::{ATerm, TermPool};
+use mcrl2_sys::atermpp::{ATerm, TermPool};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
-    utilities::{to_data_expression, ExplicitPosition},
+    utilities::to_data_expression,
 };
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
@@ -36,23 +35,18 @@ impl RewriteSpecificationSyntax {
             // Convert the conditions.
             let mut conditions = vec![];
             for c in &rule.conditions {
-                let lhs_term = c.lhs.to_term(tp);
-                let rhs_term = c.rhs.to_term(tp);
-
                 let condition = Condition {
-                    lhs: to_data_expression(tp, &lhs_term, &variables),
-                    rhs: to_data_expression(tp, &rhs_term, &variables),
+                    lhs: to_data_expression(tp, &c.lhs, &variables),
+                    rhs: to_data_expression(tp, &c.rhs, &variables),
                     equality: c.equality,
                 };
                 conditions.push(condition);
             }
             
-            let lhs = rule.lhs.to_term(tp);
-            let rhs = rule.rhs.to_term(tp);
 
             rewrite_rules.push(Rule {
-                lhs: to_data_expression(tp, &lhs, &variables),
-                rhs: to_data_expression(tp, &rhs, &variables),
+                lhs: to_data_expression(tp, &rule.lhs, &variables),
+                rhs: to_data_expression(tp, &rule.rhs, &variables),
                 conditions,
             });
         }
@@ -78,69 +72,11 @@ impl fmt::Display for RewriteSpecificationSyntax {
     }
 }
 
-/// A TermSyntaxTrees stores a term in a tree structure. They are not used in expensive computations.
-#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct TermSyntaxTree {
-    pub head_symbol: String,
-    pub sub_terms: Vec<TermSyntaxTree>,
-}
-
-impl TermSyntaxTree {
-    /// Get the subtree at a given position. Panics if that subtree does not exists.
-    pub fn get_position(&self, p: &ExplicitPosition) -> &TermSyntaxTree {
-        // Start with the root
-        let mut sub_term = self;
-
-        for x in &p.indices {
-            sub_term = sub_term.sub_terms.get(*x - 1).unwrap();
-        }
-
-        sub_term
-    }
-
-    /// Converts the syntax tree into a maximally shared [ATerm].
-    pub fn to_term(&self, tp: &mut TermPool) -> ATerm {
-        // Create an ATerm with as arguments all the evaluated semi compressed term trees.
-        let mut subterms = Vec::with_capacity(self.sub_terms.len());
-
-        for argument in self.sub_terms.iter() {
-            subterms.push(argument.to_term(tp));
-        }
-
-        let head = tp.create_symbol(&self.head_symbol, self.sub_terms.len());
-        tp.create(&head, &subterms)
-    }
-}
-
-/// Pretty prints TermSyntaxTrees. Sample output: and(true, false).
-impl fmt::Display for TermSyntaxTree {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.head_symbol.clone())?;
-        if !self.sub_terms.is_empty() {
-            write!(f, "(")?;
-        }
-        let mut first = true;
-        for sub in &self.sub_terms {
-            if first {
-                sub.fmt(f)?;
-                first = false;
-            } else {
-                write!(f, ",")?;
-                sub.fmt(f)?;
-            }
-        }
-        if !self.sub_terms.is_empty() {
-            write!(f, ")")?;
-        }
-        Ok(())
-    }
-}
-
 /// Syntax tree for rewrite rules
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RewriteRuleSyntax {
-    pub lhs: TermSyntaxTree,
-    pub rhs: TermSyntaxTree,
+    pub lhs: ATerm,
+    pub rhs: ATerm,
     pub conditions: Vec<ConditionSyntax>,
 }
 
@@ -153,7 +89,7 @@ impl fmt::Display for RewriteRuleSyntax {
 /// Syntax tree for conditional part of a rewrite rule
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ConditionSyntax {
-    pub lhs: TermSyntaxTree,
-    pub rhs: TermSyntaxTree,
+    pub lhs: ATerm,
+    pub rhs: ATerm,
     pub equality: bool, // The condition either specifies that lhs and rhs are equal or different
 }
