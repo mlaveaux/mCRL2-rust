@@ -5,7 +5,7 @@ mod tests
     use test_case::test_case;
 
     use ahash::AHashSet;
-    use mcrl2_rust::atermpp::{ATerm, TermPool};
+    use mcrl2_sys::atermpp::{ATerm, TermPool};
     use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
     use sabre::utilities::to_data_expression;
     use rec_tests::load_REC_from_strings;
@@ -66,30 +66,28 @@ mod tests
     {
         let tp = Rc::new(RefCell::new(TermPool::new()));
         let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
-            let (syntax_spec, syntax_terms) = load_REC_from_strings(&rec_files);
+            let (syntax_spec, syntax_terms) = load_REC_from_strings(&mut tp.borrow_mut(), &rec_files);
             let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
             (result, syntax_terms.iter().map(|t| { 
-                let term = t.to_term(&mut tp.borrow_mut());
-                to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new())
+                to_data_expression(&mut tp.borrow_mut(), t, &AHashSet::new())
             }).collect())
         };
 
         // Test Sabre rewriter
         let mut sa = SabreRewriter::new(tp.clone(), &spec);
-        let mut inner = InnermostRewriter::new(tp, &spec);
-
+        let mut inner = InnermostRewriter::new(tp.clone(), &spec);
+        
         let mut expected = expected_result.split('\n');
 
         for term in &terms {
-            let expected_result: String = expected.next().unwrap().split_whitespace().collect();
+            let expected_term = tp.borrow_mut().from_string(expected.next().unwrap()).unwrap();
+            let expected_result = to_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
 
             let result = inner.rewrite(term.clone());
-            let str_result: String = format!("Result: {}", &result).split_whitespace().collect();
-            assert_eq!(str_result, expected_result, "The inner rewrite result doesn't match the expected result");
+            assert_eq!(result, expected_result, "The inner rewrite result doesn't match the expected result");
 
-            //let result = sa.rewrite(term.clone());
-            //let str_result: String = format!("Result: {}", &result).split_whitespace().collect();
-            //assert_eq!(str_result, expected_result, "The sabre rewrite result doesn't match the expected result");
+            let result = sa.rewrite(term.clone());
+            assert_eq!(result, expected_result, "The sabre rewrite result doesn't match the expected result");
         }
     }
 }
