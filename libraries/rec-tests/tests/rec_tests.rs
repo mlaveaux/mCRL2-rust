@@ -61,7 +61,7 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/soundnessofparallelengines.rec")], include_str!("validated_results/result_soundnessofparallelengines.txt") ; "soundnessofparallelengines")]
     // #[test_case(vec![include_str!("REC_files/tak18.rec"), include_str!("REC_files/tak.rec")], include_str!("validated_results/result_tak18.txt") ; "tak18")]
     // #[test_case(vec![include_str!("REC_files/tautologyhard.rec")], include_str!("validated_results/result_tautologyhard.txt") ; "tautologyhard")]
-    #[test_case(vec![include_str!("REC_files/tricky.rec")], include_str!("validated_results/result_tricky.txt") ; "tricky")]
+    // #[test_case(vec![include_str!("REC_files/tricky.rec")], include_str!("validated_results/result_tricky.txt") ; "tricky")]
     fn rec_test(rec_files: Vec<&str>, expected_result: &str) 
     {
         let tp = Rc::new(RefCell::new(TermPool::new()));

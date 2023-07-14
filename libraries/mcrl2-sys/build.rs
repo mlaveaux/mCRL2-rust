@@ -119,7 +119,7 @@ fn main() {
     build_dparser.compile("dparser");
 
     // These are the files for which we need to call cxxbuild to produce the bridge code.
-    let mut build = cxx_build::bridges(["src/atermpp.rs", "src/data.rs", "src/lps.rs"]);
+    let mut build = cxx_build::bridges(["src/atermpp_ffi.rs", "src/data_ffi.rs", "src/lps_ffi.rs"]);
 
     // Additional files needed to compile the bridge, basically to build mCRL2 itself.
     build
@@ -185,5 +185,11 @@ fn main() {
     build.compile("mcrl2-sys");
 
     // It seems that build changes are detected properly automatically, otherwise adapt this.
-    cargo_emit::rerun_if_changed!("");
+    cargo_emit::rerun_if_changed!(
+        "src/atermpp_ffi.rs",
+        "src/data_ffi.rs",
+        "src/lps_ffi.rs",
+        "cpp/atermpp/aterm.h",
+        "cpp/data/data.h",
+        "cpp/lps/lps.h");
 }

@@ -8,6 +8,10 @@
 //! goal of this interface is to define proper Rust types that behave as
 //! expected while making use of the existing code base.
 
+mod atermpp_ffi;
+mod data_ffi;
+mod lps_ffi;
+
 pub mod atermpp;
 pub mod lps;
 pub mod data;

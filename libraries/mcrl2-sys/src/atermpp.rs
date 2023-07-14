@@ -1,103 +1,13 @@
-use cxx::{Exception, UniquePtr};
-use std::collections::VecDeque;
-use std::{cmp::Ordering, fmt, hash::Hash, hash::Hasher};
+use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
+use std::{fmt, collections::VecDeque};
+
+use anyhow::Result as AnyResult;
+use ahash::AHashSet;
+use cxx::{UniquePtr, Exception};
 
 use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
-
-#[cxx::bridge(namespace = "atermpp")]
-pub mod ffi {
-
-    /// This is an abstraction of unprotected_aterm that exists on both sides.
-    struct aterm_ref {
-        index: usize,
-    }
-
-    unsafe extern "C++" {
-        include!("mcrl2-sys/cpp/atermpp/aterm.h");
-
-        type aterm;
-        type function_symbol;
-
-        /// Initialises the library.
-        fn initialise();
-
-        /// Trigger garbage collection.
-        fn collect_garbage();
-
-        /// Creates a default term.
-        fn new_aterm() -> UniquePtr<aterm>;
-
-        /// Creates a term from the given function and arguments.
-        fn create_aterm(function: &function_symbol, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
-
-        /// Parses the given string and returns an aterm
-        fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
-
-        /// Returns true iff the term is an aterm_int.
-        fn ffi_is_int(term: &aterm) -> bool;
-
-        /// Returns the address of the given aterm. Should be used with care.
-        fn aterm_pointer(term: &aterm) -> usize;
-
-        /// Converts an aterm to a string.
-        fn print_aterm(term: &aterm) -> String;
-
-        /// Computes the hash for an aterm.
-        fn hash_aterm(term: &aterm) -> usize;
-
-        /// Returns true iff the terms are equivalent.
-        fn equal_aterm(first: &aterm, second: &aterm) -> bool;
-
-        /// Returns true iff the first term is less than the second term.
-        fn less_aterm(first: &aterm, second: &aterm) -> bool;
-
-        /// Makes a copy of the given term.
-        fn copy_aterm(term: &aterm) -> UniquePtr<aterm>;
-
-        /// Returns the function symbol of an aterm.
-        fn get_aterm_function_symbol(term: &aterm) -> UniquePtr<function_symbol>;
-
-        /// Returns the function symbol name
-        fn get_function_symbol_name(symbol: &function_symbol) -> &str;
-
-        /// Returns the function symbol name
-        fn get_function_symbol_arity(symbol: &function_symbol) -> usize;
-
-        /// Returns the hash for a function symbol
-        fn hash_function_symbol(symbol: &function_symbol) -> usize;
-
-        fn equal_function_symbols(first: &function_symbol, second: &function_symbol) -> bool;
-
-        fn less_function_symbols(first: &function_symbol, second: &function_symbol) -> bool;
-
-        /// Makes a copy of the given function symbol
-        fn copy_function_symbol(symbol: &function_symbol) -> UniquePtr<function_symbol>;
-
-        /// Returns the ith argument of this term.
-        fn get_term_argument(term: &aterm, index: usize) -> UniquePtr<aterm>;
-
-        /// Creates a function symbol with the given name and arity.
-        fn create_function_symbol(name: String, arity: usize) -> UniquePtr<function_symbol>;
-
-        fn function_symbol_address(symbol: &function_symbol) -> usize;
-
-        /// For data::variable
-        fn ffi_is_data_variable(term: &aterm) -> bool;
-
-        fn ffi_create_data_variable(name: String) -> UniquePtr<aterm>;
-
-        /// For data::application
-        fn ffi_is_data_application(term: &aterm) -> bool;
-
-        fn ffi_create_data_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
-
-        /// For data::function_symbol        
-        fn ffi_is_data_function_symbol(term: &aterm) -> bool;
-
-        fn ffi_create_data_function_symbol(name: String) -> UniquePtr<aterm>;
-
-    }
-}
+use crate::atermpp_ffi::ffi;
 
 /// A Symbol now references to an aterm function symbol, which has a name and an arity.
 pub struct Symbol {
@@ -475,6 +385,235 @@ impl Iterator for TermIterator {
             }
 
             Some(term)
+        }
+    }
+}
+
+enum Config<I> {
+    Apply(I, usize),
+    Construct(Symbol, usize),
+}
+
+pub struct TermArgs<'a, I> {
+    terms: &'a mut Vec<ATerm>,
+    tmp: &'a mut Vec<Config<I>>,
+    top_of_stack: usize,
+}
+
+impl<'a, I> TermArgs<'a, I> {
+    pub fn push(&mut self, input: I) {
+        self.terms.push(ATerm::default());    
+        self.tmp.push(Config::Apply(input, self.top_of_stack + self.tmp.len()));
+    }
+}
+
+/// Can be used to construct a term bottom up using an iterative approach
+pub struct TermBuilder<I>
+{
+    // The stack of terms
+    terms: Vec<ATerm>,
+    configs: Vec<Config<I>>,
+    tmp: Vec<Config<I>>,
+}
+
+impl<I> fmt::Display for TermBuilder<I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Terms: [")?;
+        for (i, term) in self.terms.iter().enumerate() {
+            writeln!(f, "{}\t{}", i, term)?;
+        }
+        writeln!(f, "]")?;
+        
+        writeln!(f, "Tmp: [")?;
+        for config in &self.tmp {
+            writeln!(f, "\t{}", config)?;
+        }
+        writeln!(f, "]")?;
+
+        writeln!(f, "Configs: [")?;
+        for config in &self.configs {
+            writeln!(f, "\t{}", config)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl<I> fmt::Display for Config<I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Config::Apply(_, result) => write!(f, "Apply({})", result),
+            Config::Construct(symbol, result) => {
+                write!(f, "Construct({}, {})", symbol, result)
+            }
+        }
+    }
+}
+
+impl<I> TermBuilder<I> {
+
+    pub fn new() -> TermBuilder<I> {
+        TermBuilder {
+            terms: vec![],
+            configs: vec![],
+            tmp: vec![],
+        }
+    }
+
+    pub fn evaluate<F>(&mut self, tp: &mut TermPool, input: I, function: F) -> AnyResult<ATerm>
+        where F: Fn(&mut TermPool, &mut TermArgs<I>, I) -> AnyResult<Symbol>  {
+
+        self.configs.push(Config::Apply(input, 0));
+        
+        loop {
+            //println!("{}", self);
+
+            match self.configs.pop() {
+                Some(config) => {
+                    match config {
+                        Config::Apply(input, result) => {
+                            // Applies the given function to this input, and obtain a number of symbol and arguments.
+                            let top_of_stack = self.terms.len();
+                            let mut args = TermArgs {
+                                terms: &mut self.terms,
+                                tmp: &mut self.tmp,
+                                top_of_stack,
+                            };
+
+                            let symbol = function(tp, &mut args, input)?;
+
+                            let arity =  symbol.arity();
+                            self.configs.push(Config::Construct(symbol, result));
+                            self.configs.append(&mut self.tmp);
+
+                            assert_eq!(top_of_stack, self.terms.len() - arity, "Function should have added {arity} arguments");
+
+                        },
+                        Config::Construct(symbol, result) => {
+                            let arguments = &self.terms[self.terms.len() - symbol.arity()..];                    
+
+                            let t = tp.create(&symbol, arguments);
+
+                            // Remove elements from the stack.
+                            self.terms.drain(self.terms.len() - symbol.arity()..);
+
+                            if result == self.terms.len() {
+                                // Special case where the result is placed on the first argument.
+                                self.terms.push(ATerm::default());
+                            } else if result > self.terms.len() {
+                                panic!("The result can only replace the first argument.")
+                            }
+
+                            self.terms[result] = t;
+                        }
+                    }
+                },
+                None => {
+                    break;
+                }
+            }
+        }
+
+        assert!(
+            self.terms.len() == 1,
+            "Expect exactly one term on the result stack"
+        );
+
+        return Ok(self
+            .terms
+            .pop().unwrap())
+
+    }
+}
+
+/// Create a random term consisting of the given symbol and constants. Performs
+/// iterations number of constructions, and uses chance_duplicates to choose the
+/// amount of subterms that are duplicated.
+pub fn random_term(
+    tp: &mut TermPool,
+    symbols: &[(String, usize)],
+    constants: &[String],
+    iterations: usize,
+) -> ATerm {
+    use rand::prelude::IteratorRandom;
+
+    assert!(
+        !constants.is_empty(),
+        "We need constants to be able to create a term"
+    );
+
+    let mut subterms = AHashSet::<ATerm>::from_iter(constants.iter().map(|name| {
+        let symbol = tp.create_symbol(name, 0);
+        tp.create(&symbol, &[])
+    }));
+
+    let mut rng = rand::thread_rng();
+    let mut result = ATerm::default();
+    for _ in 0..iterations {
+        let (symbol, arity) = symbols.iter().choose(&mut rng).unwrap();
+
+        let mut arguments = vec![];
+        for _ in 0..*arity {
+            arguments.push(subterms.iter().choose(&mut rng).unwrap().clone());
+        }
+
+        let symbol = tp.create_symbol(symbol, *arity);
+        result = tp.create(&symbol, &arguments);
+
+        // Make this term available as another subterm that can be used.
+        subterms.insert(result.clone());
+    }
+
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use std::thread;
+
+    use super::*;
+
+    fn verify_term(term: &ATerm) {
+        for subterm in term.iter() {
+            assert_eq!(subterm.get_head_symbol().arity(), subterm.arguments().len(), "The arity matches the number of arguments.")
+        }        
+    }
+
+    #[test]
+    fn test_term_iterator() {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(g(a),b)").unwrap();
+
+        let mut result = t.iter();
+        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap());
+    }
+
+    fn test_thread_aterm_pool() {
+        let mut threads = vec![];
+
+        for _ in 0..100 {
+            threads.push(thread::spawn(
+                || {
+                    let mut tp = TermPool::new();
+
+                    let terms : Vec::<ATerm> = 
+                        (0..100)
+                        .map(|_| {
+                            random_term(&mut tp,
+                                &[("f".to_string(), 2)],
+                                &["a".to_string(), "b".to_string()],
+                                10)
+                        }).collect();
+
+                    tp.collect();
+
+                    for term in &terms {
+                        verify_term(term);
+                    }
+                },
+            ));
         }
     }
 }

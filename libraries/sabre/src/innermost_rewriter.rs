@@ -272,8 +272,7 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use ahash::AHashSet;
-    use mcrl2::random_term;
-    use mcrl2_sys::atermpp::TermPool;
+    use mcrl2_sys::atermpp::{random_term, TermPool};
 
     use crate::{
         InnermostRewriter, RewriteSpecification, utilities::to_data_expression, RewriteEngine,

@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ahash = "0.8"
+anyhow = "1.0"
 cxx = "1.0"
+rand = "0.8"
 
 [build-dependencies]
 cxx-build = { version = "1.0", features = ["parallel"] }
 cc = "1.0"
-cargo-emit = "0.2.1"
+cargo-emit = "0.2"

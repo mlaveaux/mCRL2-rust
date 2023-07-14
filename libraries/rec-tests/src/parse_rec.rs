@@ -2,8 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use mcrl2::TermBuilder;
-use mcrl2_sys::atermpp::{ATerm, TermPool};
+use mcrl2_sys::atermpp::{ATerm, TermPool, TermBuilder};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;

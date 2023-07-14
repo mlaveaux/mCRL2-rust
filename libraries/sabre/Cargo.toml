@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mcrl2 = { path="../../libraries/mcrl2" }
 mcrl2-sys = { path="../../libraries/mcrl2-sys" }
 ahash = "0.8.3"
 smallvec = "1.10.0"
