@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2_sys::atermpp::{ATerm, TermPool};
+use mcrl2_sys::atermpp::{ATerm, TermPool, TermBuilder, Yield};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -45,50 +45,32 @@ fn substitute_rec(
     }
 }
 
-/// Applies the given function to every subterm of the given term.
-pub fn apply<F>(tp: &mut TermPool, t: &ATerm, function: &F) -> ATerm
-where
-    F: Fn(&mut TermPool, &ATerm) -> Option<ATerm>,
-{
-    match function(tp, t) {
-        Some(result) => result,
-        None => {
-            // The function did not change the term, so apply on its arguments.
-            let mut args = Vec::with_capacity(t.arguments().len());
-
-            for i in 0..t.arguments().len() {
-                args.push(apply(tp, &t.arg(i), function));
-            }
-
-            tp.create(&t.get_head_symbol(), &args)
-        }
-    }
-}
-
 /// Converts an [ATerm] to an untyped data expression.
 pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
-    apply(tp, t, &|tp, arg| {
+    let mut builder = TermBuilder::<ATerm, ATerm>::new();
+
+    builder.evaluate(tp, t.clone(), |tp, args, t| {
         debug_assert!(!t.is_int(), "Term cannot be an aterm_int, although not sure why");
 
-        if variables.contains(arg.get_head_symbol().name()) {
+        if variables.contains(t.get_head_symbol().name()) {
             // Convert a constant variable, for example 'x', into an untyped variable.
-            Some(tp.create_variable(arg.get_head_symbol().name()).into())
+            Ok(Yield::Term(tp.create_variable(t.get_head_symbol().name()).into()))
         } else if t.get_head_symbol().arity() == 0 {
-            Some(tp.create_data_function_symbol(t.get_head_symbol().name()).into())
+            Ok(Yield::Term(tp.create_data_function_symbol(t.get_head_symbol().name()).into()))
         } else {
             // This is a function symbol applied to a number of arguments (higher order terms not allowed)
             let head = tp.create_data_function_symbol(t.get_head_symbol().name());
             
-            // The function did not change the term, so apply on its arguments.
-            let mut args = Vec::with_capacity(t.arguments().len());
-
-            for i in 0..t.arguments().len() {
-                args.push(to_data_expression(tp, &t.arg(i), variables));
+            for arg in t.arguments() {
+                args.push(arg);
             }
 
-            Some(tp.create_data_application(&head.into(), &args).into())
+            Ok(Yield::Construct(head.into()))
         }
-    })
+    }, |tp, input, args| {
+            Ok(tp.create_data_application(&input, args).into())
+        }
+    ).unwrap()
 }
 
 #[cfg(test)]
@@ -113,5 +95,14 @@ mod tests {
             t0,
             get_position(&result, &ExplicitPosition::new(&vec![1, 1]))
         );
+    }
+
+    #[test]
+    fn test_to_data_expression() {
+        let mut term_pool = TermPool::new();
+
+        let t = term_pool.from_string("s(s(a))").unwrap();
+
+        let expression = to_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
     }
 }

@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use std::{fmt, collections::VecDeque};
+use std::{collections::VecDeque, fmt};
 
-use anyhow::Result as AnyResult;
 use ahash::AHashSet;
-use cxx::{UniquePtr, Exception};
+use anyhow::Result as AnyResult;
+use cxx::{Exception, UniquePtr};
 
-use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
 use crate::atermpp_ffi::ffi;
+use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
 
 /// A Symbol now references to an aterm function symbol, which has a name and an arity.
 pub struct Symbol {
@@ -283,9 +283,7 @@ impl TermPool {
         // Initialise the C++ aterm library.
         ffi::initialise();
 
-        TermPool {
-            arguments: vec![],
-        }
+        TermPool { arguments: vec![] }
     }
 
     /// Trigger a garbage collection
@@ -327,9 +325,11 @@ impl TermPool {
         head: &ATerm,
         arguments: &[ATerm],
     ) -> DataApplication {
-
         DataApplication {
-            term: ATerm::from(ffi::create_data_application(head.get(), self.tmp_arguments(arguments))),
+            term: ATerm::from(ffi::create_data_application(
+                head.get(),
+                self.tmp_arguments(arguments),
+            )),
         }
     }
 
@@ -346,12 +346,10 @@ impl TermPool {
     }
 
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments(&mut self, arguments: &[ATerm]) -> &[ffi::aterm_ref] {        
+    fn tmp_arguments(&mut self, arguments: &[ATerm]) -> &[ffi::aterm_ref] {
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() {
-            self.arguments.push(ffi::aterm_ref{
-                index: 0
-            });
+            self.arguments.push(ffi::aterm_ref { index: 0 });
         }
 
         // TODO: This part of the ffi is very slow and should be improved.
@@ -405,45 +403,20 @@ impl Default for TermPool {
     }
 }
 
-enum Config<I> {
-    Apply(I, usize),
-    Construct(Symbol, usize),
-}
-
-pub struct TermArgs<'a, I> {
-    terms: &'a mut Vec<ATerm>,
-    tmp: &'a mut Vec<Config<I>>,
-    top_of_stack: usize,
-}
-
-impl<'a, I> TermArgs<'a, I> {
-    pub fn push(&mut self, input: I) {
-        self.terms.push(ATerm::default());    
-        self.tmp.push(Config::Apply(input, self.top_of_stack + self.tmp.len()));
-    }
-}
-
-/// Can be used to construct a term bottom up using an iterative approach
+/// Can be used to construct a term using two functions. Type I is used for the
+/// input of transformer function, and C the type for the construct function.
 #[derive(Default)]
-pub struct TermBuilder<I>
-{
+pub struct TermBuilder<I, C> {
     // The stack of terms
     terms: Vec<ATerm>,
-    configs: Vec<Config<I>>,
-    tmp: Vec<Config<I>>,
+    configs: Vec<Config<I, C>>,
 }
 
-impl<I> fmt::Display for TermBuilder<I> {
+impl<I, C: fmt::Display> fmt::Display for TermBuilder<I, C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Terms: [")?;
         for (i, term) in self.terms.iter().enumerate() {
             writeln!(f, "{}\t{}", i, term)?;
-        }
-        writeln!(f, "]")?;
-        
-        writeln!(f, "Tmp: [")?;
-        for config in &self.tmp {
-            writeln!(f, "\t{}", config)?;
         }
         writeln!(f, "]")?;
 
@@ -455,64 +428,98 @@ impl<I> fmt::Display for TermBuilder<I> {
     }
 }
 
-impl<I> fmt::Display for Config<I> {
+impl<I, C: fmt::Display> fmt::Display for Config<I, C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Config::Apply(_, result) => write!(f, "Apply({})", result),
-            Config::Construct(symbol, result) => {
-                write!(f, "Construct({}, {})", symbol, result)
+            Config::Construct(symbol, arity, result) => {
+                write!(f, "Construct({}, {}, {})", symbol, arity, result)
             }
         }
     }
 }
 
-impl<I> TermBuilder<I> {
+/// Applies the given function to every subterm of the given term.
+pub fn apply<F>(tp: &mut TermPool, t: &ATerm, function: &F) -> ATerm
+where
+    F: Fn(&mut TermPool, &ATerm) -> Option<ATerm>,
+{
+    let mut builder = TermBuilder::<ATerm, Symbol>::new();
 
-    pub fn new() -> TermBuilder<I> {
+    builder
+        .evaluate(
+            tp,
+            t.clone(),
+            |tp, args, t| {
+                match function(tp, &t) {
+                    Some(result) => Ok(Yield::Term(result)),
+                    None => {
+                        for arg in t.arguments() {
+                            args.push(arg);
+                        }
+
+                        Ok(Yield::Construct(t.get_head_symbol()))
+                    }
+                }
+            },
+            |tp, symbol, args| Ok(tp.create(&symbol, args)),
+        )
+        .unwrap()
+}
+
+impl<I, C: fmt::Display> TermBuilder<I, C> {
+    pub fn new() -> TermBuilder<I, C> {
         TermBuilder {
             terms: vec![],
             configs: vec![],
-            tmp: vec![],
         }
     }
 
-    pub fn evaluate<F>(&mut self, tp: &mut TermPool, input: I, function: F) -> AnyResult<ATerm>
-        where F: Fn(&mut TermPool, &mut TermArgs<I>, I) -> AnyResult<Symbol>  {
-
+    pub fn evaluate<F, G>(
+        &mut self,
+        tp: &mut TermPool,
+        input: I,
+        transformer: F,
+        construct: G,
+    ) -> AnyResult<ATerm>
+    where
+        F: Fn(&mut TermPool, &mut ArgStack<I, C>, I) -> AnyResult<Yield<C>>,
+        G: Fn(&mut TermPool, C, &[ATerm]) -> AnyResult<ATerm>,
+    {
         self.terms.push(ATerm::default());
         self.configs.push(Config::Apply(input, 0));
-        
-        while let Some(config) = self.configs.pop() {
-            //println!("{}", self);
 
+        while let Some(config) = self.configs.pop() {
             match config {
                 Config::Apply(input, result) => {
                     // Applies the given function to this input, and obtain a number of symbol and arguments.
-                    let top_of_stack = self.terms.len();
-                    let mut args = TermArgs {
-                        terms: &mut self.terms,
-                        tmp: &mut self.tmp,
-                        top_of_stack,
-                    };
+                    let top_of_stack = self.configs.len();
+                    let mut args = ArgStack::new(&mut self.terms, &mut self.configs);
 
-                    let symbol = function(tp, &mut args, input)?;
+                    match transformer(tp, &mut args, input)? {
+                        Yield::Construct(input) => {
+                            // This occurs before the other constructs.
+                            let arity = args.len();
+                            self.configs.reserve(1);
+                            self.configs
+                                .insert(top_of_stack, Config::Construct(input, arity, result));
+                        }
+                        Yield::Term(term) => {
+                            self.terms[result] = term;
+                        }
+                    }
+                }
+                Config::Construct(input, arity, result) => {
+                    let arguments = &self.terms[self.terms.len() - arity..];
 
-                    let arity =  symbol.arity();
-                    self.configs.push(Config::Construct(symbol, result));
-                    self.configs.append(&mut self.tmp);
-
-                    assert_eq!(top_of_stack, self.terms.len() - arity, "Function should have added {arity} arguments");
-
-                },
-                Config::Construct(symbol, result) => {
-                    let arguments = &self.terms[self.terms.len() - symbol.arity()..];                    
-
-                    self.terms[result] = tp.create(&symbol, arguments);
+                    self.terms[result] = construct(tp, input, arguments)?;
 
                     // Remove elements from the stack.
-                    self.terms.drain(self.terms.len() - symbol.arity()..);
+                    self.terms.drain(self.terms.len() - arity..);
                 }
             }
+
+            //println!("{}", self);
         }
 
         debug_assert!(
@@ -522,9 +529,47 @@ impl<I> TermBuilder<I> {
 
         Ok(self
             .terms
-            .pop().
-            expect("There should be at last one result"))
+            .pop()
+            .expect("There should be at last one result"))
+    }
+}
 
+enum Config<I, C> {
+    Apply(I, usize),
+    Construct(C, usize, usize),
+}
+
+pub enum Yield<C> {
+    Term(ATerm),  // Yield this term as is.
+    Construct(C), // Yield f(args) for every arg push to the argument stack, with the function applied to it.
+}
+
+pub struct ArgStack<'a, I, C> {
+    terms: &'a mut Vec<ATerm>,
+    configs: &'a mut Vec<Config<I, C>>,
+    top_of_stack: usize,
+}
+
+impl<'a, I, C> ArgStack<'a, I, C> {
+    fn new(terms: &'a mut Vec<ATerm>, configs: &'a mut Vec<Config<I, C>>) -> ArgStack<'a, I, C> {
+        let top_of_stack = terms.len();
+        ArgStack {
+            terms,
+            configs,
+            top_of_stack: top_of_stack,
+        }
+    }
+
+    /// Returns the amount of arguments added.
+    fn len(&self) -> usize {
+        self.terms.len() - self.top_of_stack
+    }
+
+    /// Adds the term to the argument stack, will construct construct(C, args...) with the transformer applied to arguments.
+    pub fn push(&mut self, input: I) {
+        self.configs
+            .push(Config::Apply(input, self.terms.len()));
+        self.terms.push(ATerm::default());
     }
 }
 
@@ -577,8 +622,12 @@ mod tests {
 
     fn verify_term(term: &ATerm) {
         for subterm in term.iter() {
-            assert_eq!(subterm.get_head_symbol().arity(), subterm.arguments().len(), "The arity matches the number of arguments.")
-        }        
+            assert_eq!(
+                subterm.get_head_symbol().arity(),
+                subterm.arguments().len(),
+                "The arity matches the number of arguments."
+            )
+        }
     }
 
     #[test]
@@ -597,26 +646,26 @@ mod tests {
         let mut threads = vec![];
 
         for _ in 0..100 {
-            threads.push(thread::spawn(
-                || {
-                    let mut tp = TermPool::new();
+            threads.push(thread::spawn(|| {
+                let mut tp = TermPool::new();
 
-                    let terms : Vec::<ATerm> = 
-                        (0..100)
-                        .map(|_| {
-                            random_term(&mut tp,
-                                &[("f".to_string(), 2)],
-                                &["a".to_string(), "b".to_string()],
-                                10)
-                        }).collect();
+                let terms: Vec<ATerm> = (0..100)
+                    .map(|_| {
+                        random_term(
+                            &mut tp,
+                            &[("f".to_string(), 2)],
+                            &["a".to_string(), "b".to_string()],
+                            10,
+                        )
+                    })
+                    .collect();
 
-                    tp.collect();
+                tp.collect();
 
-                    for term in &terms {
-                        verify_term(term);
-                    }
-                },
-            ));
+                for term in &terms {
+                    verify_term(term);
+                }
+            }));
         }
     }
 }

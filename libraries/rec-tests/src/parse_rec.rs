@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Result as AnyResult;
-use mcrl2_sys::atermpp::{ATerm, TermPool, TermBuilder};
+use mcrl2_sys::atermpp::{ATerm, TermPool, TermBuilder, Symbol, Yield};
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
@@ -128,7 +128,7 @@ pub fn load_REC_from_strings(
 
 /// Extracts data from parsed header of REC spec. Returns name and include files.
 fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>) {
-    assert_eq!(pair.as_rule(), Rule::header);
+    debug_assert_eq!(pair.as_rule(), Rule::header);
 
     let mut inner = pair.into_inner();
     let name = inner.next().unwrap().as_str().to_string();
@@ -143,10 +143,11 @@ fn parse_header(pair: Pair<Rule>) -> (String, Vec<String>) {
 
 /// Extracts data from parsed constructor section, derives the arity of symbols. Types are ignored.
 fn parse_constructors(pair: Pair<Rule>) -> Vec<(String, usize)> {
-    assert_eq!(pair.as_rule(), Rule::cons);
+    debug_assert_eq!(pair.as_rule(), Rule::cons);
+
     let mut constructors = Vec::new();
     for decl in pair.into_inner() {
-        assert_eq!(decl.as_rule(), Rule::cons_decl);
+        debug_assert_eq!(decl.as_rule(), Rule::cons_decl);
         let mut inner = decl.into_inner();
         let symbol = inner.next().unwrap().as_str().to_string();        
         let arity = inner.count() - 1;
@@ -157,7 +158,7 @@ fn parse_constructors(pair: Pair<Rule>) -> Vec<(String, usize)> {
 
 /// Extracts data from parsed rewrite rules. Returns list of rewrite rules
 fn parse_rewrite_rules(tp: &mut TermPool, pair: Pair<Rule>) -> Vec<RewriteRuleSyntax> {
-    assert_eq!(pair.as_rule(), Rule::rules);
+    debug_assert_eq!(pair.as_rule(), Rule::rules);
     let mut rules = vec![];
     let inner = pair.into_inner();
     for p in inner {
@@ -169,12 +170,12 @@ fn parse_rewrite_rules(tp: &mut TermPool, pair: Pair<Rule>) -> Vec<RewriteRuleSy
 
 // Extracts data from the variable VARS block. Types are ignored.
 fn parse_vars(pair: Pair<Rule>) -> Vec<String> {
-    assert_eq!(pair.as_rule(), Rule::vars);
+    debug_assert_eq!(pair.as_rule(), Rule::vars);
 
     let mut variables = vec![];
     let inner = pair.into_inner();
     for v in inner {
-        assert_eq!(v.as_rule(), Rule::var_decl);
+        debug_assert_eq!(v.as_rule(), Rule::var_decl);
 
         variables.extend(parse_var_decl(v));
     }
@@ -183,12 +184,12 @@ fn parse_vars(pair: Pair<Rule>) -> Vec<String> {
 }
 
 fn parse_var_decl(pair: Pair<Rule>) -> Vec<String> {
-    assert_eq!(pair.as_rule(), Rule::var_decl);
+    debug_assert_eq!(pair.as_rule(), Rule::var_decl);
 
     let mut variables = vec![];
     let inner = pair.into_inner();
     for v in inner {
-        assert_eq!(v.as_rule(), Rule::identifier);
+        debug_assert_eq!(v.as_rule(), Rule::identifier);
 
         variables.push(String::from(v.as_str()));
     }
@@ -223,9 +224,9 @@ pub fn from_string(tp: &mut TermPool, str: &str) -> AnyResult<ATerm> {
 
 /// Extracts data from parsed term.
 fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> AnyResult<ATerm> {
-    assert_eq!(pair.as_rule(), Rule::term);
+    debug_assert_eq!(pair.as_rule(), Rule::term);
 
-    let mut builder = TermBuilder::<Pair<'_, Rule>>::new();
+    let mut builder = TermBuilder::<Pair<'_, Rule>, Symbol>::new();
 
     Ok(builder.evaluate(tp, pair, |tp, stack, pair| {
         match pair.as_rule() {
@@ -242,12 +243,14 @@ fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> AnyResult<ATerm> {
                     }
                 }
                 
-                Ok(tp.create_symbol(head_symbol, arity))
+                Ok(Yield::Construct(tp.create_symbol(head_symbol, arity)))
             }
             _ => {
                 panic!("Should be unreachable!")
             }
         }
+    }, |tp, symbol, args| {
+        Ok(tp.create(&symbol, args))
     }).unwrap())
 }
 

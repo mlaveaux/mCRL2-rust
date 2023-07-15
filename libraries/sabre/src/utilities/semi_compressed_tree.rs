@@ -154,11 +154,9 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPositio
 
 #[cfg(test)]
 mod tests {
-    use crate::utilities::apply;
-
     use super::*;
     use ahash::AHashSet;
-    use mcrl2_sys::atermpp::TermPool;
+    use mcrl2_sys::atermpp::{TermPool, apply};
 
     /// Converts a slice of static strings into a set of owned strings
     /// 

@@ -224,7 +224,7 @@ impl MatchGoal {
 
     // Assumes two slices are of the same length and computes to what length they are equal
     fn common_prefix_length(pos1: &[usize], pos2: &[usize]) -> usize {
-        assert_eq!(
+        debug_assert_eq!(
             pos1.len(),
             pos2.len(),
             "Given arrays should be of the same length."
