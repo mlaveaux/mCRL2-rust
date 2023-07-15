@@ -61,11 +61,11 @@ fn main() {
     let lps_source_files = [
         "lps.cpp",
         "lps_io.cpp",
-        "tools.cpp",
-        "linearise.cpp",
-        "lpsparunfoldlib.cpp",
-        "next_state_generator.cpp",
-        "symbolic_lts_io.cpp",
+        //"tools.cpp",
+        //"linearise.cpp",
+        //"lpsparunfoldlib.cpp",
+        //"next_state_generator.cpp",
+        //"symbolic_lts_io.cpp",
     ];
 
     let data_source_files = [
@@ -73,7 +73,7 @@ fn main() {
         "data_io.cpp",
         "data_specification.cpp",
         "typecheck.cpp",
-        "detail/prover/smt_lib_solver.cpp",
+        //"detail/prover/smt_lib_solver.cpp",
         "detail/rewrite/jitty.cpp",
         "detail/rewrite/rewrite.cpp",
         "detail/rewrite/strategy.cpp",
@@ -82,10 +82,9 @@ fn main() {
     let utilities_source_files = [
         "bitstream.cpp",
         "cache_metric.cpp",
-        "command_line_interface.cpp",
-        "logger.cpp",
+        //"command_line_interface.cpp",
         "text_utility.cpp",
-        "toolset_version.cpp",
+        //"toolset_version.cpp",
     ];
 
     let core_source_files = ["dparser.cpp", "core.cpp"];
