@@ -30,7 +30,7 @@ pub struct EquivalenceClass {
 /// Checks if the equivalence classes hold for the given term.
 pub fn check_equivalence_classes(term: &ATerm, eqs: &[EquivalenceClass]) -> bool {
     eqs.iter().all(|ec| {
-        assert!(ec.positions.len() >= 2, "An equivalence class must contain at least two positions");
+        debug_assert!(ec.positions.len() >= 2, "An equivalence class must contain at least two positions");
 
         // The term at the first position must be equivalent to all other positions.
         let mut iter_pos = ec.positions.iter();
@@ -111,7 +111,7 @@ pub struct EnhancedMatchAnnouncement {
 
     /// The innermost rewrite stack for the right hand side and the positions that must be added to the stack.
     pub innermost_stack: Vec<Config>,
-    pub positions: Vec<(ExplicitPosition, usize)>,
+    pub variables: Vec<(ExplicitPosition, usize)>,
     pub stack_size: usize,
 }
 
@@ -169,7 +169,7 @@ impl EnhancedMatchAnnouncement {
             semi_compressed_rhs: sctt_rhs,
             conditions,
             is_duplicating,
-            positions,
+            variables: positions,
             innermost_stack,
             stack_size,
         }
@@ -206,16 +206,16 @@ impl MatchGoal {
             );
 
             for mo in &g.obligations {
-                //Compare up to gcp_length or the length of the match obligation position
+                // Compare up to gcp_length or the length of the match obligation position
                 let compare_length = min(gcp_length, mo.position.len());
-                //gcp_length shrinks if they are not the same up to compare_length
+                // gcp_length shrinks if they are not the same up to compare_length
                 gcp_length = MatchGoal::common_prefix_length(
                     &prefix.indices[0..compare_length],
                     &mo.position.indices[0..compare_length],
                 );
             }
         }
-        //The gcp is constructed by taking the first gcp_length indices of the first match goal prefix
+        // The gcp is constructed by taking the first gcp_length indices of the first match goal prefix
         let greatest_common_prefix = SmallVec::from_slice(&prefix.indices[0..gcp_length]);
         ExplicitPosition {
             indices: greatest_common_prefix,
@@ -410,8 +410,25 @@ mod tests {
         , "The resulting config stack is not as expected");
 
         assert_eq!(ema.stack_size, 5, "The stack size does not match");
-
-
-
     }
+
+    #[test]
+    fn test_enhanced_match_announcement_variable() {
+        let mut tp = TermPool::new();
+
+        let announcement = MatchAnnouncement {
+            rule: create_rewrite_rule(&mut tp, "f(x)", "x", &["x"]),
+            position: ExplicitPosition::default(),
+            symbols_seen: 0,
+        };
+
+        let ema = EnhancedMatchAnnouncement::new(announcement);
+
+        // Check if the resulting construction succeeded.
+        assert!(ema.innermost_stack.is_empty(), "The resulting config stack is not as expected");
+
+        assert_eq!(ema.stack_size, 1, "The stack size does not match");
+    }
+
+
 }

@@ -1,5 +1,6 @@
 use std::fmt;
 
+use itertools::Itertools;
 use mcrl2_sys::{
     atermpp::ATerm,
     data::DataFunctionSymbol
@@ -48,6 +49,22 @@ impl fmt::Display for Rule
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
     {
-        write!(f, "{:?} -> {} = {}", self.conditions, self.lhs, self.rhs)
+        if self.conditions.is_empty() {
+            write!(f, "{} = {}", self.lhs, self.rhs)
+        } else {
+            write!(f, "{} -> {} = {}", self.conditions.iter().format(", "), self.lhs, self.rhs)
+        }
+    }
+}
+
+impl fmt::Display for Condition
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
+    {
+        if self.equality {
+            write!(f, "{} == {}", self.lhs, self.rhs)
+        } else {
+            write!(f, "{} <> {}", self.lhs, self.rhs)
+        }
     }
 }

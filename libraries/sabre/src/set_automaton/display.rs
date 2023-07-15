@@ -1,13 +1,13 @@
 use std::{path::Path, io};
 
-use mcrl2_sys::{data::{DataFunctionSymbol, DataApplication}, atermpp::ATerm};
+use itertools::Itertools;
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, State};
 use core::fmt;
 use std::fs::File;
 use std::io::Write;
 
-use super::{Transition, MatchAnnouncement, MatchGoal, MatchObligation};
+use super::{Transition, MatchAnnouncement, MatchGoal, MatchObligation, EquivalenceClass};
 
 impl fmt::Debug for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -20,121 +20,51 @@ impl fmt::Display for Transition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Transition {{ Symbol: {}, Outputs: [",
-            self.symbol
-        )?;
-
-        let mut first = true;
-        for r in &self.announcements {
-            if !first {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", r)?;
-            first = false;
-        }
-
-        write!(f, "], Destinations: [")?;
-        first = true;
-        for (pos, s) in &self.destinations {
-            if !first {
-                write!(f, " ")?;
-            }
-            write!(f, "({},{})", pos, s)?;
-            first = false;
-        }
-        write!(f, "] }}")
+            "Transition {{ {}, announce: [{}], dest: [{}] }}",
+            self.symbol,
+            self.announcements.iter().format(", "),
+            self.destinations.iter().format_with(", ", |element, f| {
+                f(&format_args!("{} -> {}", element.0, element.1))
+            })
+        )
     }
 }
 
 /// Implement display for a match announcement
 impl fmt::Display for MatchAnnouncement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.rule.lhs.is_data_function_symbol() {
-            write!(
-                f,
-                "{}@{}",
-                <ATerm as Into<DataFunctionSymbol>>::into(self.rule.lhs.clone()),
-                self.position
-            )?;
-        } else {
-            write!(
-                f,
-                "{}@{}",
-                <ATerm as Into<DataApplication>>::into(self.rule.lhs.clone()),
-                self.position
-            )?;
-        }
-
-        if !self.rule.conditions.is_empty() {   
-            write!(f, "[")?;
-
-            let mut first = true;
-            for c in &self.rule.conditions {
-                if !first { 
-                    write!(f, ", ")?;
-                }
-
-                let comparison_symbol = if c.equality { "==" } else { "<>" };
-                write!(f, "{} {} {}", &c.lhs, comparison_symbol, &c.rhs)?;
-
-                first = false;
-            } 
-
-            write!(f, "]")?;
-        }
-
-        Ok(())
+        write!(
+            f,
+            "{}@{}",
+            self.rule.lhs.clone(),
+            self.position
+        )
     }
 }
 
 impl fmt::Display for MatchObligation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.pattern.is_data_function_symbol() {
-            write!(
-                f,
-                "{}@{}",
-                <ATerm as Into<DataFunctionSymbol>>::into(self.pattern.clone()),
-                self.position
-            )
-        } else {
-            write!(
-                f,
-                "{}@{}",
-                <ATerm as Into<DataApplication>>::into(self.pattern.clone()),
-                self.position
-            )
-        }
+        write!(
+            f,
+            "{}@{}",
+            self.pattern.clone(),
+            self.position
+        )
+    }
+}
 
+impl fmt::Display for EquivalenceClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{{ {} }}", self.variable, self.positions.iter().format(", "))
     }
 }
 
 impl fmt::Display for EnhancedMatchAnnouncement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", &self.announcement)?;
-
-        write!(f, ", equivalences: [")?;
-        for ec in &self.equivalence_classes {
-            write!(f, "{}{{", ec.variable)?;
-            let mut first = true;
-            for p in &ec.positions {
-                if !first {
-                    write!(f, ", ")?;
-                } 
-                write!(f, "{}", p)?;
-                first = false;
-            }
-            write!(f, "}} ")?;
-        }
-
-        write!(f, "], conditions: [")?;
-        for (i, c) in self.announcement.rule.conditions.iter().enumerate() {
-            if i != 0 {
-                write!(f, ", ")?;
-            }
-            let comparison_symbol = if c.equality { "==" } else { "<>" };
-            write!(f, "{} {} {}", &c.lhs, comparison_symbol, &c.rhs)?;
-        }
-        write!(f, "]")
+        write!(f, "{{ conditions: [{}], equivalences: [{}] }}",
+        self.announcement.rule.conditions.iter().format(", "),
+        self.equivalence_classes.iter().format(", "))
     }
 }
 
@@ -177,15 +107,14 @@ impl SetAutomaton {
         writeln!(&mut f, "digraph{{")?;
         writeln!(&mut f, "  final[label=\"💩\"];")?;
         for (i, s) in self.states.iter().enumerate() {
-            let mut match_goals = "".to_string();
+            let mut match_goals = String::new();
             for mg in &s.match_goals {
-                for (i, mo) in mg.obligations.iter().enumerate() {
-                    if i > 0 {
-                        match_goals += ", ";
-                    }
-                    match_goals += &*format!("{}@{}", &mo.pattern, mo.position);
-                }
-                match_goals += &*format!(
+
+                match_goals += &format!("{}", mg.obligations.iter().format_with(", ", |mo, f| {
+                    f(&format_args!("{}@{}", &mo.pattern, mo.position))
+                }));
+
+                match_goals += &format!(
                     " 👉 {}-\\>{}@{}, {}\\l",
                     &mg.announcement.rule.lhs,
                     &mg.announcement.rule.rhs,
