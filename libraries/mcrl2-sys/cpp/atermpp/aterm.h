@@ -25,7 +25,7 @@ namespace atermpp
 inline void initialise()
 {
   // Enable debugging messages.
-  mcrl2::log::mcrl2_logger::set_reporting_level(mcrl2::log::debug);
+  mcrl2::log::set_reporting_level(mcrl2::log::debug);
 }
 
 inline void collect_garbage()
