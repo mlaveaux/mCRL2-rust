@@ -103,6 +103,6 @@ mod tests {
 
         let t = term_pool.from_string("s(s(a))").unwrap();
 
-        let expression = to_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
+        let _expression = to_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
     }
 }
