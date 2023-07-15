@@ -80,11 +80,6 @@ pub(crate) mod ffi {
 
         fn create_data_variable(name: String) -> UniquePtr<aterm>;
 
-        /// For data::application
-        fn is_data_application(term: &aterm) -> bool;
-
-        fn create_data_application(head: &aterm, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
-
         /// For data::function_symbol        
         fn is_data_function_symbol(term: &aterm) -> bool;
 

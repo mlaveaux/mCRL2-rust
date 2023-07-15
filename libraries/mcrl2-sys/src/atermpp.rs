@@ -9,7 +9,7 @@ use cxx::{Exception, UniquePtr};
 use crate::atermpp_ffi::ffi;
 use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
 
-/// A Symbol now references to an aterm function symbol, which has a name and an arity.
+/// A Symbol references to an aterm function symbol, which has a name and an arity.
 pub struct Symbol {
     function: UniquePtr<ffi::function_symbol>,
 }
@@ -93,7 +93,9 @@ pub struct ATerm {
 
 impl ATerm {
     pub fn from(term: UniquePtr<ffi::aterm>) -> Self {
-        ATerm { term }
+        ATerm { 
+            term,
+        }
     }
 
     /// Get access to the underlying term
@@ -109,6 +111,7 @@ impl ATerm {
             "arg({index}) is not defined for term {:?}",
             self
         );
+        
         ATerm {
             term: ffi::get_term_argument(&self.term, index),
         }
@@ -159,7 +162,10 @@ impl ATerm {
 
     pub fn is_data_application(&self) -> bool {
         self.require_valid();
-        ffi::is_data_application(&self.term)
+        // Check DataAppl is expensive, so it derived from whether the first
+        // argument is a TermFunctionSymbo. This is also done in the upstream
+        // code.
+        self.get_head_symbol().arity() > 0 && self.arg(0).is_data_function_symbol()
     }
 
     pub fn is_data_function_symbol(&self) -> bool {
@@ -273,17 +279,22 @@ impl From<DataFunctionSymbol> for ATerm {
     }
 }
 
-/// This is a standin for the global term pool, with the idea to eventually replace it by a proper implementation.
+/// This is the thread local term pool.
 pub struct TermPool {
     arguments: Vec<ffi::aterm_ref>,
+    data_appl: Vec<Symbol>, // Function symbols to represent 'DataAppl' with any number of arguments.
 }
+
 
 impl TermPool {
     pub fn new() -> TermPool {
         // Initialise the C++ aterm library.
         ffi::initialise();
 
-        TermPool { arguments: vec![] }
+        TermPool { 
+            arguments: vec![], 
+            data_appl: vec![]
+        }
     }
 
     /// Trigger a garbage collection
@@ -306,7 +317,7 @@ impl TermPool {
         debug_assert_eq!(
             symbol.arity(),
             arguments.len(),
-            "Not enough arguments provided to create term"
+            "Number of arguments does not match arity"
         );
 
         ATerm {
@@ -325,11 +336,21 @@ impl TermPool {
         head: &ATerm,
         arguments: &[ATerm],
     ) -> DataApplication {
+        // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
+        while self.data_appl.len() < arguments.len() + 2 {
+            let symbol = self.create_symbol("DataAppl", self.data_appl.len() + 1);
+            self.data_appl.push(symbol);
+        }
+
+        let symbol = &self.data_appl[arguments.len()].clone();
+        let term = self.create2(
+            symbol,
+            head, 
+            arguments,
+        );
+
         DataApplication {
-            term: ATerm::from(ffi::create_data_application(
-                head.get(),
-                self.tmp_arguments(arguments),
-            )),
+            term,
         }
     }
 
@@ -344,6 +365,21 @@ impl TermPool {
             term: ATerm::from(ffi::create_data_function_symbol(String::from(name))),
         }
     }
+    
+    /// Creates an [ATerm] with the given symbol, first and other arguments.
+    fn create2(&mut self, symbol: &Symbol, head: &ATerm, arguments: &[ATerm]) -> ATerm {
+        let arguments = self.tmp_arguments2(head, arguments);
+
+        debug_assert_eq!(
+            symbol.arity(),
+            arguments.len(),
+            "Number of arguments does not match arity"
+        );
+
+        ATerm {
+            term: ffi::create_aterm(&symbol.function, arguments),
+        }
+    }
 
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
     fn tmp_arguments(&mut self, arguments: &[ATerm]) -> &[ffi::aterm_ref] {
@@ -352,7 +388,6 @@ impl TermPool {
             self.arguments.push(ffi::aterm_ref { index: 0 });
         }
 
-        // TODO: This part of the ffi is very slow and should be improved.
         self.arguments.clear();
         for arg in arguments {
             self.arguments.push(ffi::aterm_ref {
@@ -362,6 +397,27 @@ impl TermPool {
 
         &self.arguments
     }
+
+    /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
+    fn tmp_arguments2(&mut self, head: &ATerm, arguments: &[ATerm]) -> &[ffi::aterm_ref] {
+        // Make the temp vector sufficient length.
+        while self.arguments.len() < arguments.len() + 1{
+            self.arguments.push(ffi::aterm_ref { index: 0 });
+        }
+
+        self.arguments.clear();
+        self.arguments.push(ffi::aterm_ref {
+            index: ffi::aterm_pointer(head.get())
+        });
+        for arg in arguments {
+            self.arguments.push(ffi::aterm_ref {
+                index: ffi::aterm_pointer(arg.get()),
+            });
+        }
+
+        &self.arguments
+    }
+
 }
 
 /// An iterator over all subterms of the given [ATerm].
@@ -642,10 +698,11 @@ mod tests {
         assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap());
     }
 
+    #[test]
     fn test_thread_aterm_pool() {
         let mut threads = vec![];
 
-        for _ in 0..100 {
+        for _ in 0..300 {
             threads.push(thread::spawn(|| {
                 let mut tp = TermPool::new();
 
