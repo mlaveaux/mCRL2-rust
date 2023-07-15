@@ -56,6 +56,21 @@ impl RewriteSpecificationSyntax {
             constructors,
         }
     }
+
+    pub fn merge(&mut self, include_spec: &RewriteSpecificationSyntax) {
+        self
+            .rewrite_rules
+            .extend_from_slice(&include_spec.rewrite_rules);
+        self
+            .constructors
+            .extend_from_slice(&include_spec.constructors);
+
+        for s in &include_spec.variables {
+            if !self.variables.contains(s) {
+                self.variables.push(s.clone());
+            }
+        }
+    }
 }
 
 impl fmt::Display for RewriteSpecificationSyntax {

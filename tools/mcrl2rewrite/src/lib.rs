@@ -1,15 +1,21 @@
-use std::error::Error;
+use std::cell::RefCell;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
+use std::rc::Rc;
+use std::time::Instant;
 
+use ahash::AHashSet;
+use anyhow::Result as AnyResult;
+use mcrl2_sys::atermpp::TermPool;
 use mcrl2_sys::data::{DataSpecification, JittyRewriter};
-//use sabre::set_automaton::SetAutomaton;
+use rec_tests::load_REC_from_file;
+use sabre::utilities::to_data_expression;
+use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
 
 /// Performs state space exploration of the given model and returns the number of states.
-pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
-{
+pub fn rewrite_data_spec(filename_dataspec: &str, filename_expressions: &str) -> AnyResult<()> {
     // Read the data specification
-    let data_spec_text = fs::read_to_string(&config.filename_dataspec).expect("failed to read file");
+    let data_spec_text = fs::read_to_string(&filename_dataspec)?;
     let data_spec = DataSpecification::new(&data_spec_text);
 
     // Create a jitty rewriter;
@@ -20,41 +26,38 @@ pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
     //let automaton = SetAutomaton::new(&data_spec);
 
     // Open the file in read-only mode.
-    let file = File::open(&config.filename_expressions).unwrap(); 
+    let file = File::open(&filename_expressions).unwrap();
 
     // Read the file line by line, and return an iterator of the lines of the file.
-    for line in BufReader::new(file).lines().map(|x| x.unwrap() )
-    {
+    for line in BufReader::new(file).lines().map(|x| x.unwrap()) {
         println!("{}", &line);
         println!("{}", rewriter.rewrite(&data_spec.parse(&line)));
     }
-    
-    Ok(0)
+
+    Ok(())
 }
 
-pub struct Config
-{
-  pub filename_dataspec: String,
-  pub filename_expressions: String
+pub fn rewrite_rec(specification: &str, text: &str) -> AnyResult<()> {
+    let tp = Rc::new(RefCell::new(TermPool::new()));
+
+    let (syntax_spec, _) =
+        load_REC_from_file(&mut tp.borrow_mut(), specification.into());
+    let spec = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
+    let term_str = tp.borrow_mut().from_string(text)?;
+    let term = to_data_expression(&mut tp.borrow_mut(), &term_str, &AHashSet::new());
+
+    let mut sa = SabreRewriter::new(tp.clone(), &spec);
+    let mut inner = InnermostRewriter::new(tp.clone(), &spec);
+
+    let now = Instant::now();
+    inner.rewrite(term.clone());
+    println!("innermost rewrite took {} ms", now.elapsed().as_millis());
+
+    let now = Instant::now();
+    let result = sa.rewrite(term.clone());
+    println!("sabre rewrite took {} ms", now.elapsed().as_millis());
+
+    println!("{}", result);
+    Ok(())
 }
 
-impl Config
-{
-    /// Parses the provided arguments and fills in the configuration.
-    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str>
-    {
-        args.next(); // The first argument is the executable's location.
-
-        let filename_dataspec = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Requires data specification filename")
-        };
-
-        let filename_expressions = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Requires data expressions filename")
-        };
-
-        Ok(Config { filename_dataspec, filename_expressions })
-    }
-}

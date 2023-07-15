@@ -1,21 +1,33 @@
-use std::env;
-use std::process;
+use anyhow::Result as AnyResult;
+use clap::Parser;
 
-use mcrl2rewrite::{run, Config};
+use mcrl2rewrite::{rewrite_data_spec, rewrite_rec};
 
-fn main()
+#[derive(Parser, Debug)]
+#[command(
+    name = "Maurice Laveaux",
+    about = "A command line rewriting tool",
+    long_about = "Can be used to parse and rewrite arbitrary mCRL2 data specifications and REC files"
+)]
+pub struct Cli {
+    #[arg(long)]
+    rec: bool,
+
+    #[arg(value_name = "FILE")]
+    specification: String,
+
+    #[arg()]
+    term: String,
+}
+
+fn main() -> AnyResult<()>
 {
-    let config = Config::new(env::args()).unwrap_or_else(
-        |err| 
-        { 
-            eprintln!("Problem parsing input: {}", err); 
-            process::exit(-1); 
-        }
-    );
+    let cli = Cli::parse();
 
-    if let Err(err) = run(&config)
-    {
-        eprintln!("Problem parsing input: {}", err); 
-        process::exit(-1);
-    }   
+    if cli.rec { 
+        rewrite_rec(&cli.specification, &cli.term)     
+    } else {
+        rewrite_data_spec(&cli.specification, "") 
+    }
+
 }

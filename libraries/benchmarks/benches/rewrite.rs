@@ -64,14 +64,6 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion) {
             include_str!("../../rec-tests/tests/REC_files/factorial.rec"),
         ],
         "factorial9",
-    ), (vec![
-            include_str!("../../rec-tests/tests/REC_files/closure.rec"),
-        ],
-        "closure",
-    ), (vec![
-            include_str!("../../rec-tests/tests/REC_files/evalexpr.rec"),
-        ],
-        "evalexpr"
     )];
 
     for (input, name) in cases {

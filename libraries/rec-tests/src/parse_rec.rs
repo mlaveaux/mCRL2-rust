@@ -90,7 +90,7 @@ fn parse_REC(
 }
 
 /// Load a REC specification from a specified file.
-#[allow(non_snake_case, dead_code)]
+#[allow(non_snake_case)]
 pub fn load_REC_from_file(tp: &mut TermPool, file: PathBuf) -> (RewriteSpecificationSyntax, Vec<ATerm>) {
     let contents = fs::read_to_string(file.clone()).unwrap();
     parse_REC(tp, &contents, Some(file))
@@ -107,20 +107,8 @@ pub fn load_REC_from_strings(
 
     for spec in specs {
         let (include_spec, include_terms) = parse_REC(tp, spec, None);
-
+        rewrite_spec.merge(&include_spec);
         terms.extend_from_slice(&include_terms);
-        rewrite_spec
-            .rewrite_rules
-            .extend_from_slice(&include_spec.rewrite_rules);
-        rewrite_spec
-            .constructors
-            .extend_from_slice(&include_spec.constructors);
-
-        for s in include_spec.variables {
-            if !rewrite_spec.variables.contains(&s) {
-                rewrite_spec.variables.push(s);
-            }
-        }
     }
 
     (rewrite_spec, terms)
