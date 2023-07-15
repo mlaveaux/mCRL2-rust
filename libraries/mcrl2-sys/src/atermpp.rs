@@ -479,6 +479,7 @@ impl<I> TermBuilder<I> {
     pub fn evaluate<F>(&mut self, tp: &mut TermPool, input: I, function: F) -> AnyResult<ATerm>
         where F: Fn(&mut TermPool, &mut TermArgs<I>, I) -> AnyResult<Symbol>  {
 
+        self.terms.push(ATerm::default());
         self.configs.push(Config::Apply(input, 0));
         
         while let Some(config) = self.configs.pop() {
@@ -506,26 +507,10 @@ impl<I> TermBuilder<I> {
                 Config::Construct(symbol, result) => {
                     let arguments = &self.terms[self.terms.len() - symbol.arity()..];                    
 
-                    let t = tp.create(&symbol, arguments);
+                    self.terms[result] = tp.create(&symbol, arguments);
 
                     // Remove elements from the stack.
                     self.terms.drain(self.terms.len() - symbol.arity()..);
-
-                    match result.cmp(&self.terms.len()) {
-                        Ordering::Equal => {
-                            // Special case where the result is placed on the first argument.
-                            self.terms.push(ATerm::default());
-                        },
-                        Ordering::Greater => {                            
-                            panic!("The result can only replace the first argument.")
-                        },
-                        Ordering::Less => {
-                            // This is acceptable.
-                        }
-                    }
-
-
-                    self.terms[result] = t;
                 }
             }
         }
