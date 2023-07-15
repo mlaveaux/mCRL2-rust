@@ -1,5 +1,6 @@
 use std::{cell::RefCell, fmt, rc::Rc};
 
+use itertools::Itertools;
 use mcrl2_sys::{
     atermpp::{ATerm, TermPool},
     data::DataFunctionSymbol,
@@ -97,19 +98,19 @@ impl InnermostRewriter {
         let mut stack = InnerStack::default();
         stack.terms.push(ATerm::default());
         stack.add_rewrite(term, 0);
+        
+        // println!("{}", stack);
 
         while let Some(config) = stack.configs.pop() {
-                //println!("{}", stack);
-
             match config {
                 Config::Rewrite(result) => {
                     let term = stack.terms.pop().unwrap();
 
                     let symbol = get_data_function_symbol(&term);
                     let arguments = get_data_arguments(&term);
-                    
+
                     // For all the argument we reserve space on the stack.
-                    let top_of_stack = stack.terms.len(); 
+                    let top_of_stack = stack.terms.len();
                     for _ in 0..arguments.len() {
                         stack.terms.push(ATerm::default());
                     }
@@ -126,8 +127,7 @@ impl InnermostRewriter {
                     let term: ATerm = if arguments.is_empty() {
                         symbol.into()
                     } else {
-                        tp.create_data_application(&symbol.into(), arguments)
-                            .into()
+                        tp.create_data_application(&symbol.into(), arguments).into()
                     };
 
                     // Remove the arguments from the stack.
@@ -147,7 +147,7 @@ impl InnermostRewriter {
                                 match config {
                                     Config::Construct(symbol, arity, offset) => {
                                         if first {
-                                            // The first result must be placed on the original result.
+                                            // The first result must be placed on the original result index.
                                             stack.add_result(symbol.clone(), *arity, index);
                                         } else {
                                             // Otherwise, we put it on the end of the stack.
@@ -165,10 +165,28 @@ impl InnermostRewriter {
                                 first = false;
                             }
 
-                            for (position, index) in &ema.positions {
-                                // Add the positions to the stack.
-                                stack.terms[top_of_stack + index - 1] =
-                                    get_position(&term, position);
+                            /*
+                            println!(
+                                "{}, {}, {}",
+                                ema.stack_size,
+                                ema.variables.iter().format_with(", ", |element, f| {
+                                    f(&format_args!("{} -> {}", element.0, element.1))
+                                }),
+                                ema.innermost_stack.iter().format("\n")
+                            );
+                            */
+
+                            debug_assert!(ema.stack_size != 1 || ema.variables.len() <= 1, "There can only be a single variable in the right hand side");
+                            if ema.stack_size == 1 && ema.variables.len() == 1{
+                                // This is a special case where we place the result on the correct position immediately.
+                                // The right hand side is only a variable
+                                stack.terms[index] = get_position(&term, &ema.variables[0].0);
+                            } else {
+                                for (position, index) in &ema.variables {
+                                    // Add the positions to the stack.
+                                    stack.terms[top_of_stack + index - 1] =
+                                        get_position(&term, position);
+                                }
                             }
 
                             stats.rewrite_steps += 1;
@@ -181,9 +199,27 @@ impl InnermostRewriter {
                     }
                 }
             }
+
+            /*/
+            println!("{}", stack);
+
+            for (index, term) in stack.terms.iter().enumerate() {
+                if term.is_default() {
+                    debug_assert!(
+                        stack.configs.iter().any(|x| {
+                            match x {
+                                Config::Construct(_, _, result) => index == *result,
+                                Config::Rewrite(result) => index == *result,
+                            }
+                        }),
+                        "This default term {index} is not a result of any operation."
+                    );
+                }
+            }
+            */
         }
 
-        assert!(
+        debug_assert!(
             stack.terms.len() == 1,
             "Expect exactly one term on the result stack"
         );
@@ -269,7 +305,7 @@ mod tests {
     use mcrl2_sys::atermpp::{random_term, TermPool};
 
     use crate::{
-        InnermostRewriter, RewriteSpecification, utilities::to_data_expression, RewriteEngine,
+        utilities::to_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,
     };
 
     #[test]
@@ -290,6 +326,10 @@ mod tests {
         );
         let term = to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new());
 
-        assert_eq!(inner.rewrite(term.clone()), term, "Should be in normal form for no rewrite rules");
+        assert_eq!(
+            inner.rewrite(term.clone()),
+            term,
+            "Should be in normal form for no rewrite rules"
+        );
     }
 }

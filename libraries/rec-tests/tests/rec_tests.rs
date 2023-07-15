@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests
 {
+    use std::time::Instant;
     use std::{cell::RefCell, rc::Rc};
     use test_case::test_case;
 
@@ -8,18 +9,18 @@ mod tests
     use mcrl2_sys::atermpp::{ATerm, TermPool};
     use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
     use sabre::utilities::to_data_expression;
-    use rec_tests::{load_REC_from_strings, from_string};
+    use rec_tests::load_REC_from_strings;
 
-    // #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
-    // #[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
-    // #[test_case(vec![include_str!("REC_files/benchsym10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym10.txt") ; "benchsym10")]
+    #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
+    //#[test_case(vec![include_str!("REC_files/benchexpr20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr20.txt") ; "benchexpr20")]
+    #[test_case(vec![include_str!("REC_files/benchsym10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym10.txt") ; "benchsym10")]
     // #[test_case(vec![include_str!("REC_files/benchsym20.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym20.txt") ; "benchsym20")]
     // #[test_case(vec![include_str!("REC_files/bubblesort10.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort10.txt") ; "bubblesort10")]
     // #[test_case(vec![include_str!("REC_files/bubblesort20.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort20.txt") ; "bubblesort20")]
     // #[test_case(vec![include_str!("REC_files/bubblesort100.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort100.txt") ; "bubblesort100")]
-    // #[test_case(vec![include_str!("REC_files/calls.rec")], include_str!("validated_results/result_calls.txt") ; "calls")]
-    // #[test_case(vec![include_str!("REC_files/check1.rec")], include_str!("validated_results/result_check1.txt") ; "check1")]
-    // #[test_case(vec![include_str!("REC_files/check2.rec")], include_str!("validated_results/result_check2.txt") ; "check2")]
+    #[test_case(vec![include_str!("REC_files/calls.rec")], include_str!("validated_results/result_calls.txt") ; "calls")]
+    #[test_case(vec![include_str!("REC_files/check1.rec")], include_str!("validated_results/result_check1.txt") ; "check1")]
+    #[test_case(vec![include_str!("REC_files/check2.rec")], include_str!("validated_results/result_check2.txt") ; "check2")]
     // #[test_case(vec![include_str!("REC_files/closure.rec")], include_str!("validated_results/result_closure.txt") ; "closure")]
     // #[test_case(vec![include_str!("REC_files/confluence.rec")], include_str!("validated_results/result_confluence.txt") ; "confluence")]
     // #[test_case(vec![include_str!("REC_files/dart.rec")], include_str!("validated_results/result_dart.txt") ; "dart")]
@@ -31,13 +32,13 @@ mod tests
     // #[test_case(vec![include_str!("REC_files/factorial7.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial7.txt") ; "factorial7")]
     // #[test_case(vec![include_str!("REC_files/factorial8.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial8.txt") ; "factorial8")]
     // #[test_case(vec![include_str!("REC_files/factorial9.rec"), include_str!("REC_files/factorial.rec")], include_str!("validated_results/result_factorial9.txt") ; "factorial9")]
-    // #[test_case(vec![include_str!("REC_files/fibonacci05.rec"), include_str!("REC_files/fibonacci.rec")], include_str!("validated_results/result_fibonacci05.txt") ; "fibonacci05")]
+    #[test_case(vec![include_str!("REC_files/fibonacci05.rec"), include_str!("REC_files/fibonacci.rec")], include_str!("validated_results/result_fibonacci05.txt") ; "fibonacci05")]
     // #[test_case(vec![include_str!("REC_files/fibonacci18.rec"), include_str!("REC_files/fibonacci.rec")], include_str!("validated_results/result_fibonacci18.txt") ; "fibonacci18")]
     // #[test_case(vec![include_str!("REC_files/fibonacci19.rec"), include_str!("REC_files/fibonacci.rec")], include_str!("validated_results/result_fibonacci19.txt") ; "fibonacci19")]
     // #[test_case(vec![include_str!("REC_files/fibonacci20.rec"), include_str!("REC_files/fibonacci.rec")], include_str!("validated_results/result_fibonacci20.txt") ; "fibonacci20")]
     // #[test_case(vec![include_str!("REC_files/fibonacci21.rec"), include_str!("REC_files/fibonacci.rec")], include_str!("validated_results/result_fibonacci21.txt") ; "fibonacci21")]
-    // #[test_case(vec![include_str!("REC_files/garbagecollection.rec")], include_str!("validated_results/result_garbagecollection.txt") ; "garbagecollection")]
-    // #[test_case(vec![include_str!("REC_files/hanoi4.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi4.txt") ; "hanoi4")]
+    #[test_case(vec![include_str!("REC_files/garbagecollection.rec")], include_str!("validated_results/result_garbagecollection.txt") ; "garbagecollection")]
+    #[test_case(vec![include_str!("REC_files/hanoi4.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi4.txt") ; "hanoi4")]
     // #[test_case(vec![include_str!("REC_files/hanoi8.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi8.txt") ; "hanoi8")]
     // #[test_case(vec![include_str!("REC_files/hanoi12.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi12.txt") ; "hanoi12")]
     // #[test_case(vec![include_str!("REC_files/logic3.rec")], include_str!("validated_results/result_logic3.txt") ; "logic3")]
@@ -83,11 +84,18 @@ mod tests
             let expected_term = tp.borrow_mut().from_string(expected.next().unwrap()).unwrap();
             let expected_result = to_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
 
+            let now = Instant::now();
+
             let result = inner.rewrite(term.clone());
             assert_eq!(result, expected_result, "The inner rewrite result doesn't match the expected result");
 
+            println!("innermost rewrite took {} ms", now.elapsed().as_millis());
+            let now = Instant::now();
+
             let result = sa.rewrite(term.clone());
             assert_eq!(result, expected_result, "The sabre rewrite result doesn't match the expected result");
+            
+            println!("sabre rewrite took {} ms", now.elapsed().as_millis());
         }
     }
 }

@@ -1,6 +1,6 @@
-Result: nullary_constructor
-Result: unary_constructor(nullary_constructor)
-Result: nary_constructor(nullary_constructor,nullary_constructor,nullary_constructor)
-Result: nullary_constructor
-Result: unary_constructor(nullary_constructor)
-Result: nary_constructor(nullary_constructor,nullary_constructor,nullary_constructor)
+nullary_constructor
+unary_constructor(nullary_constructor)
+nary_constructor(nullary_constructor,nullary_constructor,nullary_constructor)
+nullary_constructor
+unary_constructor(nullary_constructor)
+nary_constructor(nullary_constructor,nullary_constructor,nullary_constructor)
