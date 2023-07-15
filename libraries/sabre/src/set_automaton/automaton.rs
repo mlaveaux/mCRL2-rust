@@ -377,7 +377,7 @@ impl State {
         };
 
         for mg in &self.match_goals {
-            assert!(!mg.obligations.is_empty(), "The obligations should never be empty, should be completed then");
+            debug_assert!(!mg.obligations.is_empty(), "The obligations should never be empty, should be completed then");
 
             // Completed match goals
             if mg.obligations.len() == 1

@@ -23,7 +23,7 @@ Tests can be performed using `cargo test`. To show print statements during tests
 
 # Benchmarks
 
-For micro benchmarks we use [Criterion.rs](https://crates.io/crates/criterion) and these benchmarks can be executed using `cargo bench`. 
+For micro benchmarks we use [Criterion.rs](https://crates.io/crates/criterion) and these benchmarks can be executed using `cargo bench`. Additionally, we can also install `cargo-criterion` and run `cargo criterion` instead to keep track of more information, such as changes over time.
 
 # Address Sanitizer
 

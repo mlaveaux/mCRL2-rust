@@ -68,7 +68,7 @@ where
 /// Converts an [ATerm] to an untyped data expression.
 pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
     apply(tp, t, &|tp, arg| {
-        assert!(!t.is_int(), "Term cannot be an aterm_int, although not sure why");
+        debug_assert!(!t.is_int(), "Term cannot be an aterm_int, although not sure why");
 
         if variables.contains(arg.get_head_symbol().name()) {
             // Convert a constant variable, for example 'x', into an untyped variable.

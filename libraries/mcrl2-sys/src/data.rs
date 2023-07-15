@@ -70,7 +70,7 @@ impl DataVariable {
 
 impl From<ATerm> for DataVariable {
     fn from(value: ATerm) -> Self {
-        assert!(value.is_data_variable(), "Term {value} is not a data variable");
+        debug_assert!(value.is_data_variable(), "Term {value} is not a data variable");
         DataVariable { term: value }
     }
 }
@@ -88,7 +88,7 @@ pub struct DataApplication {
 
 impl From<ATerm> for DataApplication {
     fn from(value: ATerm) -> Self {
-        assert!(value.is_data_application(), "Term {value} is not a data application");
+        debug_assert!(value.is_data_application(), "Term {value} is not a data application");
         DataApplication { term: value }
     }
 }
@@ -132,14 +132,14 @@ impl DataFunctionSymbol
     
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
-        assert!(self.term.is_data_function_symbol(), "term {} is not a data function symbol", self.term);
+        debug_assert!(self.term.is_data_function_symbol(), "term {} is not a data function symbol", self.term);
         get_data_function_symbol_index(&self.term.term)
     }
 }
 
 impl From<ATerm> for DataFunctionSymbol {
     fn from(value: ATerm) -> Self {
-        assert!(value.is_data_function_symbol(), "Term {value} is not a data function symbol");
+        debug_assert!(value.is_data_function_symbol(), "Term {value} is not a data function symbol");
         DataFunctionSymbol { term: value }
     }
 }

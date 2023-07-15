@@ -253,7 +253,7 @@ fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> AnyResult<ATerm> {
 
 // /Extracts data from parsed rewrite rule
 fn parse_rewrite_rule(tp: &mut TermPool, pair: Pair<Rule>) -> RewriteRuleSyntax {
-    assert!(pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule);
+    debug_assert!(pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule);
 
     let mut inner = match pair.as_rule() {
         Rule::single_rewrite_rule => pair.into_inner().next().unwrap().into_inner(),
