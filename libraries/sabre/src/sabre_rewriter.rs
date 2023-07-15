@@ -8,10 +8,10 @@ use mcrl2_sys::{
 use crate::{
     rewrite_specification::RewriteSpecification,
     set_automaton::{
-        get_data_function_symbol, EnhancedMatchAnnouncement,
-        SetAutomaton, check_equivalence_classes,
+        check_equivalence_classes, get_data_function_symbol, EnhancedMatchAnnouncement,
+        SetAutomaton,
     },
-    utilities::{Configuration, ConfigurationStack, SideInfo, SideInfoType, get_position},
+    utilities::{get_position, Configuration, ConfigurationStack, SideInfo, SideInfoType},
 };
 
 /// A shared trait for all the rewriters
@@ -112,18 +112,21 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let function_symbol: DataFunctionSymbol =
-                                get_data_function_symbol(&get_position(
-                                    &leaf.subterm,
-                                    &automaton.states[leaf.state].label,
-                                ));
+                            let function_symbol: DataFunctionSymbol = get_data_function_symbol(
+                                &get_position(&leaf.subterm, &automaton.states[leaf.state].label),
+                            );
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
-                            if let Some(tr) = &automaton.states[leaf.state].transitions.get(function_symbol.operation_id()) {
+                            if let Some(tr) = &automaton.states[leaf.state]
+                                .transitions
+                                .get(function_symbol.operation_id())
+                            {
                                 // Loop over the match announcements of the transition
                                 for ema in &tr.announcements {
-                                    if ema.conditions.is_empty() && ema.equivalence_classes.is_empty() {
+                                    if ema.conditions.is_empty()
+                                        && ema.equivalence_classes.is_empty()
+                                    {
                                         if ema.is_duplicating {
                                             // We do not want to apply duplicating rules straight away
                                             cs.side_branch_stack.push(SideInfo {
@@ -189,7 +192,10 @@ impl SabreRewriter {
                                 }
                                 SideInfoType::EquivalenceAndConditionCheck(ema) => {
                                     // Apply the delayed rewrite rule if the conditions hold
-                                    if SabreRewriter::conditions_hold(
+                                    if check_equivalence_classes(
+                                        &leaf.subterm,
+                                        &ema.equivalence_classes,
+                                    ) && SabreRewriter::conditions_hold(
                                         tp, automaton, ema, leaf, stats,
                                     ) {
                                         SabreRewriter::apply_rewrite_rule(
@@ -229,10 +235,9 @@ impl SabreRewriter {
         stats.rewrite_steps += 1;
 
         // Computes the new subterm of the configuration
-        let new_subterm = ema.semi_compressed_rhs.evaluate(
-            &get_position(&leaf_subterm, &ema.announcement.position),
-            tp,
-        );
+        let new_subterm = ema
+            .semi_compressed_rhs
+            .evaluate(&get_position(&leaf_subterm, &ema.announcement.position), tp);
 
         // println!(
         //     "rewrote {} to {} using rule {}",
@@ -253,30 +258,27 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let rhs = c.semi_compressed_rhs.evaluate(
-                &get_position(&leaf.subterm, &ema.announcement.position),
-                tp,
-            );
-            let lhs = c.semi_compressed_lhs.evaluate(
-                &get_position(&leaf.subterm, &ema.announcement.position),
-                tp,
-            );
+            let subterm = &get_position(&leaf.subterm, &ema.announcement.position);
 
-            if lhs != rhs || !c.equality {
+            let rhs = c.semi_compressed_rhs.evaluate(subterm, tp);
+            let lhs = c.semi_compressed_lhs.evaluate(subterm, tp);
+
+            // Equality => lhs == rhs.
+            if !c.equality || lhs != rhs {
                 let rhs_normal =
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs.clone(), stats);
                 let lhs_normal =
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs.clone(), stats);
 
-                if lhs_normal != rhs_normal || !c.equality {
-                    return check_equivalence_classes(
-                        &leaf.subterm,
-                        &ema.equivalence_classes,
-                    );
+                // If lhs != rhs && !equality OR equality && lhs == rhs.
+                if (!c.equality && lhs_normal == rhs_normal)
+                    || (c.equality && lhs_normal == rhs_normal)
+                {
+                    return false;
                 }
             }
         }
 
-        false
+        true
     }
 }
