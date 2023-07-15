@@ -70,12 +70,12 @@ mod tests
             assert_eq!(result, expected_result, "The inner rewrite result doesn't match the expected result");
 
             println!("innermost rewrite took {} ms", now.elapsed().as_millis());
-            /*let now = Instant::now();
+            let now = Instant::now();
 
             let result = sa.rewrite(term.clone());
             assert_eq!(result, expected_result, "The sabre rewrite result doesn't match the expected result");
             
-            println!("sabre rewrite took {} ms", now.elapsed().as_millis());*/
+            println!("sabre rewrite took {} ms", now.elapsed().as_millis());
         }
     }
 

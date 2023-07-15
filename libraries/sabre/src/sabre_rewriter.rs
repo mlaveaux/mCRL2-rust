@@ -272,7 +272,7 @@ impl SabreRewriter {
 
                 // If lhs != rhs && !equality OR equality && lhs == rhs.
                 if (!c.equality && lhs_normal == rhs_normal)
-                    || (c.equality && lhs_normal == rhs_normal)
+                    || (c.equality && lhs_normal != rhs_normal)
                 {
                     return false;
                 }
