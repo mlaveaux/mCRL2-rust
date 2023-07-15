@@ -103,7 +103,7 @@ fn coverage() -> AnyResult<()> {
     let mut prof_directory = base_directory.clone();
     prof_directory.push("cargo-test-%p-%m.profraw");
 
-    cmd!("cargo", "test", "--", "--test-threads=1")
+    cmd!("cargo", "test")
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", prof_directory)
@@ -165,9 +165,6 @@ fn sanitizer(cargo_arguments: Vec<String>) -> AnyResult<()> {
     ];
 
     add_target_flag(&mut arguments);
-    arguments.push("--".to_string());
-    arguments.push("--test-threads=1".to_string());
-
     arguments.extend(cargo_arguments.into_iter());
 
     cmd("cargo", arguments)

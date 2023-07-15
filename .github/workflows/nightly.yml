@@ -28,7 +28,7 @@ jobs:
         submodules: true
 
     - name: Run tests
-      run: cargo test --release -- --test-threads=1
+      run: cargo test --release
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
