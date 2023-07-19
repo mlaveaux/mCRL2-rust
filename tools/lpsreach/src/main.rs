@@ -1,21 +1,14 @@
-use std::env;
-use std::process;
+use std::{process::ExitCode};
 
+use anyhow::Result as AnyResult;
+use clap::Parser;
 use reach::{run, Config};
 
-fn main()
+fn main() -> AnyResult<ExitCode>
 {
-    let config = Config::new(env::args()).unwrap_or_else(
-        |err| 
-        { 
-            eprintln!("Problem parsing input: {}", err); 
-            process::exit(-1); 
-        }
-    );
+    let config = Config::parse();
 
-    if let Err(err) = run(&config)
-    {
-        eprintln!("Problem parsing input: {}", err); 
-        process::exit(-1);
-    }
+    run(&config);
+
+    Ok(0.into())
 }

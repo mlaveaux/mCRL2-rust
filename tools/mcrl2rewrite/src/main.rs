@@ -29,5 +29,4 @@ fn main() -> AnyResult<()>
     } else {
         rewrite_data_spec(&cli.specification, "") 
     }
-
 }

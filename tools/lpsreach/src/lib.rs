@@ -4,6 +4,8 @@ mod sylvan_io;
 
 use std::error::Error;
 
+use clap::Parser;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "Maurice Laveaux",

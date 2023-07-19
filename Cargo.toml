@@ -8,13 +8,6 @@ debug = true
 [workspace]
 resolver = "2"
 members = [
-    "libraries/ldd-library/benchmarks", 
-    "libraries/ldd-library/ldd",
     "libraries/*",
     "tools/*"
-]
-
-# Added these crates separatedly since the ldd-library has it's own workspace
-exclude = [
-    "libraries/ldd-library"
 ]

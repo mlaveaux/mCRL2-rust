@@ -9,6 +9,7 @@ edition = "2021"
 ahash = "0.8"
 mcrl2-sys = { path="../mcrl2-sys" }
 rec-tests = { path="../rec-tests" }
+ldd = { path="../ldd" }
 rand = "0.8"
 sabre = { path="../sabre" }
 criterion = { version = "0.5", features = ["html_reports"] }

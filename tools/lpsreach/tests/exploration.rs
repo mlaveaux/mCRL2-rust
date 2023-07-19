@@ -5,12 +5,9 @@ use reach::run;
 #[test]
 fn test_anderson()
 {
-    let args = [
-        String::from("path"),
-        String::from("models/anderson.4.ldd"),
-    ];
-
-    let config = Config::new(args.iter().map(|s| s.to_string())).unwrap();
+    let config = Config {
+        filename: String::from("models/anderson.4.ldd")
+    };
 
     if let Ok(result) = run(&config)
     {
