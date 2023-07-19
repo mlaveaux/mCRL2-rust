@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 mcrl2-sys = { path="../../libraries/mcrl2-sys" }
-ahash = "0.8.3"
-itertools = "0.11.0"
-rand = "0.8.4"
-rayon = "1.5.1"
-rustc-hash = "1.1.0"
-smallvec = "1.10.0"
+ahash = "0.8"
+itertools = "0.11"
+rand = "0.8"
+rayon = "1.5"
+rustc-hash = "1.1"
+smallvec = "1.10"

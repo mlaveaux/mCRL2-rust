@@ -1,10 +1,10 @@
 [package]
-name = "lpsreach"
+name = "reach"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mcrl2-sys = { path="../../libraries/mcrl2-sys" }
-ldd = { path="../../libraries/ldd-library/ldd" }
+clap = { version = "4.0", features = ["derive"] }
+ldd = { path="../../libraries/ldd" }
