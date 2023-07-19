@@ -8,6 +8,5 @@ mcrl2-sys = { path="../../libraries/mcrl2-sys" }
 ahash = "0.8"
 itertools = "0.11"
 rand = "0.8"
-rayon = "1.5"
 rustc-hash = "1.1"
-smallvec = "1.10"
+smallvec = "1.11"

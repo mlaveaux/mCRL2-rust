@@ -1,19 +1,30 @@
+extern crate ldd;
+
+mod sylvan_io;
+
 use std::error::Error;
 
-use mcrl2_sys::lps::LinearProcessSpecification;
+#[derive(Parser, Debug)]
+#[command(
+    name = "Maurice Laveaux",
+    about = "A command line symbolic reachability tool",
+)]
+pub struct Config
+{
+  #[arg(value_name = "FILE")]
+  pub filename: String,
+}
 
 /// Performs state space exploration of the given model and returns the number of states.
 pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
 {
-    let _linear_process = LinearProcessSpecification::read(&config.filename);
-
-    // Initialize the ldd library.
+    // Initialize the library.
     let mut storage = ldd::Storage::new();
     storage.enable_performance_metrics(true);
 
-    //let (initial_state, transitions) = sylvan_io::load_model(&mut storage, &config.filename)?;
+    let (initial_state, transitions) = sylvan_io::load_model(&mut storage, &config.filename)?;
 
-    /*let mut todo = initial_state.clone();
+    let mut todo = initial_state.clone();
     let mut states = initial_state; // The state space.
     let mut iteration = 0;
 
@@ -36,27 +47,5 @@ pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
     let num_of_states = ldd::len(&mut storage, states.borrow());
     println!("The model has {} states", num_of_states);
 
-    Ok(num_of_states)*/
-    Ok(0)
-}
-
-pub struct Config
-{
-  pub filename: String,
-}
-
-impl Config
-{
-    /// Parses the provided arguments and fills in the configuration.
-    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str>
-    {
-        args.next(); // The first argument is the executable's location.
-
-        let filename = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Requires model filename")
-        };
-
-        Ok(Config { filename })
-    }
+    Ok(num_of_states)
 }

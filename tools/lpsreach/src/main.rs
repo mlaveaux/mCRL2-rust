@@ -1,7 +1,7 @@
 use std::env;
 use std::process;
 
-use lpsreach::{run, Config};
+use reach::{run, Config};
 
 fn main()
 {
@@ -17,5 +17,5 @@ fn main()
     {
         eprintln!("Problem parsing input: {}", err); 
         process::exit(-1);
-    }   
+    }
 }
