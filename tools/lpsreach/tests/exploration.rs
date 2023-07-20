@@ -1,5 +1,5 @@
-use reach::Config;
-use reach::run;
+use lpsreach::Config;
+use lpsreach::run;
 
 // A test for one of the given models.
 #[test]

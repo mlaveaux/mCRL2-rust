@@ -2,7 +2,7 @@ use std::{process::ExitCode};
 
 use anyhow::{Result as AnyResult, Ok};
 use clap::Parser;
-use reach::{run, Config};
+use lpsreach::{run, Config};
 
 fn main() -> AnyResult<ExitCode>
 {
