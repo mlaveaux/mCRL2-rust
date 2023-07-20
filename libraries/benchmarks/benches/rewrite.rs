@@ -31,19 +31,19 @@ pub fn load_case(tp: &mut TermPool, name: &str, max_number_expressions: usize) -
     let expressions: Vec<ATerm> = BufReader::new(file)
         .lines()
         .take(max_number_expressions)
-        .map(|x| data_spec.parse(tp, &x.unwrap()))
+        .map(|x| data_spec.parse(&x.unwrap()))
         .collect();
 
     (data_spec, expressions)
 }
 
 pub fn criterion_benchmark_jitty(c: &mut Criterion) {
-    let mut tp = Rc::new(RefCell::new(TermPool::new()));
+    let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    let (data_spec, expressions) = load_case(&mut tp, "cases/add16", 100);
+    let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), "cases/add16", 100);
 
     // Create a jitty rewriter;
-    let mut jitty_rewriter = JittyRewriter::new(&mut tp.borrow_mut(), &data_spec);
+    let mut jitty_rewriter = JittyRewriter::new(&data_spec);
 
     let _term_pool = Rc::new(RefCell::new(TermPool::new()));
     //let sabre_rewriter = SabreRewriter::new(term_pool, );

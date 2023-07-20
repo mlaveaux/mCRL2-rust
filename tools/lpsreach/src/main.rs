@@ -1,4 +1,4 @@
-use std::{process::ExitCode, any::Any};
+use std::{process::ExitCode};
 
 use anyhow::{Result as AnyResult, Ok};
 use clap::Parser;

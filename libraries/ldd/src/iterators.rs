@@ -108,6 +108,8 @@ impl Iterator for Iter<'_>
 #[cfg(test)]
 mod tests
 {
+    use utilities::test_utility::random_vector_set;
+
     use super::*;    
     use crate::test_utility::*;
     

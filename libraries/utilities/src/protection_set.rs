@@ -37,7 +37,7 @@ impl ProtectionSet
     }
 
     /// Protect the given root node to prevent garbage collection.
-    pub(crate) fn protect(&mut self, root: usize) -> usize
+    pub fn protect(&mut self, root: usize) -> usize
     {
         self.number_of_insertions += 1;
 
@@ -65,7 +65,7 @@ impl ProtectionSet
     
     /// Remove protection from the given LDD node. Note that index must be the
     /// index returned by the [protect] call.
-    fn unprotect(&mut self, index: usize)
+    pub fn unprotect(&mut self, index: usize)
     {
         match self.free {
             Some(next) => {

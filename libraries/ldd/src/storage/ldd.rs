@@ -5,6 +5,8 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+use utilities::protection_set::ProtectionSet;
+
 /// Every Ldd points to its root node in the Storage instance for maximal
 /// sharing. These Ldd instances can only be created from the storage.
 pub struct Ldd

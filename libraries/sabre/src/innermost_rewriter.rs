@@ -1,6 +1,7 @@
 use std::{cell::RefCell, fmt, rc::Rc};
 
-use itertools::Itertools;
+// use itertools::Itertools;
+
 use mcrl2_sys::{
     atermpp::{ATerm, TermPool},
     data::DataFunctionSymbol,

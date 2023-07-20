@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::hash::{Hash, Hasher};
 
+use utilities::protection_set::ProtectionSet;
+
 use crate::operations::height;
 
 mod cache;
@@ -11,7 +13,6 @@ mod ldd;
 pub use self::cache::*;
 use self::indexed_set::IndexedSet;
 pub use self::ldd::{Ldd, LddRef};
-use self::ldd::ProtectionSet;
 
 pub type Value = u32;
 
@@ -315,6 +316,8 @@ fn mark_node(nodes: &mut IndexedSet<Node>, stack: &mut Vec<usize>, root: usize)
 #[cfg(test)]
 mod tests
 {
+    use utilities::test_utility::{random_vector, random_vector_set};
+
     use super::*;
     use crate::test_utility::*;
     use crate::operations::singleton;

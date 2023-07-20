@@ -1,7 +1,5 @@
 use crate::{Ldd, Storage, operations::*, Value, iterators::*};
 
-use std::collections::HashSet;
-
 ///! Functions in this module are only relevant for testing purposes.
 
 /// Returns an LDD containing all elements of the given iterator over vectors.

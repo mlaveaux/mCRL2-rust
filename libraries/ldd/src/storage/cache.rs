@@ -4,7 +4,7 @@ use ahash::RandomState;
 
 use crate::{Storage, Ldd, LddRef};
 
-use super::ldd::ProtectionSet;
+use utilities::protection_set::ProtectionSet;
 
 /// The operation cache can significantly speed up operations by caching
 /// intermediate results. This is necessary since the maximal sharing means that

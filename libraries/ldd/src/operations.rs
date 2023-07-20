@@ -433,6 +433,9 @@ mod tests {
     use crate::test_utility::*;
 
     use rand::Rng;
+    use utilities::test_utility::random_sorted_vector;
+    use utilities::test_utility::random_vector;
+    use utilities::test_utility::random_vector_set;
     use std::collections::HashSet;
     use std::ops::Sub;
 

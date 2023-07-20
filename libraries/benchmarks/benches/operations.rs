@@ -1,6 +1,7 @@
 use criterion::{black_box, Criterion};
 use ldd::*;
 use rand::Rng;
+use utilities::test_utility::{random_vector_set, random_sorted_vector};
 use std::collections::HashSet;
 
 /// Returns an LDD containing all elements of the given iterator over vectors.
