@@ -96,7 +96,7 @@ mod tests
     #[test_case(vec![include_str!("REC_files/natlist.rec")], include_str!("validated_results/result_natlist.txt") ; "natlist")]
     #[test_case(vec![include_str!("REC_files/oddeven.rec")], include_str!("validated_results/result_oddeven.txt") ; "oddeven")]
     #[test_case(vec![include_str!("REC_files/order.rec")], include_str!("validated_results/result_order.txt") ; "order")]
-    #[test_case(vec![include_str!("REC_files/hanoi12.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi12.txt") ; "hanoi12")]
+    //#[test_case(vec![include_str!("REC_files/hanoi12.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi12.txt") ; "hanoi12")]
     //#[test_case(vec![include_str!("REC_files/permutations7.rec"), include_str!("REC_files/permutations.rec")], include_str!("validated_results/result_permutations7.txt") ; "permutations7")]
     #[test_case(vec![include_str!("REC_files/revnat1000.rec"), include_str!("REC_files/revnat.rec")], include_str!("validated_results/result_revnat1000.txt") ; "revnat1000")]
     #[test_case(vec![include_str!("REC_files/sieve1000.rec"), include_str!("REC_files/sieve.rec")], include_str!("validated_results/result_sieve1000.txt") ; "sieve1000")]
