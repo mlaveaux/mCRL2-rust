@@ -62,10 +62,10 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion) {
 
     let cases = vec![(
         vec![
-            include_str!("../../rec-tests/tests/REC_files/factorial9.rec"),
+            include_str!("../../rec-tests/tests/REC_files/factorial7.rec"),
             include_str!("../../rec-tests/tests/REC_files/factorial.rec"),
         ],
-        "factorial9",
+        "factorial7",
     )];
 
     for (input, name) in cases {

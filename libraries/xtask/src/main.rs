@@ -4,15 +4,13 @@
 //!
 
 use anyhow::Result as AnyResult;
-use fs_extra as fsx;
-use glob::glob;
-use std::{
-    env,
-    fs::create_dir_all,
-    path::{Path, PathBuf},
-};
+use std::env;
 
-pub use duct::cmd;
+mod coverage;
+mod sanitizer;
+
+use coverage::coverage;
+use sanitizer::sanitizer;
 
 fn main() {
     if let Err(e) = try_main() {
@@ -34,8 +32,12 @@ fn try_main() -> AnyResult<()> {
     let other_arguments: Vec<String> = args.collect();
 
     match task.as_deref() {
-        Some("coverage") => coverage()?,
-        Some("sanitizer") => sanitizer(other_arguments)?,
+        Some("coverage") => {
+            coverage()?
+        },
+        Some("sanitizer") => {
+            sanitizer(other_arguments)?
+        },
         _ => print_help(),
     }
 
@@ -44,134 +46,4 @@ fn try_main() -> AnyResult<()> {
 
 fn print_help() {
     println!("Unknown task");
-}
-
-///
-/// Remove a set of files given a glob
-///
-/// # Errors
-/// Fails if listing or removal fails
-///
-pub fn clean_files(pattern: &str) -> AnyResult<()> {
-    let files: Result<Vec<PathBuf>, _> = glob(pattern)?.collect();
-    files?.iter().try_for_each(remove_file)
-}
-
-///
-/// Remove a single file
-///
-/// # Errors
-/// Fails if removal fails
-///
-pub fn remove_file<P>(path: P) -> AnyResult<()>
-where
-    P: AsRef<Path>,
-{
-    fsx::file::remove(path).map_err(anyhow::Error::msg)
-}
-
-///
-/// Remove a directory with its contents
-///
-/// # Errors
-/// Fails if removal fails
-///
-pub fn remove_dir<P>(path: P) -> AnyResult<()>
-where
-    P: AsRef<Path>,
-{
-    fsx::dir::remove(path).map_err(anyhow::Error::msg)
-}
-
-///
-/// Run coverage
-///
-/// # Errors
-/// Fails if any command fails
-///
-fn coverage() -> AnyResult<()> {
-    remove_dir("target/coverage")?;
-    create_dir_all("target/coverage")?;
-
-    println!("=== running coverage ===");
-
-    // The path from which cargo is called.
-    let mut base_directory = env::current_dir().unwrap();
-    base_directory.push("target");
-    base_directory.push("coverage");
-
-    let mut prof_directory = base_directory.clone();
-    prof_directory.push("cargo-test-%p-%m.profraw");
-
-    cmd!("cargo", "test")
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Cinstrument-coverage")
-        .env("LLVM_PROFILE_FILE", prof_directory)
-        .run()?;
-    println!("ok.");
-
-    println!("=== generating report ===");
-    let (fmt, file) = ("html", "target/coverage/html");
-    cmd!(
-        "grcov",
-        base_directory,
-        "--binary-path",
-        "./target/debug/deps",
-        "-s",
-        ".",
-        "-t",
-        fmt,
-        "--branch",
-        "--ignore-not-existing",
-        "-o",
-        file,
-    )
-    .run()?;
-    println!("ok.");
-
-    println!("=== cleaning up ===");
-    clean_files("**/*.profraw")?;
-    println!("ok.");
-
-    println!("report location: {file}");
-
-    Ok(())
-}
-
-#[cfg(not(unix))]
-fn add_target_flag(_arguments: &mut Vec<String>) {}
-
-#[cfg(target_os = "linux")]
-fn add_target_flag(arguments: &mut Vec<String>) {
-    arguments.push("--target".to_string());
-    arguments.push( "x86_64-unknown-linux-gnu".to_string());
-}
-
-#[cfg(target_os = "macos")]
-fn add_target_flag(arguments: &mut Vec<String>) {
-    arguments.push("--target".to_string());
-    arguments.push( "x86_64-apple-darwin".to_string());
-}
-
-///
-/// Run the tests with the address sanitizer enabled to detect memory issues in unsafe and C++ code.
-///
-/// This only works under Linux and MacOS currently and requires the nightly toolchain.
-///
-fn sanitizer(cargo_arguments: Vec<String>) -> AnyResult<()> {
-    let mut arguments: Vec<String> = vec![
-        "test".to_string(),
-        "-Zbuild-std".to_string(),
-    ];
-
-    add_target_flag(&mut arguments);
-    arguments.extend(cargo_arguments.into_iter());
-
-    cmd("cargo", arguments)
-        .env("CARGO_INCREMENTAL", "0")
-        .env("RUSTFLAGS", "-Zsanitizer=address")
-        .run()?;
-    println!("ok.");
-
-    Ok(())
 }
