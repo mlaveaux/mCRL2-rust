@@ -7,13 +7,14 @@ edition = "2021"
 
 [dependencies]
 ahash = "0.8"
-mcrl2-sys = { path="../mcrl2-sys" }
-rec-tests = { path="../rec-tests" }
-ldd = { path="../ldd" }
-rand = "0.8"
-sabre = { path="../sabre" }
 criterion = { version = "0.5", features = ["html_reports"] }
+ldd = { path="../ldd" }
+mcrl2-sys = { path="../mcrl2-sys" }
+rand = "0.8"
+rec-tests = { path="../rec-tests" }
+sabre = { path="../sabre" }
+utilities = { path="../utilities" }
 
 [[bench]]
-name = "rewrite"
+name = "benchmarks"
 harness = false

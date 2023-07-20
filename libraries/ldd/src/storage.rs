@@ -11,7 +11,7 @@ mod ldd;
 pub use self::cache::*;
 use self::indexed_set::IndexedSet;
 pub use self::ldd::{Ldd, LddRef};
-use self::ldd::{ProtectionSet};
+use self::ldd::ProtectionSet;
 
 pub type Value = u32;
 
