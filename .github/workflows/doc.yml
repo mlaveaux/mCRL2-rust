@@ -59,7 +59,7 @@ jobs:
           cargo doc --no-deps
           rm target/doc/.lock
           cp -r target/coverage/html target/doc/coverage/
-          echo "<meta http-equiv=\"refresh\" content=\"0; url=mcrl2-sys\">" > target/doc/index.html
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=mcrl2_sys\">" > target/doc/index.html
         env:
           RUSTC_WRAPPER: sccache
 
