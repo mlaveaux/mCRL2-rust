@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2_sys::atermpp::{ATerm, TermPool, TermBuilder, Yield};
+use mcrl2::atermpp::{ATerm, TermPool, TermBuilder, Yield};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -78,7 +78,7 @@ mod tests {
     use crate::utilities::{get_position, ExplicitPosition};
 
     use super::*;
-    use mcrl2_sys::atermpp::TermPool;
+    use mcrl2::atermpp::TermPool;
 
     #[test]
     fn test_substitute() {

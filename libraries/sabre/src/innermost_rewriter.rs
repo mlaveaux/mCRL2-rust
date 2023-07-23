@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt, rc::Rc};
 
 // use itertools::Itertools;
 
-use mcrl2_sys::{
+use mcrl2::{
     atermpp::{ATerm, TermPool},
     data::DataFunctionSymbol,
 };
@@ -303,7 +303,7 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use ahash::AHashSet;
-    use mcrl2_sys::atermpp::{random_term, TermPool};
+    use mcrl2::atermpp::{random_term, TermPool};
 
     use crate::{
         utilities::to_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,

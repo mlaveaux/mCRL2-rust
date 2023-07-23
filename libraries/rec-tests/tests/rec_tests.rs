@@ -6,7 +6,7 @@ mod tests
     use test_case::test_case;
 
     use ahash::AHashSet;
-    use mcrl2_sys::atermpp::{ATerm, TermPool};
+    use mcrl2::atermpp::{ATerm, TermPool};
     use sabre::{SabreRewriter, RewriteEngine, RewriteSpecification, InnermostRewriter};
     use sabre::utilities::to_data_expression;
     use rec_tests::load_REC_from_strings;

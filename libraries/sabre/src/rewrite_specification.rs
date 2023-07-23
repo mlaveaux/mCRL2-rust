@@ -1,7 +1,7 @@
 use std::fmt;
 
 use itertools::Itertools;
-use mcrl2_sys::{
+use mcrl2::{
     atermpp::ATerm,
     data::DataFunctionSymbol
 };

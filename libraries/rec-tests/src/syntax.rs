@@ -1,7 +1,7 @@
 use core::fmt;
 
 use ahash::AHashSet;
-use mcrl2_sys::atermpp::{ATerm, TermPool};
+use mcrl2::atermpp::{ATerm, TermPool};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
     utilities::to_data_expression,

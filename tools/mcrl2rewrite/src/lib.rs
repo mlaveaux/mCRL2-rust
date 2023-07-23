@@ -6,8 +6,8 @@ use std::time::Instant;
 
 use ahash::AHashSet;
 use anyhow::Result as AnyResult;
-use mcrl2_sys::atermpp::TermPool;
-use mcrl2_sys::data::{DataSpecification, JittyRewriter};
+use mcrl2::atermpp::TermPool;
+use mcrl2::data::{DataSpecification, JittyRewriter};
 use rec_tests::load_REC_from_file;
 use sabre::utilities::to_data_expression;
 use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
