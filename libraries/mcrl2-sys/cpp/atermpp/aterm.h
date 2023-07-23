@@ -15,7 +15,7 @@
 #include "mcrl2/data/parse.h"
 #include "mcrl2/data/function_symbol.h"
 
-#include "mcrl2-sys/src/atermpp_ffi.rs.h"
+#include "mcrl2-sys/src/atermpp.rs.h"
 
 using namespace mcrl2::data;
 
