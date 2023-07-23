@@ -4,8 +4,8 @@ use criterion::{black_box, Criterion};
 
 use ahash::AHashSet;
 
-use mcrl2_sys::atermpp::{ATerm, TermPool};
-use mcrl2_sys::data::{DataSpecification, JittyRewriter};
+use mcrl2::atermpp::{ATerm, TermPool};
+use mcrl2::data::{DataSpecification, JittyRewriter};
 use rec_tests::load_REC_from_strings;
 use sabre::set_automaton::SetAutomaton;
 use sabre::utilities::to_data_expression;
