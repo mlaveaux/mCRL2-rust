@@ -3,7 +3,7 @@
 //!
 //!
 
-use anyhow::Result as AnyResult;
+use std::error::Error;
 
 pub use duct::cmd;
 
@@ -28,7 +28,7 @@ fn add_target_flag(arguments: &mut Vec<String>) {
 ///
 /// This only works under Linux and MacOS currently and requires the nightly toolchain.
 ///
-pub fn sanitizer(cargo_arguments: Vec<String>) -> AnyResult<()> {
+pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut arguments: Vec<String> = vec![
         "test".to_string(),
         "-Zbuild-std".to_string(),

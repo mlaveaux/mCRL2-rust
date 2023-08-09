@@ -3,14 +3,13 @@
 //!
 //!
 
-use anyhow::Result as AnyResult;
-use std::env;
+use std::{env, error::Error};
 
 mod coverage;
 mod sanitizer;
 
 use coverage::coverage;
-use sanitizer::sanitizer;
+use sanitizer::*;
 
 fn main() {
     if let Err(e) = try_main() {
@@ -19,7 +18,7 @@ fn main() {
     }
 }
 
-fn try_main() -> AnyResult<()> {
+fn try_main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args();
 
     // Ignore the first argument (which should be xtask)
@@ -36,7 +35,7 @@ fn try_main() -> AnyResult<()> {
             coverage()?
         },
         Some("sanitizer") => {
-            sanitizer(other_arguments)?
+            address_sanitizer(other_arguments)?
         },
         _ => print_help(),
     }

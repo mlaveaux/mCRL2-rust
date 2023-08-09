@@ -3,13 +3,12 @@
 //!
 //!
 
-use anyhow::Result as AnyResult;
 use fs_extra as fsx;
 use glob::glob;
 use std::{
     env,
     fs::create_dir_all,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, error::Error,
 };
 
 use duct::cmd;
@@ -20,7 +19,7 @@ use duct::cmd;
 /// # Errors
 /// Fails if listing or removal fails
 ///
-fn clean_files(pattern: &str) -> AnyResult<()> {
+fn clean_files(pattern: &str) -> Result<(), Box<dyn Error>> {
     let files: Result<Vec<PathBuf>, _> = glob(pattern)?.collect();
     files?.iter().try_for_each(remove_file)
 }
@@ -31,11 +30,12 @@ fn clean_files(pattern: &str) -> AnyResult<()> {
 /// # Errors
 /// Fails if removal fails
 ///
-fn remove_file<P>(path: P) -> AnyResult<()>
+fn remove_file<P>(path: P) -> Result<(), Box<dyn Error>>
 where
     P: AsRef<Path>,
 {
-    fsx::file::remove(path).map_err(anyhow::Error::msg)
+    fsx::file::remove(path)?;
+    Ok(())
 }
 
 ///
@@ -44,11 +44,12 @@ where
 /// # Errors
 /// Fails if removal fails
 ///
-fn remove_dir<P>(path: P) -> AnyResult<()>
+fn remove_dir<P>(path: P) -> Result<(), Box<dyn Error>>
 where
     P: AsRef<Path>,
 {
-    fsx::dir::remove(path).map_err(anyhow::Error::msg)
+    fsx::dir::remove(path)?;
+    Ok(())
 }
 
 ///
@@ -57,7 +58,7 @@ where
 /// # Errors
 /// Fails if any command fails
 ///
-pub fn coverage() -> AnyResult<()> {
+pub fn coverage() -> Result<(), Box<dyn Error>> {
     remove_dir("target/coverage")?;
     create_dir_all("target/coverage")?;
 
