@@ -1,8 +1,7 @@
-use std::fs;
+use std::{fs, error::Error};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::Result as AnyResult;
 use mcrl2::atermpp::{ATerm, TermPool, TermBuilder, Symbol, Yield};
 use pest::iterators::Pair;
 use pest::Parser;
@@ -202,7 +201,7 @@ fn parse_eval(tp: &mut TermPool, pair: Pair<Rule>) -> Vec<ATerm> {
 }
 
 /// Constructs a ATerm from a string.
-pub fn from_string(tp: &mut TermPool, str: &str) -> AnyResult<ATerm> {
+pub fn from_string(tp: &mut TermPool, str: &str) -> Result<ATerm, Box<dyn Error>> {
     let mut pairs = RecParser::parse(Rule::term, str)?;
     parse_term(
         tp,
@@ -211,7 +210,7 @@ pub fn from_string(tp: &mut TermPool, str: &str) -> AnyResult<ATerm> {
 }
 
 /// Extracts data from parsed term.
-fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> AnyResult<ATerm> {
+fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> Result<ATerm, Box<dyn Error>> {
     debug_assert_eq!(pair.as_rule(), Rule::term);
 
     let mut builder = TermBuilder::<Pair<'_, Rule>, Symbol>::new();

@@ -1,20 +1,14 @@
-use std::{process::ExitCode};
+use std::{process::ExitCode, error::Error};
 
-use anyhow::{Result as AnyResult, Ok};
 use clap::Parser;
 use lpsreach::{run, Config};
 
-fn main() -> AnyResult<ExitCode>
+fn main() -> Result<ExitCode, Box<dyn Error>>
 {
     let config = Config::parse();
 
-    match run(&config) {
-        Result::Ok(num_of_states) => {
-            println!("There are {num_of_states} states");
-            Ok(ExitCode::SUCCESS)
-        },
-        Result::Err(err) => {
-            Ok(ExitCode::FAILURE)
-        }
-    }
+    let num_of_states = run(&config)?;
+    println!("There are {num_of_states} states");
+    
+    Ok(ExitCode::SUCCESS)
 }
