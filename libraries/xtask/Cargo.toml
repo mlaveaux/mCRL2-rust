@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-duct = "0.13.6"
+duct = "0.13"
 fs_extra = "1"
-glob = "0.3.0"
+glob = "0.3"
