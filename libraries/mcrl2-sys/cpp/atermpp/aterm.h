@@ -30,7 +30,7 @@ inline void initialise()
 
 inline void collect_garbage()
 {
-  detail::g_term_pool().collect();
+  detail::g_thread_term_pool().collect();
 }
 
 inline std::unique_ptr<aterm> new_aterm()
