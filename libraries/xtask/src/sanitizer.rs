@@ -1,8 +1,3 @@
-//!
-//! xtask building block operations such as copy, remove, confirm, and more
-//!
-//!
-
 use std::error::Error;
 
 pub use duct::cmd;
@@ -35,11 +30,34 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
     ];
 
     add_target_flag(&mut arguments);
-    arguments.extend(cargo_arguments.into_iter());
+    arguments.extend(cargo_arguments);
 
     cmd("cargo", arguments)
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Zsanitizer=address")
+        .run()?;
+    println!("ok.");
+
+    Ok(())
+}
+
+///
+/// Run the tests with the thread sanitizer enabled to detect data race conditions.
+///
+/// This only works under Linux and MacOS currently and requires the nightly toolchain.
+///
+pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
+    let mut arguments: Vec<String> = vec![
+        "test".to_string(),
+        "-Zbuild-std".to_string(),
+    ];
+
+    add_target_flag(&mut arguments);
+    arguments.extend(cargo_arguments);
+
+    cmd("cargo", arguments)
+        .env("CARGO_INCREMENTAL", "0")
+        .env("RUSTFLAGS", "-Zsanitizer=thread")
         .run()?;
     println!("ok.");
 

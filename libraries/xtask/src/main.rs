@@ -9,7 +9,6 @@ mod coverage;
 mod sanitizer;
 
 use coverage::coverage;
-use sanitizer::*;
 
 fn main() {
     if let Err(e) = try_main() {
@@ -34,8 +33,14 @@ fn try_main() -> Result<(), Box<dyn Error>> {
         Some("coverage") => {
             coverage()?
         },
-        Some("sanitizer") => {
-            address_sanitizer(other_arguments)?
+        Some("address-sanitizer") => {
+            sanitizer::address_sanitizer(other_arguments)?
+        },
+        Some("thread-sanitizer") => {
+            sanitizer::thread_sanitizer(other_arguments)?
+        },
+        Some(x) => {
+            println!("Unknown task {}", x);
         },
         _ => print_help(),
     }
