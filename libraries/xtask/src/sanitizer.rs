@@ -35,6 +35,8 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
     cmd("cargo", arguments)
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Zsanitizer=address")
+        .env("CFLAGS", "-fsanitize=address")
+        .env("CXXFLAGS", "-fsanitize=address")
         .run()?;
     println!("ok.");
 
@@ -58,6 +60,8 @@ pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Erro
     cmd("cargo", arguments)
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Zsanitizer=thread")
+        .env("CFLAGS", "-fsanitize=thread")
+        .env("CXXFLAGS", "-fsanitize=thread")
         .run()?;
     println!("ok.");
 
