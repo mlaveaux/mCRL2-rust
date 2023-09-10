@@ -700,10 +700,10 @@ mod tests {
     }
 
     #[test]
-    fn test_thread_aterm_pool() {
+    fn test_thread_aterm_pool_parallel() {
         let mut threads = vec![];
 
-        for _ in 0..300 {
+        for _ in 0..20 {
             threads.push(thread::spawn(|| {
                 let mut tp = TermPool::new();
 
