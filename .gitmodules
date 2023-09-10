@@ -8,3 +8,6 @@
 [submodule "libraries/ldd-library"]
 	path = libraries/ldd-library
 	url = https://github.com/mlaveaux/ldd-library
+[submodule "3rd-party/ldd-library"]
+	path = 3rd-party/ldd-library
+	url = https://github.com/mlaveaux/ldd-library.git

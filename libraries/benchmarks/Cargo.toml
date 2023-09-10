@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ahash = "0.8"
 criterion = { version = "0.5", features = ["html_reports"] }
-ldd = { path="../ldd" }
+ldd = { path="../../3rd-party/ldd-library/ldd" }
 mcrl2 = { path="../mcrl2" }
 rand = "0.8"
 rec-tests = { path="../rec-tests" }
