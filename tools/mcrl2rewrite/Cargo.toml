@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ahash = "0.8"
 anyhow = "1.0"
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.4", features = ["derive"] }
 mcrl2 = { path="../../libraries/mcrl2" }
 rec-tests = { path="../../libraries/rec-tests" }
 sabre = { path="../../libraries/sabre" }
