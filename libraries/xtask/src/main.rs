@@ -3,7 +3,7 @@
 //!
 //!
 
-use std::{env, error::Error, process::{ExitCode, ExitStatus}};
+use std::{env, error::Error, process::{ExitCode}};
 
 mod coverage;
 mod sanitizer;
@@ -24,7 +24,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
 
     match task.as_deref() {
         Some("coverage") => {
-            coverage()?
+            coverage(other_arguments)?
         },
         Some("address-sanitizer") => {
             sanitizer::address_sanitizer(other_arguments)?

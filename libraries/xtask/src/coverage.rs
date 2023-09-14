@@ -58,7 +58,7 @@ where
 /// # Errors
 /// Fails if any command fails
 ///
-pub fn coverage() -> Result<(), Box<dyn Error>> {
+pub fn coverage(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     remove_dir("target/coverage")?;
     create_dir_all("target/coverage")?;
 
@@ -72,7 +72,12 @@ pub fn coverage() -> Result<(), Box<dyn Error>> {
     let mut prof_directory = base_directory.clone();
     prof_directory.push("cargo-test-%p-%m.profraw");
 
-    cmd!("cargo", "test")
+    let mut arguments: Vec<String> = vec![
+        "test".to_string(),
+    ];
+    arguments.extend(cargo_arguments);
+
+    cmd("cargo", arguments)
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", prof_directory)

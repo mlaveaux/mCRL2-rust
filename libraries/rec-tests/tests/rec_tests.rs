@@ -11,6 +11,7 @@ mod tests
     use sabre::utilities::to_data_expression;
     use rec_tests::load_REC_from_strings;
 
+    #[ignore]
     #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
     #[test_case(vec![include_str!("REC_files/benchsym10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym10.txt") ; "benchsym10")]
     #[test_case(vec![include_str!("REC_files/bubblesort10.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort10.txt") ; "bubblesort10")]

@@ -35,7 +35,7 @@ jobs:
       run: cargo install grcov
 
     - name: Generating Code Coverage
-      run: cargo xtask coverage        
+      run: cargo xtask coverage -- --include-ignored
       env:
         RUSTC_WRAPPER: sccache
 
