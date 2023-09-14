@@ -3,6 +3,7 @@ use std::error::Error;
 pub use duct::cmd;
 
 #[cfg(not(unix))]
+#[allow(clippy::ptr_arg)] // For other configurations the mutability is relevant.
 fn add_target_flag(_arguments: &mut Vec<String>) {}
 
 #[cfg(target_os = "linux")]

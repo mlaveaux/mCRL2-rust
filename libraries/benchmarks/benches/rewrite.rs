@@ -16,7 +16,7 @@ use std::io::{BufRead, BufReader};
 
 
 /// Creates a rewriter and a vector of ATerm expressions for the given case.
-pub fn load_case(tp: &mut TermPool, name: &str, max_number_expressions: usize) -> (DataSpecification, Vec<ATerm>) {
+pub fn load_case(_: &mut TermPool, name: &str, max_number_expressions: usize) -> (DataSpecification, Vec<ATerm>) {
     let path = String::from(name) + ".dataspec";
     let path_expressions = String::from(name) + ".expressions";
 

@@ -613,7 +613,7 @@ impl<'a, I, C> ArgStack<'a, I, C> {
         ArgStack {
             terms,
             configs,
-            top_of_stack: top_of_stack,
+            top_of_stack,
         }
     }
 
