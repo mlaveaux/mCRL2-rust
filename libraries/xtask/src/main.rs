@@ -3,21 +3,14 @@
 //!
 //!
 
-use std::{env, error::Error};
+use std::{env, error::Error, process::{ExitCode, ExitStatus}};
 
 mod coverage;
 mod sanitizer;
 
 use coverage::coverage;
 
-fn main() {
-    if let Err(e) = try_main() {
-        eprintln!("{}", e);
-        std::process::exit(-1);
-    }
-}
-
-fn try_main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<ExitCode, Box<dyn Error>> {
     let mut args = env::args();
 
     // Ignore the first argument (which should be xtask)
@@ -40,14 +33,17 @@ fn try_main() -> Result<(), Box<dyn Error>> {
             sanitizer::thread_sanitizer(other_arguments)?
         },
         Some(x) => {
-            println!("Unknown task {}", x);
+            println!("Unknown task {x}");
+            println!();
+            print_help();
+            return Ok(ExitCode::FAILURE)
         },
         _ => print_help(),
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 fn print_help() {
-    println!("Unknown task");
+    println!("Available tasks: coverage, address-sanitizer, thread-sanitizer");
 }
