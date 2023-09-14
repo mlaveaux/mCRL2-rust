@@ -25,9 +25,9 @@ Tests can be performed using `cargo test`. To show print statements during tests
 
 For micro benchmarks we use [Criterion.rs](https://crates.io/crates/criterion) and these benchmarks can be executed using `cargo bench`. Additionally, we can also install `cargo-criterion` and run `cargo criterion` instead to keep track of more information, such as changes over time.
 
-# Address Sanitizer
+# LLVM Sanitizer
 
-For Linux targets it is also possible to run the LLVM address sanitizer to detect memory issues in unsafe and C++ code. This requires the nightly version of the rust compiler, which can acquired using `rustup toolchain install nightly`. To show the symbols for the resulting stacktrace it is also convenient to install `llvm-symbolizer`, for example using `sudo apt install llvm` on Ubuntu. Afterwards, the tests can be executed with the address sanitizer enabled using `cargo +nightly xtask sanitizer`.
+For Linux targets it is also possible to run the LLVM address sanitizer to detect memory issues in unsafe and C++ code. This requires the nightly version of the rust compiler, which can acquired using `rustup toolchain install nightly`. To show the symbols for the resulting stacktrace it is also convenient to install `llvm-symbolizer`, for example using `sudo apt install llvm` on Ubuntu. Afterwards, the tests can be executed with the address sanitizer enabled using `cargo +nightly xtask address-sanitizer`. Similarly, we also provide a task for the thread sanitizer to detect data races, which can be executed by `cargo +nightly xtask thread-sanitizer`.
 
 # Code Coverage
 
