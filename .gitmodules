@@ -5,7 +5,3 @@
 [submodule "3rd-party/boost-include-only"]
 	path = 3rd-party/boost-include-only
 	url = https://github.com/mlaveaux/boost-include-only.git
-	branch = v1.83.0
-[submodule "3rd-party/ldd-library"]
-	path = 3rd-party/ldd-library
-	url = https://github.com/mlaveaux/ldd-library.git

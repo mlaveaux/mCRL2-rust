@@ -519,6 +519,7 @@ dependencies = [
 [[package]]
 name = "ldd"
 version = "0.1.0"
+source = "git+https://github.com/mlaveaux/ldd-library.git#a9fa275c3f3217f798e7249c94750d99ab37315e"
 dependencies = [
  "ahash",
  "rand",
@@ -578,7 +579,6 @@ version = "0.1.0"
 dependencies = [
  "ahash",
  "criterion",
- "ldd",
  "mcrl2",
  "rand",
  "rec-tests",

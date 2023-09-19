@@ -109,8 +109,9 @@ impl Iterator for ProtSetIter<'_>
 #[cfg(test)]
 mod tests
 {
+    use rand::Rng;
+
     use super::*;
-    use crate::{test_utility::*};
 
     #[test]
     fn test_protection_set()
@@ -118,12 +119,12 @@ mod tests
         let mut protection_set = ProtectionSet::new();
 
         // Protect a number of LDDs and record their indices.
-        let root_variables = random_vector(1000, 5000);
         let mut indices: Vec<usize> = Vec::new();
+        let mut rng = rand::thread_rng();
 
-        for variable in root_variables
+        for _ in 0..5000
         {
-            indices.push(protection_set.protect(variable as usize));
+            indices.push(protection_set.protect(rng.gen_range(0..1000)));
         }
 
         // Unprotect a number of LDDs.
