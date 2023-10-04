@@ -82,6 +82,7 @@ fn main() {
     let utilities_source_files = [
         "bitstream.cpp",
         "cache_metric.cpp",
+        "logger.cpp",
         //"command_line_interface.cpp",
         "text_utility.cpp",
         //"toolset_version.cpp",
