@@ -5,7 +5,7 @@ use std::{collections::VecDeque, fmt};
 use ahash::AHashSet;
 use anyhow::Result as AnyResult;
 
-use cxx::{UniquePtr, Exception};
+use cxx::{Exception, UniquePtr};
 use mcrl2_sys::atermpp::ffi;
 
 use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
@@ -94,9 +94,7 @@ pub struct ATerm {
 
 impl ATerm {
     pub fn from(term: UniquePtr<ffi::aterm>) -> Self {
-        ATerm { 
-            term,
-        }
+        ATerm { term }
     }
 
     /// Get access to the underlying term
@@ -112,7 +110,7 @@ impl ATerm {
             "arg({index}) is not defined for term {:?}",
             self
         );
-        
+
         ATerm {
             term: ffi::get_term_argument(&self.term, index),
         }
@@ -280,21 +278,72 @@ impl From<DataFunctionSymbol> for ATerm {
     }
 }
 
+impl From<ATermList> for ATerm {
+    fn from(value: DataFunctionSymbol) -> Self {
+        value.term
+    }
+}
+
+struct ATermList<T> {
+    term: ATerm,
+}
+
+impl<T> ATermList<T> {
+
+    /// Obtain the head, i.e. the first element, of the list.
+    pub fn head(&self) -> T {
+        self.term.arg(0).into()
+    }
+
+    /// Obtain the tail, i.e. the remainder, of the list.
+    pub fn tail(&self) -> ATermList<T> {
+        self.term.arg(1).into()
+    }
+
+    /// Returns an iterator over all elements in the list.
+    pub fn iter(&self) -> ATermListIter<T> {
+        ATermListIter { current: self.clone() }
+    }
+}
+
+struct ATermListIter<T> {
+    current: ATermList,
+}
+
+impl Iterator for ATermList<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current.is_empty() {
+            None
+        } else {
+            let head = self.current.head();
+            self.current = self.current.tail();
+            Some(head.into())
+        }
+    }
+}
+
+impl From<ATerm> for ATermList {
+    fn from(value: ATerm) -> Self {
+        ATermList { term: value }
+    }
+}
+
 /// This is the thread local term pool.
 pub struct TermPool {
     arguments: Vec<ffi::aterm_ref>,
     data_appl: Vec<Symbol>, // Function symbols to represent 'DataAppl' with any number of arguments.
 }
 
-
 impl TermPool {
     pub fn new() -> TermPool {
         // Initialise the C++ aterm library.
         ffi::initialise();
 
-        TermPool { 
-            arguments: vec![], 
-            data_appl: vec![]
+        TermPool {
+            arguments: vec![],
+            data_appl: vec![],
         }
     }
 
@@ -344,15 +393,9 @@ impl TermPool {
         }
 
         let symbol = &self.data_appl[arguments.len()].clone();
-        let term = self.create2(
-            symbol,
-            head, 
-            arguments,
-        );
+        let term = self.create2(symbol, head, arguments);
 
-        DataApplication {
-            term,
-        }
+        DataApplication { term }
     }
 
     pub fn create_variable(&mut self, name: &str) -> DataVariable {
@@ -366,7 +409,7 @@ impl TermPool {
             term: ATerm::from(ffi::create_data_function_symbol(String::from(name))),
         }
     }
-    
+
     /// Creates an [ATerm] with the given symbol, first and other arguments.
     fn create2(&mut self, symbol: &Symbol, head: &ATerm, arguments: &[ATerm]) -> ATerm {
         let arguments = self.tmp_arguments2(head, arguments);
@@ -402,13 +445,13 @@ impl TermPool {
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
     fn tmp_arguments2(&mut self, head: &ATerm, arguments: &[ATerm]) -> &[ffi::aterm_ref] {
         // Make the temp vector sufficient length.
-        while self.arguments.len() < arguments.len() + 1{
+        while self.arguments.len() < arguments.len() + 1 {
             self.arguments.push(ffi::aterm_ref { index: 0 });
         }
 
         self.arguments.clear();
         self.arguments.push(ffi::aterm_ref {
-            index: ffi::aterm_pointer(head.get())
+            index: ffi::aterm_pointer(head.get()),
         });
         for arg in arguments {
             self.arguments.push(ffi::aterm_ref {
@@ -418,7 +461,6 @@ impl TermPool {
 
         &self.arguments
     }
-
 }
 
 /// An iterator over all subterms of the given [ATerm].
@@ -507,16 +549,14 @@ where
         .evaluate(
             tp,
             t.clone(),
-            |tp, args, t| {
-                match function(tp, &t) {
-                    Some(result) => Ok(Yield::Term(result)),
-                    None => {
-                        for arg in t.arguments() {
-                            args.push(arg);
-                        }
-
-                        Ok(Yield::Construct(t.get_head_symbol()))
+            |tp, args, t| match function(tp, &t) {
+                Some(result) => Ok(Yield::Term(result)),
+                None => {
+                    for arg in t.arguments() {
+                        args.push(arg);
                     }
+
+                    Ok(Yield::Construct(t.get_head_symbol()))
                 }
             },
             |tp, symbol, args| Ok(tp.create(&symbol, args)),
@@ -624,8 +664,7 @@ impl<'a, I, C> ArgStack<'a, I, C> {
 
     /// Adds the term to the argument stack, will construct construct(C, args...) with the transformer applied to arguments.
     pub fn push(&mut self, input: I) {
-        self.configs
-            .push(Config::Apply(input, self.terms.len()));
+        self.configs.push(Config::Apply(input, self.terms.len()));
         self.terms.push(ATerm::default());
     }
 }

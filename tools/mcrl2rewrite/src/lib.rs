@@ -13,7 +13,7 @@ use sabre::utilities::to_data_expression;
 use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
 
 /// Performs state space exploration of the given model and returns the number of states.
-pub fn rewrite_data_spec(filename_dataspec: &str, filename_expressions: &str) -> AnyResult<()> {
+pub fn rewrite_data_spec(tp: &mut TermPool, filename_dataspec: &str, filename_expressions: &str) -> AnyResult<()> {
     // Read the data specification
     let data_spec_text = fs::read_to_string(filename_dataspec)?;
     let data_spec = DataSpecification::new(&data_spec_text);
@@ -22,7 +22,8 @@ pub fn rewrite_data_spec(filename_dataspec: &str, filename_expressions: &str) ->
     let mut rewriter = JittyRewriter::new(&data_spec);
 
     // Convert to the rewrite rules that sabre expects.
-    //let rewriter = SabreRewriter::new(&data_spec);
+    let rewriter = SabreRewriter::new(tp, &data_spec);
+
     //let automaton = SetAutomaton::new(&data_spec);
 
     // Open the file in read-only mode.

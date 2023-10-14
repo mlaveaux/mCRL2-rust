@@ -23,10 +23,11 @@ pub struct Cli {
 fn main() -> AnyResult<()>
 {
     let cli = Cli::parse();
+    let mut tp = TermPool::new();
 
     if cli.rec { 
         rewrite_rec(&cli.specification, &cli.term)     
     } else {
-        rewrite_data_spec(&cli.specification, "") 
+        rewrite_data_spec(&mut tp, &cli.specification, "") 
     }
 }
