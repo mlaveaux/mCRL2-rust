@@ -10,21 +10,21 @@ use mcrl2::atermpp::TermPool;
 use mcrl2::data::{DataSpecification, JittyRewriter};
 use rec_tests::load_REC_from_file;
 use sabre::utilities::to_data_expression;
-use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
+use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter, RewriteSpecification};
 
 /// Performs state space exploration of the given model and returns the number of states.
-pub fn rewrite_data_spec(tp: &mut TermPool, filename_dataspec: &str, filename_expressions: &str) -> AnyResult<()> {
+pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, filename_expressions: &str) -> AnyResult<()> {
     // Read the data specification
     let data_spec_text = fs::read_to_string(filename_dataspec)?;
     let data_spec = DataSpecification::new(&data_spec_text);
+    let data_spec2 = DataSpecification::new(&data_spec_text);
 
     // Create a jitty rewriter;
     let mut rewriter = JittyRewriter::new(&data_spec);
 
     // Convert to the rewrite rules that sabre expects.
-    let rewriter = SabreRewriter::new(tp, &data_spec);
-
-    //let automaton = SetAutomaton::new(&data_spec);
+    let rewrite_spec = RewriteSpecification::from(data_spec2);
+    let mut sabre_rewriter = SabreRewriter::new(tp, &rewrite_spec);
 
     // Open the file in read-only mode.
     let file = File::open(filename_expressions).unwrap();
@@ -32,7 +32,10 @@ pub fn rewrite_data_spec(tp: &mut TermPool, filename_dataspec: &str, filename_ex
     // Read the file line by line, and return an iterator of the lines of the file.
     for line in BufReader::new(file).lines().map(|x| x.unwrap()) {
         println!("{}", &line);
-        println!("{}", rewriter.rewrite(&data_spec.parse(&line)));
+
+        let term = data_spec.parse(&line);
+        println!("{}", rewriter.rewrite(&term));
+        println!("{}", sabre_rewriter.rewrite(term));
     }
 
     Ok(())

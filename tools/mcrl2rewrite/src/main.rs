@@ -1,6 +1,9 @@
+use std::{rc::Rc, cell::RefCell};
+
 use anyhow::Result as AnyResult;
 use clap::Parser;
 
+use mcrl2::atermpp::TermPool;
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec};
 
 #[derive(Parser, Debug)]
@@ -23,11 +26,11 @@ pub struct Cli {
 fn main() -> AnyResult<()>
 {
     let cli = Cli::parse();
-    let mut tp = TermPool::new();
+    let tp = Rc::new(RefCell::new(TermPool::new()));
 
     if cli.rec { 
         rewrite_rec(&cli.specification, &cli.term)     
     } else {
-        rewrite_data_spec(&mut tp, &cli.specification, "") 
+        rewrite_data_spec(tp, &cli.specification, "") 
     }
 }

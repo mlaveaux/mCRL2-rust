@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
 use std::{collections::VecDeque, fmt};
 
 use ahash::AHashSet;
@@ -278,21 +279,20 @@ impl From<DataFunctionSymbol> for ATerm {
     }
 }
 
-impl From<ATermList> for ATerm {
-    fn from(value: DataFunctionSymbol) -> Self {
+impl<T> From<ATermList<T>> for ATerm {
+    fn from(value: ATermList<T>) -> Self {
         value.term
     }
 }
 
 struct ATermList<T> {
     term: ATerm,
+    _marker: PhantomData<T>,
 }
 
 impl<T> ATermList<T> {
-
-    /// Obtain the head, i.e. the first element, of the list.
-    pub fn head(&self) -> T {
-        self.term.arg(0).into()
+    pub fn is_empty(&self) -> bool {
+        false
     }
 
     /// Obtain the tail, i.e. the remainder, of the list.
@@ -306,11 +306,29 @@ impl<T> ATermList<T> {
     }
 }
 
-struct ATermListIter<T> {
-    current: ATermList,
+impl<T> Clone for ATermList<T> {
+    fn clone(&self) -> Self {
+        ATermList {
+            term: self.term.clone(),
+            _marker: PhantomData::default(),
+        }
+    }
 }
 
-impl Iterator for ATermList<T> {
+
+impl<T: From<ATerm>> ATermList<T> {
+
+    /// Obtain the head, i.e. the first element, of the list.
+    pub fn head(&self) -> T {
+        self.term.arg(0).into()
+    }
+}
+
+struct ATermListIter<T> {
+    current: ATermList<T>,
+}
+
+impl<T: From<ATerm>> Iterator for ATermListIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -319,14 +337,14 @@ impl Iterator for ATermList<T> {
         } else {
             let head = self.current.head();
             self.current = self.current.tail();
-            Some(head.into())
+            Some(head)
         }
     }
 }
 
-impl From<ATerm> for ATermList {
+impl<T> From<ATerm> for ATermList<T> {
     fn from(value: ATerm) -> Self {
-        ATermList { term: value }
+        ATermList::<T> { term: value, _marker: PhantomData }
     }
 }
 

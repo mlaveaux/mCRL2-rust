@@ -36,7 +36,7 @@ impl From<DataSpecification> for RewriteSpecification {
     fn from(value: DataSpecification) -> Self {
         let equations = value.equations();
         
-        RewriteSpecification { rewrite_rules: (), constructors: () }
+        RewriteSpecification { rewrite_rules: vec![], constructors: vec![] }
     }
 }
 

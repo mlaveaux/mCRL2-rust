@@ -158,3 +158,42 @@ impl fmt::Display for DataFunctionSymbol {
 {
   rewriter: UniquePtr<ffi::RewriterJittyCompiling>
 }*/
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_data_specification() {
+
+        let text = "
+            sort Xbool = struct
+                Xfalse
+            | Xtrue ;
+            
+            sort Bit = struct
+                x0
+            | x1 ;
+            
+            sort Octet = struct
+                buildOctet (Bit, Bit, Bit, Bit, Bit, Bit, Bit, Bit) ;
+            
+            sort OctetSum = struct
+                buildOctetSum (Bit, Octet) ;
+            
+            sort Half = struct
+                buildHalf (Octet, Octet) ;
+            
+            sort HalfSum = struct
+                buildHalfSum (Bit, Half) ;
+            
+            map
+                notBool : Xbool -> Xbool ;
+                andBool : Xbool # Xbool -> Xbool ;";
+
+        let data_spec = DataSpecification::new(text);
+
+    }
+
+}
