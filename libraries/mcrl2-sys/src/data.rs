@@ -24,6 +24,9 @@ pub mod ffi {
             data_spec: &data_specification,
         ) -> UniquePtr<aterm>;
 
+        /// Returns the data equations for the given specification.
+        fn get_data_specification_equations(data_spec: &data_specification) -> UniquePtr<CxxVector<aterm>>;
+
         /// Creates an instance of the jitty rewriter.
         fn create_jitty_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJitty>;
 
@@ -33,7 +36,8 @@ pub mod ffi {
         /// Rewrites the given term to normal form.
         fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: &aterm) -> UniquePtr<aterm>;        
         
-        /// Obtain
+        /// Obtain the index assigned internally to every data function symbol.
         fn get_data_function_symbol_index(term: &aterm) -> usize;
+
     }
 }

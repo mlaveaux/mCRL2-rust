@@ -127,7 +127,7 @@ impl ATerm {
         ffi::aterm_pointer(&self.term) == 0
     }
     
-    /// Returns true iff this is a aterm_list
+    /// Returns true iff this is an aterm_list
     pub fn is_list(&self) -> bool {
         ffi::aterm_is_list(&self.term)        
     }
@@ -370,7 +370,7 @@ impl<T: From<ATerm>> Iterator for ATermListIter<T> {
 
 impl<T> From<ATerm> for ATermList<T> {
     fn from(value: ATerm) -> Self {
-        debug_assert!(value.is_list(), "Can only convert a list aterm");
+        debug_assert!(value.is_list(), "Can only convert a aterm_list");
         ATermList::<T> { term: value, _marker: PhantomData }
     }
 }

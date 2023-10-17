@@ -3,7 +3,7 @@ use core::fmt;
 use cxx::UniquePtr;
 
 use mcrl2_sys::data::ffi::*;
-use crate::atermpp::ATerm;
+use crate::atermpp::{ATerm, ATermList};
 
 pub struct DataSpecification {
     pub data_spec: UniquePtr<data_specification>,
@@ -11,14 +11,25 @@ pub struct DataSpecification {
 
 /// A pattern is simply an aterm of the shape f(...)
 pub type DataExpression = ATerm;
-pub type Variable = ATerm;
 
 #[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Debug)]
 pub struct DataEquation {
-    pub variables: Vec<Variable>,
+    pub variables: Vec<DataVariable>,
     pub condition: DataExpression,
     pub lhs: DataExpression,
     pub rhs: DataExpression,
+}
+
+impl From<ATerm> for DataEquation {
+    fn from(value: ATerm) -> Self {
+        let variables: ATermList<DataVariable> = value.arg(0).into();
+
+        DataEquation { 
+            variables: variables.iter().collect(), 
+            condition: value.arg(1), 
+            lhs: value.arg(2), 
+            rhs: value.arg(3) }
+    }
 }
 
 impl DataSpecification {
@@ -32,11 +43,13 @@ impl DataSpecification {
 
     /// Parses the given data expression as text into a term
     pub fn parse(&self, text: &str) -> ATerm {
-        ATerm::from(parse_data_expression(text, &self.data_spec))
+        parse_data_expression(text, &self.data_spec).into()
     }
 
     pub fn equations(&self) -> Vec<DataEquation> {
-        vec![]
+        get_data_specification_equations(&self.data_spec).iter().map(|x| {
+            ATerm::from(x).into()
+        }).collect()
     }
 }
 
