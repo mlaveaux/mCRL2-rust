@@ -94,10 +94,6 @@ pub struct ATerm {
 }
 
 impl ATerm {
-    pub fn from(term: UniquePtr<ffi::aterm>) -> Self {
-        ATerm { term }
-    }
-
     /// Get access to the underlying term
     pub fn get(&self) -> &ffi::aterm {
         self.require_valid();
@@ -126,14 +122,27 @@ impl ATerm {
         result
     }
 
+    /// Returns whether the term is the default term (not initialised)
     pub fn is_default(&self) -> bool {
         ffi::aterm_pointer(&self.term) == 0
     }
+    
+    /// Returns true iff this is a aterm_list
+    pub fn is_list(&self) -> bool {
+        ffi::aterm_is_list(&self.term)        
+    }
 
+    /// Returns true iff this is the empty aterm_list
+    pub fn is_empty_list(&self) -> bool {
+        ffi::aterm_is_empty_list(&self.term)        
+    }
+
+    /// Returns true iff this is a aterm_int
     pub fn is_int(&self) -> bool {
         ffi::aterm_is_int(&self.term)
     }
 
+    /// Returns the head function symbol of the term.
     pub fn get_head_symbol(&self) -> Symbol {
         self.require_valid();
         Symbol {
@@ -155,19 +164,23 @@ impl ATerm {
     }
 
     // Recognizers for the data library
+    
+    /// Returns true iff this is a data::variable
     pub fn is_data_variable(&self) -> bool {
         self.require_valid();
         ffi::is_data_variable(&self.term)
     }
 
+    /// Returns true iff this is a data::application
     pub fn is_data_application(&self) -> bool {
         self.require_valid();
         // Check DataAppl is expensive, so it derived from whether the first
-        // argument is a TermFunctionSymbo. This is also done in the upstream
+        // argument is a TermFunctionSymbol. This is also done in the upstream
         // code.
         self.get_head_symbol().arity() > 0 && self.arg(0).is_data_function_symbol()
     }
 
+    /// Returns true iff this is a data::function_symbol
     pub fn is_data_function_symbol(&self) -> bool {
         self.require_valid();
         ffi::is_data_function_symbol(&self.term)
@@ -179,6 +192,18 @@ impl Default for ATerm {
         ATerm {
             term: ffi::new_aterm(),
         }
+    }
+}
+
+impl From<UniquePtr<ffi::aterm>> for ATerm {
+    fn from(value: UniquePtr<ffi::aterm>) -> Self {
+        ATerm { term: value }
+    }
+}
+
+impl From<&ffi::aterm> for ATerm {
+    fn from(value: &ffi::aterm) -> Self {
+        ATerm { term: ffi::protect_aterm(value) }
     }
 }
 
@@ -285,14 +310,24 @@ impl<T> From<ATermList<T>> for ATerm {
     }
 }
 
-struct ATermList<T> {
+pub struct ATermList<T> {
     term: ATerm,
     _marker: PhantomData<T>,
 }
 
+impl<T: From<ATerm>> ATermList<T> {
+
+    /// Obtain the head, i.e. the first element, of the list.
+    pub fn head(&self) -> T {
+        self.term.arg(0).into()
+    }
+}
+
 impl<T> ATermList<T> {
+
+    /// Returns true iff the list is empty.
     pub fn is_empty(&self) -> bool {
-        false
+        self.term.is_empty_list()        
     }
 
     /// Obtain the tail, i.e. the remainder, of the list.
@@ -315,16 +350,7 @@ impl<T> Clone for ATermList<T> {
     }
 }
 
-
-impl<T: From<ATerm>> ATermList<T> {
-
-    /// Obtain the head, i.e. the first element, of the list.
-    pub fn head(&self) -> T {
-        self.term.arg(0).into()
-    }
-}
-
-struct ATermListIter<T> {
+pub struct ATermListIter<T> {
     current: ATermList<T>,
 }
 
@@ -344,6 +370,7 @@ impl<T: From<ATerm>> Iterator for ATermListIter<T> {
 
 impl<T> From<ATerm> for ATermList<T> {
     fn from(value: ATerm) -> Self {
+        debug_assert!(value.is_list(), "Can only convert a list aterm");
         ATermList::<T> { term: value, _marker: PhantomData }
     }
 }
@@ -393,12 +420,14 @@ impl TermPool {
         }
     }
 
+    /// Creates a function symbol with the given name and arity.
     pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol {
         Symbol {
             function: ffi::create_function_symbol(String::from(name), arity),
         }
     }
 
+    /// Creates a data application of head applied to the given arguments.
     pub fn create_data_application(
         &mut self,
         head: &ATerm,
@@ -411,7 +440,7 @@ impl TermPool {
         }
 
         let symbol = &self.data_appl[arguments.len()].clone();
-        let term = self.create2(symbol, head, arguments);
+        let term = self.create_head(symbol, head, arguments);
 
         DataApplication { term }
     }
@@ -429,8 +458,8 @@ impl TermPool {
     }
 
     /// Creates an [ATerm] with the given symbol, first and other arguments.
-    fn create2(&mut self, symbol: &Symbol, head: &ATerm, arguments: &[ATerm]) -> ATerm {
-        let arguments = self.tmp_arguments2(head, arguments);
+    fn create_head(&mut self, symbol: &Symbol, head: &ATerm, arguments: &[ATerm]) -> ATerm {
+        let arguments = self.tmp_arguments_head(head, arguments);
 
         debug_assert_eq!(
             symbol.arity(),
@@ -461,7 +490,7 @@ impl TermPool {
     }
 
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments2(&mut self, head: &ATerm, arguments: &[ATerm]) -> &[ffi::aterm_ref] {
+    fn tmp_arguments_head(&mut self, head: &ATerm, arguments: &[ATerm]) -> &[ffi::aterm_ref] {
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() + 1 {
             self.arguments.push(ffi::aterm_ref { index: 0 });
@@ -782,5 +811,22 @@ mod tests {
                 }
             }));
         }
+    }
+
+    #[test]
+    fn test_aterm_list() {
+        let mut tp = TermPool::new();
+        let list: ATermList<ATerm> = tp.from_string("[f,g,h,i]").unwrap().into();
+
+        assert!(!list.is_empty());
+
+        // Convert into normal vector.
+        let values: Vec<ATerm> = list.iter().collect();
+
+        assert_eq!(values[0], tp.from_string("f").unwrap());
+        assert_eq!(values[1], tp.from_string("g").unwrap());
+        assert_eq!(values[2], tp.from_string("h").unwrap());
+        assert_eq!(values[3], tp.from_string("i").unwrap());
+
     }
 }

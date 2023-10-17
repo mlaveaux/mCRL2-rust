@@ -1,8 +1,9 @@
 #pragma once
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <iostream>
+
 
 #include "rust/cxx.h"
 
@@ -12,8 +13,9 @@
 
 #include "mcrl2/data/application.h"
 #include "mcrl2/data/data_expression.h"
-#include "mcrl2/data/parse.h"
 #include "mcrl2/data/function_symbol.h"
+#include "mcrl2/data/parse.h"
+
 
 #include "mcrl2-sys/src/atermpp.rs.h"
 
@@ -40,9 +42,16 @@ inline std::unique_ptr<aterm> new_aterm()
 
 std::unique_ptr<aterm> create_aterm(const function_symbol& symbol, rust::Slice<const aterm_ref> arguments)
 {
-  // Since aterm_ref and aterm have the same layout they can be transmuted. And honestly who is going to prevent that anyway.
-  rust::Slice<aterm> aterm_slice(const_cast<aterm*>(reinterpret_cast<const aterm*>(arguments.data())), arguments.length());
+  // Since aterm_ref and aterm have the same layout they can be transmuted. And honestly who is going to prevent that
+  // anyway.
+  rust::Slice<aterm> aterm_slice(const_cast<aterm*>(reinterpret_cast<const aterm*>(arguments.data())),
+      arguments.length());
   return std::make_unique<aterm>(aterm_appl(symbol, aterm_slice.begin(), aterm_slice.end()));
+}
+
+std::unique_ptr<aterm> protect_aterm(const aterm& term)
+{
+  return std::make_unique<aterm>(term);
 }
 
 std::unique_ptr<aterm> aterm_from_string(rust::String text)
@@ -58,6 +67,16 @@ std::size_t aterm_pointer(const aterm& term)
 bool aterm_is_int(const aterm& term)
 {
   return term.type_is_int();
+}
+
+bool aterm_is_list(const aterm& term)
+{
+  return term.type_is_list();
+}
+
+bool aterm_is_empty_list(const aterm& term)
+{
+  return term.function() == detail::g_as_empty_list;
 }
 
 rust::String print_aterm(const aterm& term)
@@ -159,9 +178,13 @@ bool is_data_application(const aterm& term)
 
 std::unique_ptr<aterm> create_data_application(const aterm& head, rust::Slice<const aterm_ref> arguments)
 {
-  rust::Slice<data_expression> aterm_slice(const_cast<data_expression*>(reinterpret_cast<const data_expression*>(arguments.data())), arguments.length());
+  rust::Slice<data_expression> aterm_slice(
+      const_cast<data_expression*>(reinterpret_cast<const data_expression*>(arguments.data())),
+      arguments.length());
 
-  return std::make_unique<mcrl2::data::application>(static_cast<const data_expression&>(head), aterm_slice.begin(), aterm_slice.end());
+  return std::make_unique<mcrl2::data::application>(static_cast<const data_expression&>(head),
+      aterm_slice.begin(),
+      aterm_slice.end());
 }
 
 std::unique_ptr<aterm> create_data_function_symbol(rust::String name)
@@ -174,5 +197,9 @@ std::size_t function_symbol_address(const function_symbol& symbol)
   return reinterpret_cast<std::size_t>(&symbol.name());
 }
 
+std::unique_ptr<std::vector<aterm>> generate_types()
+{
+  return std::make_unique<std::vector<aterm>>();
+}
 
 } // namespace atermpp

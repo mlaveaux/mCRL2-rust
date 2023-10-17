@@ -24,8 +24,17 @@ pub mod ffi {
         /// Creates a term from the given function and arguments.
         fn create_aterm(function: &function_symbol, arguments: &[aterm_ref]) -> UniquePtr<aterm>;
 
+        /// Protect the given aterm.
+        fn protect_aterm(value: &aterm) -> UniquePtr<aterm>;
+
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
+
+        /// Returns true iff the term is an aterm_list.
+        fn aterm_is_list(term: &aterm) -> bool;
+
+        /// Returns true iff the term is the empty aterm_list.
+        fn aterm_is_empty_list(term: &aterm) -> bool;
 
         /// Returns true iff the term is an aterm_int.
         fn aterm_is_int(term: &aterm) -> bool;
@@ -75,14 +84,17 @@ pub mod ffi {
 
         fn function_symbol_address(symbol: &function_symbol) -> usize;
 
-        /// For data::variable
+        // For data::variable
         fn is_data_variable(term: &aterm) -> bool;
 
         fn create_data_variable(name: String) -> UniquePtr<aterm>;
 
-        /// For data::function_symbol        
+        // For data::function_symbol        
         fn is_data_function_symbol(term: &aterm) -> bool;
 
         fn create_data_function_symbol(name: String) -> UniquePtr<aterm>;
+
+        /// This function is to generate necessary data types
+        fn generate_types() -> UniquePtr<CxxVector<aterm>>;
     }
 }
