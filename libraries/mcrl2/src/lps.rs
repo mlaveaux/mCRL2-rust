@@ -1,23 +1,23 @@
 use cxx::UniquePtr;
 use std::fmt;
 
-use mcrl2_sys::lps::ffi::*;
+use mcrl2_sys::lps::ffi;
 
 /// Rust representation of a lps::linear_process_specification.
 pub struct LinearProcessSpecification {
-    lps: UniquePtr<specification>,
+    lps: UniquePtr<ffi::specification>,
 }
 
 impl LinearProcessSpecification {
     pub fn read(filename: &str) -> LinearProcessSpecification {
         LinearProcessSpecification {
-            lps: read_linear_process_specification(filename).expect("cannot read given lps."),
+            lps: ffi::read_linear_process_specification(filename).expect("cannot read given lps."),
         }
     }
 }
 
 impl fmt::Display for LinearProcessSpecification {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", print_linear_process_specification(&self.lps))
+        write!(f, "{}", ffi::print_linear_process_specification(&self.lps))
     }
 }

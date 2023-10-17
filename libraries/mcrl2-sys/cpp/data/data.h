@@ -59,10 +59,25 @@ std::size_t get_data_function_symbol_index(const atermpp::aterm& term)
       static_cast<const mcrl2::data::function_symbol&>(term));
 }
 
+std::unique_ptr<data_specification> data_specification_clone(const data_specification& spec) 
+{
+  return std::make_unique<data_specification>(spec);  
+}
+
 std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_equations(const data_specification& data_spec)
 {
   auto equations = data_spec.equations();
   return std::make_unique<std::vector<atermpp::aterm>>(equations.begin(), equations.end());
+}
+
+std::unique_ptr<atermpp::aterm> true_term() 
+{
+  return std::make_unique<atermpp::aterm>(data::sort_bool::true_());
+}
+
+std::unique_ptr<atermpp::aterm> false_term() 
+{
+  return std::make_unique<atermpp::aterm>(data::sort_bool::false_());
 }
 
 } // namespace mcrl2::data

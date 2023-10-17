@@ -43,15 +43,23 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), "cases/add16", 100);
 
     // Create a jitty rewriter;
-    let mut jitty_rewriter = JittyRewriter::new(&data_spec);
+    let mut jitty_rewriter = JittyRewriter::new(&data_spec.clone());
 
-    let _term_pool = Rc::new(RefCell::new(TermPool::new()));
-    //let sabre_rewriter = SabreRewriter::new(term_pool, );
+    let tp = Rc::new(RefCell::new(TermPool::new()));
+    let mut sabre_rewriter = SabreRewriter::new(tp, &data_spec.into());
 
-    c.bench_function("add16", |bencher| {
+    c.bench_function("add16 jitty", |bencher| {
         bencher.iter(|| {
             for expression in expressions.iter() {
                 black_box(jitty_rewriter.rewrite(expression));
+            }
+        })
+    });
+
+    c.bench_function("add16 sabre", |bencher| {
+        bencher.iter(|| {
+            for expression in expressions.iter() {
+                black_box(sabre_rewriter.rewrite(expression.clone()));
             }
         })
     });

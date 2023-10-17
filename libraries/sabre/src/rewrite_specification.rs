@@ -3,7 +3,7 @@ use std::fmt;
 use itertools::Itertools;
 use mcrl2::{
     atermpp::ATerm,
-    data::{DataFunctionSymbol, DataSpecification}
+    data::{DataFunctionSymbol, DataSpecification, BoolSort}
 };
 
 /// A rewrite specification contains the bare info we need for rewriting (in particular no type information).
@@ -35,8 +35,24 @@ pub struct Rule
 impl From<DataSpecification> for RewriteSpecification {
     fn from(value: DataSpecification) -> Self {
         let equations = value.equations();
+
+        // Convert the equations.
+        let mut rewrite_rules = vec![];
+        for equation in equations {
+            rewrite_rules.push(Rule {
+                conditions: vec![
+                    Condition {
+                        lhs: equation.condition,
+                        rhs: BoolSort::true_term().into(),
+                        equality: true
+                    }
+                ],
+                lhs: equation.lhs,
+                rhs: equation.rhs
+            })
+        }
         
-        RewriteSpecification { rewrite_rules: vec![], constructors: vec![] }
+        RewriteSpecification { rewrite_rules, constructors: vec![] }
     }
 }
 

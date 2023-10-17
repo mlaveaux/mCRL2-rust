@@ -17,13 +17,12 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, fil
     // Read the data specification
     let data_spec_text = fs::read_to_string(filename_dataspec)?;
     let data_spec = DataSpecification::new(&data_spec_text);
-    let data_spec2 = DataSpecification::new(&data_spec_text);
 
     // Create a jitty rewriter;
     let mut rewriter = JittyRewriter::new(&data_spec);
 
     // Convert to the rewrite rules that sabre expects.
-    let rewrite_spec = RewriteSpecification::from(data_spec2);
+    let rewrite_spec = RewriteSpecification::from(data_spec.clone());
     let mut sabre_rewriter = SabreRewriter::new(tp, &rewrite_spec);
 
     // Open the file in read-only mode.
@@ -34,8 +33,8 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, fil
         println!("{}", &line);
 
         let term = data_spec.parse(&line);
-        println!("{}", rewriter.rewrite(&term));
-        println!("{}", sabre_rewriter.rewrite(term));
+        println!("jitty: {}", rewriter.rewrite(&term));
+        println!("sabre: {}", sabre_rewriter.rewrite(term));
     }
 
     Ok(())

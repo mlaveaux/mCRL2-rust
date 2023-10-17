@@ -2,11 +2,11 @@ use core::fmt;
 
 use cxx::UniquePtr;
 
-use mcrl2_sys::data::ffi::*;
+use mcrl2_sys::data::ffi;
 use crate::atermpp::{ATerm, ATermList};
 
 pub struct DataSpecification {
-    pub data_spec: UniquePtr<data_specification>,
+    pub data_spec: UniquePtr<ffi::data_specification>,
 }
 
 /// A pattern is simply an aterm of the shape f(...)
@@ -36,36 +36,46 @@ impl DataSpecification {
     /// Parses the given text into a data specification
     pub fn new(text: &str) -> Self {
         DataSpecification {
-            data_spec: parse_data_specification(text)
+            data_spec: ffi::parse_data_specification(text)
                 .expect("failed to parse data specification"),
         }
     }
 
     /// Parses the given data expression as text into a term
     pub fn parse(&self, text: &str) -> ATerm {
-        parse_data_expression(text, &self.data_spec).into()
+        ffi::parse_data_expression(text, &self.data_spec).into()
     }
 
+    /// Returns the equations of the data specification.
     pub fn equations(&self) -> Vec<DataEquation> {
-        get_data_specification_equations(&self.data_spec).iter().map(|x| {
+        ffi::get_data_specification_equations(&self.data_spec).iter().map(|x| {
             ATerm::from(x).into()
         }).collect()
     }
 }
 
+impl Clone for DataSpecification {
+    fn clone(&self) -> Self {
+        DataSpecification { data_spec: ffi::data_specification_clone(&self.data_spec) }
+    }
+}
+
 pub struct JittyRewriter {
-    rewriter: UniquePtr<RewriterJitty>,
+    rewriter: UniquePtr<ffi::RewriterJitty>,
 }
 
 impl JittyRewriter {
+
+    /// Create a rewriter instance from the given data specification.
     pub fn new(spec: &DataSpecification) -> JittyRewriter {
         JittyRewriter {
-            rewriter: create_jitty_rewriter(&spec.data_spec),
+            rewriter: ffi::create_jitty_rewriter(&spec.data_spec),
         }
     }
 
+    /// Rewrites the term with the jitty rewriter.
     pub fn rewrite(&mut self, term: &ATerm) -> ATerm {
-        ATerm::from(rewrite(self.rewriter.pin_mut(), term.get()))
+        ATerm::from(ffi::rewrite(self.rewriter.pin_mut(), term.get()))
     }
 }
 
@@ -146,7 +156,7 @@ impl DataFunctionSymbol
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
         debug_assert!(self.term.is_data_function_symbol(), "term {} is not a data function symbol", self.term);
-        get_data_function_symbol_index(&self.term.term)
+        ffi::get_data_function_symbol_index(&self.term.term)
     }
 }
 
@@ -164,6 +174,30 @@ impl fmt::Display for DataFunctionSymbol {
         } else {
             write!(f, "<default>")
         }
+    }
+}
+
+pub struct BoolSort {
+    pub(crate) term: ATerm,
+}
+
+impl BoolSort {
+    pub fn true_term() -> BoolSort {
+        BoolSort { 
+            term: ffi::true_term().into()
+        }
+    }
+
+    pub fn false_term() -> BoolSort {
+        BoolSort { 
+            term: ffi::false_term().into()
+        }
+    }
+}
+
+impl From<ATerm> for BoolSort {
+    fn from(value: ATerm) -> Self {
+        BoolSort { term: value }
     }
 }
 
@@ -205,7 +239,7 @@ mod tests {
                 notBool : Xbool -> Xbool ;
                 andBool : Xbool # Xbool -> Xbool ;";
 
-        let data_spec = DataSpecification::new(text);
+        let _data_spec = DataSpecification::new(text);
 
     }
 

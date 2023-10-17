@@ -9,7 +9,7 @@ use anyhow::Result as AnyResult;
 use cxx::{Exception, UniquePtr};
 use mcrl2_sys::atermpp::ffi;
 
-use crate::data::{DataApplication, DataFunctionSymbol, DataVariable};
+use crate::data::{DataApplication, DataFunctionSymbol, DataVariable, BoolSort};
 
 /// A Symbol references to an aterm function symbol, which has a name and an arity.
 pub struct Symbol {
@@ -94,12 +94,8 @@ pub struct ATerm {
 }
 
 impl ATerm {
-    /// Get access to the underlying term
-    pub fn get(&self) -> &ffi::aterm {
-        self.require_valid();
-        &self.term
-    }
 
+    /// Returns the indexed argument of the term
     pub fn arg(&self, index: usize) -> ATerm {
         self.require_valid();
         debug_assert!(
@@ -113,6 +109,7 @@ impl ATerm {
         }
     }
 
+    /// Returns the list of arguments.
     pub fn arguments(&self) -> Vec<ATerm> {
         self.require_valid();
         let mut result = vec![];
@@ -161,6 +158,12 @@ impl ATerm {
             !self.is_default(),
             "This function can only be called on valid terms, i.e., not default terms"
         );
+    }
+
+    /// Get access to the underlying term
+    pub(crate) fn get(&self) -> &ffi::aterm {
+        self.require_valid();
+        &self.term
     }
 
     // Recognizers for the data library
@@ -309,6 +312,13 @@ impl<T> From<ATermList<T>> for ATerm {
         value.term
     }
 }
+
+impl From<BoolSort> for ATerm {
+    fn from(value: BoolSort) -> Self {
+        value.term
+    }
+}
+
 
 pub struct ATermList<T> {
     term: ATerm,

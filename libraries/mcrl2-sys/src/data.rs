@@ -34,10 +34,18 @@ pub mod ffi {
         //fn create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJittyCompiling>;
 
         /// Rewrites the given term to normal form.
-        fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: &aterm) -> UniquePtr<aterm>;        
-        
+        fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: &aterm) -> UniquePtr<aterm>;   
+
+        /// Clone the data specification
+        fn data_specification_clone(data_spec: &data_specification) -> UniquePtr<data_specification>;
+
         /// Obtain the index assigned internally to every data function symbol.
         fn get_data_function_symbol_index(term: &aterm) -> usize;
 
+        /// Create the data::true term
+        fn true_term() -> UniquePtr<aterm>;
+
+        /// Create the data::false term
+        fn false_term() -> UniquePtr<aterm>;
     }
 }
