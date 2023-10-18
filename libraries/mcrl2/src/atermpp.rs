@@ -595,7 +595,10 @@ impl<I, C: fmt::Display> fmt::Display for Config<I, C> {
     }
 }
 
-/// Applies the given function to every subterm of the given term.
+/// Applies the given function to every subterm of the given term using the TermBuilder.
+///     function(subterm) returns:
+///         None   , in which case subterm is kept and it is recursed into its argments.
+///         Some(x), in which case subterm is replaced by x.
 pub fn apply<F>(tp: &mut TermPool, t: &ATerm, function: &F) -> ATerm
 where
     F: Fn(&mut TermPool, &ATerm) -> Option<ATerm>,
@@ -621,6 +624,31 @@ where
         .unwrap()
 }
 
+/// This can be used to construct a term from a given input of type (inductive
+/// type) I, without using the system stack.
+/// 
+/// The `transformer` function is applied to every input I, which can put more
+/// more inputs onto the argument stack and some instance C that is used to construct
+/// the result term. Or yield a result term directly.
+/// 
+/// The `construct` function takes an instance C and the term arguments pushed to stack
+/// where the transformer was applied.
+/// 
+/// 
+/// A simple example could be to transform a term into another term using a
+/// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is the
+/// input, and C will be the Symbol from which we can construct the recursive
+/// term.
+/// 
+/// `transformer` takes the input and applies f(input). Then either we return
+/// Yield(x) when f returns some term, or Construct(head(input)) with the
+/// arguments of the input term pushed to stack.
+/// 
+/// `construct` simply constructs the term from the symbol and the arguments on
+/// the stack.
+/// 
+/// However, it can also be that I is some syntax tree from which we want to
+/// construct a term.
 impl<I, C: fmt::Display> TermBuilder<I, C> {
     pub fn new() -> TermBuilder<I, C> {
         TermBuilder {
@@ -698,6 +726,7 @@ pub enum Yield<C> {
     Construct(C), // Yield f(args) for every arg push to the argument stack, with the function applied to it.
 }
 
+/// This struct defines a local argument stack on the global stack.
 pub struct ArgStack<'a, I, C> {
     terms: &'a mut Vec<ATerm>,
     configs: &'a mut Vec<Config<I, C>>,
