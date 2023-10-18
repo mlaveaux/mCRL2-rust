@@ -94,6 +94,13 @@ pub mod ffi {
 
         fn create_data_function_symbol(name: String) -> UniquePtr<aterm>;
 
+        // For data::data_expression        
+        fn is_data_expression(term: &aterm) -> bool;
+        fn is_data_where_clause(term: &aterm) -> bool;
+        fn is_data_application(term: &aterm) -> bool;
+        fn is_data_abstraction(term: &aterm) -> bool;
+        fn is_data_untyped_identifier(term: &aterm) -> bool;
+
         /// This function is to generate necessary data types
         fn generate_types() -> UniquePtr<CxxVector<aterm>>;
     }

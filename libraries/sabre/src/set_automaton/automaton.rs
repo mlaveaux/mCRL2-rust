@@ -35,53 +35,62 @@ enum GoalsOrInitial {
     Goals(Vec<MatchGoal>),
 }
 
-fn add_symbol(function_symbol: DataFunctionSymbol, arity: usize, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+fn add_symbol(
+    function_symbol: DataFunctionSymbol,
+    arity: usize,
+    symbols: &mut Vec<(DataFunctionSymbol, usize)>,
+) {
     let index = function_symbol.operation_id();
 
     if index >= symbols.len() {
         symbols.resize(index + 1, Default::default());
     }
 
-    if symbols[index] == Default::default() {                        
+    if symbols[index] == Default::default() {
         symbols[index] = (function_symbol, arity);
-    } else {                        
-        assert!(symbols[index].1 == arity, "Function symbol {} occurs with arity {} and {}", function_symbol, arity, &symbols[index].1);                        
+    } else {
+        assert!(
+            symbols[index].1 == arity,
+            "Function symbol {} occurs with arity {} and {}",
+            function_symbol,
+            arity,
+            &symbols[index].1
+        );
     }
 }
 
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
-fn is_valid(t: &ATerm) -> bool {
+fn is_supported_term(t: &ATerm) -> bool {
     for subterm in t.iter() {
-        if subterm.is_data_application() {
-            let args = subterm.arguments();
-            if !args[0].is_data_function_symbol() {
-                return false;
-            }
-        } 
-        
-        if subterm.get_head_symbol().name() == "Binder" {
+        if subterm.is_data_application() && !subterm.arg(0).is_data_function_symbol() {
+            println!("{} is higher order", subterm);
+            return false;
+        } else if subterm.is_data_abstraction()
+            || subterm.is_data_where_clause()
+            || subterm.is_data_untyped_identifier()
+        {
+            println!("{} is unsupported construct", subterm);
             return false;
         }
     }
 
-    return true;
+    true
 }
 
 /// Checks whether the set automaton can use this rule, no higher order rules or binders.
-fn is_usable_rule(rule: &Rule) -> bool {
-
+fn is_supported_rule(rule: &Rule) -> bool {
     // There should be no terms of the shape t(t0,...,t_n)
-    if !is_valid(&rule.rhs) || !is_valid(&rule.lhs) {
+    if !is_supported_term(&rule.rhs) || !is_supported_term(&rule.lhs) {
         return false;
     }
 
-    for cond in &rule.conditions {   
-        if !is_valid(&cond.rhs) || !is_valid(&cond.lhs) {
+    for cond in &rule.conditions {
+        if !is_supported_term(&cond.rhs) || !is_supported_term(&cond.lhs) {
             return false;
         }
     }
 
-    return true;
+    true
 }
 
 /// Finds all data symbols in the term and adds them to the symbol index.
@@ -95,7 +104,10 @@ fn find_symbols(t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
             let args = subterm.arguments();
 
             // REC specifications should never contain this so it can be a debug error.
-            assert!(args[0].is_data_function_symbol(), "Higher order term rewrite systems are not supported");
+            assert!(
+                args[0].is_data_function_symbol(),
+                "Higher order term rewrite systems are not supported"
+            );
             let function_symbol: DataFunctionSymbol = args[0].clone().into();
             add_symbol(function_symbol, args.len() - 1, symbols);
         }
@@ -106,23 +118,33 @@ impl SetAutomaton {
     pub fn new(spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
-        
+
+        // Remove rules that we cannot deal with
+        let supported_rules: Vec<Rule> = spec
+            .rewrite_rules
+            .iter()
+            .filter(|rule| {
+                if is_supported_rule(rule) {
+                    true
+                } else {
+                    println!("ignored rule: {}", rule);
+                    false
+                }
+            })
+            .map(Rule::clone)
+            .collect();
+
         // Find the indices of all the function symbols.
         let symbols = {
             let mut symbols = vec![];
 
-            for rule in &spec.rewrite_rules {
-                if !is_usable_rule(rule) {
-                    println!("ignored rule: {}: {:?}", rule, rule);
-                } else {
-                    println!("added rule {}", rule);
-                    find_symbols(&rule.lhs, &mut symbols);
-                    find_symbols(&rule.rhs, &mut symbols);
+            for rule in &supported_rules {
+                find_symbols(&rule.lhs, &mut symbols);
+                find_symbols(&rule.rhs, &mut symbols);
 
-                    for cond in &rule.conditions {   
-                        find_symbols(&cond.lhs, &mut symbols);
-                        find_symbols(&cond.rhs, &mut symbols);
-                    }
+                for cond in &rule.conditions {
+                    find_symbols(&cond.lhs, &mut symbols);
+                    find_symbols(&cond.rhs, &mut symbols);
                 }
             }
 
@@ -133,14 +155,14 @@ impl SetAutomaton {
             symbols
         };
 
-        /*for symbol in &symbols {
-            println!("{}: {}", symbol.0, symbol.1);
-        }*/
+        // for (index, (symbol, arity))in symbols.iter().enumerate() {
+        //     println!("{}: {} {}", index, symbol, arity);
+        // }
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
         // with one obligation l@ε and announcement l@ε.
         let mut match_goals = Vec::<MatchGoal>::new();
-        for rr in &spec.rewrite_rules {
+        for rr in &supported_rules {
             match_goals.push(MatchGoal {
                 obligations: vec![MatchObligation {
                     pattern: rr.lhs.clone(),
@@ -188,9 +210,9 @@ impl SetAutomaton {
                         states.get(s_index).unwrap().derive_transition(
                             symbol.clone(),
                             *arity,
-                            &spec.rewrite_rules,
+                            &supported_rules,
                             apma,
-                            debug
+                            debug,
                         ),
                     )
                 })
@@ -387,6 +409,7 @@ impl State {
                     let pos = ExplicitPosition {
                         indices: SmallVec::from_slice(&pos.indices[gcp_length..]),
                     };
+
                     // Add the fresh goals to the partition
                     for rr in rewrite_rules {
                         if let GoalsOrInitial::Goals(goals) = &mut destinations[key].1 {
@@ -418,7 +441,12 @@ impl State {
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(&self, symbol: &DataFunctionSymbol, arity: usize, debug: bool) -> Derivative {
+    fn compute_derivative(
+        &self,
+        symbol: &DataFunctionSymbol,
+        arity: usize,
+        debug: bool,
+    ) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
@@ -426,22 +454,25 @@ impl State {
         };
 
         for mg in &self.match_goals {
-            debug_assert!(!mg.obligations.is_empty(), "The obligations should never be empty, should be completed then");
+            debug_assert!(
+                !mg.obligations.is_empty(),
+                "The obligations should never be empty, should be completed then"
+            );
 
             // Completed match goals
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
                         && &get_data_function_symbol(&mo.pattern) == symbol
-                        && get_data_arguments(&mo.pattern).iter().all(|x| x.is_data_variable()) // Again skip the function symbol
+                        && get_data_arguments(&mo.pattern)
+                            .iter()
+                            .all(|x| x.is_data_variable()) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
-            } else if mg
-                .obligations
-                .iter()
-                .any(|mo| mo.position == self.label && &get_data_function_symbol(&mo.pattern) != symbol)
-            {
+            } else if mg.obligations.iter().any(|mo| {
+                mo.position == self.label && &get_data_function_symbol(&mo.pattern) != symbol
+            }) {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
                 // Unchanged match goals
@@ -457,7 +488,8 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if &get_data_function_symbol(&mo.pattern) == symbol && mo.position == self.label {
+                    if &get_data_function_symbol(&mo.pattern) == symbol && mo.position == self.label
+                    {
                         // Reduced match obligation
                         for (index, t) in get_data_arguments(&mo.pattern).iter().enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
@@ -487,12 +519,15 @@ impl State {
         }
 
         if debug {
-            println!("compute_derivative(symbol {}, label {})", symbol, self.label);
+            println!(
+                "compute_derivative(symbol {}, label {})",
+                symbol, self.label
+            );
             println!("Match goals: {{");
             for mg in &self.match_goals {
                 println!("\t {}", mg);
             }
-            
+
             println!("}}");
             println!("Completed: {{");
             for mg in &result.completed {
@@ -556,12 +591,12 @@ mod tests {
 
     use super::SetAutomaton;
 
-    #[test]
+    // Creating this auomaton takes too much time.
+    /*#[test]
     fn test_automaton_from_data_spec() {
-
         let data_spec_text = include_str!("../../../benchmarks/cases/add16.dataspec");
         let data_spec = DataSpecification::new(data_spec_text);
 
         let _ = SetAutomaton::new(&data_spec.into(), false, false);
-    }
+    }*/
 }

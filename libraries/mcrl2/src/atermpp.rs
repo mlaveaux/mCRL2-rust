@@ -9,7 +9,7 @@ use anyhow::Result as AnyResult;
 use cxx::{Exception, UniquePtr};
 use mcrl2_sys::atermpp::ffi;
 
-use crate::data::{DataApplication, DataFunctionSymbol, DataVariable, BoolSort};
+use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
 
 /// A Symbol references to an aterm function symbol, which has a name and an arity.
 pub struct Symbol {
@@ -94,7 +94,6 @@ pub struct ATerm {
 }
 
 impl ATerm {
-
     /// Returns the indexed argument of the term
     pub fn arg(&self, index: usize) -> ATerm {
         self.require_valid();
@@ -123,15 +122,15 @@ impl ATerm {
     pub fn is_default(&self) -> bool {
         ffi::aterm_pointer(&self.term) == 0
     }
-    
+
     /// Returns true iff this is an aterm_list
     pub fn is_list(&self) -> bool {
-        ffi::aterm_is_list(&self.term)        
+        ffi::aterm_is_list(&self.term)
     }
 
     /// Returns true iff this is the empty aterm_list
     pub fn is_empty_list(&self) -> bool {
-        ffi::aterm_is_empty_list(&self.term)        
+        ffi::aterm_is_empty_list(&self.term)
     }
 
     /// Returns true iff this is a aterm_int
@@ -167,7 +166,7 @@ impl ATerm {
     }
 
     // Recognizers for the data library
-    
+
     /// Returns true iff this is a data::variable
     pub fn is_data_variable(&self) -> bool {
         self.require_valid();
@@ -178,15 +177,39 @@ impl ATerm {
     pub fn is_data_application(&self) -> bool {
         self.require_valid();
         // Check DataAppl is expensive, so it derived from whether the first
-        // argument is a TermFunctionSymbol. This is also done in the upstream
-        // code.
-        self.get_head_symbol().arity() > 0 && self.arg(0).is_data_function_symbol()
+        // it is not any of the other data expressions.
+        self.is_data_expression()
+            && !(self.is_data_variable()
+                || self.is_data_function_symbol()
+                || self.is_data_where_clause()
+                || self.is_data_abstraction()
+                || self.is_data_untyped_identifier())
+    }
+
+    pub fn is_data_expression(&self) -> bool {
+        self.require_valid();
+        ffi::is_data_expression(&self.term)
     }
 
     /// Returns true iff this is a data::function_symbol
     pub fn is_data_function_symbol(&self) -> bool {
         self.require_valid();
         ffi::is_data_function_symbol(&self.term)
+    }
+
+    pub fn is_data_where_clause(&self) -> bool {
+        self.require_valid();
+        ffi::is_data_where_clause(&self.term)
+    }
+
+    pub fn is_data_abstraction(&self) -> bool {
+        self.require_valid();
+        ffi::is_data_abstraction(&self.term)
+    }
+
+    pub fn is_data_untyped_identifier(&self) -> bool {
+        self.require_valid();
+        ffi::is_data_untyped_identifier(&self.term)
     }
 }
 
@@ -206,7 +229,9 @@ impl From<UniquePtr<ffi::aterm>> for ATerm {
 
 impl From<&ffi::aterm> for ATerm {
     fn from(value: &ffi::aterm) -> Self {
-        ATerm { term: ffi::protect_aterm(value) }
+        ATerm {
+            term: ffi::protect_aterm(value),
+        }
     }
 }
 
@@ -319,14 +344,12 @@ impl From<BoolSort> for ATerm {
     }
 }
 
-
 pub struct ATermList<T> {
     term: ATerm,
     _marker: PhantomData<T>,
 }
 
 impl<T: From<ATerm>> ATermList<T> {
-
     /// Obtain the head, i.e. the first element, of the list.
     pub fn head(&self) -> T {
         self.term.arg(0).into()
@@ -334,10 +357,9 @@ impl<T: From<ATerm>> ATermList<T> {
 }
 
 impl<T> ATermList<T> {
-
     /// Returns true iff the list is empty.
     pub fn is_empty(&self) -> bool {
-        self.term.is_empty_list()        
+        self.term.is_empty_list()
     }
 
     /// Obtain the tail, i.e. the remainder, of the list.
@@ -347,7 +369,9 @@ impl<T> ATermList<T> {
 
     /// Returns an iterator over all elements in the list.
     pub fn iter(&self) -> ATermListIter<T> {
-        ATermListIter { current: self.clone() }
+        ATermListIter {
+            current: self.clone(),
+        }
     }
 }
 
@@ -355,7 +379,7 @@ impl<T> Clone for ATermList<T> {
     fn clone(&self) -> Self {
         ATermList {
             term: self.term.clone(),
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
@@ -381,7 +405,10 @@ impl<T: From<ATerm>> Iterator for ATermListIter<T> {
 impl<T> From<ATerm> for ATermList<T> {
     fn from(value: ATerm) -> Self {
         debug_assert!(value.is_list(), "Can only convert a aterm_list");
-        ATermList::<T> { term: value, _marker: PhantomData }
+        ATermList::<T> {
+            term: value,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -626,27 +653,27 @@ where
 
 /// This can be used to construct a term from a given input of type (inductive
 /// type) I, without using the system stack.
-/// 
+///
 /// The `transformer` function is applied to every input I, which can put more
 /// more inputs onto the argument stack and some instance C that is used to construct
 /// the result term. Or yield a result term directly.
-/// 
+///
 /// The `construct` function takes an instance C and the term arguments pushed to stack
 /// where the transformer was applied.
-/// 
-/// 
+///
+///
 /// A simple example could be to transform a term into another term using a
 /// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is the
 /// input, and C will be the Symbol from which we can construct the recursive
 /// term.
-/// 
+///
 /// `transformer` takes the input and applies f(input). Then either we return
 /// Yield(x) when f returns some term, or Construct(head(input)) with the
 /// arguments of the input term pushed to stack.
-/// 
+///
 /// `construct` simply constructs the term from the symbol and the arguments on
 /// the stack.
-/// 
+///
 /// However, it can also be that I is some syntax tree from which we want to
 /// construct a term.
 impl<I, C: fmt::Display> TermBuilder<I, C> {
@@ -866,6 +893,5 @@ mod tests {
         assert_eq!(values[1], tp.from_string("g").unwrap());
         assert_eq!(values[2], tp.from_string("h").unwrap());
         assert_eq!(values[3], tp.from_string("i").unwrap());
-
     }
 }

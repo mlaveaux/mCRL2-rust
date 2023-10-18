@@ -52,11 +52,6 @@ impl DataSpecification {
             ATerm::from(x).into()
         }).collect()
     }
-
-    /// Returns the subset of equations that are actually relevant
-    pub fn necessary_equations(&self) -> Vec<DataEquation> {
-        vec![]
-    }
 }
 
 impl Clone for DataSpecification {
@@ -125,7 +120,13 @@ impl fmt::Display for DataApplication {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut args = self.term.arguments().into_iter();
 
-        write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(args.next().unwrap()))?;
+        let head = args.next().unwrap();
+        if head.is_data_function_symbol() {
+            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head))?;
+        } else {
+            write!(f, "{:?}", head)?;
+        }
+
 
         let mut first = true;
         for arg in args {
@@ -167,7 +168,7 @@ impl DataFunctionSymbol
 
 impl From<ATerm> for DataFunctionSymbol {
     fn from(value: ATerm) -> Self {
-        debug_assert!(value.is_data_function_symbol(), "Term {value} is not a data function symbol");
+        debug_assert!(value.is_data_function_symbol(), "Term {value:?} is not a data function symbol");
         DataFunctionSymbol { term: value }
     }
 }

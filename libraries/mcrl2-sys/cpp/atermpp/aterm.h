@@ -171,9 +171,29 @@ std::unique_ptr<aterm> create_data_variable(rust::String name)
   return std::make_unique<aterm>(mcrl2::data::variable(static_cast<std::string>(name), mcrl2::data::sort_expression()));
 }
 
+bool is_data_where_clause(const aterm& term)
+{
+  return mcrl2::data::is_where_clause(static_cast<const aterm_appl&>(term));
+}
+
 bool is_data_application(const aterm& term)
 {
   return mcrl2::data::is_application(static_cast<const aterm_appl&>(term));
+}
+
+bool is_data_expression(const aterm& term)
+{
+  return mcrl2::data::is_data_expression(static_cast<const aterm_appl&>(term));
+}
+
+bool is_data_abstraction(const aterm& term)
+{
+  return mcrl2::data::is_abstraction(static_cast<const aterm_appl&>(term));
+}
+
+bool is_data_untyped_identifier(const aterm& term)
+{
+  return mcrl2::data::is_untyped_identifier(static_cast<const aterm_appl&>(term));
 }
 
 std::unique_ptr<aterm> create_data_application(const aterm& head, rust::Slice<const aterm_ref> arguments)

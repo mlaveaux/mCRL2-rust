@@ -23,7 +23,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, fil
 
     // Convert to the rewrite rules that sabre expects.
     let rewrite_spec = RewriteSpecification::from(data_spec.clone());
-    let mut inner_rewriter = InnermostRewriter::new(tp, &rewrite_spec);
+    let mut inner_rewriter = InnermostRewriter::new(tp.clone(), &rewrite_spec);
     let mut sabre_rewriter = SabreRewriter::new(tp, &rewrite_spec);
 
     // Open the file in read-only mode.
@@ -44,7 +44,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, fil
         println!("innermost rewrite took {} ms", now.elapsed().as_millis());
     
         let now = Instant::now();
-        let result = sabre_rewriter.rewrite(term.clone());
+        sabre_rewriter.rewrite(term.clone());
         println!("sabre rewrite took {} ms", now.elapsed().as_millis());
     }
 
