@@ -19,10 +19,11 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, fil
     let data_spec = DataSpecification::new(&data_spec_text);
 
     // Create a jitty rewriter;
-    let mut rewriter = JittyRewriter::new(&data_spec);
+    let mut jitty_rewriter = JittyRewriter::new(&data_spec);
 
     // Convert to the rewrite rules that sabre expects.
     let rewrite_spec = RewriteSpecification::from(data_spec.clone());
+    let mut inner_rewriter = InnermostRewriter::new(tp, &rewrite_spec);
     let mut sabre_rewriter = SabreRewriter::new(tp, &rewrite_spec);
 
     // Open the file in read-only mode.
@@ -33,8 +34,18 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, filename_dataspec: &str, fil
         println!("{}", &line);
 
         let term = data_spec.parse(&line);
-        println!("jitty: {}", rewriter.rewrite(&term));
-        println!("sabre: {}", sabre_rewriter.rewrite(term));
+
+        let now = Instant::now();
+        jitty_rewriter.rewrite(&term);
+        println!("jitty rewrite took {} ms", now.elapsed().as_millis());
+
+        let now = Instant::now();
+        inner_rewriter.rewrite(term.clone());
+        println!("innermost rewrite took {} ms", now.elapsed().as_millis());
+    
+        let now = Instant::now();
+        let result = sabre_rewriter.rewrite(term.clone());
+        println!("sabre rewrite took {} ms", now.elapsed().as_millis());
     }
 
     Ok(())

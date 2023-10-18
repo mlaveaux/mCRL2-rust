@@ -13,7 +13,7 @@ use mcrl2rewrite::{rewrite_data_spec, rewrite_rec};
     long_about = "Can be used to parse and rewrite arbitrary mCRL2 data specifications and REC files"
 )]
 pub struct Cli {
-    #[arg(long)]
+    #[arg(long="rec")]
     rec: bool,
 
     #[arg(value_name = "FILE")]
@@ -21,6 +21,7 @@ pub struct Cli {
 
     #[arg()]
     term: String,
+
 }
 
 fn main() -> AnyResult<()>
@@ -31,6 +32,6 @@ fn main() -> AnyResult<()>
     if cli.rec { 
         rewrite_rec(&cli.specification, &cli.term)     
     } else {
-        rewrite_data_spec(tp, &cli.specification, "") 
+        rewrite_data_spec(tp, &cli.specification, &cli.term) 
     }
 }

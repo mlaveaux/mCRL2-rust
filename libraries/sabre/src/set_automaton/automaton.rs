@@ -49,6 +49,42 @@ fn add_symbol(function_symbol: DataFunctionSymbol, arity: usize, symbols: &mut V
     }
 }
 
+/// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
+fn is_valid(t: &ATerm) -> bool {
+    for subterm in t.iter() {
+        if subterm.is_data_application() {
+            let args = subterm.arguments();
+            if !args[0].is_data_function_symbol() {
+                return false;
+            }
+        } 
+        
+        if subterm.get_head_symbol().name() == "Binder" {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/// Checks whether the set automaton can use this rule, no higher order rules or binders.
+fn is_usable_rule(rule: &Rule) -> bool {
+
+    // There should be no terms of the shape t(t0,...,t_n)
+    if !is_valid(&rule.rhs) || !is_valid(&rule.lhs) {
+        return false;
+    }
+
+    for cond in &rule.conditions {   
+        if !is_valid(&cond.rhs) || !is_valid(&cond.lhs) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/// Finds all data symbols in the term and adds them to the symbol index.
 fn find_symbols(t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
     if t.is_data_function_symbol() {
         add_symbol(t.clone().into(), 0, symbols);
@@ -72,21 +108,34 @@ impl SetAutomaton {
         let mut state_counter: usize = 1;
         
         // Find the indices of all the function symbols.
-        let mut symbols = vec![];
+        let symbols = {
+            let mut symbols = vec![];
 
-        for rule in &spec.rewrite_rules {
-            find_symbols(&rule.lhs, &mut symbols);
-            find_symbols(&rule.rhs, &mut symbols);
+            for rule in &spec.rewrite_rules {
+                if !is_usable_rule(rule) {
+                    println!("ignored rule: {}: {:?}", rule, rule);
+                } else {
+                    println!("added rule {}", rule);
+                    find_symbols(&rule.lhs, &mut symbols);
+                    find_symbols(&rule.rhs, &mut symbols);
 
-            for cond in&rule.conditions {   
-                find_symbols(&cond.lhs, &mut symbols);
-                find_symbols(&cond.rhs, &mut symbols);
+                    for cond in &rule.conditions {   
+                        find_symbols(&cond.lhs, &mut symbols);
+                        find_symbols(&cond.rhs, &mut symbols);
+                    }
+                }
             }
-        }
 
-        for (symbol, arity) in &spec.constructors {
-            add_symbol(symbol.clone(), *arity, &mut symbols);
-        }
+            for (symbol, arity) in &spec.constructors {
+                add_symbol(symbol.clone(), *arity, &mut symbols);
+            }
+
+            symbols
+        };
+
+        /*for symbol in &symbols {
+            println!("{}: {}", symbol.0, symbol.1);
+        }*/
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
         // with one obligation l@ε and announcement l@ε.
@@ -498,5 +547,21 @@ impl State {
             transitions: Vec::with_capacity(num_transitions), // Transitions need to be added later
             match_goals: goals,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mcrl2::data::DataSpecification;
+
+    use super::SetAutomaton;
+
+    #[test]
+    fn test_automaton_from_data_spec() {
+
+        let data_spec_text = include_str!("../../../benchmarks/cases/add16.dataspec");
+        let data_spec = DataSpecification::new(data_spec_text);
+
+        let _ = SetAutomaton::new(&data_spec.into(), false, false);
     }
 }

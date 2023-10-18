@@ -52,6 +52,11 @@ impl DataSpecification {
             ATerm::from(x).into()
         }).collect()
     }
+
+    /// Returns the subset of equations that are actually relevant
+    pub fn necessary_equations(&self) -> Vec<DataEquation> {
+        vec![]
+    }
 }
 
 impl Clone for DataSpecification {
@@ -212,7 +217,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_data_specification() {
+    fn test_parse_data_specification() {
 
         let text = "
             sort Xbool = struct
