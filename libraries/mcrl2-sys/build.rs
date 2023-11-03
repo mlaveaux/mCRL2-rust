@@ -178,7 +178,7 @@ fn main() {
     }
 
     // Enable thread safety since Rust executes its tests at least by default, and allow threading in general.
-    build.define("MCRL2_THREAD_SAFE", "1");
+    build.define("MCRL2_ENABLE_MULTITHREADING", "1");
 
     add_platform_flags(&mut build, mcrl2_path);
     add_cpp_flags(&mut build);
