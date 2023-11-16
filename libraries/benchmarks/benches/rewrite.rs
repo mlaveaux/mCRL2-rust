@@ -45,8 +45,8 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     // Create a jitty rewriter;
     let mut jitty_rewriter = JittyRewriter::new(&data_spec.clone());
 
-    let tp = Rc::new(RefCell::new(TermPool::new()));
-    let mut sabre_rewriter = SabreRewriter::new(tp, &data_spec.into());
+    // let tp = Rc::new(RefCell::new(TermPool::new()));
+    // let mut sabre_rewriter = SabreRewriter::new(tp, &data_spec.into());
 
     c.bench_function("add16 jitty", |bencher| {
         bencher.iter(|| {
@@ -56,13 +56,13 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("add16 sabre", |bencher| {
-        bencher.iter(|| {
-            for expression in expressions.iter() {
-                black_box(sabre_rewriter.rewrite(expression.clone()));
-            }
-        })
-    });
+    // c.bench_function("add16 sabre", |bencher| {
+    //     bencher.iter(|| {
+    //         for expression in expressions.iter() {
+    //             black_box(sabre_rewriter.rewrite(expression.clone()));
+    //         }
+    //     })
+    // });
 }
 
 pub fn criterion_benchmark_sabre(c: &mut Criterion) {
