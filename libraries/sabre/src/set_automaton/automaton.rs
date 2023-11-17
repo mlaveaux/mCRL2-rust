@@ -62,7 +62,7 @@ fn add_symbol(
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
 fn is_supported_term(tp: &mut TermPool, t: &ATerm) -> bool {
     for subterm in t.iter() {
-        if tp.is_data_application(t) && !subterm.arg(0).is_data_function_symbol() {
+        if tp.is_data_application(&subterm) && !subterm.arg(0).is_data_function_symbol() {
             println!("{} is higher order", subterm);
             return false;
         } else if subterm.is_data_abstraction()

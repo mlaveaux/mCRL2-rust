@@ -477,9 +477,17 @@ impl TermPool {
     }
 
     /// Returns true iff this is a data::application
-    pub fn is_data_application(&self, term: &ATerm) -> bool {
-        term.require_valid();
-        term.get_head_symbol() == self.data_appl[term.get_head_symbol().arity()]
+    pub fn is_data_application(&mut self, term: &ATerm) -> bool {
+        term.require_valid();       
+        
+        let symbol = term.get_head_symbol();
+        // It can be that data_applications are created without create_data_application in the mcrl2 ffi.
+        while self.data_appl.len() <= symbol.arity() {
+            let symbol = self.create_symbol("DataAppl", self.data_appl.len());
+            self.data_appl.push(symbol);
+        }
+
+        symbol == self.data_appl[symbol.arity()]
     }
 
     /// Creates an [ATerm] with the given symbol, first and other arguments.
