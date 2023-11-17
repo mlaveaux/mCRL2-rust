@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use ahash::HashMap;
-use mcrl2::{atermpp::ATerm, data::DataFunctionSymbol};
+use mcrl2::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -60,9 +60,9 @@ fn add_symbol(
 }
 
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
-fn is_supported_term(t: &ATerm) -> bool {
+fn is_supported_term(tp: &mut TermPool, t: &ATerm) -> bool {
     for subterm in t.iter() {
-        if subterm.is_data_application() && !subterm.arg(0).is_data_function_symbol() {
+        if tp.is_data_application(t) && !subterm.arg(0).is_data_function_symbol() {
             println!("{} is higher order", subterm);
             return false;
         } else if subterm.is_data_abstraction()
@@ -78,14 +78,14 @@ fn is_supported_term(t: &ATerm) -> bool {
 }
 
 /// Checks whether the set automaton can use this rule, no higher order rules or binders.
-fn is_supported_rule(rule: &Rule) -> bool {
+fn is_supported_rule(tp: &mut TermPool, rule: &Rule) -> bool {
     // There should be no terms of the shape t(t0,...,t_n)
-    if !is_supported_term(&rule.rhs) || !is_supported_term(&rule.lhs) {
+    if !is_supported_term(tp, &rule.rhs) || !is_supported_term(tp, &rule.lhs) {
         return false;
     }
 
     for cond in &rule.conditions {
-        if !is_supported_term(&cond.rhs) || !is_supported_term(&cond.lhs) {
+        if !is_supported_term(tp, &cond.rhs) || !is_supported_term(tp, &cond.lhs) {
             return false;
         }
     }
@@ -94,13 +94,13 @@ fn is_supported_rule(rule: &Rule) -> bool {
 }
 
 /// Finds all data symbols in the term and adds them to the symbol index.
-fn find_symbols(t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
     if t.is_data_function_symbol() {
         add_symbol(t.clone().into(), 0, symbols);
     }
 
     for subterm in t.iter() {
-        if subterm.is_data_application() {
+        if tp.is_data_application(&subterm) {
             let args = subterm.arguments();
 
             // REC specifications should never contain this so it can be a debug error.
@@ -115,7 +115,7 @@ fn find_symbols(t: &ATerm, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
 }
 
 impl SetAutomaton {
-    pub fn new(spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
+    pub fn new(tp: &mut TermPool, spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
 
@@ -124,7 +124,7 @@ impl SetAutomaton {
             .rewrite_rules
             .iter()
             .filter(|rule| {
-                if is_supported_rule(rule) {
+                if is_supported_rule(tp, rule) {
                     true
                 } else {
                     println!("ignored rule: {}", rule);
@@ -139,12 +139,12 @@ impl SetAutomaton {
             let mut symbols = vec![];
 
             for rule in &supported_rules {
-                find_symbols(&rule.lhs, &mut symbols);
-                find_symbols(&rule.rhs, &mut symbols);
+                find_symbols(tp, &rule.lhs, &mut symbols);
+                find_symbols(tp, &rule.rhs, &mut symbols);
 
                 for cond in &rule.conditions {
-                    find_symbols(&cond.lhs, &mut symbols);
-                    find_symbols(&cond.rhs, &mut symbols);
+                    find_symbols(tp, &cond.lhs, &mut symbols);
+                    find_symbols(tp, &cond.rhs, &mut symbols);
                 }
             }
 
@@ -208,6 +208,7 @@ impl SetAutomaton {
                     (
                         symbol.clone(),
                         states.get(s_index).unwrap().derive_transition(
+                            tp,
                             symbol.clone(),
                             *arity,
                             &supported_rules,
@@ -223,7 +224,9 @@ impl SetAutomaton {
                 // Associate an EnhancedMatchAnnouncement to every transition
                 let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
                     .into_iter()
-                    .map(EnhancedMatchAnnouncement::new)
+                    .map(|x| {
+                        EnhancedMatchAnnouncement::new(tp, x)
+                    })
                     .collect();
 
                 announcements.sort_by(|ema1, ema2| {
@@ -306,9 +309,9 @@ pub(crate) struct State {
 }
 
 /// Returns the data function symbol of the given term
-pub fn get_data_function_symbol(term: &ATerm) -> DataFunctionSymbol {
+pub fn get_data_function_symbol(tp: &mut TermPool, term: &ATerm) -> DataFunctionSymbol {
     // If this is an application it is the first argument, otherwise it's the term itself
-    if term.is_data_application() {
+    if tp.is_data_application(term) {
         term.arg(0).into()
     } else {
         term.clone().into()
@@ -316,8 +319,8 @@ pub fn get_data_function_symbol(term: &ATerm) -> DataFunctionSymbol {
 }
 
 /// Returns the data arguments of the term
-pub fn get_data_arguments(term: &ATerm) -> Vec<ATerm> {
-    if term.is_data_application() {
+pub fn get_data_arguments(tp: &mut TermPool, term: &ATerm) -> Vec<ATerm> {
+    if tp.is_data_application(term) {
         let mut result = term.arguments();
         result.remove(0);
         result
@@ -335,6 +338,7 @@ impl State {
     /// Parameter symbol is the symbol for which the transition is computed
     fn derive_transition(
         &self,
+        tp: &mut TermPool,
         symbol: DataFunctionSymbol,
         arity: usize,
         rewrite_rules: &Vec<Rule>,
@@ -345,7 +349,7 @@ impl State {
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
         // Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(&symbol, arity, debug);
+        let mut derivative = self.compute_derivative(tp, &symbol, arity, debug);
 
         // The outputs/matching patterns of the transitions are those who are completed
         let outputs = derivative
@@ -443,6 +447,7 @@ impl State {
     /// completed, unchanged and reduced.
     fn compute_derivative(
         &self,
+        tp: &mut TermPool, 
         symbol: &DataFunctionSymbol,
         arity: usize,
         debug: bool,
@@ -463,15 +468,15 @@ impl State {
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && &get_data_function_symbol(&mo.pattern) == symbol
-                        && get_data_arguments(&mo.pattern)
+                        && &get_data_function_symbol(tp, &mo.pattern) == symbol
+                        && get_data_arguments(tp, &mo.pattern)
                             .iter()
                             .all(|x| x.is_data_variable()) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
             } else if mg.obligations.iter().any(|mo| {
-                mo.position == self.label && &get_data_function_symbol(&mo.pattern) != symbol
+                mo.position == self.label && &get_data_function_symbol(tp, &mo.pattern) != symbol
             }) {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
@@ -488,10 +493,10 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if &get_data_function_symbol(&mo.pattern) == symbol && mo.position == self.label
+                    if &get_data_function_symbol(tp,&mo.pattern) == symbol && mo.position == self.label
                     {
                         // Reduced match obligation
-                        for (index, t) in get_data_arguments(&mo.pattern).iter().enumerate() {
+                        for (index, t) in get_data_arguments(tp, &mo.pattern).iter().enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
                             if !t.is_data_variable() {

@@ -40,8 +40,8 @@ impl RewriteEngine for SabreRewriter {
 impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
         SabreRewriter {
-            term_pool: tp,
-            automaton: SetAutomaton::new(spec, false, false),
+            term_pool: tp.clone(),
+            automaton: SetAutomaton::new(&mut tp.borrow_mut(), spec, false, false),
         }
     }
 
@@ -113,6 +113,7 @@ impl SabreRewriter {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
                             let function_symbol: DataFunctionSymbol = get_data_function_symbol(
+                                tp,
                                 &get_position(&leaf.subterm, &automaton.states[leaf.state].label),
                             );
                             stats.symbol_comparisons += 1;

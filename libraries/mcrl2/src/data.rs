@@ -111,7 +111,7 @@ pub struct DataApplication {
 
 impl From<ATerm> for DataApplication {
     fn from(value: ATerm) -> Self {
-        debug_assert!(value.is_data_application(), "Term {value} is not a data application");
+        //debug_assert!(value.is_data_application(), "Term {value} is not a data application");
         DataApplication { term: value }
     }
 }

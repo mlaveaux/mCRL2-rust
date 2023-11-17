@@ -92,7 +92,7 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion) {
         // Benchmark the set automaton construction
         c.bench_function(&format!("construct set automaton {:?}", name), |bencher| {
             bencher.iter(|| {
-                let _ = black_box(SetAutomaton::new(&spec, false, false));
+                let _ = black_box(SetAutomaton::new(&mut tp.borrow_mut(), &spec, false, false));
             });
         });
 

@@ -176,16 +176,6 @@ bool is_data_where_clause(const aterm& term)
   return mcrl2::data::is_where_clause(static_cast<const aterm_appl&>(term));
 }
 
-bool is_data_application(const aterm& term)
-{
-  return mcrl2::data::is_application(static_cast<const aterm_appl&>(term));
-}
-
-bool is_data_expression(const aterm& term)
-{
-  return mcrl2::data::is_data_expression(static_cast<const aterm_appl&>(term));
-}
-
 bool is_data_abstraction(const aterm& term)
 {
   return mcrl2::data::is_abstraction(static_cast<const aterm_appl&>(term));

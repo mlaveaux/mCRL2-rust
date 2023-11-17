@@ -173,24 +173,6 @@ impl ATerm {
         ffi::is_data_variable(&self.term)
     }
 
-    /// Returns true iff this is a data::application
-    pub fn is_data_application(&self) -> bool {
-        self.require_valid();
-        // Check DataAppl is expensive, so it derived from whether the first
-        // it is not any of the other data expressions.
-        self.is_data_expression()
-            && !(self.is_data_variable()
-                || self.is_data_function_symbol()
-                || self.is_data_where_clause()
-                || self.is_data_abstraction()
-                || self.is_data_untyped_identifier())
-    }
-
-    pub fn is_data_expression(&self) -> bool {
-        self.require_valid();
-        ffi::is_data_expression(&self.term)
-    }
-
     /// Returns true iff this is a data::function_symbol
     pub fn is_data_function_symbol(&self) -> bool {
         self.require_valid();
@@ -245,12 +227,12 @@ impl fmt::Display for ATerm {
                 "{}",
                 <ATerm as Into<DataFunctionSymbol>>::into(self.clone())
             )
-        } else if self.is_data_application() {
-            write!(
-                f,
-                "{}",
-                <ATerm as Into<DataApplication>>::into(self.clone())
-            )
+        // } else if self.is_data_application() {
+        //     write!(
+        //         f,
+        //         "{}",
+        //         <ATerm as Into<DataApplication>>::into(self.clone())
+        //     )
         } else if self.is_data_variable() {
             write!(f, "{}", <ATerm as Into<DataVariable>>::into(self.clone()))
         } else {
@@ -471,12 +453,12 @@ impl TermPool {
         arguments: &[ATerm],
     ) -> DataApplication {
         // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
-        while self.data_appl.len() < arguments.len() + 2 {
-            let symbol = self.create_symbol("DataAppl", self.data_appl.len() + 1);
+        while self.data_appl.len() <= arguments.len() + 1 {
+            let symbol = self.create_symbol("DataAppl", self.data_appl.len());
             self.data_appl.push(symbol);
         }
 
-        let symbol = &self.data_appl[arguments.len()].clone();
+        let symbol = &self.data_appl[arguments.len() + 1].clone();
         let term = self.create_head(symbol, head, arguments);
 
         DataApplication { term }
@@ -492,6 +474,12 @@ impl TermPool {
         DataFunctionSymbol {
             term: ATerm::from(ffi::create_data_function_symbol(String::from(name))),
         }
+    }
+
+    /// Returns true iff this is a data::application
+    pub fn is_data_application(&self, term: &ATerm) -> bool {
+        term.require_valid();
+        term.get_head_symbol() == self.data_appl[term.get_head_symbol().arity()]
     }
 
     /// Creates an [ATerm] with the given symbol, first and other arguments.
