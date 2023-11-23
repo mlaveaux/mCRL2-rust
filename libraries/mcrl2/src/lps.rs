@@ -1,7 +1,6 @@
-use cxx::UniquePtr;
 use std::fmt;
 
-use mcrl2_sys::lps::ffi;
+use mcrl2_sys::{cxx::UniquePtr, lps::ffi};
 
 /// Rust representation of a lps::linear_process_specification.
 pub struct LinearProcessSpecification {

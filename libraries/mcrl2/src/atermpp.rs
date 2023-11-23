@@ -1,13 +1,12 @@
 use std::cmp::Ordering;
+use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::{collections::VecDeque, fmt};
 
 use ahash::AHashSet;
-use anyhow::Result as AnyResult;
 
-use cxx::{Exception, UniquePtr};
-use mcrl2_sys::atermpp::ffi;
+use mcrl2_sys::{atermpp::ffi, cxx::{Exception, UniquePtr}};
 
 use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
 
@@ -686,10 +685,10 @@ impl<I, C: fmt::Display> TermBuilder<I, C> {
         input: I,
         transformer: F,
         construct: G,
-    ) -> AnyResult<ATerm>
+    ) -> Result<ATerm, Box<dyn Error>>
     where
-        F: Fn(&mut TermPool, &mut ArgStack<I, C>, I) -> AnyResult<Yield<C>>,
-        G: Fn(&mut TermPool, C, &[ATerm]) -> AnyResult<ATerm>,
+        F: Fn(&mut TermPool, &mut ArgStack<I, C>, I) -> Result<Yield<C>, Box<dyn Error>>,
+        G: Fn(&mut TermPool, C, &[ATerm]) -> Result<ATerm, Box<dyn Error>>,
     {
         self.terms.push(ATerm::default());
         self.configs.push(Config::Apply(input, 0));

@@ -1,8 +1,6 @@
 use core::fmt;
 
-use cxx::UniquePtr;
-
-use mcrl2_sys::data::ffi;
+use mcrl2_sys::{data::ffi, cxx::UniquePtr};
 use crate::atermpp::{ATerm, ATermList};
 
 pub struct DataSpecification {

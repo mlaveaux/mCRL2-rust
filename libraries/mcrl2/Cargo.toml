@@ -5,7 +5,5 @@ edition = "2021"
 
 [dependencies]
 ahash = "0.8"
-anyhow = "1.0"
-cxx = "1.0"
 mcrl2-sys = { path="../mcrl2-sys" }
 rand = "0.8"

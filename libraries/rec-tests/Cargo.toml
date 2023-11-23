@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 ahash = "0.8"
-anyhow = "1.0"
 mcrl2 = { path="../mcrl2" }
 sabre = { path="../sabre" }
 pest = "2.7"

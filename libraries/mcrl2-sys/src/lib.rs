@@ -9,3 +9,8 @@
 pub mod atermpp;
 pub mod lps;
 pub mod data;
+
+// Reexport the cxx types that we use
+pub mod cxx {
+    pub use cxx::{Exception, UniquePtr};
+}

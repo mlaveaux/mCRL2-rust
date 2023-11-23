@@ -11,9 +11,17 @@ fn add_prefix(prefix: String, paths: &[&str]) -> Vec<String> {
     result
 }
 
-/// Add MSVC specific flags and definitions.
-#[cfg(windows)]
-fn add_platform_flags(build: &mut Build, mcrl2_path: String) {
+/// Add platform specific compile flags and definitions.
+#[allow(unused_variables)]
+fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
+
+    #[cfg(unix)]
+    build
+        .flag_if_supported("-Wall")
+        .flag_if_supported("-pipe")
+        .flag_if_supported("-pedantic");
+
+    #[cfg(windows)]
     build
         .include(mcrl2_path + "build/workarounds/msvc") // These are MSVC workarounds that mCRL2 relies on for compilation.
         .flag_if_supported("/EHs")
@@ -27,24 +35,16 @@ fn add_platform_flags(build: &mut Build, mcrl2_path: String) {
         .define("_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES", "1")
         .define("_CRT_SECURE_NO_WARNINGS", "1")
         .define("BOOST_ALL_NO_LIB", "1");
+
 }
 
-/// Add Linux specific flags and definitions.
-#[cfg(unix)]
-fn add_platform_flags(build: &mut Build, _mcrl2_path: String) {
-    build
-        .flag_if_supported("-Wall")
-        .flag_if_supported("-pipe")
-        .flag_if_supported("-pedantic");
-}
-
-#[cfg(windows)]
+/// Add compiler specific flags to enable C++17 compilation.
 fn add_cpp_flags(build: &mut Build) {
+
+    #[cfg(windows)]
     build.flag_if_supported("/std:c++17");
-}
 
-#[cfg(unix)]
-fn add_cpp_flags(build: &mut Build) {
+    #[cfg(unix)]
     build.flag_if_supported("-std=c++17");
 }
 
@@ -115,7 +115,7 @@ fn main() {
             &dparser_source_files,
         ));
 
-    add_platform_flags(&mut build_dparser, mcrl2_path.clone());
+    add_compile_flags(&mut build_dparser, mcrl2_path.clone());
     build_dparser.compile("dparser");
 
     // These are the files for which we need to call cxxbuild to produce the bridge code.
@@ -180,11 +180,10 @@ fn main() {
     // Enable thread safety since Rust executes its tests at least by default, and allow threading in general.
     build.define("MCRL2_ENABLE_MULTITHREADING", "1");
 
-    add_platform_flags(&mut build, mcrl2_path);
+    add_compile_flags(&mut build, mcrl2_path);
     add_cpp_flags(&mut build);
 
     build.compile("mcrl2-sys");
 
-    // It seems that build changes are detected properly automatically, otherwise adapt this.
-    cargo_emit::rerun_if_changed!("");
+    // It seems that build changes are detected properly automatically.
 }
