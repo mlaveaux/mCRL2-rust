@@ -5,7 +5,6 @@ use std::marker::PhantomData;
 use std::{collections::VecDeque, fmt};
 
 use ahash::AHashSet;
-
 use mcrl2_sys::{atermpp::ffi, cxx::{Exception, UniquePtr}};
 
 use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
