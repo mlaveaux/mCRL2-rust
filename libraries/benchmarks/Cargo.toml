@@ -1,16 +1,16 @@
 [package]
 name = "mcrl2-benchmarks"
-version = "0.1.0"
-rust-version = "1.70"
-edition = "2021"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ahash = "0.8"
+ahash.workspace = true
 criterion = { version = "0.5", features = ["html_reports"] }
 mcrl2 = { path="../mcrl2" }
-rand = "0.8"
+rand.workspace = true
 rec-tests = { path="../rec-tests" }
 sabre = { path="../sabre" }
 utilities = { path="../utilities" }

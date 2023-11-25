@@ -1,9 +1,9 @@
 [package]
 name = "mcrl2-sys"
-version = "0.1.0"
-rust-version = "1.70"
-edition = "2021"
 links = "mcrl2"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
 
 [dependencies]
 cxx = "1.0"
