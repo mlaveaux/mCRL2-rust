@@ -11,7 +11,6 @@ mod tests
     use sabre::utilities::to_data_expression;
     use rec_tests::load_REC_from_strings;
 
-    #[ignore]
     #[test_case(vec![include_str!("REC_files/benchexpr10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchexpr10.txt") ; "benchexpr10")]
     #[test_case(vec![include_str!("REC_files/benchsym10.rec"), include_str!("REC_files/asfsdfbenchmark.rec")], include_str!("validated_results/result_benchsym10.txt") ; "benchsym10")]
     #[test_case(vec![include_str!("REC_files/bubblesort10.rec"), include_str!("REC_files/bubblesort.rec")], include_str!("validated_results/result_bubblesort10.txt") ; "bubblesort10")]
@@ -32,8 +31,7 @@ mod tests
     #[test_case(vec![include_str!("REC_files/merge.rec")], include_str!("validated_results/result_merge.txt") ; "merge")]
     #[test_case(vec![include_str!("REC_files/mergesort10.rec"), include_str!("REC_files/mergesort.rec")], include_str!("validated_results/result_mergesort10.txt") ; "mergesort10")]
     #[test_case(vec![include_str!("REC_files/missionaries2.rec"), include_str!("REC_files/missionaries.rec")], include_str!("validated_results/result_missionaries2.txt") ; "missionaries2")]
-    #[test_case(vec![include_str!("REC_files/missionaries3.rec"), include_str!("REC_files/missionaries.rec")], include_str!("validated_results/result_missionaries3.txt") ; "missionaries3")]//
-    #[test_case(vec![include_str!("REC_files/permutations6.rec"), include_str!("REC_files/permutations.rec")], include_str!("validated_results/result_permutations6.txt") ; "permutations6")]
+    #[test_case(vec![include_str!("REC_files/missionaries3.rec"), include_str!("REC_files/missionaries.rec")], include_str!("validated_results/result_missionaries3.txt") ; "missionaries3")]
     #[test_case(vec![include_str!("REC_files/quicksort10.rec"), include_str!("REC_files/quicksort.rec")], include_str!("validated_results/result_quicksort10.txt") ; "quicksort10")]
     #[test_case(vec![include_str!("REC_files/revelt.rec")], include_str!("validated_results/result_revelt.txt") ; "revelt")]
     #[test_case(vec![include_str!("REC_files/revnat100.rec"), include_str!("REC_files/revnat.rec")], include_str!("validated_results/result_revnat100.txt") ; "revnat100")]
@@ -97,7 +95,8 @@ mod tests
     #[test_case(vec![include_str!("REC_files/natlist.rec")], include_str!("validated_results/result_natlist.txt") ; "natlist")]
     #[test_case(vec![include_str!("REC_files/oddeven.rec")], include_str!("validated_results/result_oddeven.txt") ; "oddeven")]
     #[test_case(vec![include_str!("REC_files/order.rec")], include_str!("validated_results/result_order.txt") ; "order")]
-    //#[test_case(vec![include_str!("REC_files/hanoi12.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi12.txt") ; "hanoi12")]
+    //#[test_case(vec![include_str!("REC_files/hanoi12.rec"), include_str!("REC_files/hanoi.rec")], include_str!("validated_results/result_hanoi12.txt") ; "hanoi12")]   
+    #[test_case(vec![include_str!("REC_files/permutations6.rec"), include_str!("REC_files/permutations.rec")], include_str!("validated_results/result_permutations6.txt") ; "permutations6")]
     //#[test_case(vec![include_str!("REC_files/permutations7.rec"), include_str!("REC_files/permutations.rec")], include_str!("validated_results/result_permutations7.txt") ; "permutations7")]
     #[test_case(vec![include_str!("REC_files/revnat1000.rec"), include_str!("REC_files/revnat.rec")], include_str!("validated_results/result_revnat1000.txt") ; "revnat1000")]
     #[test_case(vec![include_str!("REC_files/sieve1000.rec"), include_str!("REC_files/sieve.rec")], include_str!("validated_results/result_sieve1000.txt") ; "sieve1000")]
