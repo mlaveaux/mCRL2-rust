@@ -14,24 +14,21 @@ use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewrite
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 
-
 /// Creates a rewriter and a vector of ATerm expressions for the given case.
-pub fn load_case(_: &mut TermPool, name: &str, max_number_expressions: usize) -> (DataSpecification, Vec<ATerm>) {
-    let path = String::from(name) + ".dataspec";
-    let path_expressions = String::from(name) + ".expressions";
-
+pub fn load_case(
+    _: &mut TermPool,
+    data_spec_text: &str,
+    expressions_text: &str,
+    max_number_expressions: usize,
+) -> (DataSpecification, Vec<ATerm>) {
     // Read the data specification
-    let data_spec_text = fs::read_to_string(path).expect("failed to read file");
     let data_spec = DataSpecification::new(&data_spec_text);
 
-    // Open the file in read-only mode.
-    let file = File::open(path_expressions).unwrap();
-
     // Read the file line by line, and return an iterator of the lines of the file.
-    let expressions: Vec<ATerm> = BufReader::new(file)
+    let expressions: Vec<ATerm> = expressions_text
         .lines()
         .take(max_number_expressions)
-        .map(|x| data_spec.parse(&x.unwrap()))
+        .map(|x| data_spec.parse(x))
         .collect();
 
     (data_spec, expressions)
@@ -40,7 +37,12 @@ pub fn load_case(_: &mut TermPool, name: &str, max_number_expressions: usize) ->
 pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), "cases/add16", 100);
+    let (data_spec, expressions) = load_case(
+        &mut tp.borrow_mut(),
+        include_str!("../cases/add16.dataspec"),
+        include_str!("../cases/add16.expressions"),
+        100,
+    );
 
     // Create a jitty rewriter;
     let mut jitty_rewriter = JittyRewriter::new(&data_spec.clone());
@@ -70,8 +72,8 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion) {
 
     let cases = vec![(
         vec![
-            include_str!("../../rec-tests/tests/REC_files/factorial7.rec"),
-            include_str!("../../rec-tests/tests/REC_files/factorial.rec"),
+            include_str!("../../rec-tests/REC_files/factorial7.rec"),
+            include_str!("../../rec-tests/REC_files/factorial.rec"),
         ],
         "factorial7",
     )];
@@ -104,7 +106,7 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion) {
                 });
             }
         });
-        
+
         let mut sabre = SabreRewriter::new(tp.clone(), &spec);
         c.bench_function(&format!("sabre benchmark {:?}", name), |bencher| {
             for term in &terms {
