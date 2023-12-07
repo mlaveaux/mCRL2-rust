@@ -45,7 +45,13 @@ fn add_cpp_flags(build: &mut Build) {
     build.flag_if_supported("/std:c++17");
 
     #[cfg(unix)]
-    build.flag_if_supported("-std=c++17");
+    {
+        build.flag_if_supported("-std=c++17");
+        // build.flag_if_supported("-flto=auto");
+        // build.flag_if_supported("-fno-fat-lto-objects");
+        // build.flag_if_supported("-fuse-linker-plugin");
+        // build.flag_if_supported("-fuse-ld=lld");
+    }
 }
 
 fn main() {

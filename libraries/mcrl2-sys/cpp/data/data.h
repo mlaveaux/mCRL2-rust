@@ -7,7 +7,6 @@
 #include "mcrl2/data/detail/rewrite/jitty.h"
 #include "mcrl2/data/parse.h"
 
-
 #ifdef MCRL2_JITTYC_AVAILABLE
 #include "mcrl2/data/detail/rewrite/jittyc.h"
 #else
@@ -46,17 +45,20 @@ std::unique_ptr<detail::RewriterCompilingJitty> ffi_create_jittyc_rewriter(const
 }
 #endif // MCRL2_JITTYC_AVAILABLE
 
-std::unique_ptr<atermpp::aterm> rewrite(detail::RewriterJitty& rewriter, const atermpp::aterm& term)
+std::unique_ptr<atermpp::aterm> rewrite(detail::RewriterJitty& rewriter, const atermpp::detail::_aterm* term)
 {
   detail::RewriterJitty::substitution_type subsitution;
-  data_expression result = rewriter.rewrite(static_cast<const data_expression&>(term), subsitution);
+  atermpp::unprotected_aterm t(term);
+
+  data_expression result = rewriter.rewrite(static_cast<const data_expression&>(t), subsitution);
   return std::make_unique<atermpp::aterm>(static_cast<const atermpp::aterm&>(result));
 }
 
-std::size_t get_data_function_symbol_index(const atermpp::aterm& term)
+std::size_t get_data_function_symbol_index(const atermpp::detail::_aterm* term)
 {
+  atermpp::unprotected_aterm t(term);
   return atermpp::detail::index_traits<mcrl2::data::function_symbol, function_symbol_key_type, 2>::index(
-      static_cast<const mcrl2::data::function_symbol&>(term));
+      static_cast<const mcrl2::data::function_symbol&>(t));
 }
 
 std::unique_ptr<data_specification> data_specification_clone(const data_specification& spec) 

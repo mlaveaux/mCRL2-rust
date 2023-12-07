@@ -14,6 +14,9 @@ pub mod ffi {
 
         #[namespace = "atermpp"]
         type aterm = crate::atermpp::ffi::aterm;
+        
+        #[namespace = "atermpp::detail"]
+        type _aterm = crate::atermpp::ffi::_aterm;
 
         /// Parses the given text into a data specification.
         fn parse_data_specification(text: &str) -> Result<UniquePtr<data_specification>>;
@@ -34,13 +37,13 @@ pub mod ffi {
         //fn create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJittyCompiling>;
 
         /// Rewrites the given term to normal form.
-        fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: &aterm) -> UniquePtr<aterm>;   
+        unsafe fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: *const _aterm) -> UniquePtr<aterm>;   
 
         /// Clone the data specification
         fn data_specification_clone(data_spec: &data_specification) -> UniquePtr<data_specification>;
 
         /// Obtain the index assigned internally to every data function symbol.
-        fn get_data_function_symbol_index(term: &aterm) -> usize;
+        unsafe fn get_data_function_symbol_index(term: *const _aterm) -> usize;
 
         /// Create the data::true term
         fn true_term() -> UniquePtr<aterm>;
