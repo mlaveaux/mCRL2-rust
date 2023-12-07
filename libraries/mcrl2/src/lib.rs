@@ -3,6 +3,8 @@
 //! [mCRL2](https://mcrl2.org/) toolset.
 //! 
 
+pub mod symbol;
 pub mod atermpp;
+pub mod aterm_builder;
 pub mod lps;
 pub mod data;

@@ -1,7 +1,7 @@
 use core::fmt;
 
 use mcrl2_sys::{data::ffi, cxx::UniquePtr};
-use crate::atermpp::{ATerm, ATermList};
+use crate::{atermpp::{ATerm, ATermList, ATermRef, ATermTrait}, symbol::SymbolTrait};
 
 pub struct DataSpecification {
     pub data_spec: UniquePtr<ffi::data_specification>,
@@ -24,9 +24,9 @@ impl From<ATerm> for DataEquation {
 
         DataEquation { 
             variables: variables.iter().collect(), 
-            condition: value.arg(1), 
-            lhs: value.arg(2), 
-            rhs: value.arg(3) }
+            condition: value.arg(1).into(), 
+            lhs: value.arg(2).into(), 
+            rhs: value.arg(3).into() }
     }
 }
 
@@ -73,7 +73,9 @@ impl JittyRewriter {
 
     /// Rewrites the term with the jitty rewriter.
     pub fn rewrite(&mut self, term: &ATerm) -> ATerm {
-        ATerm::from(ffi::rewrite(self.rewriter.pin_mut(), term.get()))
+        unsafe {
+            ATerm::from(ffi::rewrite(self.rewriter.pin_mut(), term.borrow().term))
+        }
     }
 }
 
@@ -93,6 +95,13 @@ impl From<ATerm> for DataVariable {
     fn from(value: ATerm) -> Self {
         debug_assert!(value.is_data_variable(), "Term {value} is not a data variable");
         DataVariable { term: value }
+    }
+}
+
+impl<'a> From<ATermRef<'a>> for DataVariable {
+    fn from(value: ATermRef<'a>) -> Self {
+        debug_assert!(value.is_data_variable(), "Term {value} is not a data variable");
+        DataVariable { term: value.protect() }
     }
 }
 
@@ -120,7 +129,7 @@ impl fmt::Display for DataApplication {
 
         let head = args.next().unwrap();
         if head.is_data_function_symbol() {
-            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head))?;
+            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head.into()))?;
         } else {
             write!(f, "{:?}", head)?;
         }
@@ -160,7 +169,9 @@ impl DataFunctionSymbol
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
         debug_assert!(self.term.is_data_function_symbol(), "term {} is not a data function symbol", self.term);
-        ffi::get_data_function_symbol_index(&self.term.term)
+        unsafe {
+            ffi::get_data_function_symbol_index(self.term.borrow().term)
+        }
     }
 }
 
