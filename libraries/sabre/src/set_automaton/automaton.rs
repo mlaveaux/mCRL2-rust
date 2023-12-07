@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use ahash::HashMap;
-use mcrl2::{atermpp::{ATerm, TermPool}, data::DataFunctionSymbol};
+use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait}, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -101,7 +101,7 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
 
     for subterm in t.iter() {
         if tp.is_data_application(&subterm) {
-            let args = subterm.arguments();
+            let args: Vec<ATerm> = subterm.arguments().collect();
 
             // REC specifications should never contain this so it can be a debug error.
             assert!(
@@ -312,7 +312,7 @@ pub(crate) struct State {
 pub fn get_data_function_symbol(tp: &mut TermPool, term: &ATerm) -> DataFunctionSymbol {
     // If this is an application it is the first argument, otherwise it's the term itself
     if tp.is_data_application(term) {
-        term.arg(0).into()
+        term.arg(0).protect().into()
     } else {
         term.clone().into()
     }
@@ -321,7 +321,7 @@ pub fn get_data_function_symbol(tp: &mut TermPool, term: &ATerm) -> DataFunction
 /// Returns the data arguments of the term
 pub fn get_data_arguments(tp: &mut TermPool, term: &ATerm) -> Vec<ATerm> {
     if tp.is_data_application(term) {
-        let mut result = term.arguments();
+        let mut result: Vec<ATerm> = term.arguments().collect();
         result.remove(0);
         result
     } else {

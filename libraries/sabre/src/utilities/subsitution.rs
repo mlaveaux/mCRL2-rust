@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::atermpp::{ATerm, TermPool, TermBuilder, Yield};
+use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait}, aterm_builder::{TermBuilder, Yield}, symbol::SymbolTrait};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -15,7 +15,7 @@ use mcrl2::atermpp::{ATerm, TermPool, TermBuilder, Yield};
 /// Then we traverse the term until we have arrived at a and replace it with 0.
 /// We then construct s(0) (using the maximally shared term pool)
 /// We then construct s(s(0)) (using the maximally shared term pool)
-pub fn substitute(tp: &mut TermPool, t: &ATerm, new_subterm: ATerm, p: &[usize]) -> ATerm {
+pub fn substitute<'a>(tp: &mut TermPool, t: &'a impl ATermTrait<'a>, new_subterm: ATerm, p: &[usize]) -> ATerm {
     substitute_rec(tp, t, new_subterm, p, 0)
 }
 
@@ -23,9 +23,9 @@ pub fn substitute(tp: &mut TermPool, t: &ATerm, new_subterm: ATerm, p: &[usize])
 ///
 /// 'depth'         -   Used to keep track of the depth in 't'. Function should be called with
 ///                     'depth' = 0.
-fn substitute_rec(
+fn substitute_rec<'a>(
     tp: &mut TermPool,
-    t: &ATerm,
+    t: &'a impl ATermTrait<'a>,
     new_subterm: ATerm,
     p: &[usize],
     depth: usize,
@@ -38,7 +38,7 @@ fn substitute_rec(
         let new_child_index = p[depth] - 1;
         let new_child = substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, depth + 1);
 
-        let mut args = t.arguments();
+        let mut args: Vec<ATerm> = t.arguments().collect();
         args[new_child_index] = new_child;
 
         tp.create(&t.get_head_symbol(), &args)

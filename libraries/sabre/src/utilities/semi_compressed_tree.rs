@@ -2,10 +2,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{utilities::ExplicitPosition};
+use crate::utilities::ExplicitPosition;
 use mcrl2::{
-    atermpp::{ATerm, Symbol, TermPool},
-    data::DataVariable
+    atermpp::{ATerm, TermPool, ATermTrait},
+    data::DataVariable, symbol::Symbol
 };
 
 /// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a TermSyntaxTree and is used
@@ -86,11 +86,10 @@ impl SemiCompressedTermTree {
         } else {
             let children = t
                 .arguments()
-                .iter()
                 .map(|c| SemiCompressedTermTree::from_term(c.clone(), var_map))
                 .collect();
             let node = ExplicitNode {
-                head: t.get_head_symbol(),
+                head: t.get_head_symbol().protect(),
                 children,
             };
 
@@ -156,7 +155,7 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPositio
 mod tests {
     use super::*;
     use ahash::AHashSet;
-    use mcrl2::atermpp::{TermPool, apply};
+    use mcrl2::{atermpp::TermPool, aterm_builder::apply, symbol::SymbolTrait};
 
     /// Converts a slice of static strings into a set of owned strings
     /// 

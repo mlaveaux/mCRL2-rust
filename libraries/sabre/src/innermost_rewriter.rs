@@ -303,7 +303,7 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use ahash::AHashSet;
-    use mcrl2::atermpp::{random_term, TermPool};
+    use mcrl2::{atermpp::TermPool, aterm_builder::random_term};
 
     use crate::{
         utilities::to_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,

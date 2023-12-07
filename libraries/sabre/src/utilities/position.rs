@@ -1,6 +1,6 @@
 //! Module for storing positions of terms
 use core::fmt;
-use mcrl2::atermpp::ATerm;
+use mcrl2::atermpp::{ATerm, ATermTrait};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -61,7 +61,7 @@ pub fn get_position(term: &ATerm, position: &ExplicitPosition) -> ATerm {
     let mut result = term.clone();
 
     for index in &position.indices {
-        result = result.arg(index - 1); // Note that positions are 1 indexed.
+        result = result.arg(index - 1).protect(); // Note that positions are 1 indexed.
     }
     
     result
@@ -103,7 +103,7 @@ impl Iterator for PositionIterator {
             let (term, pos) = self.queue.pop_front().unwrap();
 
             // Put subterms in the queue
-            for (i, argument) in term.arguments().iter().enumerate() {
+            for (i, argument) in term.arguments().enumerate() {
                 let mut new_position = pos.clone();
                 new_position.indices.push(i + 1);
                 self.queue.push_back((argument.clone(), new_position));
