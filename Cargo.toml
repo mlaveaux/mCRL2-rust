@@ -3,7 +3,7 @@ lto = true
 incremental = true
 
 [profile.bench]
-debug = true
+debug = "line-tables-only"
 
 [workspace]
 resolver = "2"
