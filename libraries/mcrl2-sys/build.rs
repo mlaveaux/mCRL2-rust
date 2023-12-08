@@ -180,7 +180,9 @@ fn main() {
         "release" => {
             build.define("NDEBUG", "1");
         }
-        _ => (),
+        _ => {
+            panic!("Unsupported profile {}", profile);
+        },
     }
 
     // Enable thread safety since Rust executes its tests at least by default, and allow threading in general.
