@@ -559,14 +559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mcrl2-derive"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn",
-]
-
-[[package]]
 name = "mcrl2-sys"
 version = "0.1.0"
 dependencies = [

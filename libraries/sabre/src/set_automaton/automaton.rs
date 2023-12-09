@@ -274,6 +274,8 @@ impl SetAutomaton {
                     .transitions
                     .push(transition);
             }
+
+            tp.print_metrics();
         }
 
         // Clear the match goals since they are only for debugging purposes.

@@ -4,7 +4,8 @@ use anyhow::Result as AnyResult;
 use clap::Parser;
 
 use mcrl2::atermpp::TermPool;
-use mcrl2rewrite::{rewrite_data_spec, rewrite_rec};
+use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
+
 
 #[derive(Parser, Debug)]
 #[command(
@@ -15,6 +16,9 @@ use mcrl2rewrite::{rewrite_data_spec, rewrite_rec};
 pub struct Cli {
     #[arg(long="rec")]
     rec: bool,
+
+    #[arg(long="rewriter")]
+    rewriter: Rewriter,
 
     #[arg(value_name = "FILE")]
     specification: String,
@@ -30,8 +34,8 @@ fn main() -> AnyResult<()>
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     if cli.rec { 
-        rewrite_rec(&cli.specification, &cli.term)     
+        rewrite_rec(&cli.specification, cli.rewriter, &cli.term)     
     } else {
-        rewrite_data_spec(tp, &cli.specification, &cli.term) 
+        rewrite_data_spec(tp, cli.rewriter, &cli.specification, &cli.term) 
     }
 }
