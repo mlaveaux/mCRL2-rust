@@ -37,6 +37,12 @@ void collect_garbage()
   detail::g_thread_term_pool().collect();
 }
 
+inline
+void print_metrics()
+{
+  detail::g_thread_term_pool().print_local_performance_statistics();
+}
+
 const detail::_aterm* aterm_address(const aterm& term)
 {
   return detail::address(term);

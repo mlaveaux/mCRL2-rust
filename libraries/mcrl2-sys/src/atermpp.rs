@@ -19,6 +19,9 @@ pub mod ffi {
         /// Trigger garbage collection.
         fn collect_garbage();
 
+        /// Prints various metrics that are being tracked for terms.
+        fn print_metrics();
+
         /// Creates a term from the given function and arguments.
         unsafe fn create_aterm(function: *const _function_symbol, arguments: &[*const _aterm]) -> UniquePtr<aterm>;
         

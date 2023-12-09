@@ -386,6 +386,11 @@ impl TermPool {
         ffi::collect_garbage();
     }
 
+    /// Print performance metrics
+    pub fn print_metrics(&self) {
+        ffi::print_metrics();
+    }
+
     /// Creates an ATerm from a string.
     pub fn from_string(&mut self, text: &str) -> Result<ATerm, Exception> {
         match ffi::aterm_from_string(String::from(text)) {
@@ -393,10 +398,6 @@ impl TermPool {
             Err(exception) => Err(exception),
         }
     }
-}
-
-
-impl TermPool {
 
     /// Creates an [ATerm] with the given symbol and arguments.
     pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[ATerm]) -> ATerm {
@@ -516,6 +517,12 @@ impl TermPool {
 impl Default for TermPool {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Drop for TermPool {
+    fn drop(&mut self) {
+        self.print_metrics();
     }
 }
 
