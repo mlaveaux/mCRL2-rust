@@ -124,9 +124,9 @@ mod tests {
 
     #[test]
     fn test_reading_aut() {
-        let file = File::open("/home/mlaveaux/Downloads/vlts/vasy_8082_42933.aut").unwrap();
+        let file = include_str!("../../../examples/lts/abp.aut");
 
-        let lts = read_aut(file).unwrap();
+        let lts = read_aut(file.as_bytes()).unwrap();
     }
 
 }
