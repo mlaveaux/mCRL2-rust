@@ -1,0 +1,13 @@
+[package]
+name = "ltsconvert"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ahash.workspace = true
+anyhow = "1.0"
+clap.workspace = true
+io = { path = "../../libraries/io" }
