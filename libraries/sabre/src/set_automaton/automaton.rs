@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use ahash::HashMap;
-use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait, ATermRef}, data::DataFunctionSymbol};
+use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait, ATermRef, ATermArgs}, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -321,13 +321,13 @@ pub fn get_data_function_symbol(tp: &mut TermPool, term: ATermRef) -> DataFuncti
 }
 
 /// Returns the data arguments of the term
-pub fn get_data_arguments(tp: &mut TermPool, term: &ATerm) -> Vec<ATerm> {
+pub fn get_data_arguments<'a>(tp: &mut TermPool, term: &'a ATerm) -> ATermArgs<'a> {
     if tp.is_data_application(term) {
-        let mut result: Vec<ATerm> = term.arguments().collect();
-        result.remove(0);
+        let mut result = term.arguments();
+        result.next();
         result
     } else {
-        vec![]
+        Default::default()
     }
 }
 
@@ -472,7 +472,6 @@ impl State {
                     mo.position == self.label
                         && &get_data_function_symbol(tp, mo.pattern.borrow()) == symbol
                         && get_data_arguments(tp, &mo.pattern)
-                            .iter()
                             .all(|x| x.is_data_variable()) // Again skip the function symbol
                 })
             {
@@ -498,7 +497,7 @@ impl State {
                     if &get_data_function_symbol(tp,mo.pattern.borrow()) == symbol && mo.position == self.label
                     {
                         // Reduced match obligation
-                        for (index, t) in get_data_arguments(tp, &mo.pattern).iter().enumerate() {
+                        for (index, t) in get_data_arguments(tp, &mo.pattern).enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
                             if !t.is_data_variable() {

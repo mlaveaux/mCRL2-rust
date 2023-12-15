@@ -528,7 +528,7 @@ impl Drop for TermPool {
     }
 }
 
-
+#[derive(Default)]
 pub struct ATermArgs<'a> {
     term: ATermRef<'a>,
     arity: usize,
@@ -578,7 +578,7 @@ impl<'a> DoubleEndedIterator for ATermArgs<'a> {
 
 impl<'a> ExactSizeIterator for ATermArgs<'a> {
     fn len(&self) -> usize {
-        self.arity
+        self.arity - self.index
     }
 }
 
