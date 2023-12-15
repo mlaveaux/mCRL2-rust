@@ -1,4 +1,2 @@
-mod aut;
-// mod bitstream;
-
-pub use aut::*;
+pub mod aut;
+pub mod variablewidth;
