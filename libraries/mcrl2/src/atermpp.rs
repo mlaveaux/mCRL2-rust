@@ -14,7 +14,7 @@ use crate::symbol::{SymbolTrait, Symbol, SymbolRef};
 pub trait ATermTrait<'a> {
     
     /// Returns the indexed argument of the term
-    fn arg(&'a self, index: usize) -> ATermRef<'a>;
+    fn arg<'b: 'a>(&'a self, index: usize) -> ATermRef<'b>;
 
     /// Returns the list of arguments as a collection
     fn arguments(&'a self) -> ATermArgs;
@@ -73,14 +73,16 @@ impl<'a> ATermRef<'a> {
             ATerm { term: Some(ffi::protect_aterm(self.term)) }
         }
     }
+}
 
-    pub fn borrow(&self) -> ATermRef<'a> {
-        ATermRef { term: self.term, marker: self.marker }
+impl<'a> ATermRef<'a> {
+    pub fn borrow<'b: 'a>(&self) -> ATermRef<'b> {
+        ATermRef { term: self.term, marker: PhantomData::default() }
     }
 }
 
 impl<'a> ATermTrait<'a> for ATermRef<'a> {
-    fn arg(&self, index: usize) -> ATermRef<'a> {
+    fn arg<'b: 'a>(&self, index: usize) -> ATermRef<'b> {
         self.require_valid();
         debug_assert!(
             index < self.get_head_symbol().arity(),
@@ -647,7 +649,7 @@ impl Eq for ATerm {}
 
 
 impl<'a> ATermTrait<'a> for ATerm {
-    fn arg(&'a self, index: usize) -> ATermRef<'a> {
+    fn arg<'b: 'a>(&'a self, index: usize) -> ATermRef<'b> {
         debug_assert!(
             index < self.get_head_symbol().arity(),
             "arg({index}) is not defined for term {:?}",
