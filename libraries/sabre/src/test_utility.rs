@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::atermpp::TermPool;
+use mcrl2::aterm::TermPool;
 
 use crate::{utilities::to_data_expression, Rule};
 

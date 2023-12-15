@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use mcrl2::aterm_builder::{TermBuilder, Yield};
-use mcrl2::atermpp::{ATerm, TermPool};
+use mcrl2::aterm::{ATerm, TermPool};
 use mcrl2::symbol::Symbol;
 use pest::iterators::Pair;
 use pest::Parser;

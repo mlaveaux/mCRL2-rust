@@ -1,7 +1,7 @@
 use core::fmt;
 
 use mcrl2_sys::{data::ffi, cxx::UniquePtr};
-use crate::{atermpp::{ATerm, ATermList, ATermRef, ATermTrait}, symbol::SymbolTrait};
+use crate::{aterm::{ATerm, ATermList, ATermRef, ATermTrait}, symbol::SymbolTrait};
 
 pub struct DataSpecification {
     pub data_spec: UniquePtr<ffi::data_specification>,

@@ -1,6 +1,6 @@
 //! Module for storing positions of terms
 use core::fmt;
-use mcrl2::atermpp::{ATerm, ATermTrait, ATermRef};
+use mcrl2::aterm::{ATerm, ATermTrait, ATermRef};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -116,7 +116,7 @@ impl Iterator for PositionIterator {
 
 #[cfg(test)]
 mod tests {
-    use mcrl2::atermpp::TermPool;
+    use mcrl2::aterm::TermPool;
 
     use super::*;
 

@@ -2,7 +2,7 @@ use std::fmt;
 
 use itertools::Itertools;
 use mcrl2::{
-    atermpp::ATerm,
+    aterm::ATerm,
     data::{DataFunctionSymbol, DataSpecification, BoolSort}
 };
 

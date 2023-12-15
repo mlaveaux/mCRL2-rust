@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use mcrl2::{
-    atermpp::{ATerm, TermPool},
+    aterm::{ATerm, TermPool},
     data::DataFunctionSymbol,
 };
 

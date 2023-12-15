@@ -3,7 +3,7 @@ use std::fmt;
 
 use ahash::AHashSet;
 
-use crate::atermpp::{TermPool, ATerm, ATermTrait};
+use crate::aterm::{TermPool, ATerm, ATermTrait};
 use crate::symbol::Symbol;
 
 /// This can be used to construct a term from a given input of type (inductive
@@ -245,7 +245,7 @@ pub fn random_term(
 mod tests {
     use std::thread;
 
-    use crate::atermpp::ATermList;
+    use crate::aterm::ATermList;
     use crate::symbol::SymbolTrait;
 
     use super::*;

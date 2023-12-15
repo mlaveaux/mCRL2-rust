@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use ahash::AHashSet;
 use anyhow::{Result as AnyResult, bail};
 use clap::ValueEnum;
-use mcrl2::atermpp::TermPool;
+use mcrl2::aterm::TermPool;
 use mcrl2::data::{DataSpecification, JittyRewriter};
 use rec_tests::load_REC_from_file;
 use sabre::utilities::to_data_expression;

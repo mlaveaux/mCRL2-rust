@@ -2,7 +2,7 @@
 pub mod ffi {
 
     unsafe extern "C++" {
-        include!("mcrl2-sys/cpp/atermpp/aterm.h");
+        include!("mcrl2-sys/cpp/atermpp/atermpp.h");
 
         type aterm;
         type function_symbol;
@@ -13,11 +13,22 @@ pub mod ffi {
         #[namespace = "atermpp::detail"]
         type _function_symbol;
 
+        #[namespace = "mcrl2::utilities"]
+        type shared_guard;
+        #[namespace = "mcrl2::utilities"]
+        type lock_guard;
+
         /// Initialises the library.
         fn initialise();
 
         /// Trigger garbage collection.
         fn collect_garbage();
+
+        /// Provides shared access to the aterm library.
+        fn lock_shared() -> UniquePtr<shared_guard>;
+
+        /// Provides exclusive access to the aterm library.
+        fn lock_exclusive() -> UniquePtr<lock_guard>;
 
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();

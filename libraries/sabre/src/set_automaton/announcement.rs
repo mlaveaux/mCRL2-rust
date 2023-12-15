@@ -5,7 +5,7 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
-use mcrl2::atermpp::{ATerm, TermPool, ATermTrait};
+use mcrl2::aterm::{ATerm, TermPool, ATermTrait};
 use smallvec::SmallVec;
 
 use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
@@ -357,7 +357,7 @@ impl MatchGoal {
 #[cfg(test)]
 mod tests {
     use ahash::AHashSet;
-    use mcrl2::atermpp::TermPool;
+    use mcrl2::aterm::TermPool;
 
     use crate::{utilities::to_data_expression, test_utility::create_rewrite_rule};
 

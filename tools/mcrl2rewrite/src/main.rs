@@ -3,7 +3,7 @@ use std::{rc::Rc, cell::RefCell};
 use anyhow::Result as AnyResult;
 use clap::Parser;
 
-use mcrl2::atermpp::TermPool;
+use mcrl2::aterm::TermPool;
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 
 

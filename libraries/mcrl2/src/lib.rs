@@ -4,7 +4,8 @@
 //! 
 
 pub mod symbol;
-pub mod atermpp;
+pub mod aterm;
+pub mod busy_forbidden;
 pub mod aterm_builder;
 pub mod lps;
 pub mod data;

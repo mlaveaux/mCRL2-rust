@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::utilities::ExplicitPosition;
 use mcrl2::{
-    atermpp::{ATerm, TermPool, ATermTrait},
+    aterm::{ATerm, TermPool, ATermTrait},
     data::DataVariable, symbol::Symbol
 };
 
@@ -155,7 +155,7 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPositio
 mod tests {
     use super::*;
     use ahash::AHashSet;
-    use mcrl2::{atermpp::TermPool, aterm_builder::apply, symbol::SymbolTrait};
+    use mcrl2::{aterm::TermPool, aterm_builder::apply, symbol::SymbolTrait};
 
     /// Converts a slice of static strings into a set of owned strings
     /// 

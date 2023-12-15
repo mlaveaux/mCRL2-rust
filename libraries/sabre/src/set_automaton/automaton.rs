@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use ahash::HashMap;
-use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait, ATermRef, ATermArgs}, data::DataFunctionSymbol};
+use mcrl2::{aterm::{ATerm, TermPool, ATermTrait, ATermRef, ATermArgs}, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
