@@ -1,14 +1,14 @@
 /// The protection set keeps track of nodes that should not be garbage
 /// collected since they are being referenced by instances.
 #[derive(Default)]
-pub struct ProtectionSet
+pub struct ProtectionSet<T>
 {    
-    roots: Vec<(usize, bool)>, // The set of root active nodes.
-    free: Option<usize>,
+    roots: Vec<(T, bool)>, // The set of root active nodes.
+    free: Option<T>,
     number_of_insertions: u64,
 }
 
-impl ProtectionSet
+impl<T> ProtectionSet<T>
 {
     pub fn new() -> Self
     {
