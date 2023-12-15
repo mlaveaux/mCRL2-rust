@@ -3,7 +3,7 @@ use std::fs::File;
 use anyhow::Result;
 use clap::Parser;
 
-use io::read_aut;
+use io::aut::read_aut;
 
 #[derive(Parser, Debug)]
 #[command(
