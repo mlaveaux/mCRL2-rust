@@ -158,7 +158,7 @@ impl EnhancedMatchAnnouncement {
                 stack_size += 1;
             } else if tp.is_data_application(&term) || term.is_data_function_symbol() {
                 let arity = get_data_arguments(tp, &term).len();
-                innermost_stack.push(Config::Construct(get_data_function_symbol(tp, &term), arity, stack_size));
+                innermost_stack.push(Config::Construct(get_data_function_symbol(tp, term.borrow()), arity, stack_size));
                 stack_size += 1;
             } else {
                 // Skip intermediate terms such as UntypeSortUnknown and SortId(@NoValue)

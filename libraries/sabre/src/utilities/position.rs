@@ -1,6 +1,6 @@
 //! Module for storing positions of terms
 use core::fmt;
-use mcrl2::atermpp::{ATerm, ATermTrait};
+use mcrl2::atermpp::{ATerm, ATermTrait, ATermRef};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -57,11 +57,11 @@ fn to_string(position: &ExplicitPosition) -> String {
 }
 
 /// Returns the subterm at the specific position
-pub fn get_position(term: &ATerm, position: &ExplicitPosition) -> ATerm {
-    let mut result = term.clone();
+pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRef<'a> {
+    let mut result = term.borrow();
 
     for index in &position.indices {
-        result = result.arg(index - 1).protect(); // Note that positions are 1 indexed.
+        result = result.arg(index - 1); // Note that positions are 1 indexed.
     }
     
     result
@@ -126,7 +126,7 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
-        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), expected);
+        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), expected.borrow());
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         for (term, pos) in PositionIterator::new(t.clone()) {
-            assert_eq!(get_position(&t, &pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
+            assert_eq!(get_position(&t, &pos), term.borrow(), "The resulting (subterm, position) pair doesn't match the get_position implementation");
         }
 
         assert_eq!(

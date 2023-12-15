@@ -114,7 +114,7 @@ impl SabreRewriter {
                             // Observe a symbol according to the state label of the set automaton.
                             let function_symbol: DataFunctionSymbol = get_data_function_symbol(
                                 tp,
-                                &get_position(&leaf.subterm, &automaton.states[leaf.state].label),
+                                get_position(&leaf.subterm, &automaton.states[leaf.state].label),
                             );
                             stats.symbol_comparisons += 1;
 
@@ -238,7 +238,7 @@ impl SabreRewriter {
         // Computes the new subterm of the configuration
         let new_subterm = ema
             .semi_compressed_rhs
-            .evaluate(&get_position(&leaf_subterm, &ema.announcement.position), tp);
+            .evaluate(&get_position(&leaf_subterm, &ema.announcement.position).protect(), tp);
 
         // println!(
         //     "rewrote {} to {} using rule {}",
@@ -259,7 +259,7 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let subterm = &get_position(&leaf.subterm, &ema.announcement.position);
+            let subterm = &get_position(&leaf.subterm, &ema.announcement.position).protect();
 
             let rhs = c.semi_compressed_rhs.evaluate(subterm, tp);
             let lhs = c.semi_compressed_lhs.evaluate(subterm, tp);

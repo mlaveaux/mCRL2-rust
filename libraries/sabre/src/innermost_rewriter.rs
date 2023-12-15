@@ -107,7 +107,7 @@ impl InnermostRewriter {
                 Config::Rewrite(result) => {
                     let term = stack.terms.pop().unwrap();
 
-                    let symbol = get_data_function_symbol(tp, &term);
+                    let symbol = get_data_function_symbol(tp, term.borrow());
                     let arguments = get_data_arguments(tp, &term);
 
                     // For all the argument we reserve space on the stack.
@@ -181,12 +181,12 @@ impl InnermostRewriter {
                             if ema.stack_size == 1 && ema.variables.len() == 1{
                                 // This is a special case where we place the result on the correct position immediately.
                                 // The right hand side is only a variable
-                                stack.terms[index] = get_position(&term, &ema.variables[0].0);
+                                stack.terms[index] = get_position(&term, &ema.variables[0].0).protect();
                             } else {
                                 for (position, index) in &ema.variables {
                                     // Add the positions to the stack.
                                     stack.terms[top_of_stack + index - 1] =
-                                        get_position(&term, position);
+                                        get_position(&term, position).protect();
                                 }
                             }
 
@@ -245,7 +245,7 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let symbol = get_data_function_symbol(tp, &get_position(t, &state.label));
+            let symbol = get_data_function_symbol(tp, get_position(t, &state.label));
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = state.transitions.get(symbol.operation_id()) {

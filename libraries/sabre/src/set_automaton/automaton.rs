@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use ahash::HashMap;
-use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait}, data::DataFunctionSymbol};
+use mcrl2::{atermpp::{ATerm, TermPool, ATermTrait, ATermRef}, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -311,12 +311,12 @@ pub(crate) struct State {
 }
 
 /// Returns the data function symbol of the given term
-pub fn get_data_function_symbol(tp: &mut TermPool, term: &ATerm) -> DataFunctionSymbol {
+pub fn get_data_function_symbol(tp: &mut TermPool, term: ATermRef) -> DataFunctionSymbol {
     // If this is an application it is the first argument, otherwise it's the term itself
-    if tp.is_data_application(term) {
+    if tp.is_data_application(&term) {
         term.arg(0).protect().into()
     } else {
-        term.clone().into()
+        term.protect().into()
     }
 }
 
@@ -470,7 +470,7 @@ impl State {
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && &get_data_function_symbol(tp, &mo.pattern) == symbol
+                        && &get_data_function_symbol(tp, mo.pattern.borrow()) == symbol
                         && get_data_arguments(tp, &mo.pattern)
                             .iter()
                             .all(|x| x.is_data_variable()) // Again skip the function symbol
@@ -478,7 +478,7 @@ impl State {
             {
                 result.completed.push(mg.clone());
             } else if mg.obligations.iter().any(|mo| {
-                mo.position == self.label && &get_data_function_symbol(tp, &mo.pattern) != symbol
+                mo.position == self.label && &get_data_function_symbol(tp, mo.pattern.borrow()) != symbol
             }) {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
@@ -495,7 +495,7 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if &get_data_function_symbol(tp,&mo.pattern) == symbol && mo.position == self.label
+                    if &get_data_function_symbol(tp,mo.pattern.borrow()) == symbol && mo.position == self.label
                     {
                         // Reduced match obligation
                         for (index, t) in get_data_arguments(tp, &mo.pattern).iter().enumerate() {
@@ -594,9 +594,9 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use mcrl2::data::DataSpecification;
+    //use mcrl2::data::DataSpecification;
 
-    use super::SetAutomaton;
+    //use super::SetAutomaton;
 
     // Creating this auomaton takes too much time.
     /*#[test]

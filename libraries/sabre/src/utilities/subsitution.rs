@@ -93,7 +93,7 @@ mod tests {
         // Check that indeed the new term as a 0 at position 1.1.
         assert_eq!(
             t0,
-            get_position(&result, &ExplicitPosition::new(&vec![1, 1]))
+            get_position(&result, &ExplicitPosition::new(&vec![1, 1])).protect()
         );
     }
 

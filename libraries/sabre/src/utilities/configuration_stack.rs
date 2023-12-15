@@ -95,7 +95,7 @@ impl<'a> ConfigurationStack<'a> {
         // Create a new configuration and push it onto the stack
         let new_leaf = Configuration {
             state: *des,
-            subterm: get_position(&leaf.subterm, pos),
+            subterm: get_position(&leaf.subterm, pos).protect(),
             position: Some(pos),
         };
         self.stack.push(new_leaf);

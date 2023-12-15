@@ -64,7 +64,7 @@ impl SemiCompressedTermTree {
                 tp.create(&node.head, &subterms)
             }
             Compressed(ct) => ct.clone(),
-            Variable(p) => get_position(t, p),
+            Variable(p) => get_position(t, p).protect(),
         }
     }
 
