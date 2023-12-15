@@ -6,7 +6,7 @@ use std::time::Instant;
 use std::fmt::Debug;
 
 use ahash::AHashSet;
-use anyhow::Result as AnyResult;
+use anyhow::{Result as AnyResult, bail};
 use clap::ValueEnum;
 use mcrl2::atermpp::TermPool;
 use mcrl2::data::{DataSpecification, JittyRewriter};
@@ -85,7 +85,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
     Ok(())
 }
 
-pub fn rewrite_rec(specification: &str, rewriter: Rewriter, text: &str) -> AnyResult<()> {
+pub fn rewrite_rec(rewriter: Rewriter, specification: &str, text: &str) -> AnyResult<()> {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     let (syntax_spec, _) =
@@ -110,7 +110,7 @@ pub fn rewrite_rec(specification: &str, rewriter: Rewriter, text: &str) -> AnyRe
             println!("sabre rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Jitty => {
-            //return Err("Cannot use REC specifications with mCRL2's jitty rewriter".to_string());
+            bail!("Cannot use REC specifications with mCRL2's jitty rewriter");
         }
     }
 

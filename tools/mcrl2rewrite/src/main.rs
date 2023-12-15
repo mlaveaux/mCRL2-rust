@@ -34,8 +34,12 @@ fn main() -> AnyResult<()>
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     if cli.rec { 
-        rewrite_rec(&cli.specification, cli.rewriter, &cli.term)     
+        rewrite_rec(cli.rewriter, &cli.specification, &cli.term)?;  
     } else {
-        rewrite_data_spec(tp, cli.rewriter, &cli.specification, &cli.term) 
+        rewrite_data_spec(tp.clone(), cli.rewriter, &cli.specification, &cli.term)?;
     }
+    
+    tp.borrow().print_metrics();
+
+    Ok(())
 }
