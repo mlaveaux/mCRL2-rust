@@ -1,38 +1,49 @@
 use std::marker::PhantomData;
 
-use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
-
+use mcrl2_sys::atermpp::ffi;
 
 /// Provides access to the mCRL2 busy forbidden protocol. For more efficient
 /// shared mutex implementation see bf-sharedmutex.
-struct BfTermPool<T> {
+pub struct BfTermPool<T> {
     object: T
 }
 
-struct BfTermPoolRead<'a> {
-    guard: UniquePtr<ffi::shared_guard>,
+pub struct BfTermPoolRead<'a, T> {
+    object: &'a T,
     _marker: PhantomData<&'a ()>,
 }
 
-struct BfTermPoolWrite<'a> {
-    guard: UniquePtr<ffi::lock_guard>,
+impl<'a, T> Drop for BfTermPoolRead<'a, T> {
+    fn drop(&mut self) {
+        ffi::unlock_shared();        
+    }
+}
+
+pub struct BfTermPoolWrite<'a, T> {
+    object: &'a T,
     _marker: PhantomData<&'a ()>,
 }
 
-
+impl<'a, T> Drop for BfTermPoolWrite<'a, T> {
+    fn drop(&mut self) {
+        ffi::unlock_exclusive();        
+    }
+}
 
 impl<'a, T> BfTermPool<T> {
 
-    pub fn read(&'a self) -> BfTermPoolRead<'a> {
+    pub fn read(&'a self) -> BfTermPoolRead<'a, T> {
+        ffi::lock_shared();
         BfTermPoolRead {
-            guard: ffi::lock_shared(),
+            object: &self.object,
             _marker: Default::default()
         }
     }
 
-    pub fn write(&'a self) -> BfTermPoolWrite<'a> {
+    pub fn write(&'a self) -> BfTermPoolWrite<'a, T> {
+        ffi::lock_exclusive();
         BfTermPoolWrite {
-            guard: ffi::lock_exclusive(),
+            object: &self.object,
             _marker: Default::default()
         }
     }
