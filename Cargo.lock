@@ -584,6 +584,7 @@ dependencies = [
  "ahash",
  "mcrl2-sys",
  "rand",
+ "utilities",
 ]
 
 [[package]]
@@ -597,6 +598,14 @@ dependencies = [
  "rec-tests",
  "sabre",
  "utilities",
+]
+
+[[package]]
+name = "mcrl2-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

@@ -3,9 +3,8 @@ use std::fmt;
 
 use ahash::AHashSet;
 
-use crate::aterm::{ATerm, ATermTrait};
+use crate::aterm::{ATerm, TermPool, ATermTrait};
 use crate::symbol::Symbol;
-use crate::term_pool::TermPool;
 
 /// This can be used to construct a term from a given input of type (inductive
 /// type) I, without using the system stack.
