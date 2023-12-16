@@ -36,21 +36,31 @@ void collect_garbage()
 }
 
 inline
+void lock_shared() 
+{
+  detail::g_thread_term_pool().mutex().lock_shared_impl();
+}
+
+void unlock_shared() 
+{
+  detail::g_thread_term_pool().mutex().unlock_shared();
+}
+
+inline
+void lock_exclusive() 
+{
+  detail::g_thread_term_pool().mutex().lock_impl();
+}
+
+void unlock_exclusive() 
+{
+  detail::g_thread_term_pool().mutex().unlock_impl();
+}
+
+inline
 void print_metrics()
 {
   detail::g_thread_term_pool().print_local_performance_statistics();
-}
-
-inline
-std::unique_ptr<shared_guard> lock_shared() 
-{
-  std::make_unique<mcrl2::utilities::shared_guard>(detail::g_thread_term_pool().lock_shared());
-}
-
-inline
-std::unique_ptr<lock_guard> lock_exclusive() 
-{
-  std::make_unique<lock_guard>(detail::g_thread_term_pool().lock());
 }
 
 const detail::_aterm* aterm_address(const aterm& term)

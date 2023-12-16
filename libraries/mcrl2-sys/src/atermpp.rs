@@ -25,10 +25,12 @@ pub mod ffi {
         fn collect_garbage();
 
         /// Provides shared access to the aterm library.
-        fn lock_shared() -> UniquePtr<shared_guard>;
+        fn lock_shared();
+        fn unlock_shared();
 
         /// Provides exclusive access to the aterm library.
-        fn lock_exclusive() -> UniquePtr<lock_guard>;
+        fn lock_exclusive();
+        fn unlock_exclusive();
 
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();
