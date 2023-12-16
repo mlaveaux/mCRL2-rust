@@ -6,5 +6,6 @@ edition.workspace = true
 
 [dependencies]
 ahash.workspace = true
-mcrl2-sys = { path="../mcrl2-sys" }
 rand.workspace = true
+mcrl2-sys = { path="../mcrl2-sys" }
+utilities = { path="../utilities" }

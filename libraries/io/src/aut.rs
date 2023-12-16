@@ -120,13 +120,12 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
 
     #[test]
     fn test_reading_aut() {
         let file = include_str!("../../../examples/lts/abp.aut");
 
-        let lts = read_aut(file.as_bytes()).unwrap();
+        let _lts = read_aut(file.as_bytes()).unwrap();
     }
 
 }
