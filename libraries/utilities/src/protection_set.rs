@@ -80,6 +80,8 @@ impl<T> ProtectionSet<T> {
     /// Remove protection from the given LDD node. Note that index must be the
     /// index returned by the [protect] call.
     pub fn unprotect(&mut self, index: usize) {
+        debug_assert!(matches!(self.roots[index], Entry::Filled(_)), "Index {index} is not valid");
+
         match self.free {
             Some(next) => {
                 self.roots[index] = Entry::Free(next);

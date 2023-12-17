@@ -6,6 +6,7 @@
 pub mod symbol;
 pub mod aterm;
 pub mod aterm_builder;
+pub mod aterm_pool;
 pub mod busy_forbidden;
 pub mod lps;
 pub mod data;

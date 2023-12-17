@@ -73,7 +73,11 @@ impl<'a> Default for ATermRef<'a> {
 
 impl<'a> ATermRef<'a> {
     pub fn protect(&self) -> ATerm {
-        THREAD_TERM_POOL.with_borrow_mut(|tp| { tp.protect(self.term) })
+        if self.is_default() {
+            ATerm::default()
+        } else {
+            THREAD_TERM_POOL.with_borrow_mut(|tp| { tp.protect(self.term) })
+        }
     }
 }
 
@@ -237,9 +241,11 @@ impl Default for ATerm {
 
 impl Drop for ATerm {
     fn drop(&mut self) {
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            tp.drop(self);
-        })
+        if !self.is_default() {
+            THREAD_TERM_POOL.with_borrow_mut(|tp| {
+                tp.drop(self);
+            })
+        }
     }
 }
 

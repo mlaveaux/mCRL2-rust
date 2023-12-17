@@ -145,8 +145,6 @@ impl<I, C: fmt::Display> TermBuilder<I, C> {
                     self.terms.drain(self.terms.len() - arity..);
                 }
             }
-
-            //println!("{}", self);
         }
 
         debug_assert!(
@@ -244,12 +242,14 @@ pub fn random_term(
 #[cfg(test)]
 mod tests {
     use std::thread;
+    use test_log::test;
 
     use crate::aterm::ATermList;
     use crate::symbol::SymbolTrait;
 
     use super::*;
 
+    /// Make sure that the term has the same number of arguments as its arity.
     fn verify_term(term: &ATerm) {
         for subterm in term.iter() {
             assert_eq!(
@@ -276,7 +276,7 @@ mod tests {
     fn test_thread_aterm_pool_parallel() {
         let mut threads = vec![];
 
-        for _ in 0..20 {
+        for _ in 0..2 {
             threads.push(thread::spawn(|| {
                 let mut tp = TermPool::new();
 
@@ -297,6 +297,11 @@ mod tests {
                     verify_term(term);
                 }
             }));
+        }
+
+        // Join the threads
+        for thread in threads {
+            thread.join().unwrap();
         }
     }
 

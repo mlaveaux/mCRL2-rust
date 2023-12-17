@@ -6,6 +6,8 @@ pub mod ffi {
 
         type aterm;
         type function_symbol;
+        type callback_container;
+        type term_mark_stack;
 
         /// The underlying detail::_aterm
         #[namespace = "atermpp::detail"]
@@ -32,17 +34,23 @@ pub mod ffi {
         fn lock_exclusive();
         fn unlock_exclusive();
 
+        /// Register a function to be called during marking of the garbage collection
+        fn register_mark_callback(callback_mark: fn() -> (), callback_size: fn() -> usize) -> UniquePtr<callback_container>;
+
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();
 
-        /// Creates a term from the given function and arguments.
-        unsafe fn create_aterm(function: *const _function_symbol, arguments: &[*const _aterm]) -> UniquePtr<aterm>;
+        /// Creates a term from the given function and arguments, must be protected
+        unsafe fn create_aterm(function: *const _function_symbol, arguments: &[*const _aterm]) -> *const _aterm;
         
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
 
-        /// Protect the given aterm.
-        unsafe fn protect_aterm(value: *const _aterm) -> UniquePtr<aterm>;
+        /// Returns the pointer underlying the given term.
+        unsafe fn aterm_address(term: &aterm) -> *const _aterm;
+
+        /// Marks the aterm to prevent garbage collection.
+        unsafe fn aterm_mark_address(term: *const _aterm);
 
         /// Returns true iff the term is an aterm_list.
         unsafe fn aterm_is_list(term: *const _aterm) -> bool;
@@ -53,14 +61,8 @@ pub mod ffi {
         /// Returns true iff the term is an aterm_int.
         unsafe fn aterm_is_int(term: *const _aterm) -> bool;
 
-        /// Returns the address of the given aterm. Should be used with care.
-        fn aterm_address(term: &aterm) -> *const _aterm;
-
         /// Converts an aterm to a string.
         unsafe fn print_aterm(term: *const _aterm) -> String;
-
-        /// Convert pointer into a protected function symbol.
-        unsafe fn protect_function_symbol(value: *const _function_symbol) -> UniquePtr<function_symbol>;
 
         /// Returns the function symbol of an aterm.
         unsafe fn get_aterm_function_symbol(term: *const _aterm) -> *const _function_symbol;
@@ -77,17 +79,21 @@ pub mod ffi {
         /// Creates a function symbol with the given name and arity.
         fn create_function_symbol(name: String, arity: usize) -> UniquePtr<function_symbol>;
 
+        unsafe fn protect_function_symbol(symbol: *const _function_symbol) -> UniquePtr<function_symbol>;
+
         unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;
 
         // For data::variable
         unsafe fn is_data_variable(term: *const _aterm) -> bool;
 
-        fn create_data_variable(name: String) -> UniquePtr<aterm>;
+        /// Creates an unprotected data variable, must be within in a critical section.
+        fn create_data_variable(name: String) -> *const _aterm;
 
         // For data::function_symbol        
         unsafe fn is_data_function_symbol(term: *const _aterm) -> bool;
 
-        fn create_data_function_symbol(name: String) -> UniquePtr<aterm>;
+        /// Creates an unprotected data function symbol, must be within in a critical section.
+        fn create_data_function_symbol(name: String) -> *const _aterm;
 
         // For data::data_expression        
         unsafe fn is_data_where_clause(term: *const _aterm) -> bool;

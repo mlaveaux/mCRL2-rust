@@ -7,20 +7,49 @@
 
 #include "rust/cxx.h"
 
+#include "mcrl2/core/identifier_string.h"
+
 #include "mcrl2/atermpp/aterm.h"
 #include "mcrl2/atermpp/aterm_io_text.h"
 #include "mcrl2/atermpp/detail/aterm_hash.h"
+#include "mcrl2/atermpp/detail/aterm_pool_storage_implementation.h"
 
 #include "mcrl2/data/application.h"
 #include "mcrl2/data/data_expression.h"
 #include "mcrl2/data/function_symbol.h"
 #include "mcrl2/data/parse.h"
 
+using namespace mcrl2::core;
 using namespace mcrl2::data;
 using namespace mcrl2::utilities;
 
 namespace atermpp
 {
+  
+using void_callback = rust::Fn<void()>;
+using size_callback = rust::Fn<std::size_t()>;
+
+struct callback_container: detail::_aterm_container
+{
+  /// \brief Ensure that all the terms in the containers.
+  inline void mark(std::stack<std::reference_wrapper<detail::_aterm>>& /* todo*/) const override
+  {
+    callback_mark();
+  }
+
+  virtual inline std::size_t size() const override
+  {
+    return callback_size();
+  }
+
+  callback_container(void_callback callback_mark, size_callback callback_size)
+    : callback_size(callback_size),
+      callback_mark(callback_mark)
+  {}
+
+  void_callback callback_mark;
+  size_callback callback_size;
+};
 
 inline 
 void initialise()
@@ -63,9 +92,20 @@ void print_metrics()
   detail::g_thread_term_pool().print_local_performance_statistics();
 }
 
+inline
+std::unique_ptr<callback_container> register_mark_callback(void_callback callback_mark, size_callback callback_size)
+{
+  return std::make_unique<callback_container>(callback_mark, callback_size);
+}
+
 const detail::_aterm* aterm_address(const aterm& term)
 {
   return detail::address(term);
+}
+
+std::unique_ptr<function_symbol> protect_function_symbol(const detail::_function_symbol* symbol)
+{
+  return std::make_unique<function_symbol>(symbol);
 }
 
 const detail::_function_symbol* function_symbol_address(const function_symbol& symbol)
@@ -73,22 +113,20 @@ const detail::_function_symbol* function_symbol_address(const function_symbol& s
   return symbol.address();
 }
 
-std::unique_ptr<aterm> create_aterm(const detail::_function_symbol* symbol, rust::Slice<const detail::_aterm* const> arguments)
+const detail::_aterm* create_aterm(const detail::_function_symbol* symbol, rust::Slice<const detail::_aterm* const> arguments)
 {
   rust::Slice<aterm> aterm_slice(const_cast<aterm*>(reinterpret_cast<const aterm*>(arguments.data())),
       arguments.length());
 
-  return std::make_unique<aterm>(aterm_appl(function_symbol(symbol), aterm_slice.begin(), aterm_slice.end()));
+  unprotected_aterm result(nullptr);
+  make_term_appl(reinterpret_cast<aterm&>(result), function_symbol(symbol), aterm_slice.begin(), aterm_slice.end());
+  return detail::address(result);
 }
 
-std::unique_ptr<aterm> protect_aterm(const detail::_aterm* term)
+void aterm_mark_address(const detail::_aterm* term)
 {
-  return std::make_unique<aterm>(term);
-}
-
-std::unique_ptr<function_symbol> protect_function_symbol(const detail::_function_symbol* symbol)
-{
-  return std::make_unique<function_symbol>(symbol);
+  std::stack<std::reference_wrapper<detail::_aterm>> todo;
+  mark_term(*term, todo);
 }
 
 std::unique_ptr<aterm> aterm_from_string(rust::String text)
@@ -129,7 +167,6 @@ const detail::_function_symbol* get_aterm_function_symbol(const detail::_aterm* 
 
 rust::Str get_function_symbol_name(const detail::_function_symbol* symbol)
 {
-  // TODO: This is not optimal.
   return function_symbol(symbol).name();
 }
 
@@ -163,9 +200,11 @@ bool is_data_variable(const detail::_aterm* term)
   return mcrl2::data::is_variable(static_cast<const aterm&>(t));
 }
 
-std::unique_ptr<aterm> create_data_variable(rust::String name)
+const detail::_aterm* create_data_variable(rust::String name)
 {
-  return std::make_unique<aterm>(mcrl2::data::variable(static_cast<std::string>(name), mcrl2::data::sort_expression()));
+  unprotected_aterm result(nullptr);
+  make_variable(reinterpret_cast<aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), mcrl2::data::sort_expression());
+  return detail::address(result);
 }
 
 bool is_data_where_clause(const detail::_aterm* term)
@@ -186,9 +225,11 @@ bool is_data_untyped_identifier(const detail::_aterm* term)
   return mcrl2::data::is_untyped_identifier(static_cast<const aterm_appl&>(t));
 }
 
-std::unique_ptr<aterm> create_data_function_symbol(rust::String name)
+const detail::_aterm* create_data_function_symbol(rust::String name)
 {
-  return std::make_unique<mcrl2::data::function_symbol>(static_cast<std::string>(name), untyped_sort());
+  unprotected_aterm result(nullptr);
+  make_function_symbol(reinterpret_cast<aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
+  return detail::address(result);
 }
 
 std::unique_ptr<std::vector<aterm>> generate_types()
