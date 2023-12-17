@@ -39,8 +39,8 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 
     let (data_spec, expressions) = load_case(
         &mut tp.borrow_mut(),
-        include_str!("../cases/add16.dataspec"),
-        include_str!("../cases/add16.expressions"),
+        include_str!("../../../examples/REC/mcrl2/add16.dataspec"),
+        include_str!("../../../examples/REC/mcrl2/add16.expressions"),
         100,
     );
 
@@ -72,8 +72,8 @@ pub fn criterion_benchmark_sabre(c: &mut Criterion) {
 
     let cases = vec![(
         vec![
-            include_str!("../../rec-tests/REC_files/factorial7.rec"),
-            include_str!("../../rec-tests/REC_files/factorial.rec"),
+            include_str!("../../../examples/REC/rec/factorial7.rec"),
+            include_str!("../../../examples/REC/rec/factorial.rec"),
         ],
         "factorial7",
     )];

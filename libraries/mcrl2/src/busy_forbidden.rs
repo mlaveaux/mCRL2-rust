@@ -51,7 +51,7 @@ impl<'a, T> BfTermPool<T> {
     pub fn read(&'a self) -> BfTermPoolRead<'a, T> {
         ffi::lock_shared();
         BfTermPoolRead {
-            mutex: &self,
+            mutex: self,
             _marker: Default::default()
         }
     }

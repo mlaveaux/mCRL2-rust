@@ -51,13 +51,13 @@ thread_local! {
 
 pub struct ThreadTermPool {
     protection_set: Arc<Mutex<ProtectionSet<ATermPtr>>>,
-    callback: UniquePtr<ffi::callback_container>,
+    _callback: UniquePtr<ffi::callback_container>,
     index: usize,
 }
 
 impl ThreadTermPool {
     pub fn new() -> ThreadTermPool {
-        // Initialise the C++ aterm library.
+        // Initialise the C++ aterm library, disables garbage collection so that it can be performed in Rust.
         ffi::initialise();
 
         // Register a protection set into the global set.
@@ -69,8 +69,8 @@ impl ThreadTermPool {
         trace!("Registered ThreadTermPool {}", lock.len() - 1);
         ThreadTermPool {
             protection_set,
-            callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
-            index: lock.len() - 1
+            _callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
+            index: lock.len() - 1,
         }
     }
     
@@ -124,10 +124,13 @@ impl TermPool {
         }
     }
 
-    /// Trigger a garbage collection
+    /// Trigger a garbage collection if necessary
     pub fn collect(&mut self) {
         ffi::collect_garbage();
     }
+
+    /// Enable automatic garbage collection in ffi calls.
+    /// WARNING: This should not be enabled when creating ATerms on the Rust side since that deadlocks currently.
 
     /// Print performance metrics
     pub fn print_metrics(&self) {
@@ -137,7 +140,6 @@ impl TermPool {
             info!("{:?}", tp);
         })
     }
-
 
     /// Creates an ATerm from a string.
     pub fn from_string(&mut self, text: &str) -> Result<ATerm, Exception> {
@@ -157,7 +159,7 @@ impl TermPool {
             "Number of arguments does not match arity"
         );
 
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             let mut protection_set = tp.protection_set.lock().unwrap();
              
             unsafe {
@@ -170,7 +172,10 @@ impl TermPool {
                     root
                 }
             }
-        })
+        });
+
+        self.collect();
+        result
     }
 
     /// Creates a function symbol with the given name and arity.
@@ -199,7 +204,7 @@ impl TermPool {
     /// Creates a data variable with the given name.
     pub fn create_variable(&mut self, name: &str) -> DataVariable {
         
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             let mut protection_set = tp.protection_set.lock().unwrap();
 
             let term = ffi::create_data_variable(name.to_string());
@@ -212,12 +217,15 @@ impl TermPool {
                     root
                 },
             }
-        })
+        });
+
+        self.collect();
+        result
     }
 
     /// Creates a data function symbol with the given name.
     pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol {
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             let mut protection_set = tp.protection_set.lock().unwrap();
           
             let term = ffi::create_data_function_symbol(name.to_string());
@@ -230,7 +238,10 @@ impl TermPool {
                     root
                 },
             }
-        })
+        });
+
+        self.collect();
+        result
     }
 
     /// Returns true iff this is a data::application
@@ -257,7 +268,7 @@ impl TermPool {
             "Number of arguments does not match arity"
         );
 
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             let mut protection_set = tp.protection_set.lock().unwrap();
 
             unsafe {            
@@ -270,7 +281,10 @@ impl TermPool {
                     root
                 }
             }
-        })
+        });
+
+        self.collect();
+        result
     }
 
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.

@@ -7,9 +7,9 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ahash.workspace = true
 anyhow = "1.0"
-clap.workspace = true
 mcrl2 = { path = "../../libraries/mcrl2" }
 rec-tests = { path = "../../libraries/rec-tests" }
 sabre = { path = "../../libraries/sabre" }
+ahash.workspace = true
+clap.workspace = true
