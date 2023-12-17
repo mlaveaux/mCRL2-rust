@@ -1,11 +1,13 @@
 /// The protection set keeps track of nodes that should not be garbage
 /// collected since they are being referenced by instances.
+#[derive(Debug)]
 pub struct ProtectionSet<T> {
     roots: Vec<Entry<T>>, // The set of root active nodes.
     free: Option<usize>,
     number_of_insertions: u64,
 }
 
+#[derive(Debug)]
 enum Entry<T> {
     Filled(T),
     Free(usize),
@@ -28,6 +30,11 @@ impl<T> ProtectionSet<T> {
     /// Returns maximum number of active instances.
     pub fn maximum_size(&self) -> usize {
         self.roots.capacity()
+    }
+
+    /// Returns the number of roots in the protection set
+    pub fn len(&self) -> usize {
+        self.iter().count()
     }
 
     /// Returns an iterator over all root indices in the protection set.
@@ -132,6 +139,11 @@ mod tests {
         for index in 0..250 {
             protection_set.unprotect(indices[index]);
             indices.remove(index);
+        }
+        
+        // Protect more to test the freelist
+        for _ in 0..5000 {
+            indices.push(protection_set.protect(rng.gen_range(0..1000)));
         }
 
         for index in indices {
