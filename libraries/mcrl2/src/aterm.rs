@@ -3,16 +3,17 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::{collections::VecDeque, fmt};
 
-use mcrl2_sys::{atermpp::ffi, cxx::{Exception, UniquePtr}};
+use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
 use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
-use crate::symbol::{SymbolTrait, Symbol, SymbolRef};
+use crate::symbol::{SymbolRef, SymbolTrait};
+use crate::aterm_pool::THREAD_TERM_POOL;
 
+pub use crate::aterm_pool::*;
 
 /// Rust interface of a atermpp::aterm
 
 pub trait ATermTrait<'a> {
-    
     /// Returns the indexed argument of the term
     fn arg<'b: 'a>(&'a self, index: usize) -> ATermRef<'b>;
 
@@ -21,7 +22,7 @@ pub trait ATermTrait<'a> {
 
     /// Returns whether the term is the default term (not initialised)
     fn is_default(&self) -> bool;
-    
+
     /// Returns true iff this is an aterm_list
     fn is_list(&self) -> bool;
 
@@ -58,26 +59,35 @@ pub trait ATermTrait<'a> {
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ATermRef<'a> {
     pub(crate) term: *const ffi::_aterm,
-    marker: PhantomData<&'a ()>
+    marker: PhantomData<&'a ()>,
 }
 
 impl<'a> Default for ATermRef<'a> {
     fn default() -> Self {
-        ATermRef { term: std::ptr::null(), marker: PhantomData::default() }
-    }
-}
-
-impl<'a> ATermRef<'a> {
-    pub fn protect(&self) -> ATerm { 
-        unsafe {
-            ATerm { term: Some(ffi::protect_aterm(self.term)) }
+        ATermRef {
+            term: std::ptr::null(),
+            marker: PhantomData::default(),
         }
     }
 }
 
 impl<'a> ATermRef<'a> {
+    pub fn protect(&self) -> ATerm {
+        THREAD_TERM_POOL.with_borrow_mut(|tp| { tp.protect(self.term) })
+    }
+}
+
+impl<'a> ATermRef<'a> {
+    fn new(term: *const ffi::_aterm) -> ATermRef<'a> {
+        ATermRef {
+            term,
+            marker: PhantomData::default(),
+        }
+    }
+
+    /// Borrows the term with a potentially shorter lifetime.
     pub fn borrow<'b: 'a>(&self) -> ATermRef<'b> {
-        ATermRef { term: self.term, marker: PhantomData::default() }
+        ATermRef::new(self.term)
     }
 }
 
@@ -101,15 +111,13 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
     fn arguments(&self) -> ATermArgs {
         self.require_valid();
 
-        ATermArgs::new(
-            self.borrow()
-        )
+        ATermArgs::new(self.borrow())
     }
 
     fn is_default(&self) -> bool {
         self.term.is_null()
     }
-    
+
     fn is_list(&self) -> bool {
         unsafe { ffi::aterm_is_list(self.term) }
     }
@@ -124,9 +132,7 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
 
     fn get_head_symbol(&self) -> SymbolRef<'a> {
         self.require_valid();
-        unsafe {
-            ffi::get_aterm_function_symbol(self.term).into()
-        }
+        unsafe { ffi::get_aterm_function_symbol(self.term).into() }
     }
 
     fn iter(&self) -> TermIterator {
@@ -135,9 +141,7 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
 
     fn is_data_variable(&self) -> bool {
         self.require_valid();
-        unsafe {
-        ffi::is_data_variable(self.term)
-        }
+        unsafe { ffi::is_data_variable(self.term) }
     }
 
     fn is_data_function_symbol(&self) -> bool {
@@ -159,7 +163,7 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
         self.require_valid();
         unsafe { ffi::is_data_untyped_identifier(self.term) }
     }
-    
+
     fn require_valid(&self) {
         debug_assert!(
             !self.is_default(),
@@ -169,11 +173,6 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
 }
 
 
-impl<'a> From<ATermRef<'a>> for ATerm {
-    fn from(value: ATermRef<'a>) -> Self {
-        value.protect()    
-    }
-}
 
 impl<'a> fmt::Display for ATermRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -205,7 +204,7 @@ impl<'a> fmt::Debug for ATermRef<'a> {
             write!(f, "<default>")?;
         } else {
             unsafe {
-            write!(f, "{}", ffi::print_aterm(self.term))?;
+                write!(f, "{}", ffi::print_aterm(self.term))?;
             }
             //for term in self.iter() {
             //   write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
@@ -217,28 +216,30 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 }
 
 pub struct ATerm {
-    pub(crate) term: Option<UniquePtr<ffi::aterm>>,
+    pub(crate) term: *const ffi::_aterm,
+    pub(crate) root: usize,
 }
 
 impl<'a> ATerm {
     pub fn borrow(&'a self) -> ATermRef<'a> {
-        match &self.term {
-            Some(t) => {
-                ATermRef {
-                    term: ffi::aterm_address(&t),
-                    marker: PhantomData::default()
-                }   
-            },
-            None => {
-                ATermRef::default()
-            }
-        }     
+        ATermRef::new(self.term)
     }
 }
 
 impl Default for ATerm {
     fn default() -> Self {
-        ATerm { term: None }
+        ATerm {
+            term: std::ptr::null(),
+            root: 0,
+        }
+    }
+}
+
+impl Drop for ATerm {
+    fn drop(&mut self) {
+        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            tp.drop(self);
+        })
     }
 }
 
@@ -250,15 +251,23 @@ impl Clone for ATerm {
 
 impl From<UniquePtr<ffi::aterm>> for ATerm {
     fn from(value: UniquePtr<ffi::aterm>) -> Self {
-        ATerm { term: Some(value) }
+        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            unsafe { tp.protect(ffi::aterm_address(&value)) }
+        })
     }
 }
 
 impl From<&ffi::aterm> for ATerm {
     fn from(value: &ffi::aterm) -> Self {
-        unsafe {
-            ATerm { term: Some(ffi::protect_aterm(ffi::aterm_address(value))) }
-        }
+        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            unsafe { tp.protect(ffi::aterm_address(value)) }
+        })
+    }
+}
+
+impl<'a> From<ATermRef<'a>> for ATerm {
+    fn from(value: ATermRef<'a>) -> Self {
+        value.protect()
     }
 }
 
@@ -366,173 +375,11 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
     }
 }
 
-/// This is the thread local term pool.
-pub struct TermPool {
-    arguments: Vec<*const ffi::_aterm>,
-    data_appl: Vec<Symbol>, // Function symbols to represent 'DataAppl' with any number of arguments.
-}
-
-impl TermPool {
-    pub fn new() -> TermPool {
-        // Initialise the C++ aterm library.
-        ffi::initialise();
-
-        TermPool {
-            arguments: vec![],
-            data_appl: vec![],
-        }
-    }
-
-    /// Trigger a garbage collection
-    pub fn collect(&mut self) {
-        ffi::collect_garbage();
-    }
-
-    /// Print performance metrics
-    pub fn print_metrics(&self) {
-        ffi::print_metrics();
-    }
-
-    /// Creates an ATerm from a string.
-    pub fn from_string(&mut self, text: &str) -> Result<ATerm, Exception> {
-        match ffi::aterm_from_string(String::from(text)) {
-            Ok(term) => Ok(term.into()),
-            Err(exception) => Err(exception),
-        }
-    }
-
-    /// Creates an [ATerm] with the given symbol and arguments.
-    pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[ATerm]) -> ATerm {
-        let arguments = self.tmp_arguments(arguments);
-
-        debug_assert_eq!(
-            symbol.arity(),
-            arguments.len(),
-            "Number of arguments does not match arity"
-        );
-
-        unsafe {
-            ATerm {
-                term: Some(ffi::create_aterm(symbol.address(), arguments)),
-            }
-        }
-    }
-
-    /// Creates a function symbol with the given name and arity.
-    pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol {
-        ffi::create_function_symbol(String::from(name), arity).into()
-    }
-
-    /// Creates a data application of head applied to the given arguments.
-    pub fn create_data_application(
-        &mut self,
-        head: &ATerm,
-        arguments: &[ATerm],
-    ) -> DataApplication {
-        // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
-        while self.data_appl.len() <= arguments.len() + 1 {
-            let symbol = self.create_symbol("DataAppl", self.data_appl.len());
-            self.data_appl.push(symbol);
-        }
-
-        let symbol = self.data_appl[arguments.len() + 1].clone();
-        let term = self.create_head(&symbol, head, arguments);
-
-        DataApplication { term }
-    }
-
-    pub fn create_variable(&mut self, name: &str) -> DataVariable {
-        DataVariable {
-            term: ATerm::from(ffi::create_data_variable(String::from(name))),
-        }
-    }
-
-    pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol {
-        DataFunctionSymbol {
-            term: ATerm::from(ffi::create_data_function_symbol(String::from(name))),
-        }
-    }
-
-    /// Returns true iff this is a data::application
-    pub fn is_data_application<'a>(&mut self, term: &'a impl ATermTrait<'a>) -> bool {
-        term.require_valid();       
-        
-        let symbol = term.get_head_symbol();
-        // It can be that data_applications are created without create_data_application in the mcrl2 ffi.
-        while self.data_appl.len() <= symbol.arity() {
-            let symbol = self.create_symbol("DataAppl", self.data_appl.len());
-            self.data_appl.push(symbol);
-        }
-
-        symbol == self.data_appl[symbol.arity()].borrow()
-    }
-
-    /// Creates an [ATerm] with the given symbol, first and other arguments.
-    fn create_head(&mut self, symbol: &impl SymbolTrait, head: &ATerm, arguments: &[ATerm]) -> ATerm {
-        let arguments = self.tmp_arguments_head(head, arguments);
-
-        debug_assert_eq!(
-            symbol.arity(),
-            arguments.len(),
-            "Number of arguments does not match arity"
-        );
-
-        unsafe {
-            ATerm {
-                term: Some(ffi::create_aterm(symbol.address(), arguments)),
-            }
-        }
-    }
-
-    /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments(&mut self, arguments: &[ATerm]) -> &[*const ffi::_aterm] {
-        // Make the temp vector sufficient length.
-        while self.arguments.len() < arguments.len() {
-            self.arguments.push(std::ptr::null());
-        }
-
-        self.arguments.clear();
-        for arg in arguments {
-            self.arguments.push(arg.borrow().term);
-        }
-
-        &self.arguments
-    }
-
-    /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments_head(&mut self, head: &ATerm, arguments: &[ATerm]) -> &[*const ffi::_aterm] {
-        // Make the temp vector sufficient length.
-        while self.arguments.len() < arguments.len() + 1 {
-            self.arguments.push(std::ptr::null());
-        }
-
-        self.arguments.clear();
-        self.arguments.push(head.borrow().term);
-        for arg in arguments {
-            self.arguments.push(arg.borrow().term);
-        }
-
-        &self.arguments
-    }
-}
-
-impl Default for TermPool {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Drop for TermPool {
-    fn drop(&mut self) {
-        self.print_metrics();
-    }
-}
-
 #[derive(Default)]
 pub struct ATermArgs<'a> {
     term: ATermRef<'a>,
     arity: usize,
-    index: usize
+    index: usize,
 }
 
 impl<'a> ATermArgs<'a> {
@@ -541,7 +388,7 @@ impl<'a> ATermArgs<'a> {
         ATermArgs {
             term,
             arity,
-            index: 0
+            index: 0,
         }
     }
 
@@ -552,10 +399,10 @@ impl<'a> ATermArgs<'a> {
 
 impl<'a> Iterator for ATermArgs<'a> {
     type Item = ATerm;
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            let res = Some(self.term.arg(self.index).protect());     
+            let res = Some(self.term.arg(self.index).protect());
             self.index += 1;
             res
         } else {
@@ -585,7 +432,6 @@ impl<'a> ExactSizeIterator for ATermArgs<'a> {
 pub struct ATermListIter<T> {
     current: ATermList<T>,
 }
-
 
 /// An iterator over all subterms of the given [ATerm].
 pub struct TermIterator {
@@ -647,7 +493,6 @@ impl Ord for ATerm {
 
 impl Eq for ATerm {}
 
-
 impl<'a> ATermTrait<'a> for ATerm {
     fn arg<'b: 'a>(&'a self, index: usize) -> ATermRef<'b> {
         debug_assert!(
@@ -655,30 +500,22 @@ impl<'a> ATermTrait<'a> for ATerm {
             "arg({index}) is not defined for term {:?}",
             self
         );
-        
-        match self.term.as_ref() {
-            Some(t) => {        
-                unsafe {
-                    ATermRef {
-                        term: ffi::get_term_argument(ffi::aterm_address(&t), index),
-                        marker: PhantomData::default(),
-                    }
-                }
-            }
-            None => {
-                panic!("Requires valid term");
+
+        self.require_valid();
+        unsafe {
+            ATermRef {
+                term: ffi::get_term_argument(self.term, index),
+                marker: PhantomData::default(),
             }
         }
     }
 
     fn arguments(&'a self) -> ATermArgs {
-        ATermArgs::new(
-            self.borrow()
-        )
+        ATermArgs::new(self.borrow())
     }
 
     fn is_default(&self) -> bool {
-        self.term.is_none()
+        self.term == std::ptr::null()
     }
 
     fn is_list(&self) -> bool {
@@ -694,16 +531,9 @@ impl<'a> ATermTrait<'a> for ATerm {
     }
 
     fn get_head_symbol(&'a self) -> SymbolRef<'a> {
-        match self.term.as_ref() {
-            Some(t) => {
-                unsafe {
-                    ffi::get_aterm_function_symbol(ffi::aterm_address(&t)).into()
-                }
-            }
-            None => {
-                panic!("Requires valid term");
-            }
-        }
+        self.require_valid();
+
+        unsafe { ffi::get_aterm_function_symbol(self.term).into() }
     }
 
     fn iter(&self) -> TermIterator {
@@ -731,7 +561,7 @@ impl<'a> ATermTrait<'a> for ATerm {
     }
 
     fn require_valid(&self) {
-        assert!(!self.term.is_none(), "Requires valid term");
+        assert!(!self.is_default(), "Requires valid term");
     }
 }
 
