@@ -73,7 +73,8 @@ pub fn coverage(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     prof_directory.push("cargo-test-%p-%m.profraw");
 
     let mut arguments: Vec<String> = vec![
-        "test".to_string(),
+        "nextest".to_string(),
+        "run".to_string(),
     ];
     arguments.extend(cargo_arguments);
 

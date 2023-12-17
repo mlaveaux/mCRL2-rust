@@ -24,7 +24,8 @@ fn add_target_flag(arguments: &mut Vec<String>) {
 ///
 pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut arguments: Vec<String> = vec![
-        "test".to_string(),
+        "nextest".to_string(),
+        "run".to_string(),
         "-Zbuild-std".to_string(),
     ];
 
@@ -49,7 +50,8 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
 ///
 pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut arguments: Vec<String> = vec![
-        "test".to_string(),
+        "nextest".to_string(),
+        "run".to_string(),
         "-Zbuild-std".to_string(),
     ];
 

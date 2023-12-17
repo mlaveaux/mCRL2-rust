@@ -22,6 +22,9 @@ jobs:
     - name: Setup sccache
       uses: mozilla-actions/sccache-action@v0.0.3
       
+    - name: Install nextest
+      uses: taiki-e/install-action@nextest
+      
     - name: Install Ubuntu Dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:

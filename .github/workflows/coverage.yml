@@ -19,10 +19,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: SimenB/github-actions-cpu-cores@v1
-      id: cpu-cores
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.3
 
-    - uses: mozilla-actions/sccache-action@v0.0.3
+    - name: Install nextest
+      uses: taiki-e/install-action@nextest
 
     - uses: actions/checkout@v3
       with:

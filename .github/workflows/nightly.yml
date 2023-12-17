@@ -22,13 +22,16 @@ jobs:
     - name: Setup sccache
       uses: mozilla-actions/sccache-action@v0.0.3
 
+    - name: Install nextest
+      uses: taiki-e/install-action@nextest
+
     - name: Checkout the repository
       uses: actions/checkout@v3
       with:
         submodules: true
 
     - name: Run tests
-      run: cargo test --release -- --include-ignored
+      run: cargo nextest run --release -- --include-ignored
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
