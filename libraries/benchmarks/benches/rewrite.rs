@@ -1,18 +1,16 @@
 use std::{cell::RefCell, rc::Rc};
 
-use criterion::{black_box, Criterion};
-
-use ahash::AHashSet;
+use divan::black_box;
+use env_logger;
 
 use mcrl2::aterm::{ATerm, TermPool};
-use mcrl2::data::{DataSpecification, JittyRewriter};
-use rec_tests::load_REC_from_strings;
-use sabre::set_automaton::SetAutomaton;
-use sabre::utilities::to_data_expression;
-use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewriter};
+use mcrl2::data::DataSpecification;
+use sabre::{InnermostRewriter, RewriteEngine};
 
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader};
+fn main() {
+    env_logger::init();
+    divan::main();
+}
 
 /// Creates a rewriter and a vector of ATerm expressions for the given case.
 pub fn load_case(
@@ -34,86 +32,16 @@ pub fn load_case(
     (data_spec, expressions)
 }
 
-pub fn criterion_benchmark_jitty(c: &mut Criterion) {
+#[divan::bench]
+pub fn benchmark_factorial9_innermost(bencher: divan::Bencher) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    let (data_spec, expressions) = load_case(
-        &mut tp.borrow_mut(),
-        include_str!("../../../examples/REC/mcrl2/add16.dataspec"),
-        include_str!("../../../examples/REC/mcrl2/add16.expressions"),
-        100,
-    );
+    let (data_spec, expressions) = (include_str!("../../../examples/REC/mcrl2/factorial9.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial9.expressions"));
+    let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), data_spec, expressions, 1);
 
-    // Create a jitty rewriter;
-    let mut jitty_rewriter = JittyRewriter::new(&data_spec.clone());
+    let mut inner = InnermostRewriter::new(tp, &data_spec.into());
 
-    // let tp = Rc::new(RefCell::new(TermPool::new()));
-    // let mut sabre_rewriter = SabreRewriter::new(tp, &data_spec.into());
-
-    c.bench_function("add16 jitty", |bencher| {
-        bencher.iter(|| {
-            for expression in expressions.iter() {
-                black_box(jitty_rewriter.rewrite(expression));
-            }
-        })
+    bencher.bench_local(|| {
+        let _ = black_box(inner.rewrite(expressions[0].clone()));
     });
-
-    // c.bench_function("add16 sabre", |bencher| {
-    //     bencher.iter(|| {
-    //         for expression in expressions.iter() {
-    //             black_box(sabre_rewriter.rewrite(expression.clone()));
-    //         }
-    //     })
-    // });
-}
-
-pub fn criterion_benchmark_sabre(c: &mut Criterion) {
-    let tp = Rc::new(RefCell::new(TermPool::new()));
-
-    let cases = vec![(
-        vec![
-            include_str!("../../../examples/REC/rec/factorial7.rec"),
-            include_str!("../../../examples/REC/rec/factorial.rec"),
-        ],
-        "factorial7",
-    )];
-
-    for (input, name) in cases {
-        let (spec, terms): (RewriteSpecification, Vec<ATerm>) = {
-            let (syntax_spec, syntax_terms) = load_REC_from_strings(&mut tp.borrow_mut(), &input);
-            let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
-            (
-                result,
-                syntax_terms
-                    .iter()
-                    .map(|term| to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new()))
-                    .collect(),
-            )
-        };
-
-        // Benchmark the set automaton construction
-        c.bench_function(&format!("construct set automaton {:?}", name), |bencher| {
-            bencher.iter(|| {
-                let _ = black_box(SetAutomaton::new(&mut tp.borrow_mut(), &spec, false, false));
-            });
-        });
-
-        let mut inner = InnermostRewriter::new(tp.clone(), &spec);
-        c.bench_function(&format!("innermost benchmark {:?}", name), |bencher| {
-            for term in &terms {
-                bencher.iter(|| {
-                    let _ = black_box(inner.rewrite(term.clone()));
-                });
-            }
-        });
-
-        let mut sabre = SabreRewriter::new(tp.clone(), &spec);
-        c.bench_function(&format!("sabre benchmark {:?}", name), |bencher| {
-            for term in &terms {
-                bencher.iter(|| {
-                    let _ = black_box(sabre.rewrite(term.clone()));
-                });
-            }
-        });
-    }
 }

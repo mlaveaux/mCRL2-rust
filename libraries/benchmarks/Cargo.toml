@@ -7,14 +7,15 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ahash.workspace = true
-criterion = { version = "0.5", features = ["html_reports"] }
+divan = "0.1"
+env_logger = "0.10"
 mcrl2 = { path="../mcrl2" }
-rand.workspace = true
 rec-tests = { path="../rec-tests" }
 sabre = { path="../sabre" }
 utilities = { path="../utilities" }
+ahash.workspace = true
+rand.workspace = true
 
 [[bench]]
-name = "benchmarks"
+name = "rewrite"
 harness = false
