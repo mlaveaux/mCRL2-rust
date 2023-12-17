@@ -1,0 +1,1 @@
+These are example rewrite systems from the Rewrite Engine Competition
