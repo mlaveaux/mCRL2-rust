@@ -37,25 +37,6 @@ impl ExplicitPosition {
     }
 }
 
-/// Converts a position to a string for pretty printing
-fn to_string(position: &ExplicitPosition) -> String {
-    if position.indices.is_empty() {
-        "ε".to_string()
-    } else {
-        let mut s = "".to_string();
-        let mut first = true;
-        for p in &position.indices {
-            if first {
-                s += &*p.to_string();
-                first = false;
-            } else {
-                s = s + "." + &*p.to_string();
-            }
-        }
-        s
-    }
-}
-
 /// Returns the subterm at the specific position
 pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRef<'a> {
     let mut result = term.borrow();
@@ -68,14 +49,28 @@ pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRe
 }
 
 impl fmt::Display for ExplicitPosition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", to_string(self))
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {       
+        if self.indices.is_empty() {
+            write!(f, "ε")?;
+        } else {
+            let mut first = true;
+            for p in &self.indices {
+                if first {
+                    write!(f, "{}", p)?;
+                    first = false;
+                } else {
+                    write!(f, ".{}", p)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
 impl fmt::Debug for ExplicitPosition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", to_string(self))
+        write!(f, "{}", self)
     }
 }
 

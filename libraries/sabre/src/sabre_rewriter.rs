@@ -1,5 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
+use log::{debug, trace};
 use mcrl2::{
     aterm::{ATerm, TermPool},
     data::DataFunctionSymbol,
@@ -41,7 +42,7 @@ impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp.clone(),
-            automaton: SetAutomaton::new(&mut tp.borrow_mut(), spec, false, false),
+            automaton: SetAutomaton::new(&mut tp.borrow_mut(), spec, false),
         }
     }
 
@@ -75,7 +76,7 @@ impl SabreRewriter {
         'outer: loop {
             // Inner loop so that we can easily break; to the next iteration
             'skip_point: loop {
-                // println!("{}", cs);
+                trace!("{}", cs);
 
                 // Check if there is any configuration leaf left to explore, if not we have found a normal form
                 if let Some(leaf_index) = cs.get_unexplored_leaf() {
@@ -240,10 +241,10 @@ impl SabreRewriter {
             .semi_compressed_rhs
             .evaluate(&get_position(&leaf_subterm, &ema.announcement.position).protect(), tp);
 
-        // println!(
-        //     "rewrote {} to {} using rule {}",
-        //     &leaf_subterm, &new_subterm, ema.announcement.rule
-        // );
+        debug!(
+            "rewrote {} to {} using rule {}",
+            &leaf_subterm, &new_subterm, ema.announcement.rule
+        );
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;

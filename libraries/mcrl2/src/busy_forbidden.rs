@@ -33,7 +33,17 @@ pub struct BfTermPoolWrite<'a, T> {
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a, T> DerefMut for BfTermPoolRead<'a, T> {
+impl<'a, T> Deref for BfTermPoolWrite<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        // There can only be read guards.
+        unsafe { &*self.mutex.object.get() }
+    }
+}
+
+
+impl<'a, T> DerefMut for BfTermPoolWrite<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // We are the only guard after `write()`, so we can provide mutable access to the underlying object.
         unsafe { &mut *self.mutex.object.get() }

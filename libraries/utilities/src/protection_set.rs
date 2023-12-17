@@ -1,6 +1,6 @@
 /// The protection set keeps track of nodes that should not be garbage
 /// collected since they are being referenced by instances.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ProtectionSet<T> {
     roots: Vec<Entry<T>>, // The set of root active nodes.
     free: Option<usize>,
@@ -35,6 +35,11 @@ impl<T> ProtectionSet<T> {
     /// Returns the number of roots in the protection set
     pub fn len(&self) -> usize {
         self.iter().count()
+    }
+
+    /// Returns whether the protection set is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Returns an iterator over all root indices in the protection set.
@@ -105,7 +110,7 @@ impl<'a, T> Iterator for ProtSetIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         // Find the next valid entry, return it when found or None when end of roots is reached.
-        while self.current < self.protection_set.roots.len() {
+        if self.current < self.protection_set.roots.len() {
             if let Entry::Filled(object) = &self.protection_set.roots[self.current] {
                 self.current += 1;
                 return Some(object);

@@ -23,7 +23,6 @@ mod tests
     #[test_case(vec![include_str!("../../../examples/REC/rec/factorial5.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("../validated_results/result_factorial5.txt") ; "factorial5")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/factorial6.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("../validated_results/result_factorial6.txt") ; "factorial6")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci05.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("../validated_results/result_fibonacci05.txt") ; "fibonacci05")]
-    #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci18.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("../validated_results/result_fibonacci18.txt") ; "fibonacci18")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/garbagecollection.rec")], include_str!("../validated_results/result_garbagecollection.txt") ; "garbagecollection")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/hanoi4.rec"), include_str!("../../../examples/REC/rec/hanoi.rec")], include_str!("../validated_results/result_hanoi4.txt") ; "hanoi4")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/hanoi8.rec"), include_str!("../../../examples/REC/rec/hanoi.rec")], include_str!("../validated_results/result_hanoi8.txt") ; "hanoi8")]
@@ -63,18 +62,11 @@ mod tests
             let expected_term = tp.borrow_mut().from_string(expected.next().unwrap()).unwrap();
             let expected_result = to_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
 
-            let now = Instant::now();
-
             let result = inner.rewrite(term.clone());
             assert_eq!(result, expected_result, "The inner rewrite result doesn't match the expected result");
 
-            println!("innermost rewrite took {} ms", now.elapsed().as_millis());
-            let now = Instant::now();
-
             let result = sa.rewrite(term.clone());
             assert_eq!(result, expected_result, "The sabre rewrite result doesn't match the expected result");
-            
-            println!("sabre rewrite took {} ms", now.elapsed().as_millis());
         }
     }
 
@@ -89,6 +81,7 @@ mod tests
     //#[test_case(vec![include_str!("../../../examples/REC/rec/factorial7.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("../validated_results/result_factorial7.txt") ; "factorial7")]
     //#[test_case(vec![include_str!("../../../examples/REC/rec/factorial8.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("../validated_results/result_factorial8.txt") ; "factorial8")]
     //#[test_case(vec![include_str!("../../../examples/REC/rec/factorial9.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("../validated_results/result_factorial9.txt") ; "factorial9")]
+    #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci18.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("../validated_results/result_fibonacci18.txt") ; "fibonacci18")]
     //#[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci19.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("../validated_results/result_fibonacci19.txt") ; "fibonacci19")]
     //#[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci20.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("../validated_results/result_fibonacci20.txt") ; "fibonacci20")]
     //#[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci21.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("../validated_results/result_fibonacci21.txt") ; "fibonacci21")]

@@ -1,6 +1,7 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, fmt::Debug};
 
 use ahash::HashMap;
+use log::{debug, warn, log_enabled, trace};
 use mcrl2::{aterm::{ATerm, TermPool, ATermTrait, ATermRef, ATermArgs}, data::DataFunctionSymbol};
 use smallvec::{smallvec, SmallVec};
 
@@ -63,13 +64,13 @@ fn add_symbol(
 fn is_supported_term(tp: &mut TermPool, t: &ATerm) -> bool {
     for subterm in t.iter() {
         if tp.is_data_application(&subterm) && !subterm.arg(0).is_data_function_symbol() {
-            println!("{} is higher order", subterm);
+            warn!("{} is higher order", subterm);
             return false;
         } else if subterm.is_data_abstraction()
             || subterm.is_data_where_clause()
             || subterm.is_data_untyped_identifier()
         {
-            println!("{} is unsupported construct", subterm);
+            warn!("{} contains unsupported construct", subterm);
             return false;
         }
     }
@@ -108,6 +109,7 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
                 args[0].is_data_function_symbol(),
                 "Higher order term rewrite systems are not supported"
             );
+
             let function_symbol: DataFunctionSymbol = args[0].clone().into();
             add_symbol(function_symbol, args.len() - 1, symbols);
         }
@@ -115,7 +117,7 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
 }
 
 impl SetAutomaton {
-    pub fn new(tp: &mut TermPool, spec: &RewriteSpecification, apma: bool, debug: bool) -> SetAutomaton {
+    pub fn new(tp: &mut TermPool, spec: &RewriteSpecification, apma: bool) -> SetAutomaton {
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
 
@@ -124,12 +126,7 @@ impl SetAutomaton {
             .rewrite_rules
             .iter()
             .filter(|rule| {
-                if is_supported_rule(tp, rule) {
-                    true
-                } else {
-                    println!("ignored rule: {}", rule);
-                    false
-                }
+                is_supported_rule(tp, rule)
             })
             .map(Rule::clone)
             .collect();
@@ -155,9 +152,9 @@ impl SetAutomaton {
             symbols
         };
 
-        // for (index, (symbol, arity))in symbols.iter().enumerate() {
-        //     println!("{}: {} {}", index, symbol, arity);
-        // }
+        for (index, (symbol, arity))in symbols.iter().enumerate() {
+            debug!("{}: {} {}", index, symbol, arity);
+        }
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
         // with one obligation l@ε and announcement l@ε.
@@ -213,7 +210,6 @@ impl SetAutomaton {
                             *arity,
                             &supported_rules,
                             apma,
-                            debug,
                         ),
                     )
                 })
@@ -277,16 +273,14 @@ impl SetAutomaton {
         }
 
         // Clear the match goals since they are only for debugging purposes.
-        if !debug {
+        if !log_enabled!(log::Level::Debug) {
             for state in &mut states {
                 state.match_goals.clear();
             }
         }
 
         let result = SetAutomaton { states };
-        if debug {
-            println!("{}", result);
-        }
+        debug!("{}", result);
 
         result
     }
@@ -343,13 +337,12 @@ impl State {
         arity: usize,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
-        debug: bool,
     ) -> (
         Vec<MatchAnnouncement>,
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
         // Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(tp, &symbol, arity, debug);
+        let mut derivative = self.compute_derivative(tp, &symbol, arity);
 
         // The outputs/matching patterns of the transitions are those who are completed
         let outputs = derivative
@@ -450,7 +443,6 @@ impl State {
         tp: &mut TermPool, 
         symbol: &DataFunctionSymbol,
         arity: usize,
-        debug: bool,
     ) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
@@ -522,35 +514,33 @@ impl State {
             }
         }
 
-        if debug {
-            println!(
-                "compute_derivative(symbol {}, label {})",
-                symbol, self.label
-            );
-            println!("Match goals: {{");
-            for mg in &self.match_goals {
-                println!("\t {}", mg);
-            }
-
-            println!("}}");
-            println!("Completed: {{");
-            for mg in &result.completed {
-                println!("\t {}", mg);
-            }
-
-            println!("}}");
-            println!("Unchanged: {{");
-            for mg in &result.unchanged {
-                println!("\t {}", mg);
-            }
-
-            println!("}}");
-            println!("Reduced: {{");
-            for mg in &result.reduced {
-                println!("\t {}", mg);
-            }
-            println!("}}");
+        trace!(
+            "compute_derivative(symbol {}, label {})",
+            symbol, self.label
+        );
+        trace!("Match goals: {{");
+        for mg in &self.match_goals {
+            debug!("\t {}", mg);
         }
+
+        trace!("}}");
+        trace!("Completed: {{");
+        for mg in &result.completed {
+            debug!("\t {}", mg);
+        }
+
+        trace!("}}");
+        trace!("Unchanged: {{");
+        for mg in &result.unchanged {
+            debug!("\t {}", mg);
+        }
+
+        trace!("}}");
+        trace!("Reduced: {{");
+        for mg in &result.reduced {
+            trace!("\t {}", mg);
+        }
+        trace!("}}");
 
         result
     }

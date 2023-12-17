@@ -66,7 +66,7 @@ impl<'a> Default for ATermRef<'a> {
     fn default() -> Self {
         ATermRef {
             term: std::ptr::null(),
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 }
@@ -85,7 +85,7 @@ impl<'a> ATermRef<'a> {
     fn new(term: *const ffi::_aterm) -> ATermRef<'a> {
         ATermRef {
             term,
-            marker: PhantomData::default(),
+            marker: PhantomData,
         }
     }
 
@@ -107,7 +107,7 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
         unsafe {
             ATermRef {
                 term: ffi::get_term_argument(self.term, index),
-                marker: PhantomData::default(),
+                marker: PhantomData,
             }
         }
     }
@@ -347,7 +347,7 @@ impl<T> Clone for ATermList<T> {
     }
 }
 
-impl<'a, T: From<ATerm>> Iterator for ATermListIter<T> {
+impl<T: From<ATerm>> Iterator for ATermListIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -487,7 +487,7 @@ impl PartialEq for ATerm {
 
 impl PartialOrd for ATerm {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.borrow().partial_cmp(&other.borrow())
+        Some(self.borrow().cmp(&other.borrow()))
     }
 }
 
@@ -511,7 +511,7 @@ impl<'a> ATermTrait<'a> for ATerm {
         unsafe {
             ATermRef {
                 term: ffi::get_term_argument(self.term, index),
-                marker: PhantomData::default(),
+                marker: PhantomData,
             }
         }
     }
@@ -521,7 +521,7 @@ impl<'a> ATermTrait<'a> for ATerm {
     }
 
     fn is_default(&self) -> bool {
-        self.term == std::ptr::null()
+        self.term.is_null()
     }
 
     fn is_list(&self) -> bool {

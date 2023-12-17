@@ -43,7 +43,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                 let now = Instant::now();
                 jitty_rewriter.rewrite(&term);
                 println!("jitty rewrite took {} ms", now.elapsed().as_millis());
-                tp.borrow().print_metrics();
+                println!("{}", tp.borrow());
             }
         },
         Rewriter::Innermost => {    
@@ -60,7 +60,6 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                 let now = Instant::now();
                 inner_rewriter.rewrite(term.clone());
                 println!("innermost rewrite took {} ms", now.elapsed().as_millis());
-                tp.borrow().print_metrics();
             }
         },
         Rewriter::Sabre => {

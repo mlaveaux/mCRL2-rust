@@ -125,11 +125,11 @@ impl From<ATerm> for DataApplication {
 
 impl fmt::Display for DataApplication {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut args = self.term.arguments().into_iter();
+        let mut args = self.term.arguments();
 
         let head = args.next().unwrap();
         if head.is_data_function_symbol() {
-            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head.into()))?;
+            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head))?;
         } else {
             write!(f, "{:?}", head)?;
         }

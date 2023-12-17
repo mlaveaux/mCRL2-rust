@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{sync::{Mutex, Arc}, cell::RefCell, fmt::Debug};
 
 use log::{trace, info};
@@ -20,21 +21,31 @@ impl ATermPtr {
 
 unsafe impl Send for ATermPtr {}
 
+type SharedProtectionSet = Arc<Mutex<ProtectionSet<ATermPtr>>>;
+
 /// This is the global set of protection sets, that are managed by the ThreadTermPool
-static PROTECTION_SETS: Mutex<Vec<Option<Arc<Mutex<ProtectionSet<ATermPtr>>>>>> = Mutex::new(vec![]);
+static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec![]);
 
 /// Marks the terms in all protection sets.
 fn mark_protection_sets() {
+
+    let mut protected = 0;
+    let mut total = 0;
     for set in PROTECTION_SETS.lock().unwrap().iter().flatten() {
-        let write = set.lock().unwrap();
+        let protection_set = set.lock().unwrap();
         
-        for term in write.iter() {
+        for term in protection_set.iter() {
             unsafe { ffi::aterm_mark_address(term.ptr); }
         }
+
+        protected += protection_set.len();
+        total += protection_set.maximum_size();
     }
+
+    info!("Collecting garbage, {} protected terms and {} insertions", protected, total);
 }
 
-/// Counts the terms in all protection sets.
+/// Counts the number of terms in all protection sets.
 fn protection_set_size() -> usize {
     let mut result = 0;
     for set in PROTECTION_SETS.lock().unwrap().iter().flatten() {
@@ -50,7 +61,7 @@ thread_local! {
 }
 
 pub struct ThreadTermPool {
-    protection_set: Arc<Mutex<ProtectionSet<ATermPtr>>>,
+    protection_set: SharedProtectionSet,
     _callback: UniquePtr<ffi::callback_container>,
     index: usize,
 }
@@ -95,10 +106,16 @@ impl ThreadTermPool {
     }
 }
 
+impl Default for ThreadTermPool {
+    fn default() -> Self {
+        ThreadTermPool::new()
+    }
+}
+
 impl Debug for ThreadTermPool {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { 
         let protection_set = self.protection_set.lock().unwrap();     
-        write!(f, "There are {} variables in the root set ({} total insertions)", protection_set.len(), protection_set.number_of_insertions())
+        write!(f, "{} variables in root set ({} insertions)", protection_set.len(), protection_set.number_of_insertions())
     }
 }
 
@@ -124,21 +141,9 @@ impl TermPool {
         }
     }
 
-    /// Trigger a garbage collection if necessary
+    /// Trigger a garbage collection if necessary, we disable global garbage collection so ffi will never garbage collect themselves.
     pub fn collect(&mut self) {
         ffi::collect_garbage();
-    }
-
-    /// Enable automatic garbage collection in ffi calls.
-    /// WARNING: This should not be enabled when creating ATerms on the Rust side since that deadlocks currently.
-
-    /// Print performance metrics
-    pub fn print_metrics(&self) {
-        ffi::print_metrics();
-
-        THREAD_TERM_POOL.with_borrow(|tp| {
-            info!("{:?}", tp);
-        })
     }
 
     /// Creates an ATerm from a string.
@@ -151,7 +156,7 @@ impl TermPool {
 
     /// Creates an [ATerm] with the given symbol and arguments.
     pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[ATerm]) -> ATerm {
-        let arguments: Vec<*const ffi::_aterm> = self.tmp_arguments(arguments).iter().map(|x| {*x}).collect();
+        let arguments: Vec<*const ffi::_aterm> = self.tmp_arguments(arguments).to_vec();
 
         debug_assert_eq!(
             symbol.arity(),
@@ -260,7 +265,7 @@ impl TermPool {
 
     /// Creates an [ATerm] with the given symbol, first and other arguments.
     fn create_head(&mut self, symbol: &impl SymbolTrait, head: &ATerm, arguments: &[ATerm]) -> ATerm {
-        let arguments: Vec<*const ffi::_aterm> = self.tmp_arguments_head(head, arguments).iter().map(|x| {*x}).collect();
+        let arguments: Vec<*const ffi::_aterm> = self.tmp_arguments_head(head, arguments).to_vec();
 
         debug_assert_eq!(
             symbol.arity(),
@@ -325,8 +330,13 @@ impl Default for TermPool {
     }
 }
 
-impl Drop for TermPool {
-    fn drop(&mut self) {
-        self.print_metrics();
+impl fmt::Display for TermPool {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {      
+        // TODO: This will always print, but only depends on aterm_configuration.h  
+        ffi::print_metrics();
+
+        THREAD_TERM_POOL.with_borrow(|tp| {
+            write!(f, "{:?}", tp)
+        })
     }
 }

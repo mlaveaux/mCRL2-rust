@@ -53,7 +53,7 @@ impl<'a> SymbolRef<'a> {
         unsafe {
             SymbolRef {
                 function: ffi::function_symbol_address(symbol),
-                marker: PhantomData::default(),
+                marker: PhantomData,
             }
         }
     }
@@ -89,7 +89,7 @@ impl<'a> From<*const ffi::_function_symbol> for SymbolRef<'a> {
     fn from(value: *const ffi::_function_symbol) -> Self {
         SymbolRef {
             function: value,
-            marker: PhantomData::default()
+            marker: PhantomData
         }
     }
 }
@@ -127,25 +127,25 @@ impl Clone for Symbol {
 /// TODO: These might be derivable?
 impl<'a> fmt::Display for SymbolRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{}", self.name())
     }
 }
 
 impl<'a> fmt::Debug for SymbolRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{}", self.name())
     }
 }
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{}", self.name())
     }
 }
 
 impl fmt::Debug for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{}", self.name())
     }
 }
 
@@ -180,7 +180,7 @@ impl PartialEq for Symbol {
 
 impl PartialOrd for Symbol {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.borrow().partial_cmp(&other.borrow())
+        Some(self.borrow().cmp(&other.borrow()))
     }
 }
 

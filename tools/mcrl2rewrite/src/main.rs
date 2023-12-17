@@ -38,8 +38,7 @@ fn main() -> AnyResult<()>
     } else {
         rewrite_data_spec(tp.clone(), cli.rewriter, &cli.specification, &cli.term)?;
     }
-    
-    tp.borrow().print_metrics();
 
+    println!("pool: {}", tp.borrow());
     Ok(())
 }

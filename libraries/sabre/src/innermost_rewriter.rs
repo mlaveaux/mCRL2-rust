@@ -2,8 +2,10 @@ use std::{cell::RefCell, fmt, rc::Rc};
 
 // use itertools::Itertools;
 
+use itertools::Itertools;
+use log::trace;
 use mcrl2::{
-    aterm::{ATerm, TermPool},
+    aterm::{ATerm, TermPool, ATermTrait},
     data::DataFunctionSymbol,
 };
 
@@ -84,7 +86,7 @@ impl InnermostRewriter {
     pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
         InnermostRewriter {
             term_pool: term_pool.clone(),
-            apma: SetAutomaton::new(&mut term_pool.borrow_mut(), spec, true, false),
+            apma: SetAutomaton::new(&mut term_pool.borrow_mut(), spec, true),
         }
     }
 
@@ -100,7 +102,7 @@ impl InnermostRewriter {
         stack.terms.push(ATerm::default());
         stack.add_rewrite(term, 0);
         
-        // println!("{}", stack);
+        trace!("{}", stack);
 
         while let Some(config) = stack.configs.pop() {
             match config {
@@ -166,8 +168,7 @@ impl InnermostRewriter {
                                 first = false;
                             }
 
-                            /*
-                            println!(
+                            trace!(
                                 "{}, {}, {}",
                                 ema.stack_size,
                                 ema.variables.iter().format_with(", ", |element, f| {
@@ -175,7 +176,6 @@ impl InnermostRewriter {
                                 }),
                                 ema.innermost_stack.iter().format("\n")
                             );
-                            */
 
                             debug_assert!(ema.stack_size != 1 || ema.variables.len() <= 1, "There can only be a single variable in the right hand side");
                             if ema.stack_size == 1 && ema.variables.len() == 1{
@@ -191,7 +191,7 @@ impl InnermostRewriter {
                             }
 
                             stats.rewrite_steps += 1;
-                            // println!("applying rule {}", ema.announcement.rule);
+                            trace!("applying rule {}", ema.announcement.rule);
                         }
                         None => {
                             // Add the term on the stack.
@@ -201,8 +201,7 @@ impl InnermostRewriter {
                 }
             }
 
-            /*/
-            println!("{}", stack);
+            trace!("{}", stack);
 
             for (index, term) in stack.terms.iter().enumerate() {
                 if term.is_default() {
@@ -217,7 +216,6 @@ impl InnermostRewriter {
                     );
                 }
             }
-            */
         }
 
         debug_assert!(
@@ -304,6 +302,8 @@ mod tests {
 
     use ahash::AHashSet;
     use mcrl2::{aterm::TermPool, aterm_builder::random_term};
+
+    use test_log::test;
 
     use crate::{
         utilities::to_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,

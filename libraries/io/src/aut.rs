@@ -9,7 +9,6 @@ type Label = usize;
 #[derive(Default, Debug, Clone)]
 pub struct State {
     outgoing: Vec<(Label, usize)>,
-    incoming: Vec<(Label, usize)>,
 }
 
 pub struct LTS {
@@ -79,7 +78,7 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
     let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
     let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(["a-zA-Z0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
 
-    let (_, [grp1, grp2, grp3]) = header_regex.captures(&header).ok_or(IOError::InvalidHeader("does not match des (<init>, <num_states>, <num_transitions>)"))?
+    let (_, [grp1, grp2, grp3]) = header_regex.captures(header).ok_or(IOError::InvalidHeader("does not match des (<init>, <num_states>, <num_transitions>)"))?
         .extract();
 
     let initial_state: usize = grp1.parse()?;
@@ -87,12 +86,11 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
     let _num_of_transitions: usize = grp3.parse()?;
 
     let labels: HashMap<String, usize> = HashMap::new();
-    let mut states : Vec<State> = vec![];
-    states.reserve(num_of_states);
+    let mut states : Vec<State> = Vec::with_capacity(num_of_states);
 
     while let Some(line) = lines.next() {
 
-        let (_, [grp1, grp2, grp3]) = transition_regex.captures(&line).ok_or(
+        let (_, [grp1, grp2, grp3]) = transition_regex.captures(line).ok_or(
             IOError::InvalidTransition()
         )?.extract();
 
@@ -113,7 +111,7 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
 
     Ok(LTS {
         initial_state,
-        states: vec![],
+        states,
     })
 }
 

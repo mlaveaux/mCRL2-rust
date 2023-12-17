@@ -2,18 +2,18 @@ use std::error::Error;
 
 pub use duct::cmd;
 
-fn add_target_flag(arguments: &mut Vec<String>) {
+fn add_target_flag(_arguments: &mut Vec<String>) {
 
     #[cfg(target_os = "linux")]
     {
-        arguments.push("--target".to_string());
-        arguments.push( "x86_64-unknown-linux-gnu".to_string());        
+        _arguments.push("--target".to_string());
+        _arguments.push( "x86_64-unknown-linux-gnu".to_string());        
     }
 
     #[cfg(target_os = "macos")]
     {
-        arguments.push("--target".to_string());
-        arguments.push( "x86_64-apple-darwin".to_string());
+        _arguments.push("--target".to_string());
+        _arguments.push( "x86_64-apple-darwin".to_string());
     }
 }
 

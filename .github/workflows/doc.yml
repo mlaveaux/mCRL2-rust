@@ -40,6 +40,9 @@ jobs:
   
       - name: Install grcov
         run: cargo install grcov
+        
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
