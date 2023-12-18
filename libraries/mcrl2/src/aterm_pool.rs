@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{cell::RefCell, fmt::Debug, sync::Arc};
+use std::{cell::RefCell, fmt::Debug, sync::Arc, pin::Pin};
 
 use log::{info, trace};
 use parking_lot::Mutex;

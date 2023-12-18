@@ -4,8 +4,7 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::fmt;
 
-use mcrl2_sys::cxx::UniquePtr;
-use mcrl2_sys::atermpp::ffi::{self, _function_symbol, function_symbol};
+use mcrl2_sys::atermpp::ffi::{self, _function_symbol};
 
 /// A Symbol references to an aterm function symbol, which has a name and an arity.
 pub trait SymbolTrait {
@@ -45,12 +44,10 @@ pub struct SymbolRef<'a> {
 }
 
 impl<'a> SymbolRef<'a> {
-    fn new(symbol: *const ffi::_function_symbol,) -> SymbolRef<'a> {   
-        unsafe {
-            SymbolRef {
-                symbol,
-                marker: PhantomData,
-            }
+    fn new(symbol: *const ffi::_function_symbol,) -> SymbolRef<'a> {
+        SymbolRef {
+            symbol,
+            marker: PhantomData,
         }
     }
 
