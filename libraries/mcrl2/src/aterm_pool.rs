@@ -1,21 +1,30 @@
 use core::fmt;
-use std::{sync::{Mutex, Arc}, cell::RefCell, fmt::Debug};
+use std::{cell::RefCell, fmt::Debug, sync::Arc};
 
-use log::{trace, info};
-use mcrl2_sys::{atermpp::ffi, cxx::{Exception, UniquePtr}};
+use log::{info, trace};
+use parking_lot::Mutex;
+
+use mcrl2_sys::{
+    atermpp::ffi,
+    cxx::{Exception, UniquePtr},
+};
 use utilities::protection_set::ProtectionSet;
 
-use crate::{aterm::{ATerm, ATermTrait}, symbol::{Symbol, SymbolTrait}, data::{DataFunctionSymbol, DataVariable, DataApplication}};
+use crate::{
+    aterm::{ATerm, ATermTrait},
+    data::{DataApplication, DataFunctionSymbol, DataVariable},
+    symbol::{Symbol, SymbolTrait},
+};
 
 // TODO: Fix some of this garbage
 #[derive(Clone, Debug)]
-struct ATermPtr { ptr: *const ffi::_aterm }
+struct ATermPtr {
+    ptr: *const ffi::_aterm,
+}
 
 impl ATermPtr {
     fn new(ptr: *const ffi::_aterm) -> ATermPtr {
-        ATermPtr {
-            ptr
-        }
+        ATermPtr { ptr }
     }
 }
 
@@ -28,29 +37,32 @@ static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec
 
 /// Marks the terms in all protection sets.
 fn mark_protection_sets() {
-
     let mut protected = 0;
     let mut total = 0;
-    for set in PROTECTION_SETS.lock().unwrap().iter().flatten() {
-        let protection_set = set.lock().unwrap();
-        
+    for set in PROTECTION_SETS.lock().iter().flatten() {
+        let protection_set = set.lock();
+
         for term in protection_set.iter() {
-            unsafe { ffi::aterm_mark_address(term.ptr); }
+            unsafe {
+                ffi::aterm_mark_address(term.ptr);
+            }
         }
 
         protected += protection_set.len();
         total += protection_set.maximum_size();
     }
 
-    info!("Collecting garbage, {} protected terms and {} insertions", protected, total);
+    info!(
+        "Collecting garbage, {} protected terms and {} insertions",
+        protected, total
+    );
 }
 
 /// Counts the number of terms in all protection sets.
 fn protection_set_size() -> usize {
     let mut result = 0;
-    for set in PROTECTION_SETS.lock().unwrap().iter().flatten() {
-        let read = set.lock().unwrap();
-        result += read.len();
+    for set in PROTECTION_SETS.lock().iter().flatten() {
+        result += set.lock().len();
     }
     result
 }
@@ -74,7 +86,7 @@ impl ThreadTermPool {
         // Register a protection set into the global set.
         let protection_set = Arc::new(Mutex::new(ProtectionSet::new()));
 
-        let mut lock = PROTECTION_SETS.lock().unwrap();
+        let mut lock = PROTECTION_SETS.lock();
         lock.push(Some(protection_set.clone()));
 
         trace!("Registered ThreadTermPool {}", lock.len() - 1);
@@ -84,25 +96,32 @@ impl ThreadTermPool {
             index: lock.len() - 1,
         }
     }
-    
+
     /// Protects the given aterm address and returns the term.
     pub fn protect(&mut self, term: *const ffi::_aterm) -> ATerm {
         debug_assert!(!term.is_null(), "Can only protect valid terms");
-        let root = self.protection_set.lock().unwrap().protect(ATermPtr::new(term));
+        let root = self.protection_set.lock().protect(ATermPtr::new(term));
 
-        trace!("Protected term {:?}, index {}, set {}", term, root, self.index);
-        ATerm {
+        trace!(
+            "Protected term {:?}, index {}, set {}",
             term,
             root,
-        }
+            self.index
+        );
+        ATerm { term, root }
     }
 
     /// Removes the [ATerm] from the protection set.
     pub fn drop(&mut self, term: &ATerm) {
         term.require_valid();
 
-        trace!("Dropped term {:?}, index {}, set {}", term.term, term.root, self.index);
-        self.protection_set.lock().unwrap().unprotect(term.root);
+        trace!(
+            "Dropped term {:?}, index {}, set {}",
+            term.term,
+            term.root,
+            self.index
+        );
+        self.protection_set.lock().unprotect(term.root);
     }
 }
 
@@ -113,15 +132,21 @@ impl Default for ThreadTermPool {
 }
 
 impl Debug for ThreadTermPool {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { 
-        let protection_set = self.protection_set.lock().unwrap();     
-        write!(f, "{} variables in root set ({} insertions)", protection_set.len(), protection_set.number_of_insertions())
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let protection_set = self.protection_set.lock();
+        write!(
+            f,
+            "{} variables in root set ({} max, {} insertions)",
+            protection_set.len(),
+            protection_set.maximum_size(),
+            protection_set.number_of_insertions()
+        )
     }
 }
 
 impl Drop for ThreadTermPool {
     fn drop(&mut self) {
-        PROTECTION_SETS.lock().unwrap()[self.index] = None;
+        PROTECTION_SETS.lock()[self.index] = None;
         trace!("Removed ThreadTermPool {}", self.index);
     }
 }
@@ -133,7 +158,6 @@ pub struct TermPool {
 }
 
 impl TermPool {
-
     pub fn new() -> TermPool {
         TermPool {
             arguments: vec![],
@@ -156,7 +180,7 @@ impl TermPool {
 
     /// Creates an [ATerm] with the given symbol and arguments.
     pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[ATerm]) -> ATerm {
-        let arguments: Vec<*const ffi::_aterm> = self.tmp_arguments(arguments).to_vec();
+        let arguments = self.tmp_arguments(arguments);
 
         debug_assert_eq!(
             symbol.arity(),
@@ -165,17 +189,19 @@ impl TermPool {
         );
 
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            let mut protection_set = tp.protection_set.lock().unwrap();
-             
+            let mut protection_set = tp.protection_set.lock();
+
             unsafe {
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &arguments);
                 let root = protection_set.protect(ATermPtr::new(term));
-                trace!("Protected term {:?}, index {}, set {}", term, root, tp.index);
-
-                ATerm {
+                trace!(
+                    "Protected term {:?}, index {}, set {}",
                     term,
-                    root
-                }
+                    root,
+                    tp.index
+                );
+
+                ATerm { term, root }
             }
         });
 
@@ -185,7 +211,7 @@ impl TermPool {
 
     /// Creates a function symbol with the given name and arity.
     pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol {
-        ffi::create_function_symbol(String::from(name), arity).into()
+        Symbol::take(ffi::create_function_symbol(String::from(name), arity))
     }
 
     /// Creates a data application of head applied to the given arguments.
@@ -200,7 +226,7 @@ impl TermPool {
             self.data_appl.push(symbol);
         }
 
-        let symbol = self.data_appl[arguments.len() + 1].clone();
+        let symbol = self.data_appl[arguments.len() + 1].borrow();
         let term = self.create_head(&symbol, head, arguments);
 
         DataApplication { term }
@@ -208,19 +234,20 @@ impl TermPool {
 
     /// Creates a data variable with the given name.
     pub fn create_variable(&mut self, name: &str) -> DataVariable {
-        
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            let mut protection_set = tp.protection_set.lock().unwrap();
+            let mut protection_set = tp.protection_set.lock();
 
             let term = ffi::create_data_variable(name.to_string());
             let root = protection_set.protect(ATermPtr::new(term));
-            trace!("Protected term {:?}, index {}, set {}", term, root, tp.index);
+            trace!(
+                "Protected term {:?}, index {}, set {}",
+                term,
+                root,
+                tp.index
+            );
 
             DataVariable {
-                term: ATerm {
-                    term,
-                    root
-                },
+                term: ATerm { term, root },
             }
         });
 
@@ -231,17 +258,19 @@ impl TermPool {
     /// Creates a data function symbol with the given name.
     pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol {
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            let mut protection_set = tp.protection_set.lock().unwrap();
-          
+            let mut protection_set = tp.protection_set.lock();
+
             let term = ffi::create_data_function_symbol(name.to_string());
             let root = protection_set.protect(ATermPtr::new(term));
-            trace!("Protected term {:?}, index {}, set {}", term, root, tp.index);
+            trace!(
+                "Protected term {:?}, index {}, set {}",
+                term,
+                root,
+                tp.index
+            );
 
             DataFunctionSymbol {
-                term: ATerm {
-                    term,
-                    root
-                },
+                term: ATerm { term, root },
             }
         });
 
@@ -251,8 +280,8 @@ impl TermPool {
 
     /// Returns true iff this is a data::application
     pub fn is_data_application<'a>(&mut self, term: &'a impl ATermTrait<'a>) -> bool {
-        term.require_valid();       
-        
+        term.require_valid();
+
         let symbol = term.get_head_symbol();
         // It can be that data_applications are created without create_data_application in the mcrl2 ffi.
         while self.data_appl.len() <= symbol.arity() {
@@ -264,8 +293,13 @@ impl TermPool {
     }
 
     /// Creates an [ATerm] with the given symbol, first and other arguments.
-    fn create_head(&mut self, symbol: &impl SymbolTrait, head: &ATerm, arguments: &[ATerm]) -> ATerm {
-        let arguments: Vec<*const ffi::_aterm> = self.tmp_arguments_head(head, arguments).to_vec();
+    fn create_head(
+        &mut self,
+        symbol: &impl SymbolTrait,
+        head: &ATerm,
+        arguments: &[ATerm],
+    ) -> ATerm {
+        let arguments = self.tmp_arguments_head(head, arguments);
 
         debug_assert_eq!(
             symbol.arity(),
@@ -274,17 +308,19 @@ impl TermPool {
         );
 
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            let mut protection_set = tp.protection_set.lock().unwrap();
+            let mut protection_set = tp.protection_set.lock();
 
-            unsafe {            
+            unsafe {
                 let term = ffi::create_aterm(symbol.address(), &arguments);
                 let root = protection_set.protect(ATermPtr::new(term));
-                trace!("Protected term {:?}, index {}, set {}", term, root, tp.index);
-    
-                ATerm {
+                trace!(
+                    "Protected term {:?}, index {}, set {}",
                     term,
-                    root
-                }
+                    root,
+                    tp.index
+                );
+
+                ATerm { term, root }
             }
         });
 
@@ -331,12 +367,10 @@ impl Default for TermPool {
 }
 
 impl fmt::Display for TermPool {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {      
-        // TODO: This will always print, but only depends on aterm_configuration.h  
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO: This will always print, but only depends on aterm_configuration.h
         ffi::print_metrics();
 
-        THREAD_TERM_POOL.with_borrow(|tp| {
-            write!(f, "{:?}", tp)
-        })
+        THREAD_TERM_POOL.with_borrow(|tp| write!(f, "{:?}", tp))
     }
 }

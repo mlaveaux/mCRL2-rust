@@ -28,93 +28,100 @@ impl fmt::Display for dyn SymbolTrait {
 
 impl fmt::Debug for dyn SymbolTrait {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if true {
-            write!(f, "{}", self.name())
-        } else {
-            write!(
-                f,
-                "{}:{} [{}]",
-                self.name(),
-                self.arity(),
-                self.address() as usize,
-            )
-        }
+        write!(
+            f,
+            "{}:{} [{}]",
+            self.name(),
+            self.arity(),
+            self.address() as usize,
+        )
     }
 }
 
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SymbolRef<'a> {
-    function: *const ffi::_function_symbol,
+    symbol: *const ffi::_function_symbol,
     marker: PhantomData<&'a ()>
 }
 
 impl<'a> SymbolRef<'a> {
-    fn new(symbol: &UniquePtr<ffi::function_symbol>) -> SymbolRef<'a> {   
+    fn new(symbol: *const ffi::_function_symbol,) -> SymbolRef<'a> {   
         unsafe {
             SymbolRef {
-                function: ffi::function_symbol_address(symbol),
+                symbol,
                 marker: PhantomData,
             }
         }
     }
 
     pub fn protect(&self) -> Symbol {
-        unsafe {
-            Symbol {
-                function: ffi::protect_function_symbol(self.function)
-            }
-        }
+        Symbol::new(self.symbol)
     }
 }
 
 impl<'a> SymbolTrait for SymbolRef<'a> {
     fn name(&self) -> &str {
         unsafe {
-            ffi::get_function_symbol_name(self.function)
+            ffi::get_function_symbol_name(self.symbol)
         }
     }
 
     fn arity(&self) -> usize {
         unsafe {
-            ffi::get_function_symbol_arity(self.function)
+            ffi::get_function_symbol_arity(self.symbol)
         }
     }
 
     fn address(&self) -> *const ffi::_function_symbol {
-        self.function
+        self.symbol
     }
 }
 
 impl<'a> From<*const ffi::_function_symbol> for SymbolRef<'a> {
-    fn from(value: *const ffi::_function_symbol) -> Self {
+    fn from(symbol: *const ffi::_function_symbol) -> Self {
         SymbolRef {
-            function: value,
+            symbol,
             marker: PhantomData
         }
     }
 }
 
 pub struct Symbol {
-    function: UniquePtr<ffi::function_symbol>,
+    symbol: *const ffi::_function_symbol,
+}
+
+impl Symbol {
+    /// Takes ownership of the given pointer without changing the reference counter.
+    pub(crate) fn take(symbol: *const ffi::_function_symbol) -> Symbol {  
+        Symbol {
+            symbol
+        }
+    }
+
+    /// Protects the given pointer.
+    pub(crate) fn new(symbol: *const ffi::_function_symbol) -> Symbol {     
+        unsafe { ffi::protect_function_symbol(symbol) };   
+        Symbol {
+            symbol
+        }
+    }
+}
+
+impl Drop for Symbol {
+    fn drop(&mut self) {
+        unsafe { ffi::drop_function_symbol(self.symbol) };
+    }
 }
 
 impl<'a> Symbol {
-    pub fn borrow(&'a self) -> SymbolRef<'a> {
-        SymbolRef::new(&self.function)
+    pub fn borrow<'b: 'a>(&'a self) -> SymbolRef<'b> {
+        SymbolRef::new(self.symbol)
     }
 }
 
 impl<'a> From<&SymbolRef<'a>> for Symbol {
     fn from(value: &SymbolRef) -> Self {
         value.protect()
-    }
-}
-
-impl From<UniquePtr<function_symbol>> for Symbol {
-    fn from(value: UniquePtr<function_symbol>) -> Self {
-        Symbol {
-            function: value
-        }
     }
 }
 
@@ -152,7 +159,7 @@ impl fmt::Debug for Symbol {
 impl SymbolTrait for Symbol {
     fn name(&self) -> &str {
         unsafe {
-            ffi::get_function_symbol_name(ffi::function_symbol_address(&self.function))
+            ffi::get_function_symbol_name(self.symbol)
         }
     }
 
