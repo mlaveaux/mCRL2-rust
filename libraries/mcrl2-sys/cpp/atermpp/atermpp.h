@@ -106,16 +106,6 @@ const detail::_aterm* aterm_address(const aterm& term)
   return detail::address(term);
 }
 
-std::unique_ptr<function_symbol> protect_function_symbol(const detail::_function_symbol* symbol)
-{
-  return std::make_unique<function_symbol>(symbol);
-}
-
-const detail::_function_symbol* function_symbol_address(const function_symbol& symbol)
-{
-  return symbol.address();
-}
-
 const detail::_aterm* create_aterm(const detail::_function_symbol* symbol, rust::Slice<const detail::_aterm* const> arguments)
 {
   rust::Slice<aterm> aterm_slice(const_cast<aterm*>(reinterpret_cast<const aterm*>(arguments.data())),
@@ -170,12 +160,12 @@ const detail::_function_symbol* get_aterm_function_symbol(const detail::_aterm* 
 
 rust::Str get_function_symbol_name(const detail::_function_symbol* symbol)
 {
-  return function_symbol(symbol).name();
+  return symbol->name();
 }
 
 std::size_t get_function_symbol_arity(const detail::_function_symbol* symbol)
 {
-  return function_symbol(symbol).arity();
+  return symbol->arity();
 }
 
 const detail::_aterm* get_term_argument(const detail::_aterm* term, std::size_t index)
@@ -184,9 +174,36 @@ const detail::_aterm* get_term_argument(const detail::_aterm* term, std::size_t 
   return detail::address(static_cast<const aterm_appl&>(t)[index]);
 }
 
-std::unique_ptr<function_symbol> create_function_symbol(rust::String name, std::size_t arity)
+void protect_function_symbol(const detail::_function_symbol* symbol)
 {
-  return std::make_unique<function_symbol>(static_cast<std::string>(name), arity);
+  symbol->increment_reference_count();
+}
+
+void drop_function_symbol(const detail::_function_symbol* symbol)
+{
+  symbol->decrement_reference_count();
+}
+
+const detail::_function_symbol* function_symbol_address(const function_symbol& symbol)
+{
+  return symbol.address();
+}
+
+// What the fuck is this. Leaks the inner type because unions are not destructed automatically.
+template<typename T>
+class Leaker
+{
+public:
+  union { T m_val; char dummy; };
+  template<typename... Args>
+  Leaker(Args... inputArgs) : m_val(inputArgs...) {}
+  ~Leaker() {  }
+};
+
+const detail::_function_symbol*  create_function_symbol(rust::String name, std::size_t arity)
+{
+  Leaker<function_symbol> leak = Leaker<function_symbol>(static_cast<std::string>(name), arity);
+  return leak.m_val.address();
 }
 
 // For the data namespace

@@ -76,11 +76,16 @@ pub mod ffi {
         /// Returns the ith argument of this term.
         unsafe fn get_term_argument(term: *const _aterm, index: usize) -> *const _aterm;
 
-        /// Creates a function symbol with the given name and arity.
-        fn create_function_symbol(name: String, arity: usize) -> UniquePtr<function_symbol>;
+        /// Creates a function symbol with the given name and arity, increases the reference counter by one.
+        fn create_function_symbol(name: String, arity: usize) -> *const _function_symbol;
 
-        unsafe fn protect_function_symbol(symbol: *const _function_symbol) -> UniquePtr<function_symbol>;
+        /// Protects the given function symbol by incrementing the reference counter.
+        unsafe fn protect_function_symbol(symbol: *const _function_symbol);
 
+        /// Decreases the reference counter of the function symbol by one.
+        unsafe fn drop_function_symbol(symbol: *const _function_symbol);
+
+        /// Obtain the address of the given function symbol.
         unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;
 
         // For data::variable
