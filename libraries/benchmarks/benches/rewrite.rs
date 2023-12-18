@@ -1,11 +1,14 @@
 use std::{cell::RefCell, rc::Rc};
 
-use divan::black_box;
+use divan::{black_box, AllocProfiler};
 use env_logger;
 
 use mcrl2::aterm::{ATerm, TermPool};
 use mcrl2::data::DataSpecification;
 use sabre::{InnermostRewriter, RewriteEngine};
+
+#[global_allocator]
+static ALLOC: AllocProfiler = AllocProfiler::system();
 
 fn main() {
     env_logger::init();
