@@ -8,6 +8,54 @@ pub struct BfTermPool<T> {
     object: UnsafeCell<T>
 }
 
+unsafe impl<T> Send for BfTermPool<T> {}
+unsafe impl<T> Sync for BfTermPool<T> {}
+
+impl<T> BfTermPool<T> {
+    pub fn new(object: T) -> BfTermPool<T> {
+        BfTermPool {
+            object: UnsafeCell::new(object)
+        }
+    }
+}
+
+
+impl<'a, T> BfTermPool<T> {
+
+    /// Provides read access to the underlying object.
+    pub fn read(&'a self) -> BfTermPoolRead<'a, T> {
+        ffi::lock_shared();
+        BfTermPoolRead {
+            mutex: self,
+            _marker: Default::default()
+        }
+    }
+
+    /// Provides write access to the underlying object
+    /// 
+    /// # Safety
+    /// 
+    /// This function must ONLY be called within a thread local access. Provides mutable access
+    /// given that other threads use write exclusively.
+    pub unsafe fn write_threadlocal(&'a self) -> BfTermPoolRead<'a, T> {
+        ffi::lock_shared();
+        BfTermPoolRead {
+            mutex: self,
+            _marker: Default::default()
+        }
+    }
+
+    /// Provides write access to the underlying object.
+    pub fn write(&'a self) -> BfTermPoolWrite<'a, T> {
+        ffi::lock_exclusive();
+        BfTermPoolWrite {
+            mutex: self,
+            _marker: Default::default()
+        }
+    }
+
+}
+
 pub struct BfTermPoolRead<'a, T> {
     mutex: &'a BfTermPool<T>,
     _marker: PhantomData<&'a ()>,
@@ -54,24 +102,4 @@ impl<'a, T> Drop for BfTermPoolWrite<'a, T> {
     fn drop(&mut self) {
         ffi::unlock_exclusive();        
     }
-}
-
-impl<'a, T> BfTermPool<T> {
-
-    pub fn read(&'a self) -> BfTermPoolRead<'a, T> {
-        ffi::lock_shared();
-        BfTermPoolRead {
-            mutex: self,
-            _marker: Default::default()
-        }
-    }
-
-    pub fn write(&'a self) -> BfTermPoolWrite<'a, T> {
-        ffi::lock_exclusive();
-        BfTermPoolWrite {
-            mutex: self,
-            _marker: Default::default()
-        }
-    }
-
 }
