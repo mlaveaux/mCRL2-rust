@@ -36,25 +36,27 @@ type SharedProtectionSet = Arc<Mutex<ProtectionSet<ATermPtr>>>;
 static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec![]);
 
 /// Marks the terms in all protection sets.
-fn mark_protection_sets() {
+fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
     let mut protected = 0;
     let mut total = 0;
+    let mut max = 0;
     for set in PROTECTION_SETS.lock().iter().flatten() {
         let protection_set = set.lock();
 
         for term in protection_set.iter() {
             unsafe {
-                ffi::aterm_mark_address(term.ptr);
+                ffi::aterm_mark_address(term.ptr, todo.as_mut());
             }
         }
 
         protected += protection_set.len();
-        total += protection_set.maximum_size();
+        total += protection_set.number_of_insertions();
+        max += protection_set.maximum_size();
     }
 
     info!(
-        "Collecting garbage, {} protected terms and {} insertions",
-        protected, total
+        "Collecting garbage, protected {} terms and {} insertions, max {}",
+        protected, total, max
     );
 }
 
@@ -85,15 +87,15 @@ impl ThreadTermPool {
 
         // Register a protection set into the global set.
         let protection_set = Arc::new(Mutex::new(ProtectionSet::new()));
+        let mut protection_sets = PROTECTION_SETS.lock();
+        protection_sets.push(Some(protection_set.clone()));
 
-        let mut lock = PROTECTION_SETS.lock();
-        lock.push(Some(protection_set.clone()));
 
-        trace!("Registered ThreadTermPool {}", lock.len() - 1);
+        trace!("Registered ThreadTermPool {}", protection_sets.len() - 1);
         ThreadTermPool {
             protection_set,
             _callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
-            index: lock.len() - 1,
+            index: protection_sets.len() - 1,
         }
     }
 

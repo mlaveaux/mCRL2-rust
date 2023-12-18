@@ -35,7 +35,7 @@ pub mod ffi {
         fn unlock_exclusive();
 
         /// Register a function to be called during marking of the garbage collection
-        fn register_mark_callback(callback_mark: fn() -> (), callback_size: fn() -> usize) -> UniquePtr<callback_container>;
+        fn register_mark_callback(callback_mark: fn(Pin<&mut term_mark_stack>) -> (), callback_size: fn() -> usize) -> UniquePtr<callback_container>;
 
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();
@@ -50,7 +50,7 @@ pub mod ffi {
         unsafe fn aterm_address(term: &aterm) -> *const _aterm;
 
         /// Marks the aterm to prevent garbage collection.
-        unsafe fn aterm_mark_address(term: *const _aterm);
+        unsafe fn aterm_mark_address(term: *const _aterm, todo: Pin<&mut term_mark_stack>);
 
         /// Returns true iff the term is an aterm_list.
         unsafe fn aterm_is_list(term: *const _aterm) -> bool;

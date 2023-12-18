@@ -26,15 +26,15 @@ using namespace mcrl2::utilities;
 namespace atermpp
 {
   
-using void_callback = rust::Fn<void()>;
+using void_callback = rust::Fn<void(term_mark_stack&)>;
 using size_callback = rust::Fn<std::size_t()>;
 
 struct callback_container: detail::_aterm_container
 {
   /// \brief Ensure that all the terms in the containers.
-  inline void mark(std::stack<std::reference_wrapper<detail::_aterm>>& /* todo*/) const override
+  inline void mark(term_mark_stack& todo) const override
   {
-    callback_mark();
+    callback_mark(todo);
   }
 
   virtual inline std::size_t size() const override
@@ -49,6 +49,7 @@ struct callback_container: detail::_aterm_container
 
   void_callback callback_mark;
   size_callback callback_size;
+  term_mark_stack todo;
 };
 
 inline 
@@ -116,9 +117,8 @@ const detail::_aterm* create_aterm(const detail::_function_symbol* symbol, rust:
   return detail::address(result);
 }
 
-void aterm_mark_address(const detail::_aterm* term)
+void aterm_mark_address(const detail::_aterm* term, term_mark_stack& todo)
 {
-  std::stack<std::reference_wrapper<detail::_aterm>> todo;
   mark_term(*term, todo);
 }
 
