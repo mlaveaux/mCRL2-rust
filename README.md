@@ -1,6 +1,6 @@
 # Description
 
-A library that provides Rust wrappers for various library functionality of the mCRL2 toolset ([link](https://github.com/mCRL2org/mCRL2)) to allow writing tools in Rust that interface with mCRL2. For detailed documentation use `cargo doc --open` and visit the page for the `mcrl2-rust` crate, which contains the wrapper implementation. Compiling the library requires at least rustc version 1.58.0 and we use 2021 edition rust.
+A library that provides Rust wrappers for various library functionality of the mCRL2 toolset ([link](https://github.com/mCRL2org/mCRL2)) to allow writing tools in Rust that interface with mCRL2. For detailed documentation use `cargo doc --open` and visit the page for the `mcrl2-rust` crate, which contains the wrapper implementation. Compiling the library requires at least rustc version 1.70.0 and 2021 edition rust.
 
 # Building
 
@@ -19,11 +19,11 @@ The tools directory contains prototypes to show the viability of this approach. 
 
 # Tests
 
-Tests can be performed using `cargo test`. To show print statements during tests use `cargo test -- --nocapture`, and use `cargo test -p sabre --lib` to only run the tests belonging to the Sabre library.
+Tests can be performed using `cargo test`. To show print statements during tests use `cargo test -- --nocapture`, and use `cargo test -p sabre --lib` to only run the tests belonging to the Sabre library. The `xtask` targets use `cargo nextest run`, which is a test runner that performs all available tests with maximal parallelism and provides better runtime checks and nicer output. It can be installed using `cargo install cargo-nextest`.
 
 # Benchmarks
 
-For micro benchmarks we use [Criterion.rs](https://crates.io/crates/criterion) and these benchmarks can be executed using `cargo bench`. Additionally, we can also install `cargo-criterion` and run `cargo criterion` instead to keep track of more information, such as changes over time.
+Benchmarks can be executed using `cargo bench`. Additionally, we can also install `cargo-criterion` and run `cargo criterion` instead to keep track of more information, such as changes over time.
 
 # LLVM Sanitizer
 
