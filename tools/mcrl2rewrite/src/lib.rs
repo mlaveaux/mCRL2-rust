@@ -43,7 +43,6 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                 let now = Instant::now();
                 jitty_rewriter.rewrite(&term);
                 println!("jitty rewrite took {} ms", now.elapsed().as_millis());
-                println!("{}", tp.borrow());
             }
         },
         Rewriter::Innermost => {    
@@ -88,7 +87,7 @@ pub fn rewrite_rec(rewriter: Rewriter, specification: &str, text: &str) -> AnyRe
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     let (syntax_spec, _) =
-        load_REC_from_file(&mut tp.borrow_mut(), specification.into());
+        load_REC_from_file(&mut tp.borrow_mut(), specification.into()).unwrap();
     let spec = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
     let term_str = tp.borrow_mut().from_string(text)?;
     let term = to_data_expression(&mut tp.borrow_mut(), &term_str, &AHashSet::new());

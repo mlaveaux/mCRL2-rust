@@ -2,6 +2,7 @@ use std::{rc::Rc, cell::RefCell};
 
 use anyhow::Result as AnyResult;
 use clap::Parser;
+use env_logger;
 
 use mcrl2::aterm::TermPool;
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
@@ -30,6 +31,8 @@ pub struct Cli {
 
 fn main() -> AnyResult<()>
 {
+    env_logger::init();
+
     let cli = Cli::parse();
     let tp = Rc::new(RefCell::new(TermPool::new()));
 

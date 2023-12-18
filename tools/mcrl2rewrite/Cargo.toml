@@ -13,3 +13,4 @@ rec-tests = { path = "../../libraries/rec-tests" }
 sabre = { path = "../../libraries/sabre" }
 ahash.workspace = true
 clap.workspace = true
+env_logger.workspace = true
