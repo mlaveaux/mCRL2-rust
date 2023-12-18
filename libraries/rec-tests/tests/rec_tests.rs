@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests
 {
-    use std::time::Instant;
     use std::{cell::RefCell, rc::Rc};
     use test_case::test_case;
 
@@ -45,7 +44,7 @@ mod tests
     {
         let tp = Rc::new(RefCell::new(TermPool::new()));
         let (spec, terms): (RewriteSpecification, Vec<ATerm>) = { 
-            let (syntax_spec, syntax_terms) = load_REC_from_strings(&mut tp.borrow_mut(), &rec_files);
+            let (syntax_spec, syntax_terms) = load_REC_from_strings(&mut tp.borrow_mut(), &rec_files).unwrap();
             let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
             (result, syntax_terms.iter().map(|t| { 
                 to_data_expression(&mut tp.borrow_mut(), t, &AHashSet::new())
@@ -93,7 +92,7 @@ mod tests
     //#[test_case(vec![include_str!("../../../examples/REC/rec/permutations7.rec"), include_str!("../../../examples/REC/rec/permutations.rec")], include_str!("../validated_results/result_permutations7.txt") ; "permutations7")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/revnat1000.rec"), include_str!("../../../examples/REC/rec/revnat.rec")], include_str!("../validated_results/result_revnat1000.txt") ; "revnat1000")]
     #[test_case(vec![include_str!("../../../examples/REC/rec/sieve1000.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("../validated_results/result_sieve1000.txt") ; "sieve1000")]
-    fn rec_test_release(REC_files: Vec<&str>, expected_result: &str) {
-        rec_test(REC_files, expected_result);
+    fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
+        rec_test(rec_files, expected_result);
     }
 }

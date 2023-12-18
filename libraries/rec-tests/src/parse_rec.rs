@@ -28,71 +28,65 @@ fn parse_REC(
     tp: &mut TermPool,
     contents: &str,
     path: Option<PathBuf>,
-) -> (RewriteSpecificationSyntax, Vec<ATerm>) {
+) -> Result<(RewriteSpecificationSyntax, Vec<ATerm>), Box<dyn Error>> {
     // Initialise return result
     let mut rewrite_spec = RewriteSpecificationSyntax::default();
     let mut terms = vec![];
 
     // Use Pest parser (generated automatically from the grammar.pest file)
-    match RecParser::parse(Rule::rec_spec, contents) {
-        Ok(mut pairs) => {
-            // Get relevant sections from the REC file
-            let pair = pairs.next().unwrap();
-            let mut inner = pair.into_inner();
-            let header = inner.next().unwrap();
-            let _sorts = inner.next().unwrap();
-            let cons = inner.next().unwrap();
-            let _opns = inner.next().unwrap();
-            let vars = inner.next().unwrap();
-            let rules = inner.next().unwrap();
-            let eval = inner.next().unwrap();
-            let (_name, include_files) = parse_header(header);
+    let mut pairs = RecParser::parse(Rule::rec_spec, contents)?;
+    
+    // Get relevant sections from the REC file
+    let pair = pairs.next().unwrap();
+    let mut inner = pair.into_inner();
+    let header = inner.next().unwrap();
+    let _sorts = inner.next().unwrap();
+    let cons = inner.next().unwrap();
+    let _opns = inner.next().unwrap();
+    let vars = inner.next().unwrap();
+    let rules = inner.next().unwrap();
+    let eval = inner.next().unwrap();
+    let (_name, include_files) = parse_header(header);
 
-            rewrite_spec.rewrite_rules = parse_rewrite_rules(tp, rules);
-            rewrite_spec.constructors = parse_constructors(cons);
-            if eval.as_rule() == Rule::eval {
-                terms.extend_from_slice(&parse_eval(tp, eval));
-            }
+    rewrite_spec.rewrite_rules = parse_rewrite_rules(tp, rules);
+    rewrite_spec.constructors = parse_constructors(cons);
+    if eval.as_rule() == Rule::eval {
+        terms.extend_from_slice(&parse_eval(tp, eval));
+    }
 
-            rewrite_spec.variables = parse_vars(vars);
+    rewrite_spec.variables = parse_vars(vars);
 
-            // REC files can import other REC files. Import all referenced by the header.
-            for file in include_files {
-                if let Some(p) = &path {
-                    let include_path = p.parent().unwrap();
-                    let file_name = PathBuf::from_str(&(file.to_lowercase() + ".rec")).unwrap();
-                    let load_file = include_path.join(file_name);
-                    let contents = fs::read_to_string(load_file).unwrap();
-                    let (include_spec, include_terms) = parse_REC(tp, &contents, path.clone());
+    // REC files can import other REC files. Import all referenced by the header.
+    for file in include_files {
+        if let Some(p) = &path {
+            let include_path = p.parent().unwrap();
+            let file_name = PathBuf::from_str(&(file.to_lowercase() + ".rec")).unwrap();
+            let load_file = include_path.join(file_name);
+            let contents = fs::read_to_string(load_file).unwrap();
+            let (include_spec, include_terms) = parse_REC(tp, &contents, path.clone())?;
 
-                    // Add rewrite rules and terms to the result.
-                    terms.extend_from_slice(&include_terms);
-                    rewrite_spec
-                        .rewrite_rules
-                        .extend_from_slice(&include_spec.rewrite_rules);
-                    rewrite_spec
-                        .constructors
-                        .extend_from_slice(&include_spec.constructors);
-                    for s in include_spec.variables {
-                        if !rewrite_spec.variables.contains(&s) {
-                            rewrite_spec.variables.push(s);
-                        }
-                    }
+            // Add rewrite rules and terms to the result.
+            terms.extend_from_slice(&include_terms);
+            rewrite_spec
+                .rewrite_rules
+                .extend_from_slice(&include_spec.rewrite_rules);
+            rewrite_spec
+                .constructors
+                .extend_from_slice(&include_spec.constructors);
+            for s in include_spec.variables {
+                if !rewrite_spec.variables.contains(&s) {
+                    rewrite_spec.variables.push(s);
                 }
             }
         }
-        Err(e) => {
-            // TODO: Panic when a parse error occurs. Should probably return an error.
-            println!("{}", e);
-            panic!("Failed to load rewrite system");
-        }
     }
-    (rewrite_spec, terms)
+
+    Ok((rewrite_spec, terms))
 }
 
 /// Load a REC specification from a specified file.
 #[allow(non_snake_case)]
-pub fn load_REC_from_file(tp: &mut TermPool, file: PathBuf) -> (RewriteSpecificationSyntax, Vec<ATerm>) {
+pub fn load_REC_from_file(tp: &mut TermPool, file: PathBuf) -> Result<(RewriteSpecificationSyntax, Vec<ATerm>), Box<dyn Error>> {
     let contents = fs::read_to_string(file.clone()).unwrap();
     parse_REC(tp, &contents, Some(file))
 }
@@ -102,17 +96,17 @@ pub fn load_REC_from_file(tp: &mut TermPool, file: PathBuf) -> (RewriteSpecifica
 pub fn load_REC_from_strings(
     tp: &mut TermPool,
     specs: &[&str],
-) -> (RewriteSpecificationSyntax, Vec<ATerm>) {
+) -> Result<(RewriteSpecificationSyntax, Vec<ATerm>), Box<dyn Error>> {
     let mut rewrite_spec = RewriteSpecificationSyntax::default();
     let mut terms = vec![];
 
     for spec in specs {
-        let (include_spec, include_terms) = parse_REC(tp, spec, None);
+        let (include_spec, include_terms) = parse_REC(tp, spec, None)?;
         rewrite_spec.merge(&include_spec);
         terms.extend_from_slice(&include_terms);
     }
 
-    (rewrite_spec, terms)
+    Ok((rewrite_spec, terms))
 }
 
 /// Extracts data from parsed header of REC spec. Returns name and include files.
