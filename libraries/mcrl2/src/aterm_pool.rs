@@ -40,6 +40,8 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
     let mut protected = 0;
     let mut total = 0;
     let mut max = 0;
+    
+    trace!("Marking terms:");
     for set in PROTECTION_SETS.lock().iter().flatten() {
         let protection_set = set.lock();
 
@@ -47,6 +49,8 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
             unsafe {
                 ffi::aterm_mark_address(term.ptr, todo.as_mut());
             }
+
+            trace!("Marked {:?}", term.ptr);
         }
 
         protected += protection_set.len();
@@ -105,7 +109,7 @@ impl ThreadTermPool {
         let root = self.protection_set.lock().protect(ATermPtr::new(term));
 
         trace!(
-            "Protected term {:?}, index {}, set {}",
+            "Protected term {:?}, index {}, protection set {}",
             term,
             root,
             self.index
@@ -118,7 +122,7 @@ impl ThreadTermPool {
         term.require_valid();
 
         trace!(
-            "Dropped term {:?}, index {}, set {}",
+            "Dropped term {:?}, index {}, protection set {}",
             term.term,
             term.root,
             self.index
@@ -169,7 +173,7 @@ impl TermPool {
 
     /// Trigger a garbage collection if necessary, we disable global garbage collection so ffi will never garbage collect themselves.
     pub fn collect(&mut self) {
-        ffi::collect_garbage();
+        //ffi::collect_garbage();
     }
 
     /// Creates an ATerm from a string.
