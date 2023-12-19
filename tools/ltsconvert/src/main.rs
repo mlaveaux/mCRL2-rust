@@ -18,6 +18,8 @@ pub struct Cli {
 
 fn main() -> Result<()>
 {
+    env_logger::init();
+
     let cli = Cli::parse();
 
     let file = File::open(cli.labelled_transition_system)?;

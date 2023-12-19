@@ -5,6 +5,8 @@ use lpsreach::{run, Config};
 
 fn main() -> Result<ExitCode, Box<dyn Error>>
 {
+    env_logger::init();
+    
     let config = Config::parse();
 
     let num_of_states = run(&config)?;

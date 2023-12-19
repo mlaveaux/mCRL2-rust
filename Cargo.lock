@@ -488,6 +488,7 @@ name = "lpsreach"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "env_logger",
  "ldd",
 ]
 
@@ -498,6 +499,7 @@ dependencies = [
  "ahash",
  "anyhow",
  "clap",
+ "env_logger",
  "io",
 ]
 
@@ -707,6 +709,7 @@ name = "rec-tests"
 version = "0.1.0"
 dependencies = [
  "ahash",
+ "env_logger",
  "mcrl2",
  "pest",
  "pest_derive",
