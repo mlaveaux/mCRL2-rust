@@ -2,35 +2,13 @@ use std::error::Error;
 use std::fmt;
 
 use ahash::AHashSet;
+use log::trace;
 
 use crate::aterm::{ATerm, TermPool, ATermTrait};
 use crate::symbol::Symbol;
 
-/// This can be used to construct a term from a given input of type (inductive
-/// type) I, without using the system stack.
-///
-/// The `transformer` function is applied to every input I, which can put more
-/// more inputs onto the argument stack and some instance C that is used to construct
-/// the result term. Or yield a result term directly.
-///
-/// The `construct` function takes an instance C and the term arguments pushed to stack
-/// where the transformer was applied.
-///
-///
-/// A simple example could be to transform a term into another term using a
-/// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is the
-/// input, and C will be the Symbol from which we can construct the recursive
-/// term.
-///
-/// `transformer` takes the input and applies f(input). Then either we return
-/// Yield(x) when f returns some term, or Construct(head(input)) with the
-/// arguments of the input term pushed to stack.
-///
-/// `construct` simply constructs the term from the symbol and the arguments on
-/// the stack.
-///
-/// However, it can also be that I is some syntax tree from which we want to
-/// construct a term.
+/// This can be used to construct a term from a given input of (inductive) type I, 
+/// without using the system stack, i.e. recursion. See evaluate.
 #[derive(Default)]
 pub struct TermBuilder<I, C> {
     // The stack of terms
@@ -38,34 +16,7 @@ pub struct TermBuilder<I, C> {
     configs: Vec<Config<I, C>>,
 }
 
-impl<I, C: fmt::Display> fmt::Display for TermBuilder<I, C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Terms: [")?;
-        for (i, term) in self.terms.iter().enumerate() {
-            writeln!(f, "{}\t{}", i, term)?;
-        }
-        writeln!(f, "]")?;
-
-        writeln!(f, "Configs: [")?;
-        for config in &self.configs {
-            writeln!(f, "\t{}", config)?;
-        }
-        write!(f, "]")
-    }
-}
-
-impl<I, C: fmt::Display> fmt::Display for Config<I, C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Config::Apply(_, result) => write!(f, "Apply({})", result),
-            Config::Construct(symbol, arity, result) => {
-                write!(f, "Construct({}, {}, {})", symbol, arity, result)
-            }
-        }
-    }
-}
-
-/// Applies the given function to every subterm of the given term using the TermBuilder.
+/// Applies the given function to every subterm of the given term using the [TermBuilder].
 ///     function(subterm) returns:
 ///         None   , in which case subterm is kept and it is recursed into its argments.
 ///         Some(x), in which case subterm is replaced by x.
@@ -94,7 +45,7 @@ where
         .unwrap()
 }
 
-impl<I, C: fmt::Display> TermBuilder<I, C> {
+impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
     pub fn new() -> TermBuilder<I, C> {
         TermBuilder {
             terms: vec![],
@@ -102,6 +53,29 @@ impl<I, C: fmt::Display> TermBuilder<I, C> {
         }
     }
 
+    /// The `transformer` function is applied to every instance I, which can put more
+    /// more inputs onto the argument stack and some instance C that is used to construct
+    /// the result term. Or yield a result term directly.
+    ///
+    /// The `construct` function takes an instance C and the arguments pushed to stack
+    /// where the transformer was applied.
+    ///
+    /// # Example
+    ///
+    /// A simple example could be to transform a term into another term using a
+    /// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is the
+    /// input, and C will be the Symbol from which we can construct the recursive
+    /// term.
+    ///
+    /// `transformer` takes the input and applies f(input). Then either we return
+    /// Yield(x) when f returns some term, or Construct(head(input)) with the
+    /// arguments of the input term pushed to stack.
+    ///
+    /// `construct` simply constructs the term from the symbol and the arguments on
+    /// the stack.
+    ///
+    /// However, it can also be that I is some syntax tree from which we want to
+    /// construct a term.
     pub fn evaluate<F, G>(
         &mut self,
         tp: &mut TermPool,
@@ -113,6 +87,7 @@ impl<I, C: fmt::Display> TermBuilder<I, C> {
         F: Fn(&mut TermPool, &mut ArgStack<I, C>, I) -> Result<Yield<C>, Box<dyn Error>>,
         G: Fn(&mut TermPool, C, &[ATerm]) -> Result<ATerm, Box<dyn Error>>,
     {
+        trace!("Transforming {:?}", input);
         self.terms.push(ATerm::default());
         self.configs.push(Config::Apply(input, 0));
 
@@ -145,6 +120,8 @@ impl<I, C: fmt::Display> TermBuilder<I, C> {
                     self.terms.drain(self.terms.len() - arity..);
                 }
             }
+
+            trace!("{:?}", self);
         }
 
         debug_assert!(
@@ -195,6 +172,34 @@ impl<'a, I, C> ArgStack<'a, I, C> {
     pub fn push(&mut self, input: I) {
         self.configs.push(Config::Apply(input, self.terms.len()));
         self.terms.push(ATerm::default());
+    }
+}
+
+
+impl<I: fmt::Debug, C: fmt::Debug> fmt::Debug for TermBuilder<I, C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Terms: [")?;
+        for (i, term) in self.terms.iter().enumerate() {
+            writeln!(f, "{}\t{}", i, term)?;
+        }
+        writeln!(f, "]")?;
+
+        writeln!(f, "Configs: [")?;
+        for config in &self.configs {
+            writeln!(f, "\t{:?}", config)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl<I: fmt::Debug, C: fmt::Debug> fmt::Debug for Config<I, C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Config::Apply(x, result) => write!(f, "Apply({:?}, {})", x, result),
+            Config::Construct(symbol, arity, result) => {
+                write!(f, "Construct({:?}, {}, {})", symbol, arity, result)
+            }
+        }
     }
 }
 
