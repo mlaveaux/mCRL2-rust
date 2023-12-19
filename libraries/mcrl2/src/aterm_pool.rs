@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{cell::RefCell, fmt::Debug, sync::Arc, pin::Pin};
+use std::{cell::RefCell, fmt::Debug, sync::Arc, pin::Pin, mem::ManuallyDrop};
 
 use log::{info, trace};
 use parking_lot::Mutex;
@@ -80,7 +80,9 @@ thread_local! {
 
 pub struct ThreadTermPool {
     protection_set: SharedProtectionSet,
-    _callback: UniquePtr<ffi::callback_container>,
+    
+    // TODO: On macOS destroying the callback causes issues. However, this should be fine since the related thread_aterm_pool is destroyed.
+    _callback: ManuallyDrop<UniquePtr<ffi::callback_container>>,
     index: usize,
 }
 
@@ -98,7 +100,7 @@ impl ThreadTermPool {
         trace!("Registered ThreadTermPool {}", protection_sets.len() - 1);
         ThreadTermPool {
             protection_set,
-            _callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
+            _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
             index: protection_sets.len() - 1,
         }
     }
@@ -152,7 +154,10 @@ impl Debug for ThreadTermPool {
 
 impl Drop for ThreadTermPool {
     fn drop(&mut self) {
+        debug_assert!(self.protection_set.lock().len() == 0, "The protection set should be empty");
+
         PROTECTION_SETS.lock()[self.index] = None;
+
         trace!("Removed ThreadTermPool {}", self.index);
     }
 }
@@ -378,5 +383,59 @@ impl fmt::Display for TermPool {
         ffi::print_metrics();
 
         THREAD_TERM_POOL.with_borrow(|tp| write!(f, "{:?}", tp))
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::thread;
+
+    use crate::aterm_builder::random_term;
+
+    use super::*;
+    
+    /// Make sure that the term has the same number of arguments as its arity.
+    fn verify_term(term: &ATerm) {
+        for subterm in term.iter() {
+            assert_eq!(
+                subterm.get_head_symbol().arity(),
+                subterm.arguments().len(),
+                "The arity matches the number of arguments."
+            )
+        }
+    }
+
+    #[test]
+    fn test_thread_aterm_pool_parallel() {
+        let mut threads = vec![];
+
+        for _ in 0..2 {
+            threads.push(thread::spawn(|| {
+                let mut tp = TermPool::new();
+
+                let terms: Vec<ATerm> = (0..100)
+                    .map(|_| {
+                        random_term(
+                            &mut tp,
+                            &[("f".to_string(), 2)],
+                            &["a".to_string(), "b".to_string()],
+                            10,
+                        )
+                    })
+                    .collect();
+
+                tp.collect();
+
+                for term in &terms {
+                    verify_term(term);
+                }
+            }));
+        }
+
+        // Join the threads
+        for thread in threads {
+            thread.join().unwrap();
+        }
     }
 }

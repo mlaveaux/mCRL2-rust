@@ -246,24 +246,11 @@ pub fn random_term(
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
     use test_log::test;
 
     use crate::aterm::ATermList;
-    use crate::symbol::SymbolTrait;
 
     use super::*;
-
-    /// Make sure that the term has the same number of arguments as its arity.
-    fn verify_term(term: &ATerm) {
-        for subterm in term.iter() {
-            assert_eq!(
-                subterm.get_head_symbol().arity(),
-                subterm.arguments().len(),
-                "The arity matches the number of arguments."
-            )
-        }
-    }
 
     #[test]
     fn test_term_iterator() {
@@ -275,39 +262,6 @@ mod tests {
         assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap());
         assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap());
         assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap());
-    }
-
-    #[test]
-    fn test_thread_aterm_pool_parallel() {
-        let mut threads = vec![];
-
-        for _ in 0..2 {
-            threads.push(thread::spawn(|| {
-                let mut tp = TermPool::new();
-
-                let terms: Vec<ATerm> = (0..100)
-                    .map(|_| {
-                        random_term(
-                            &mut tp,
-                            &[("f".to_string(), 2)],
-                            &["a".to_string(), "b".to_string()],
-                            10,
-                        )
-                    })
-                    .collect();
-
-                tp.collect();
-
-                for term in &terms {
-                    verify_term(term);
-                }
-            }));
-        }
-
-        // Join the threads
-        for thread in threads {
-            thread.join().unwrap();
-        }
     }
 
     #[test]
