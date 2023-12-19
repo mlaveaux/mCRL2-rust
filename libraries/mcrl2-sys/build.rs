@@ -1,3 +1,4 @@
+use cargo_emit::rerun_if_changed;
 use cc::Build;
 
 /// \returns A vector of strings where prefix is prepended to every string slice in paths.
@@ -193,5 +194,8 @@ fn main() {
 
     build.compile("mcrl2-sys");
 
-    // It seems that build changes are detected properly automatically.
+    // These files should trigger a rebuild.
+    rerun_if_changed!("cpp/atermpp/atermpp.h");
+    rerun_if_changed!("cpp/data/data.h");
+    rerun_if_changed!("cpp/lps/lps.h");
 }

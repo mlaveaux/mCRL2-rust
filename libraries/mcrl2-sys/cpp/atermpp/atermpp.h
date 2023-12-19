@@ -43,8 +43,8 @@ struct callback_container: detail::_aterm_container
   }
 
   callback_container(void_callback callback_mark, size_callback callback_size)
-    : callback_size(callback_size),
-      callback_mark(callback_mark)
+    : callback_mark(callback_mark),
+      callback_size(callback_size)
   {}
 
   void_callback callback_mark;
