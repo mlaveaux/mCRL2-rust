@@ -5,6 +5,7 @@ pub struct ProtectionSet<T> {
     roots: Vec<Entry<T>>, // The set of root active nodes.
     free: Option<usize>,
     number_of_insertions: u64,
+    size: usize,
 }
 
 #[derive(Debug)]
@@ -19,6 +20,7 @@ impl<T> ProtectionSet<T> {
             roots: vec![],
             free: None,
             number_of_insertions: 0,
+            size: 0,
         }
     }
 
@@ -34,7 +36,7 @@ impl<T> ProtectionSet<T> {
 
     /// Returns the number of roots in the protection set
     pub fn len(&self) -> usize {
-        self.iter().count()
+        self.size
     }
 
     /// Returns whether the protection set is empty.
@@ -53,6 +55,7 @@ impl<T> ProtectionSet<T> {
     /// Protect the given root node to prevent garbage collection.
     pub fn protect(&mut self, object: T) -> usize {
         self.number_of_insertions += 1;
+        self.size += 1;
 
         match self.free {
             Some(first) => {
@@ -86,6 +89,7 @@ impl<T> ProtectionSet<T> {
     /// index returned by the [protect] call.
     pub fn unprotect(&mut self, index: usize) {
         debug_assert!(matches!(self.roots[index], Entry::Filled(_)), "Index {index} is not valid");
+        self.size -= 1;
 
         match self.free {
             Some(next) => {
@@ -121,6 +125,15 @@ impl<'a, T> Iterator for ProtSetIter<'a, T> {
         }
 
         None
+    }
+}
+
+impl<'a, T> IntoIterator for &'a ProtectionSet<T> {
+    type Item = &'a T;
+    type IntoIter = ProtSetIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
