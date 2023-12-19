@@ -12,4 +12,6 @@ mcrl2 = { path="../../libraries/mcrl2" }
 ahash.workspace = true
 log.workspace = true
 rand.workspace = true
+
+[dev-dependencies]
 test-log.workspace = true
