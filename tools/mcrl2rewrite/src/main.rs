@@ -24,8 +24,8 @@ pub struct Cli {
     #[arg(value_name = "FILE")]
     specification: String,
 
-    #[arg()]
-    term: String,
+    #[arg(help="File containing the terms to be rewritten.")]
+    terms: Option<String>,
 
 }
 
@@ -36,10 +36,18 @@ fn main() -> AnyResult<()>
     let cli = Cli::parse();
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    if cli.rec { 
-        rewrite_rec(cli.rewriter, &cli.specification, &cli.term)?;  
+    if cli.rec {
+        rewrite_rec(cli.rewriter, &cli.specification)?;
     } else {
-        rewrite_data_spec(tp.clone(), cli.rewriter, &cli.specification, &cli.term)?;
+        
+        match &cli.terms {
+            Some(expressions) => {
+                rewrite_data_spec(tp.clone(), cli.rewriter, &cli.specification, expressions)?;
+            }
+            None => {
+                
+            }
+        }
     }
 
     println!("pool: {}", tp.borrow());

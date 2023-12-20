@@ -83,28 +83,34 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
     Ok(())
 }
 
-pub fn rewrite_rec(rewriter: Rewriter, specification: &str, text: &str) -> AnyResult<()> {
+pub fn rewrite_rec(rewriter: Rewriter, specification: &str) -> AnyResult<()> {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    let (syntax_spec, _) =
+    let (syntax_spec, syntax_terms) =
         load_REC_from_file(&mut tp.borrow_mut(), specification.into()).unwrap();
+
     let spec = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
-    let term_str = tp.borrow_mut().from_string(text)?;
-    let term = to_data_expression(&mut tp.borrow_mut(), &term_str, &AHashSet::new());
+    //let term = to_data_expression(&mut tp.borrow_mut(), &term_str, &AHashSet::new());
 
     match rewriter {
         Rewriter::Innermost => {
             let mut inner = InnermostRewriter::new(tp.clone(), &spec);
 
             let now = Instant::now();
-            inner.rewrite(term.clone());
+            for term in &syntax_terms {
+                let term = to_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
+                inner.rewrite(term);
+            }
             println!("innermost rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Sabre => {
             let mut sa = SabreRewriter::new(tp.clone(), &spec);        
         
             let now = Instant::now();
-            sa.rewrite(term.clone());
+            for term in &syntax_terms {
+                let term = to_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
+                sa.rewrite(term);
+            }
             println!("sabre rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Jitty => {
