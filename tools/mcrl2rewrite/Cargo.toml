@@ -4,8 +4,6 @@ version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = "1.0"
 mcrl2 = { path = "../../libraries/mcrl2" }

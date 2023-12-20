@@ -27,6 +27,9 @@ pub struct Cli {
     #[arg(help="File containing the terms to be rewritten.")]
     terms: Option<String>,
 
+    #[arg(long="output", default_value_t=false, help="Print the resulting term(s)")]
+    output: bool
+
 }
 
 fn main() -> AnyResult<()>
@@ -37,15 +40,15 @@ fn main() -> AnyResult<()>
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     if cli.rec {
-        rewrite_rec(cli.rewriter, &cli.specification)?;
-    } else {
-        
+        assert!(cli.terms.is_none());
+        rewrite_rec(cli.rewriter, &cli.specification, cli.output)?;
+    } else {        
         match &cli.terms {
-            Some(expressions) => {
-                rewrite_data_spec(tp.clone(), cli.rewriter, &cli.specification, expressions)?;
+            Some(terms) => {
+                rewrite_data_spec(tp.clone(), cli.rewriter, &cli.specification, terms, cli.output)?;
             }
             None => {
-                
+                panic!("For mCRL2 specifications the terms argument is mandatory.");
             }
         }
     }
