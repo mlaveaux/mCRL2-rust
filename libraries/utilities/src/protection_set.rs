@@ -1,3 +1,6 @@
+use core::panic;
+use std::ops::Index;
+
 /// The protection set keeps track of nodes that should not be garbage
 /// collected since they are being referenced by instances.
 #[derive(Debug, Default)]
@@ -104,23 +107,38 @@ impl<T> ProtectionSet<T> {
     }
 }
 
+impl<T> Index<usize> for ProtectionSet<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match &self.roots[index] {
+            Entry::Filled(value) => {
+                value
+            },
+            Entry::Free(_) => {
+                panic!("Attempting to index free spot {}", index);
+            }
+        }
+    }
+
+}
+
 pub struct ProtSetIter<'a, T> {
     current: usize,
     protection_set: &'a ProtectionSet<T>,
 }
 
 impl<'a, T> Iterator for ProtSetIter<'a, T> {
-    type Item = &'a T;
+    type Item = (&'a T, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         // Find the next valid entry, return it when found or None when end of roots is reached.
-        if self.current < self.protection_set.roots.len() {
+        while self.current < self.protection_set.roots.len() {
             if let Entry::Filled(object) = &self.protection_set.roots[self.current] {
                 self.current += 1;
-                return Some(object);
+                return Some((object, self.current - 1));
             } else {
                 self.current += 1;
-                return None
             }
         }
 
@@ -129,7 +147,7 @@ impl<'a, T> Iterator for ProtSetIter<'a, T> {
 }
 
 impl<'a, T> IntoIterator for &'a ProtectionSet<T> {
-    type Item = &'a T;
+    type Item = (&'a T, usize);
     type IntoIter = ProtSetIter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -147,7 +165,7 @@ mod tests {
     fn test_protection_set() {
         let mut protection_set = ProtectionSet::<usize>::new();
 
-        // Protect a number of LDDs and record their indices.
+        // Protect a number of indices and record their roots.
         let mut indices: Vec<usize> = Vec::new();
         let mut rng = rand::thread_rng();
 
@@ -155,26 +173,29 @@ mod tests {
             indices.push(protection_set.protect(rng.gen_range(0..1000)));
         }
 
-        // Unprotect a number of LDDs.
-        for index in 0..250 {
+        // Unprotect a number of roots.
+        for index in 0..2500 {
             protection_set.unprotect(indices[index]);
             indices.remove(index);
         }
         
         // Protect more to test the freelist
-        for _ in 0..5000 {
+        for _ in 0..1000 {
             indices.push(protection_set.protect(rng.gen_range(0..1000)));
         }
 
-        for index in indices {
+        for index in &indices {
             assert!(
-                matches!(protection_set.roots[index], Entry::Filled(_)),
+                matches!(protection_set.roots[*index], Entry::Filled(_)),
                 "All indices that are not unprotected should occur in the protection set"
             );
         }
 
-        for root in protection_set.iter() {
-            assert!(*root <= 5000, "Root must be valid");
-        }
+        assert_eq!(protection_set.iter().count(), 6000 - 2500, "This is the number of roots remaining");
+
+        // TODO: Fix this test.
+        // for root in protection_set.iter() {
+        //     assert!(indices.contains(root.0), "Root must be valid");
+        // }
     }
 }

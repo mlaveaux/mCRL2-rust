@@ -74,7 +74,7 @@ impl JittyRewriter {
     /// Rewrites the term with the jitty rewriter.
     pub fn rewrite(&mut self, term: &ATerm) -> ATerm {
         unsafe {
-            ATerm::from(ffi::rewrite(self.rewriter.pin_mut(), term.borrow().term))
+          ffi::rewrite(self.rewriter.pin_mut(), term.borrow().term).into()
         }
     }
 }
