@@ -37,9 +37,10 @@ impl<'a, T> BfTermPool<T> {
     /// 
     /// This function must ONLY be called within a thread local access. Provides mutable access
     /// given that other threads use write exclusively.
-    pub unsafe fn write_threadlocal(&'a self) -> BfTermPoolRead<'a, T> {
+    pub unsafe fn write_threadlocal(&'a self) -> BfTermPoolThreadWrite<'a, T> {
+        // This is a lock shared, but assuming that ONLY one thread accesses it in "shared" mode.
         ffi::lock_shared();
-        BfTermPoolRead {
+        BfTermPoolThreadWrite {
             mutex: self,
             _marker: Default::default()
         }
@@ -90,7 +91,6 @@ impl<'a, T> Deref for BfTermPoolWrite<'a, T> {
     }
 }
 
-
 impl<'a, T> DerefMut for BfTermPoolWrite<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // We are the only guard after `write()`, so we can provide mutable access to the underlying object.
@@ -101,5 +101,32 @@ impl<'a, T> DerefMut for BfTermPoolWrite<'a, T> {
 impl<'a, T> Drop for BfTermPoolWrite<'a, T> {
     fn drop(&mut self) {
         ffi::unlock_exclusive();        
+    }
+}
+
+pub struct BfTermPoolThreadWrite<'a, T> {
+    mutex: &'a BfTermPool<T>,
+    _marker: PhantomData<&'a ()>,
+}
+
+impl<'a, T> Deref for BfTermPoolThreadWrite<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        // There can only be read guards.
+        unsafe { &*self.mutex.object.get() }
+    }
+}
+
+impl<'a, T> DerefMut for BfTermPoolThreadWrite<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        // We are the only guard after `write()`, so we can provide mutable access to the underlying object.
+        unsafe { &mut *self.mutex.object.get() }
+    }
+}
+
+impl<'a, T> Drop for BfTermPoolThreadWrite<'a, T> {
+    fn drop(&mut self) {
+        ffi::unlock_shared();        
     }
 }

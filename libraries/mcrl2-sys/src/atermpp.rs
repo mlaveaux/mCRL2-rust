@@ -23,6 +23,13 @@ pub mod ffi {
         /// Initialises the library.
         fn initialise();
 
+        /// Enable automated garbage collection.
+        /// 
+        /// # Warning
+        /// This will deadlock when any Rust terms are created due to the interaction with the protection sets.
+        /// Instead, call collect_garbage periodically to trigger garbage collection when needed.
+        fn enable_automatic_garbage_collection(enabled: bool);
+
         /// Trigger garbage collection.
         fn collect_garbage();
 
