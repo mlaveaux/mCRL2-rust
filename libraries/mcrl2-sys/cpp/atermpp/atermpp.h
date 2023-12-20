@@ -57,9 +57,12 @@ void initialise()
 {
   // Enable debugging messages.
   mcrl2::log::logger::set_reporting_level(mcrl2::log::debug);
+}
 
-  // Disable global garbage collection, this does mean that mCRL2 functions might use too much memory.
-  detail::g_term_pool().enable_garbage_collection(false);
+inline
+void enable_automatic_garbage_collection(bool enabled)
+{
+  detail::g_term_pool().enable_garbage_collection(enabled);
 }
 
 inline 

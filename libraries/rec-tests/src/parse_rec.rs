@@ -345,12 +345,12 @@ mod tests {
 
     #[test]
     fn test_parsing_rec() {
-        assert!(RecParser::parse(Rule::rec_spec, include_str!("missionaries.rec")).is_ok());
+        assert!(RecParser::parse(Rule::rec_spec, include_str!("../../../examples/REC/rec/missionaries.rec")).is_ok());
     }
 
     #[test]
     fn loading_rec() {
         let mut tp = TermPool::new();
-        let _ = parse_REC(&mut tp, include_str!("missionaries.rec"), None);
+        let _ = parse_REC(&mut tp, include_str!("../../../examples/REC/rec/missionaries.rec"), None);
     }
 }
