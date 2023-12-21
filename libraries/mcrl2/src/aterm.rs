@@ -15,10 +15,10 @@ pub use crate::aterm_pool::*;
 
 pub trait ATermTrait<'a> {
     /// Returns the indexed argument of the term
-    fn arg<'b: 'a>(&'a self, index: usize) -> ATermRef<'b>;
+    fn arg(&self, index: usize) -> ATermRef;
 
     /// Returns the list of arguments as a collection
-    fn arguments(&'a self) -> ATermArgs;
+    fn arguments(&self) -> ATermArgs;
 
     /// Returns whether the term is the default term (not initialised)
     fn is_default(&self) -> bool;
@@ -79,6 +79,12 @@ impl<'a> ATermRef<'a> {
             THREAD_TERM_POOL.with_borrow_mut(|tp| { tp.protect(self.term) })
         }
     }
+
+    /// In some cases the lifetime analysis can not figure out transitive lifetimes, and this unsafe
+    /// function can be used to extend the life time in that case.
+    pub unsafe fn upgrade<'b: 'a>(&self) -> ATermRef<'b> {
+        ATermRef::new(self.term)
+    }
 }
 
 impl<'a> ATermRef<'a> {
@@ -96,7 +102,7 @@ impl<'a> ATermRef<'a> {
 }
 
 impl<'a> ATermTrait<'a> for ATermRef<'a> {
-    fn arg<'b: 'a>(&self, index: usize) -> ATermRef<'b> {
+    fn arg(&self, index: usize) -> ATermRef {
         self.require_valid();
         debug_assert!(
             index < self.get_head_symbol().arity(),
@@ -225,7 +231,7 @@ pub struct ATerm {
 }
 
 impl<'a> ATerm {
-    pub fn borrow(&'a self) -> ATermRef<'a> {
+    pub fn borrow(&self) -> ATermRef {
         ATermRef::new(self.term)
     }
 }
@@ -500,7 +506,7 @@ impl Ord for ATerm {
 impl Eq for ATerm {}
 
 impl<'a> ATermTrait<'a> for ATerm {
-    fn arg<'b: 'a>(&'a self, index: usize) -> ATermRef<'b> {
+    fn arg(&self, index: usize) -> ATermRef {
         debug_assert!(
             index < self.get_head_symbol().arity(),
             "arg({index}) is not defined for term {:?}",
@@ -516,7 +522,7 @@ impl<'a> ATermTrait<'a> for ATerm {
         }
     }
 
-    fn arguments(&'a self) -> ATermArgs {
+    fn arguments(&self) -> ATermArgs {
         ATermArgs::new(self.borrow())
     }
 

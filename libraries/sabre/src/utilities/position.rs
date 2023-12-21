@@ -42,7 +42,9 @@ pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRe
     let mut result = term.borrow();
 
     for index in &position.indices {
-        result = result.arg(index - 1); // Note that positions are 1 indexed.
+        unsafe {
+            result = result.arg(index - 1).upgrade(); // Note that positions are 1 indexed.
+        }
     }
     
     result
