@@ -36,7 +36,7 @@ pub trait ATermTrait<'a> {
     fn get_head_symbol(&'a self) -> SymbolRef<'a>;
 
     /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
-    fn iter(&self) -> TermIterator;
+    fn iter(&'a self) -> TermIterator;
 
     // Recognizers for the data library
 
@@ -61,6 +61,8 @@ pub struct ATermRef<'a> {
     pub(crate) term: *const ffi::_aterm,
     marker: PhantomData<&'a ()>,
 }
+
+unsafe impl<'a> Send for ATermRef<'a> {}
 
 impl<'a> Default for ATermRef<'a> {
     fn default() -> Self {
@@ -410,13 +412,15 @@ impl<'a> ATermArgs<'a> {
 }
 
 impl<'a> Iterator for ATermArgs<'a> {
-    type Item = ATerm;
+    type Item = ATermRef<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            let res = Some(self.term.arg(self.index).protect());
-            self.index += 1;
-            res
+            unsafe {
+                let res = Some(self.term.arg(self.index).upgrade());
+                self.index += 1;
+                res
+            }
         } else {
             None
         }
@@ -426,9 +430,11 @@ impl<'a> Iterator for ATermArgs<'a> {
 impl<'a> DoubleEndedIterator for ATermArgs<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            let res = Some(self.term.arg(self.arity - 1).protect());
-            self.arity -= 1;
-            res
+            unsafe {
+                let res = Some(self.term.arg(self.arity - 1).upgrade());
+                self.arity -= 1;
+                res
+            }
         } else {
             None
         }
@@ -470,7 +476,7 @@ impl Iterator for TermIterator {
 
             // Put subterms in the queue
             for argument in term.arguments().rev() {
-                self.queue.push_back(argument);
+                self.queue.push_back(argument.protect());
             }
 
             Some(term)

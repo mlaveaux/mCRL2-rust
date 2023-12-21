@@ -102,15 +102,16 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
 
     for subterm in t.iter() {
         if tp.is_data_application(&subterm) {
-            let args: Vec<ATerm> = subterm.arguments().collect();
+            let mut args = subterm.arguments();
 
             // REC specifications should never contain this so it can be a debug error.
+            let head = args.next().unwrap();
             assert!(
-                args[0].is_data_function_symbol(),
+                head.is_data_function_symbol(),
                 "Higher order term rewrite systems are not supported"
             );
 
-            let function_symbol: DataFunctionSymbol = args[0].clone().into();
+            let function_symbol: DataFunctionSymbol = head.protect().into();
             add_symbol(function_symbol, args.len() - 1, symbols);
         }
     }
@@ -494,7 +495,7 @@ impl State {
                                 let mut new_pos = mo.position.clone();
                                 new_pos.indices.push(index + 2);
                                 new_obligations.push(MatchObligation {
-                                    pattern: t.clone(),
+                                    pattern: t.protect(),
                                     position: new_pos,
                                 });
                             }

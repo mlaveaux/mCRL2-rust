@@ -39,7 +39,7 @@ fn substitute_rec<'a>(
         let new_child_index = p[depth] - 1;
         let new_child = substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, depth + 1);
 
-        let mut args: Vec<ATerm> = t.arguments().collect();
+        let mut args: Vec<ATerm> = t.arguments().map(|t| t.protect()).collect();
         args[new_child_index] = new_child;
 
         tp.create(&t.get_head_symbol(), &args)
@@ -63,7 +63,7 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
             let head = tp.create_data_function_symbol(t.get_head_symbol().name());
             
             for arg in t.arguments() {
-                args.push(arg);
+                args.push(arg.protect());
             }
 
             Ok(Yield::Construct(head.into()))

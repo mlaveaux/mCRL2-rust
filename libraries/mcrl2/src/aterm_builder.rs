@@ -34,7 +34,7 @@ where
                 Some(result) => Ok(Yield::Term(result)),
                 None => {
                     for arg in t.arguments() {
-                        args.push(arg);
+                        args.push(arg.protect());
                     }
 
                     Ok(Yield::Construct(t.get_head_symbol().protect()))

@@ -120,7 +120,7 @@ impl InnermostRewriter {
 
                     stack.add_result(symbol, arguments.len(), result);
                     for (offset, arg) in arguments.into_iter().enumerate() {
-                        stack.add_rewrite(arg, top_of_stack + offset);
+                        stack.add_rewrite(arg.protect(), top_of_stack + offset);
                     }
                 }
                 Config::Construct(symbol, arity, index) => {

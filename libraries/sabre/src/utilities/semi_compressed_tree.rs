@@ -86,7 +86,7 @@ impl SemiCompressedTermTree {
         } else {
             let children = t
                 .arguments()
-                .map(|c| SemiCompressedTermTree::from_term(c.clone(), var_map))
+                .map(|c| SemiCompressedTermTree::from_term(c.protect(), var_map))
                 .collect();
             let node = ExplicitNode {
                 head: t.get_head_symbol().protect(),

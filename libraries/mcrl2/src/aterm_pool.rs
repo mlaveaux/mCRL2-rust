@@ -49,9 +49,7 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
             let protection_set = set.write_exclusive(false);
 
             for (term, root) in protection_set.iter() {
-                unsafe {
-                    ffi::aterm_mark_address(term.ptr, todo.as_mut());
-                }
+                ffi::aterm_mark_address(term.ptr, todo.as_mut());
 
                 trace!("Marked {:?}, index {root}", term.ptr);
             }

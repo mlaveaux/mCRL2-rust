@@ -103,7 +103,7 @@ impl Iterator for PositionIterator {
             for (i, argument) in term.arguments().enumerate() {
                 let mut new_position = pos.clone();
                 new_position.indices.push(i + 1);
-                self.queue.push_back((argument.clone(), new_position));
+                self.queue.push_back((argument.protect(), new_position));
             }
 
             Some((term, pos))

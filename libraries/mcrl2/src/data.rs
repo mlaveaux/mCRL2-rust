@@ -145,7 +145,7 @@ impl fmt::Display for DataApplication {
 
         let head = args.next().unwrap();
         if head.is_data_function_symbol() {
-            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head))?;
+            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head.protect()))?;
         } else {
             write!(f, "{:?}", head)?;
         }
