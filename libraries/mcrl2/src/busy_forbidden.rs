@@ -1,11 +1,15 @@
-use std::{marker::PhantomData, ops::{DerefMut, Deref}, cell::UnsafeCell};
+use std::{
+    cell::UnsafeCell,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 use mcrl2_sys::atermpp::ffi;
 
 /// Provides access to the mCRL2 busy forbidden protocol. For more efficient
 /// shared mutex implementation see bf-sharedmutex.
 pub struct BfTermPool<T> {
-    object: UnsafeCell<T>
+    object: UnsafeCell<T>,
 }
 
 unsafe impl<T> Send for BfTermPool<T> {}
@@ -14,35 +18,36 @@ unsafe impl<T> Sync for BfTermPool<T> {}
 impl<T> BfTermPool<T> {
     pub fn new(object: T) -> BfTermPool<T> {
         BfTermPool {
-            object: UnsafeCell::new(object)
+            object: UnsafeCell::new(object),
         }
     }
 }
 
-
 impl<'a, T> BfTermPool<T> {
-
     /// Provides read access to the underlying object.
     pub fn read(&'a self) -> BfTermPoolRead<'a, T> {
         ffi::lock_shared();
         BfTermPoolRead {
             mutex: self,
-            _marker: Default::default()
+            _marker: Default::default(),
         }
     }
 
     /// Provides write access to the underlying object
-    /// 
+    ///
     /// # Safety
-    /// 
-    /// This function must ONLY be called within a thread local access. Provides mutable access
-    /// given that other threads use write exclusively.
-    pub unsafe fn write_threadlocal(&'a self) -> BfTermPoolThreadWrite<'a, T> {
-        // This is a lock shared, but assuming that ONLY one thread accesses it in "shared" mode.
-        ffi::lock_shared();
+    ///
+    /// Provides mutable access given that other threads use write exclusively. If we are already in an exclusive context
+    /// then lock can be set to false.
+    pub unsafe fn write_exclusive(&'a self, lock: bool) -> BfTermPoolThreadWrite<'a, T> {
+        // This is a lock shared, but assuming that only ONE thread uses this function.
+        if lock {
+            ffi::lock_shared();
+        }
         BfTermPoolThreadWrite {
             mutex: self,
-            _marker: Default::default()
+            locked: lock,
+            _marker: Default::default(),
         }
     }
 
@@ -51,10 +56,9 @@ impl<'a, T> BfTermPool<T> {
         ffi::lock_exclusive();
         BfTermPoolWrite {
             mutex: self,
-            _marker: Default::default()
+            _marker: Default::default(),
         }
     }
-
 }
 
 pub struct BfTermPoolRead<'a, T> {
@@ -73,7 +77,7 @@ impl<'a, T> Deref for BfTermPoolRead<'a, T> {
 
 impl<'a, T> Drop for BfTermPoolRead<'a, T> {
     fn drop(&mut self) {
-        ffi::unlock_shared();        
+        ffi::unlock_shared();
     }
 }
 
@@ -100,12 +104,13 @@ impl<'a, T> DerefMut for BfTermPoolWrite<'a, T> {
 
 impl<'a, T> Drop for BfTermPoolWrite<'a, T> {
     fn drop(&mut self) {
-        ffi::unlock_exclusive();        
+        ffi::unlock_exclusive();
     }
 }
 
 pub struct BfTermPoolThreadWrite<'a, T> {
     mutex: &'a BfTermPool<T>,
+    locked: bool,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -127,6 +132,8 @@ impl<'a, T> DerefMut for BfTermPoolThreadWrite<'a, T> {
 
 impl<'a, T> Drop for BfTermPoolThreadWrite<'a, T> {
     fn drop(&mut self) {
-        ffi::unlock_shared();        
+        if self.locked {
+            ffi::unlock_shared();
+        }
     }
 }
