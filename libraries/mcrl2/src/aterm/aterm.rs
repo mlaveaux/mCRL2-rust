@@ -1,17 +1,3 @@
-
-//! Rust interface of mcrl2::atermpp
-//! 
-//! This modules provides a safe abstraction for the C++ implementation of the
-//! atermpp library. For performance we have replicated the protection set
-//! mechanism on the Rust side, which is used during garbage collection to mark
-//! terms as being reachable.
-//! 
-//! Instead of `unprotected_aterm` there are [ATermRef] classes whose lifetime
-//! is bound by an existing term, providing a safe abstracting for terms that
-//! are implicitly protected by for example occuring as subterm of another
-//! protected term.
-
-
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -20,10 +6,7 @@ use std::{collections::VecDeque, fmt};
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
 use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
-use crate::symbol::{SymbolRef, SymbolTrait};
-use crate::aterm_pool::THREAD_TERM_POOL;
-
-pub use crate::aterm_pool::*;
+use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
 
 pub trait ATermTrait<'a> {
     /// Returns the indexed argument of the term

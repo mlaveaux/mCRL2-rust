@@ -11,9 +11,8 @@ use mcrl2_sys::{
 use utilities::protection_set::ProtectionSet;
 
 use crate::{
-    aterm::{ATerm, ATermTrait},
+    aterm::{ATerm, ATermTrait, BfTermPool, BfTermPoolThreadWrite, Symbol, SymbolTrait},
     data::{DataApplication, DataFunctionSymbol, DataVariable},
-    symbol::{Symbol, SymbolTrait}, busy_forbidden::{BfTermPool, BfTermPoolThreadWrite},
 };
 
 // TODO: Fix some of this garbage
@@ -383,7 +382,7 @@ impl fmt::Display for TermPool {
 mod tests {
     use std::thread;
 
-    use crate::aterm_builder::random_term;
+    use crate::aterm::random_term;
 
     use super::*;
     

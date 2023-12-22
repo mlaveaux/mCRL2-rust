@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::utilities::ExplicitPosition;
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait, ATermRef},
-    data::DataVariable, symbol::Symbol
+    aterm::{ATerm, TermPool, ATermTrait, ATermRef, Symbol},
+    data::DataVariable
 };
 
 /// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a TermSyntaxTree and is used
@@ -155,7 +155,7 @@ pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPositio
 mod tests {
     use super::*;
     use ahash::AHashSet;
-    use mcrl2::{aterm::TermPool, aterm_builder::apply, symbol::SymbolTrait};
+    use mcrl2::aterm::{TermPool, apply, SymbolTrait};
 
     /// Converts a slice of static strings into a set of owned strings
     /// 

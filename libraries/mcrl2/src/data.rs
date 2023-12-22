@@ -1,9 +1,6 @@
 use core::fmt;
 
-use crate::{
-    aterm::{ATerm, ATermList, ATermRef, ATermTrait},
-    symbol::SymbolTrait,
-};
+use crate::aterm::{ATerm, ATermList, ATermRef, ATermTrait, SymbolTrait};
 use mcrl2_sys::{atermpp, cxx::UniquePtr, data::ffi};
 
 pub struct DataSpecification {

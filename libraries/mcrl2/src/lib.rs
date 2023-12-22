@@ -1,12 +1,9 @@
 //!
 //! This crate provides safe bindings for the libraries of the
-//! [mCRL2](https://mcrl2.org/) toolset.
+//! [mCRL2](https://mcrl2.org/) toolset, using the FFI defined
+//! in the `mcrl2-sys` crate.
 //! 
 
-pub mod symbol;
 pub mod aterm;
-pub mod aterm_builder;
-pub mod aterm_pool;
-pub mod busy_forbidden;
 pub mod lps;
 pub mod data;

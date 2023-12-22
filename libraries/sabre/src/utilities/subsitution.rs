@@ -1,6 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::{aterm::{ATerm, ATermTrait}, aterm_builder::{TermBuilder, Yield}, symbol::SymbolTrait};
-use mcrl2::aterm_pool::TermPool;
+use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///

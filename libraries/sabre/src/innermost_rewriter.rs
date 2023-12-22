@@ -301,7 +301,7 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use ahash::AHashSet;
-    use mcrl2::{aterm::TermPool, aterm_builder::random_term};
+    use mcrl2::aterm::{TermPool, random_term};
 
     use test_log::test;
 
