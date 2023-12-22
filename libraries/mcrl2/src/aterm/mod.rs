@@ -11,13 +11,15 @@
 //! protected term.
 
 pub mod aterm_builder;
+pub mod aterm_container;
 pub mod aterm_pool;
 pub mod aterm;
 pub mod busy_forbidden;
 pub mod symbol;
 
 pub use aterm::*;
-pub use aterm_pool::*;
 pub use aterm_builder::*;
+pub use aterm_container::*;
+pub use aterm_pool::*;
 pub use busy_forbidden::*;
 pub use symbol::*;

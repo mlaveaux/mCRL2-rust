@@ -11,7 +11,7 @@ use mcrl2_sys::{
 use utilities::protection_set::ProtectionSet;
 
 use crate::{
-    aterm::{ATerm, ATermTrait, BfTermPool, BfTermPoolThreadWrite, Symbol, SymbolTrait},
+    aterm::{ATerm, ATermTrait, BfTermPool, BfTermPoolThreadWrite, Symbol, SymbolTrait, Markable},
     data::{DataApplication, DataFunctionSymbol, DataVariable},
 };
 
@@ -33,8 +33,12 @@ unsafe impl Send for ATermPtr {}
 
 type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
 
+/// The protection set for containers, note that we store pointers here because we manage lifetime ourselves.
+type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<dyn Markable + 'static>>>>;
+
 /// This is the global set of protection sets, that are managed by the ThreadTermPool
 static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec![]);
+static CONTAINER_PROTECTION_SETS: Mutex<Vec<Option<SharedContainerProtectionSet>>> = Mutex::new(vec![]);
 
 /// Marks the terms in all protection sets.
 fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
@@ -56,6 +60,18 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
             protected += protection_set.len();
             total += protection_set.number_of_insertions();
             max += protection_set.maximum_size();
+        }
+    }
+
+    for set in CONTAINER_PROTECTION_SETS.lock().iter().flatten() {
+        unsafe {
+            let protection_set = set.write_exclusive(false);
+
+            for (container, root) in protection_set.iter() {
+                container.mark(todo.as_mut());
+
+                trace!("Marked container index {root}");
+            }
         }
     }
 
@@ -81,6 +97,7 @@ thread_local! {
 
 pub struct ThreadTermPool {
     protection_set: SharedProtectionSet,
+    container_protection_set: SharedContainerProtectionSet,
     
     // TODO: On macOS destroying the callback causes issues. However, this should be fine since the related thread_aterm_pool is destroyed.
     _callback: ManuallyDrop<UniquePtr<ffi::callback_container>>,
@@ -119,9 +136,15 @@ impl ThreadTermPool {
         let mut protection_sets = PROTECTION_SETS.lock();
         protection_sets.push(Some(protection_set.clone()));
 
+        
+        let container_protection_set = Arc::new(BfTermPool::new(ProtectionSet::new()));
+        let mut protection_sets = CONTAINER_PROTECTION_SETS.lock();
+        protection_sets.push(Some(container_protection_set.clone()));
+
         trace!("Registered ThreadTermPool {}", protection_sets.len() - 1);
         ThreadTermPool {
             protection_set,
+            container_protection_set,
             _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
             index: protection_sets.len() - 1,
         }
@@ -132,6 +155,21 @@ impl ThreadTermPool {
         unsafe {
             protect_with(self.protection_set.write_exclusive(true), self.index, term)
         }
+    }
+
+    /// Protects the given aterm address and returns the term.
+    pub fn protect_container(&mut self, container: Arc<dyn Markable + 'static>) -> usize {
+        let root = unsafe {
+            self.container_protection_set.write_exclusive(true).protect(container)
+        };
+    
+        trace!(
+            "Protected container index {}, protection set {}",
+            root,
+            self.index,
+        );
+    
+        root
     }
 
     /// Removes the [ATerm] from the protection set.
@@ -147,6 +185,20 @@ impl ThreadTermPool {
                 self.index
             );
             protection_set.unprotect(term.root);
+        }
+    }
+
+    /// Removes the container from the protection set.
+    pub fn drop_container(&mut self, container_root: usize) {
+        
+        unsafe {
+            let mut protection_set = self.protection_set.write_exclusive(true);
+            trace!(
+                "Dropped container index {}, protection set {}",
+                container_root,
+                self.index
+            );
+            protection_set.unprotect(container_root);
         }
     }
 }
