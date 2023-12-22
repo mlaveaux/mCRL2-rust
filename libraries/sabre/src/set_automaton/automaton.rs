@@ -112,7 +112,7 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
             );
 
             let function_symbol: DataFunctionSymbol = head.protect().into();
-            add_symbol(function_symbol, args.len() - 1, symbols);
+            add_symbol(function_symbol, args.len(), symbols);
         }
     }
 }

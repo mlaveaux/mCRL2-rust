@@ -43,7 +43,7 @@ pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRe
 
     for index in &position.indices {
         unsafe {
-            result = result.arg(index - 1).upgrade(); // Note that positions are 1 indexed.
+            result = result.arg(index - 1).upgrade(&result); // Note that positions are 1 indexed.
         }
     }
     

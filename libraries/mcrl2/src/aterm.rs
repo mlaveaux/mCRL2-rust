@@ -1,3 +1,17 @@
+
+//! Rust interface of mcrl2::atermpp
+//! 
+//! This modules provides a safe abstraction for the C++ implementation of the
+//! atermpp library. For performance we have replicated the protection set
+//! mechanism on the Rust side, which is used during garbage collection to mark
+//! terms as being reachable.
+//! 
+//! Instead of `unprotected_aterm` there are [ATermRef] classes whose lifetime
+//! is bound by an existing term, providing a safe abstracting for terms that
+//! are implicitly protected by for example occuring as subterm of another
+//! protected term.
+
+
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -10,8 +24,6 @@ use crate::symbol::{SymbolRef, SymbolTrait};
 use crate::aterm_pool::THREAD_TERM_POOL;
 
 pub use crate::aterm_pool::*;
-
-/// Rust interface of a atermpp::aterm
 
 pub trait ATermTrait<'a> {
     /// Returns the indexed argument of the term
@@ -82,9 +94,27 @@ impl<'a> ATermRef<'a> {
         }
     }
 
-    /// In some cases the lifetime analysis can not figure out transitive lifetimes, and this unsafe
-    /// function can be used to extend the life time in that case.
-    pub unsafe fn upgrade<'b: 'a>(&self) -> ATermRef<'b> {
+    /// This allows us to extend our borrowed lifetime from 'a to 'b based on
+    /// existing parent term called `witness` which lives longer than us.
+    /// 
+    /// The main usecase is to establish transitive lifetimes. For example given
+    /// a term t from which we borrow `u = t.arg(0)` then we cannot have
+    /// u.arg(0) live as long as t since the intermediate temporary u is
+    /// dropped. However, since we know that u.arg(0) is a subterm of `t` we can
+    /// upgrade its lifetime to the lifetime of `t` using this function.
+    /// 
+    /// # Safety
+    /// 
+    /// This function might only be used if witness is a parent term of the
+    /// current term.
+    pub unsafe fn upgrade<'b: 'a>(&'a self, parent: &ATermRef<'b>) -> ATermRef<'b> {
+        debug_assert!(parent.iter().find(|t| t.borrow() == *self).is_some(), "Upgrade has been used on a witness that is not a parent term");
+
+        ATermRef::new(self.term)
+    }
+
+    /// A local unchecked version of [upgrade] since the above one uses the iterators.
+    unsafe fn upgrade_unchecked<'b: 'a>(&'a self, _parent: &ATermRef<'b>) -> ATermRef<'b> {
         ATermRef::new(self.term)
     }
 }
@@ -416,11 +446,12 @@ impl<'a> Iterator for ATermArgs<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            unsafe {
-                let res = Some(self.term.arg(self.index).upgrade());
-                self.index += 1;
-                res
-            }
+            let res = unsafe {
+               Some(self.term.arg(self.index).upgrade_unchecked(&self.term))
+            };
+
+            self.index += 1;
+            res
         } else {
             None
         }
@@ -430,11 +461,12 @@ impl<'a> Iterator for ATermArgs<'a> {
 impl<'a> DoubleEndedIterator for ATermArgs<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            unsafe {
-                let res = Some(self.term.arg(self.arity - 1).upgrade());
-                self.arity -= 1;
-                res
-            }
+            let res = unsafe {
+                Some(self.term.arg(self.arity - 1).upgrade_unchecked(&self.term))
+            };
+
+            self.arity -= 1;
+            res
         } else {
             None
         }

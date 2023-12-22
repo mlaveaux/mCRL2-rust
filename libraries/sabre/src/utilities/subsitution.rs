@@ -39,7 +39,7 @@ fn substitute_rec<'a>(
         let new_child_index = p[depth] - 1;
         let new_child = substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, depth + 1);
 
-        let mut args: Vec<ATerm> = t.arguments().map(|t| t.protect()).collect();
+        let mut args: Vec<ATerm> = t.arguments().map(|u| u.protect()).collect();
         args[new_child_index] = new_child;
 
         tp.create(&t.get_head_symbol(), &args)

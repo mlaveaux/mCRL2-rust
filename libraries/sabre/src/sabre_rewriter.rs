@@ -7,7 +7,7 @@ use mcrl2::{
 };
 
 use crate::{
-    rewrite_specification::RewriteSpecification,
+    RewriteSpecification,
     set_automaton::{
         check_equivalence_classes, get_data_function_symbol, EnhancedMatchAnnouncement,
         SetAutomaton,
