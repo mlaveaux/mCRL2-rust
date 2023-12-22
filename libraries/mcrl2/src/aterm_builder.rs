@@ -258,10 +258,10 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         let mut result = t.iter();
-        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap());
-        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap());
-        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap());
-        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap());
+        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap().borrow());
     }
 
     #[test]

@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::utilities::ExplicitPosition;
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait},
+    aterm::{ATerm, TermPool, ATermTrait, ATermRef},
     data::DataVariable, symbol::Symbol
 };
 
@@ -71,7 +71,7 @@ impl SemiCompressedTermTree {
     /// Creates a SCTT from a term. The var_map parameter should specify where the variable can be
     /// found in the lhs of the rewrite rule.
     pub(crate) fn from_term(
-        t: ATerm,
+        t: ATermRef,
         var_map: &HashMap<DataVariable, ExplicitPosition>,
     ) -> SemiCompressedTermTree {
         if t.is_data_variable() {
@@ -82,11 +82,11 @@ impl SemiCompressedTermTree {
                     .clone(),
             )
         } else if t.arguments().is_empty() {
-            Compressed(t)
+            Compressed(t.protect())
         } else {
             let children = t
                 .arguments()
-                .map(|c| SemiCompressedTermTree::from_term(c.protect(), var_map))
+                .map(|c| SemiCompressedTermTree::from_term(c, var_map))
                 .collect();
             let node = ExplicitNode {
                 head: t.get_head_symbol().protect(),
@@ -94,7 +94,7 @@ impl SemiCompressedTermTree {
             };
 
             if node.children.iter().all(|c| c.is_compressed()) {
-                Compressed(t)
+                Compressed(t.protect())
             } else {
                 Explicit(node)
             }
@@ -143,7 +143,7 @@ impl SemiCompressedTermTree {
 pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
     let mut result = HashMap::new();
 
-    for (term, position) in PositionIterator::new(t.clone()) {
+    for (term, position) in PositionIterator::new(t.borrow()) {
         if term.is_data_variable() {
             result.insert(term.into(), position.clone());
         }
@@ -183,7 +183,7 @@ mod tests {
         let t = tp.from_string("a").unwrap();
 
         let map = HashMap::new();
-        let sctt = SemiCompressedTermTree::from_term(t.clone(), &map);
+        let sctt = SemiCompressedTermTree::from_term(t.borrow(), &map);
         assert_eq!(sctt, Compressed(t));
     }
 
@@ -193,7 +193,7 @@ mod tests {
         let t = tp.from_string("f(a,a)").unwrap();
 
         let map = HashMap::new();
-        let sctt = SemiCompressedTermTree::from_term(t.clone(), &&map);
+        let sctt = SemiCompressedTermTree::from_term(t.borrow(), &&map);
         assert_eq!(sctt, Compressed(t));
     }
 
@@ -210,7 +210,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
 
-        let sctt = SemiCompressedTermTree::from_term(t, &map);
+        let sctt = SemiCompressedTermTree::from_term(t.borrow(), &map);
 
         let en = Explicit(ExplicitNode {
             head: tp.create_symbol("f", 2),
@@ -236,7 +236,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
 
-        let sctt = SemiCompressedTermTree::from_term(t, &map);
+        let sctt = SemiCompressedTermTree::from_term(t.borrow(), &map);
         let en = Explicit(ExplicitNode {
             head: tp.create_symbol("f", 2),
             children: vec![
@@ -260,7 +260,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(tp.create_variable("x"), ExplicitPosition::new(&[1]));
 
-        let sctt = SemiCompressedTermTree::from_term(t_rhs, &map);
+        let sctt = SemiCompressedTermTree::from_term(t_rhs.borrow(), &map);
 
         let t_expected = tp.from_string("f(f(a,a),b)").unwrap();
         assert_eq!(sctt.evaluate(&t_lhs, &mut tp), t_expected);

@@ -42,6 +42,7 @@ pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRe
     let mut result = term.borrow();
 
     for index in &position.indices {
+        // As long as the original term exists the subarguments are all protected.
         unsafe {
             result = result.arg(index - 1).upgrade(&result); // Note that positions are 1 indexed.
         }
@@ -77,20 +78,20 @@ impl fmt::Debug for ExplicitPosition {
 }
 
 /// An iterator over all (term, position) pairs of the given [ATerm].
-pub struct PositionIterator {
-    queue: VecDeque<(ATerm, ExplicitPosition)>,
+pub struct PositionIterator<'a> {
+    queue: VecDeque<(ATermRef<'a>, ExplicitPosition)>,
 }
 
-impl PositionIterator {
-    pub fn new(t: ATerm) -> PositionIterator {
+impl<'a> PositionIterator<'a> {
+    pub fn new(t: ATermRef<'a>) -> PositionIterator {
         PositionIterator {
             queue: VecDeque::from([(t, ExplicitPosition::empty_pos())]),
         }
     }
 }
 
-impl Iterator for PositionIterator {
-    type Item = (ATerm, ExplicitPosition);
+impl<'a> Iterator for PositionIterator<'a> {
+    type Item = (ATermRef<'a>, ExplicitPosition);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.queue.is_empty() {
@@ -100,10 +101,12 @@ impl Iterator for PositionIterator {
             let (term, pos) = self.queue.pop_front().unwrap();
 
             // Put subterms in the queue
-            for (i, argument) in term.arguments().enumerate() {
-                let mut new_position = pos.clone();
-                new_position.indices.push(i + 1);
-                self.queue.push_back((argument.protect(), new_position));
+            unsafe {
+                for (i, argument) in term.arguments().enumerate() {
+                    let mut new_position = pos.clone();
+                    new_position.indices.push(i + 1);
+                    self.queue.push_back((argument.upgrade(&term), new_position));
+                }
             }
 
             Some((term, pos))
@@ -131,12 +134,12 @@ mod tests {
         let mut tp = TermPool::new();
         let t = tp.from_string("f(g(a),b)").unwrap();
 
-        for (term, pos) in PositionIterator::new(t.clone()) {
-            assert_eq!(get_position(&t, &pos), term.borrow(), "The resulting (subterm, position) pair doesn't match the get_position implementation");
+        for (term, pos) in PositionIterator::new(t.borrow()) {
+            assert_eq!(get_position(&t, &pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
         }
 
         assert_eq!(
-            PositionIterator::new(t.clone()).count(),
+            PositionIterator::new(t.borrow()).count(),
             4,
             "The number of subterms doesn't match the expected value"
         );

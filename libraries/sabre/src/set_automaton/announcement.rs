@@ -5,7 +5,7 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
-use mcrl2::aterm::{ATerm, TermPool, ATermTrait};
+use mcrl2::aterm::{ATerm, TermPool, ATermTrait, ATermRef};
 use smallvec::SmallVec;
 
 use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
@@ -40,12 +40,12 @@ pub fn check_equivalence_classes(term: &ATerm, eqs: &[EquivalenceClass]) -> bool
 }
 
 /// Adds the position of a variable to the equivalence classes
-fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: ExplicitPosition) {
+fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: ATermRef, pos: ExplicitPosition) {
     // Check if the variable was seen before
-    if ve.iter().any(|ec| &ec.variable == variable) {
+    if ve.iter().any(|ec| ec.variable.borrow() == variable) {
         for ec in ve.iter_mut() {
             // Find the equivalence class and add the position
-            if &ec.variable == variable && !ec.positions.iter().any(|x| x == &pos) {
+            if ec.variable.borrow() == variable && !ec.positions.iter().any(|x| x == &pos) {
                 ec.positions.push(pos);
                 break;
             }
@@ -53,7 +53,7 @@ fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: Ex
     } else {
         // If the variable was not found at another position add a new equivalence class
         ve.push(EquivalenceClass {
-            variable: variable.clone(),
+            variable: variable.protect(),
             positions: vec![pos],
         });
     }
@@ -63,10 +63,10 @@ fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &ATerm, pos: Ex
 fn derive_equivalence_classes(announcement: &MatchAnnouncement) -> Vec<EquivalenceClass> {
     let mut var_equivalences = vec![];
 
-    for (term, pos) in PositionIterator::new(announcement.rule.lhs.clone()) {
+    for (term, pos) in PositionIterator::new(announcement.rule.lhs.borrow()) {
         if term.is_data_variable() {
             // Register the position of the variable
-            update_equivalences(&mut var_equivalences, &term, pos);
+            update_equivalences(&mut var_equivalences, term, pos);
         }
     }
 
@@ -126,13 +126,13 @@ impl EnhancedMatchAnnouncement {
         // rhs of the rewrite rule and for lhs and rhs of each condition.
         // Also see the documentation of SemiCompressedTermTree
         let var_map = create_var_map(&announcement.rule.lhs);
-        let sctt_rhs = SemiCompressedTermTree::from_term(announcement.rule.rhs.clone(), &var_map);
+        let sctt_rhs = SemiCompressedTermTree::from_term(announcement.rule.rhs.borrow(), &var_map);
         let mut conditions = vec![];
 
         for c in &announcement.rule.conditions {
             let ema_condition = EMACondition {
-                semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.clone(), &var_map),
-                semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.clone(), &var_map),
+                semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.borrow(), &var_map),
+                semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.borrow(), &var_map),
                 equality: c.equality,
             };
             conditions.push(ema_condition);
@@ -146,7 +146,7 @@ impl EnhancedMatchAnnouncement {
         let mut positions = vec![];
         let mut stack_size = 0;
 
-        for (term, position) in PositionIterator::new(announcement.rule.rhs.clone()) {
+        for (term, position) in PositionIterator::new(announcement.rule.rhs.borrow()) {
             if let Some(index) = position.indices.last() {
                 if *index == 1 {
                     continue; // Skip the function symbol.
@@ -157,7 +157,7 @@ impl EnhancedMatchAnnouncement {
                 positions.push((var_map.get(&term.into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
             } else if tp.is_data_application(&term) || term.is_data_function_symbol() {
-                let arity = get_data_arguments(tp, &term).len();
+                let arity = get_data_arguments(tp, &term.protect()).len();
                 innermost_stack.push(Config::Construct(get_data_function_symbol(tp, term.borrow()), arity, stack_size));
                 stack_size += 1;
             } else {

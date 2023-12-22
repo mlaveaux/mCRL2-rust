@@ -178,7 +178,7 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
     }
 
     fn iter(&self) -> TermIterator {
-        TermIterator::new(self.protect())
+        TermIterator::new(self.borrow())
     }
 
     fn is_data_variable(&self) -> bool {
@@ -484,20 +484,20 @@ pub struct ATermListIter<T> {
 }
 
 /// An iterator over all subterms of the given [ATerm].
-pub struct TermIterator {
-    queue: VecDeque<ATerm>,
+pub struct TermIterator<'a> {
+    queue: VecDeque<ATermRef<'a>>,
 }
 
-impl TermIterator {
-    pub fn new(t: ATerm) -> TermIterator {
+impl TermIterator<'_> {
+    pub fn new(t: ATermRef) -> TermIterator {
         TermIterator {
             queue: VecDeque::from([t]),
         }
     }
 }
 
-impl Iterator for TermIterator {
-    type Item = ATerm;
+impl<'a> Iterator for TermIterator<'a> {
+    type Item = ATermRef<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.queue.is_empty() {
@@ -508,7 +508,9 @@ impl Iterator for TermIterator {
 
             // Put subterms in the queue
             for argument in term.arguments().rev() {
-                self.queue.push_back(argument.protect());
+                unsafe {
+                    self.queue.push_back(argument.upgrade_unchecked(&term));
+                }
             }
 
             Some(term)
@@ -587,7 +589,7 @@ impl<'a> ATermTrait<'a> for ATerm {
     }
 
     fn iter(&self) -> TermIterator {
-        self.borrow().iter()
+        TermIterator::new(self.borrow())
     }
 
     fn is_data_variable(&self) -> bool {
