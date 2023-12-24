@@ -82,9 +82,11 @@ impl<T: Markable> Markable for Vec<T> {
     }
 }
 
-impl<'a, T: Markable + ?Sized> Markable for BfTermPool<T> {
-    fn mark(&mut self, mut todo: Pin<&mut ffi::term_mark_stack>) {
-        // Marking will done while an exclusive lock is already held
+impl<'a, T: Markable + ?Sized> BfTermPool<T> {
+    pub fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
+        // Marking will done while an exclusive lock is already held, also this
+        // does not implement the Markable trait since self must be immutable
+        // here.
         unsafe {
             self.write_exclusive(false).mark(todo.as_mut());
         }

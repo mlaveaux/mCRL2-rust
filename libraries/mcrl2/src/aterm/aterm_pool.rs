@@ -15,6 +15,8 @@ use crate::{
     data::{DataApplication, DataFunctionSymbol, DataVariable},
 };
 
+use super::ATermRef;
+
 // TODO: Fix some of this garbage
 #[derive(Clone, Debug)]
 struct ATermPtr {
@@ -34,7 +36,7 @@ unsafe impl Send for ATermPtr {}
 type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
 
 /// The protection set for containers, note that we store pointers here because we manage lifetime ourselves.
-type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<dyn Markable + 'static>>>>;
+type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<BfTermPool<Vec<ATermRef<'static>>>>>>>;
 
 /// This is the global set of protection sets, that are managed by the ThreadTermPool
 static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec![]);
@@ -48,6 +50,7 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
     
     trace!("Marking terms:");
     for set in PROTECTION_SETS.lock().iter().flatten() {
+        // Do not lock since we acquired a global lock.
         unsafe {
             let protection_set = set.write_exclusive(false);
 
@@ -64,13 +67,14 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
     }
 
     for set in CONTAINER_PROTECTION_SETS.lock().iter().flatten() {
+        // Do not lock since we acquired a global lock.
         unsafe {
             let protection_set = set.write_exclusive(false);
 
             for (container, root) in protection_set.iter() {
                 container.mark(todo.as_mut());
 
-                trace!("Marked container index {root}");
+                info!("Marked container index {root}");
             }
         }
     }
@@ -158,7 +162,7 @@ impl ThreadTermPool {
     }
 
     /// Protects the given aterm address and returns the term.
-    pub fn protect_container(&mut self, container: Arc<dyn Markable + 'static>) -> usize {
+    pub fn protect_container(&mut self, container: Arc<BfTermPool<Vec<ATermRef<'static>>>>) -> usize {
         let root = unsafe {
             self.container_protection_set.write_exclusive(true).protect(container)
         };
