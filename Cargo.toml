@@ -1,6 +1,5 @@
 [profile.release]
-lto = true
-incremental = true
+lto = "thin"
 
 [profile.bench]
 debug = "line-tables-only"
@@ -13,9 +12,12 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
-rust-version = "1.70.0"
+authors = ["Maurice Laveaux"]
 edition = "2021"
+license = "BSL-1.0"
+repository = "https://github.com/mlaveaux/mCRL2-rust.git"
+rust-version = "1.70.0"
+version = "0.1.0"
 
 [workspace.dependencies]
 rand = "0.8"
