@@ -1,50 +1,61 @@
-use std::{pin::Pin, sync::Arc, mem::transmute};
+use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData};
 
 use mcrl2_sys::atermpp::ffi;
 
 use crate::aterm::{ATermRef, BfTermPool, BfTermPoolThreadWrite, THREAD_TERM_POOL};
 
-/// A container of objects that are Markable.
-struct TermContainer<C: Markable> {
-    container: Arc<BfTermPool<C>>,
+use super::{BfTermPoolRead, ATermTrait};
+
+/// A container of objects, typically either terms or objects containing terms, that are Markable.
+/// These store ATermRef<'static> that are protected during garbage collection by the container itself.
+pub struct TermContainer<C> {
+    container: Arc<BfTermPool<Vec<ATermRef<'static>>>>,
     root: usize,
+    marker: PhantomData<C>,
 }
 
-impl<C: Send + Markable> TermContainer<C> {
+impl<C> TermContainer<C> {
 
-    pub fn new(container: C) -> TermContainer<C> {
-        let mut container = Arc::new(BfTermPool::new(container));
+    pub fn new(container: Vec<ATermRef<'static>>) -> TermContainer<C> {
+        let shared = Arc::new(BfTermPool::new(container));
 
         let root = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-
-            unsafe {
-                let t: Arc<dyn Markable + 'static> = container.clone();
-                tp.protect_container(t)
-            }
+            tp.protect_container(shared.clone())
         });
 
         TermContainer {
-            container,
+            container: shared,
             root,
+            marker: Default::default(),
         }
     }
+
+    /// Provides mutable access to the underlying container.
+    pub fn write<'a>(&'a mut self) -> BfTermPoolThreadWrite<'a, Vec<ATermRef<'a>>> {
+        // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
+        unsafe {
+            transmute(self.container.write_exclusive(true))
+        }
+    }
+
+    /// Provides immutable access to the underlying container.
+    pub fn read<'a>(&'a self) -> BfTermPoolRead<'a, Vec<ATermRef<'a>>> {
+        // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
+        unsafe {
+            transmute(self.container.read())
+        }
+    }
+
 }
 
-//     pub fn write<'b: 'a>(&'b self) -> BfTermPoolThreadWrite<'b, C> {
-//         unsafe {
-//             self.container.write_exclusive(true)      
-//         }
-//     }
-// }
+impl<C> Drop for TermContainer<C> {
 
-// impl<'a, C: Markable<'a>> Drop for TermContainer<'a, C> {
-
-//     fn drop(&mut self) {
-//         THREAD_TERM_POOL.with_borrow_mut(|tp| {
-//             tp.drop_container(self.root);
-//         });
-//     }
-// }
+    fn drop(&mut self) {
+        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            tp.drop_container(self.root);
+        });
+    }
+}
 
 /// This trait should be used on all objects and containers related to storing unprotected terms.
 pub trait Markable {
@@ -53,21 +64,23 @@ pub trait Markable {
     fn mark(&mut self, todo: Pin<&mut ffi::term_mark_stack>);
 }
 
-// impl<'a> Markable<'a> for ATermRef<'a> {
-//     fn mark(&self, todo: Pin<&mut ffi::term_mark_stack>) {
-//         unsafe {
-//             ffi::aterm_mark_address(self.term, todo);
-//         }
-//     }
-// }
+impl<'a> Markable for ATermRef<'a> {
+    fn mark(&mut self, todo: Pin<&mut ffi::term_mark_stack>) {
+        if !self.is_default() {
+            unsafe {
+                ffi::aterm_mark_address(self.term, todo);
+            }
+        }
+    }
+}
 
-// impl<'a, T: Markable<'a>> Markable<'a> for Vec<T> {
-//     fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
-//         for value in self {
-//             value.mark(todo.as_mut());
-//         }
-//     }
-// }
+impl<T: Markable> Markable for Vec<T> {
+    fn mark(&mut self, mut todo: Pin<&mut ffi::term_mark_stack>) {
+        for value in self {
+            value.mark(todo.as_mut());
+        }
+    }
+}
 
 impl<'a, T: Markable + ?Sized> Markable for BfTermPool<T> {
     fn mark(&mut self, mut todo: Pin<&mut ffi::term_mark_stack>) {
@@ -78,22 +91,29 @@ impl<'a, T: Markable + ?Sized> Markable for BfTermPool<T> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+impl<C: Default> Default for TermContainer<C> {
+    fn default() -> Self {
+        TermContainer::new(Default::default())
+    }
+}
 
-//     use crate::aterm::{ATermRef, TermPool};
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_aterm_container() {
-//         let mut tp = TermPool::new();
-//         let t = tp.from_string("f(g(a),b)").unwrap();
+    use crate::aterm::TermPool;
+
+
+    #[test]
+    fn test_aterm_container() {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(g(a),b)").unwrap();
         
-//         // First test the trait for a standard container.
-//         let container = TermContainer::<Vec::<ATermRef>>::new(vec![]);
+        // First test the trait for a standard container.
+        let mut container = TermContainer::<Vec::<ATermRef>>::new(vec![]);
 
-//         for _ in 0..1000 {
-//             container.write().push(t.borrow());
-//         }
-//     }
-// }
+        for _ in 0..1000 {
+            container.write().push(t.borrow());
+        }
+    }
+}
