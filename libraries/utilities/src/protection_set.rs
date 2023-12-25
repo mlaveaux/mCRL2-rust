@@ -175,6 +175,7 @@ mod tests {
 
         // Unprotect a number of roots.
         for index in 0..2500 {
+            assert!(protection_set[indices[index]] <= 1000);
             protection_set.unprotect(indices[index]);
             indices.remove(index);
         }
@@ -192,6 +193,11 @@ mod tests {
         }
 
         assert_eq!(protection_set.iter().count(), 6000 - 2500, "This is the number of roots remaining");
+        assert_eq!(protection_set.number_of_insertions(), 6000);
+        assert!(protection_set.maximum_size() >= 5000);
+        assert!(!protection_set.is_empty());
+
+        println!("{:?}", protection_set);
 
         // TODO: Fix this test.
         // for root in protection_set.iter() {

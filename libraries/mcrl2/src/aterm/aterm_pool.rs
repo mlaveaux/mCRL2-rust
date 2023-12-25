@@ -196,13 +196,13 @@ impl ThreadTermPool {
     pub fn drop_container(&mut self, container_root: usize) {
         
         unsafe {
-            let mut protection_set = self.protection_set.write_exclusive(true);
+            let mut container_protection_set = self.container_protection_set.write_exclusive(true);
             trace!(
                 "Dropped container index {}, protection set {}",
                 container_root,
                 self.index
             );
-            protection_set.unprotect(container_root);
+            container_protection_set.unprotect(container_root);
         }
     }
 }
