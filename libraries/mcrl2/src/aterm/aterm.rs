@@ -94,7 +94,7 @@ impl<'a> ATermRef<'a> {
     /// This function might only be used if witness is a parent term of the
     /// current term.
     pub fn upgrade<'b: 'a>(&'a self, parent: &ATermRef<'b>) -> ATermRef<'b> {
-        debug_assert!(parent.iter().find(|t| t.borrow() == *self).is_some(), "Upgrade has been used on a witness that is not a parent term");
+        debug_assert!(parent.iter().any(|t| t.borrow() == *self), "Upgrade has been used on a witness that is not a parent term");
 
         ATermRef::new(self.term)
     }
@@ -524,7 +524,7 @@ impl Ord for ATerm {
 
 impl Eq for ATerm {}
 
-impl<'a> ATermTrait for ATerm {
+impl ATermTrait for ATerm {
     fn arg(&self, index: usize) -> ATermRef {
         debug_assert!(
             index < self.get_head_symbol().arity(),

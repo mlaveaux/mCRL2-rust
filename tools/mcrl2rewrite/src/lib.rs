@@ -44,7 +44,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
             // Read the file line by line, and return an iterator of the lines of the file.
             let now = Instant::now();
             for term in &terms {
-                let result = jitty_rewriter.rewrite(&term);
+                let result = jitty_rewriter.rewrite(term);
                 if output {
                     println!("{}", result)
                 }

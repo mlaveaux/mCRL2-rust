@@ -15,7 +15,7 @@ use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool,
 /// Then we traverse the term until we have arrived at a and replace it with 0.
 /// We then construct s(0) (using the maximally shared term pool)
 /// We then construct s(s(0)) (using the maximally shared term pool)
-pub fn substitute<'a>(tp: &mut TermPool, t: &'a impl ATermTrait, new_subterm: ATerm, p: &[usize]) -> ATerm {
+pub fn substitute(tp: &mut TermPool, t: &impl ATermTrait, new_subterm: ATerm, p: &[usize]) -> ATerm {
     substitute_rec(tp, t, new_subterm, p, 0)
 }
 
@@ -23,9 +23,9 @@ pub fn substitute<'a>(tp: &mut TermPool, t: &'a impl ATermTrait, new_subterm: AT
 ///
 /// 'depth'         -   Used to keep track of the depth in 't'. Function should be called with
 ///                     'depth' = 0.
-fn substitute_rec<'a>(
+fn substitute_rec(
     tp: &mut TermPool,
-    t: &'a impl ATermTrait,
+    t: &impl ATermTrait,
     new_subterm: ATerm,
     p: &[usize],
     depth: usize,

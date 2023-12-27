@@ -35,7 +35,7 @@ impl<C> TermContainer<C> {
     /// the resulting guard to be able to insert terms into the container.
     /// Otherwise the borrow checker will note that the [ATermRef] do not
     /// outlive the guard, see [TermProtection].
-    pub fn write<'a>(&'a mut self) -> TermProtection<'a, Vec<ATermRef<'a>>> {
+    pub fn write(&mut self) -> TermProtection<'_, Vec<ATermRef<'_>>> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
             TermProtection::new(transmute(self.container.write_exclusive(true)))
@@ -43,7 +43,7 @@ impl<C> TermContainer<C> {
     }
 
     /// Provides immutable access to the underlying container.
-    pub fn read<'a>(&'a self) -> BfTermPoolRead<'a, Vec<ATermRef<'a>>> {
+    pub fn read(&self) -> BfTermPoolRead<'_, Vec<ATermRef<'_>>> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
             transmute(self.container.read())
@@ -92,7 +92,7 @@ impl<T: Markable> Markable for Vec<T> {
     }
 }
 
-impl<'a, T: Markable + ?Sized> BfTermPool<T> {
+impl<T: Markable + ?Sized> BfTermPool<T> {
     pub fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
         // Marking will done while an exclusive lock is already held, also this
         // does not implement the Markable trait since self must be immutable
@@ -133,7 +133,7 @@ impl<'a, C: Markable> TermProtection<'a, C> {
         }
     }
     
-    pub fn protect<'b>(&mut self, term: ATermRef<'b>) -> ATermRef<'static>{
+    pub fn protect(&mut self, term: ATermRef<'_>) -> ATermRef<'static>{
 
         unsafe {
             // Store terms that are marked as protected to check if they are

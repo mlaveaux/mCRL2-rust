@@ -139,7 +139,7 @@ pub struct ThreadTermPool {
 /// Protects the given aterm address and returns the term.
 ///     - guard: An existing guard to the ThreadTermPool.protection_set.
 ///     - index: The index of the ThreadTermPool
-fn protect_with<'a>(mut guard: BfTermPoolThreadWrite<'a, ProtectionSet<ATermPtr>>, index: usize, term: *const ffi::_aterm) -> ATerm {
+fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, index: usize, term: *const ffi::_aterm) -> ATerm {
     debug_assert!(!term.is_null(), "Can only protect valid terms");
     let aterm = ATermPtr::new(term);
     let root = guard.protect(aterm.clone());
@@ -305,7 +305,7 @@ impl TermPool {
             unsafe {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
-                let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &arguments);
+                let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), arguments);
                 protect_with(protection_set, tp.index, term)
             }
         });
@@ -405,7 +405,7 @@ impl TermPool {
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             unsafe {
                 let protection_set = tp.protection_set.write_exclusive(true);
-                let term = ffi::create_aterm(symbol.address(), &arguments);
+                let term = ffi::create_aterm(symbol.address(), arguments);
                 protect_with(protection_set,  tp.index, term)
             }
         });
