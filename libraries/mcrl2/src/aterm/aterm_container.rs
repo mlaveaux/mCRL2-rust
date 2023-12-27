@@ -1,4 +1,4 @@
-use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData};
+use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}};
 
 use mcrl2_sys::atermpp::ffi;
 
@@ -6,8 +6,9 @@ use crate::aterm::{ATermRef, BfTermPool, BfTermPoolThreadWrite, THREAD_TERM_POOL
 
 use super::{BfTermPoolRead, ATermTrait};
 
-/// A container of objects, typically either terms or objects containing terms, that are Markable.
-/// These store ATermRef<'static> that are protected during garbage collection by the container itself.
+/// A container of objects, typically either terms or objects containing terms,
+/// that are of trait Markable. These store ATermRef<'static> that are protected
+/// during garbage collection by being in the container itself.
 pub struct TermContainer<C> {
     container: Arc<BfTermPool<Vec<ATermRef<'static>>>>,
     root: usize,
@@ -30,11 +31,14 @@ impl<C> TermContainer<C> {
         }
     }
 
-    /// Provides mutable access to the underlying container.
-    pub fn write<'a>(&'a mut self) -> BfTermPoolThreadWrite<'a, Vec<ATermRef<'a>>> {
+    /// Provides mutable access to the underlying container. Use [protect] of
+    /// the resulting guard to be able to insert terms into the container.
+    /// Otherwise the borrow checker will note that the [ATermRef] do not
+    /// outlive the guard, see [TermProtection].
+    pub fn write<'a>(&'a mut self) -> TermProtection<'a, Vec<ATermRef<'a>>> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
-            transmute(self.container.write_exclusive(true))
+            TermProtection::new(transmute(self.container.write_exclusive(true)))
         }
     }
 
@@ -46,6 +50,12 @@ impl<C> TermContainer<C> {
         }
     }
 
+}
+
+impl<C: Default> Default for TermContainer<C> {
+    fn default() -> Self {
+        TermContainer::new(Default::default())
+    }
 }
 
 impl<C> Drop for TermContainer<C> {
@@ -93,9 +103,73 @@ impl<'a, T: Markable + ?Sized> BfTermPool<T> {
     }
 }
 
-impl<C: Default> Default for TermContainer<C> {
-    fn default() -> Self {
-        TermContainer::new(Default::default())
+
+
+/// This is a helper struct used by TermContainer to protected terms that are
+/// inserted into the container before the guard is dropped.
+/// 
+/// The reason is that the ATermRef derive their lifetime from the
+/// TermContainer. However, when inserting terms with shorter lifetimes we know
+/// that their lifetime is extended by being in the container. This is enforced
+/// by runtime checks during debug for containers that implement IntoIterator.
+pub struct TermProtection<'a, C: Markable> {
+    reference: BfTermPoolThreadWrite<'a, C>,
+    
+    #[cfg(debug_assertions)]
+    protected: Vec<ATermRef<'static>>
+}
+
+impl<'a, C: Markable> TermProtection<'a, C> {
+    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> TermProtection<'_, C> {
+        #[cfg(debug_assertions)]
+        return TermProtection {
+            reference,
+            protected: vec![]
+        };
+        
+        #[cfg(not(debug_assertions))]
+        return TermProtection {
+            reference,
+        }
+    }
+    
+    pub fn protect<'b>(&mut self, term: ATermRef<'b>) -> ATermRef<'static>{
+
+        unsafe {
+            // Store terms that are marked as protected to check if they are
+            // actually in the container when the protection is dropped.
+            #[cfg(debug_assertions)]
+            self.protected.push(transmute(term.borrow()));
+
+            transmute(term)
+        }
+    }
+}
+
+impl<'a, C: Markable> Deref for TermProtection<'a, C> {
+    type Target = C;
+    
+    fn deref(&self) -> &Self::Target {
+        &self.reference
+    }
+}
+
+impl<'a, C: Markable> DerefMut for TermProtection<'a, C> {
+
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.reference        
+    }    
+}
+
+impl<'a, C: Markable> Drop for TermProtection<'a, C> {
+    fn drop(&mut self) {
+        // TODO: Implement this.
+        #[cfg(debug_assertions)]
+        {
+            // for term in &self.protected {
+            //     debug_assert!(self.reference.into_iter().find(|t| t == term).is_some(), "Term was protected, but not actually inserted");
+            // }
+        }
     }
 }
 

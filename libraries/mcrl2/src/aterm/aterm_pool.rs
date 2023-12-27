@@ -11,13 +11,15 @@ use mcrl2_sys::{
 use utilities::protection_set::ProtectionSet;
 
 use crate::{
-    aterm::{ATerm, ATermTrait, BfTermPool, BfTermPoolThreadWrite, Symbol, SymbolTrait, Markable},
+    aterm::{ATerm, ATermTrait, BfTermPool, BfTermPoolThreadWrite, Symbol, SymbolTrait},
     data::{DataApplication, DataFunctionSymbol, DataVariable},
 };
 
 use super::ATermRef;
 
-// TODO: Fix some of this garbage
+/// This newtype is necessary since plain pointers cannot be marked as Send.
+/// However since terms are immutable pointers it is fine to read them in multiple
+/// threads.
 #[derive(Clone, Debug)]
 struct ATermPtr {
     ptr: *const ffi::_aterm,
@@ -33,12 +35,13 @@ impl ATermPtr {
 
 unsafe impl Send for ATermPtr {}
 
+/// The protection set for terms.
 type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
 
-/// The protection set for containers, note that we store pointers here because we manage lifetime ourselves.
+/// The protection set for containers. Note that we store ATermRef<'static> here because we manage lifetime ourselves.
 type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<BfTermPool<Vec<ATermRef<'static>>>>>>>;
 
-/// This is the global set of protection sets, that are managed by the ThreadTermPool
+/// This is the global set of protection sets that are managed by the ThreadTermPool
 static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec![]);
 static CONTAINER_PROTECTION_SETS: Mutex<Vec<Option<SharedContainerProtectionSet>>> = Mutex::new(vec![]);
 
@@ -66,6 +69,10 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
         }
     }
 
+    let mut num_containers = 0;
+    let mut max_containers = 0;
+    let mut total_containers = 0;
+    let mut inside_containers = 0;
     for set in CONTAINER_PROTECTION_SETS.lock().iter().flatten() {
         // Do not lock since we acquired a global lock.
         unsafe {
@@ -74,14 +81,28 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
             for (container, root) in protection_set.iter() {
                 container.mark(todo.as_mut());
 
-                info!("Marked container index {root}");
+                let length = container.read().len();
+
+                trace!("Marked container index {root}, size {}", length);
+
+                inside_containers += length;
             }
+            
+            num_containers += protection_set.len();
+            total_containers += protection_set.number_of_insertions();
+            max_containers += protection_set.maximum_size();
         }
     }
 
     info!(
-        "Collecting garbage: protected {} terms, protection set {} insertions, max size {}",
-        protected, total, max
+        "Collecting garbage: protected {} terms of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {}",
+        protected, 
+        inside_containers,
+        num_containers,    
+        total, 
+        max,
+        total_containers,
+        max_containers,    
     );
 }
 
@@ -90,6 +111,13 @@ fn protection_set_size() -> usize {
     let mut result = 0;
     for set in PROTECTION_SETS.lock().iter().flatten() {
         result += set.read().len();
+    }
+    
+    // Gather the sizes of all containers
+    for set in CONTAINER_PROTECTION_SETS.lock().iter().flatten() {
+        for (container, _index) in set.read().iter() {
+            result += container.read().len();
+        }
     }
     result
 }
