@@ -4,11 +4,11 @@ use std::collections::{HashMap, HashSet};
 
 use crate::utilities::ExplicitPosition;
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait, ATermRef, Symbol},
+    aterm::{ATerm, TermPool, ATermTrait, ATermRef, Symbol, TermBuilder, Yield},
     data::DataVariable
 };
 
-/// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a TermSyntaxTree and is used
+/// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a syntax tree and is used
 /// to represent the rhs of rewrite rules and the lhs and rhs of conditions.
 ///
 /// It stores as much as possible in the term pool. Due to variables it cannot be fully compressed.
@@ -52,20 +52,23 @@ impl SemiCompressedTermTree {
     /// Both these recursive calls will return the term '0'.
     /// The term pool will be used to construct the term minus(0, 0).
     pub fn evaluate(&self, t: &ATerm, tp: &mut TermPool) -> ATerm {
-        match self {
-            Explicit(node) => {
-                // Create an ATerm with as arguments all the evaluated semi compressed term trees.
-                let mut subterms = Vec::with_capacity(node.children.len());
+        let mut builder = TermBuilder::<&SemiCompressedTermTree, &Symbol>::new();
 
-                for i in 0..node.children.len() {
-                    subterms.push(node.children[i].evaluate(t, tp));
+        builder.evaluate(tp, self, |_tp, args, node| {
+                match node {
+                    Explicit(node) => {
+                        // Create an ATerm with as arguments all the evaluated semi compressed term trees.    
+                        for i in 0..node.children.len() {
+                            args.push(&node.children[i]);
+                        }
+
+                        Ok(Yield::Construct(&node.head))
+                    }
+                    Compressed(ct) => Ok(Yield::Term(ct.clone())),
+                    Variable(p) => Ok(Yield::Term(get_position(t, p).protect())),
                 }
-
-                tp.create(&node.head, &subterms)
-            }
-            Compressed(ct) => ct.clone(),
-            Variable(p) => get_position(t, p).protect(),
-        }
+            }, 
+            |tp, symbol, args| { Ok(tp.create(symbol, &args)) } ).unwrap()
     }
 
     /// Creates a SCTT from a term. The var_map parameter should specify where the variable can be
