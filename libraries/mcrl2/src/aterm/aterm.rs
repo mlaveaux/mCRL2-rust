@@ -8,12 +8,15 @@ use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
 use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
 
-pub trait ATermTrait<'a> {
+pub trait ATermTrait {
     /// Returns the indexed argument of the term
-    fn arg(&self, index: usize) -> ATermRef;
+    fn arg(&self, index: usize) -> ATermRef<'_>;
 
     /// Returns the list of arguments as a collection
-    fn arguments(&self) -> ATermArgs;
+    fn arguments(&self) -> ATermArgs<'_>;
+
+    /// Take a borrow of the term
+    fn borrow(&self) -> ATermRef<'_>;
 
     /// Returns whether the term is the default term (not initialised)
     fn is_default(&self) -> bool;
@@ -28,10 +31,10 @@ pub trait ATermTrait<'a> {
     fn is_int(&self) -> bool;
 
     /// Returns the head function symbol of the term.
-    fn get_head_symbol(&'a self) -> SymbolRef<'a>;
+    fn get_head_symbol(&self) -> SymbolRef<'_>;
 
     /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
-    fn iter(&'a self) -> TermIterator;
+    fn iter(&self) -> TermIterator<'_>;
 
     // Recognizers for the data library
 
@@ -90,7 +93,7 @@ impl<'a> ATermRef<'a> {
     /// 
     /// This function might only be used if witness is a parent term of the
     /// current term.
-    pub unsafe fn upgrade<'b: 'a>(&'a self, parent: &ATermRef<'b>) -> ATermRef<'b> {
+    pub fn upgrade<'b: 'a>(&'a self, parent: &ATermRef<'b>) -> ATermRef<'b> {
         debug_assert!(parent.iter().find(|t| t.borrow() == *self).is_some(), "Upgrade has been used on a witness that is not a parent term");
 
         ATermRef::new(self.term)
@@ -109,14 +112,9 @@ impl<'a> ATermRef<'a> {
             marker: PhantomData,
         }
     }
-
-    /// Borrows the term with a potentially shorter lifetime.
-    pub fn borrow<'b: 'a>(&self) -> ATermRef<'b> {
-        ATermRef::new(self.term)
-    }
 }
 
-impl<'a> ATermTrait<'a> for ATermRef<'a> {
+impl<'a> ATermTrait for ATermRef<'a> {
     fn arg(&self, index: usize) -> ATermRef {
         self.require_valid();
         debug_assert!(
@@ -137,6 +135,10 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
         self.require_valid();
 
         ATermArgs::new(self.borrow())
+    }
+    
+    fn borrow(&self) -> ATermRef<'_> {
+        ATermRef::new(self.term)
     }
 
     fn is_default(&self) -> bool {
@@ -160,7 +162,7 @@ impl<'a> ATermTrait<'a> for ATermRef<'a> {
         unsafe { ffi::get_aterm_function_symbol(self.term).into() }
     }
 
-    fn iter(&self) -> TermIterator {
+    fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.borrow())
     }
 
@@ -243,12 +245,6 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 pub struct ATerm {
     pub(crate) term: *const ffi::_aterm,
     pub(crate) root: usize,
-}
-
-impl<'a> ATerm {
-    pub fn borrow(&self) -> ATermRef {
-        ATermRef::new(self.term)
-    }
 }
 
 impl Default for ATerm {
@@ -528,7 +524,7 @@ impl Ord for ATerm {
 
 impl Eq for ATerm {}
 
-impl<'a> ATermTrait<'a> for ATerm {
+impl<'a> ATermTrait for ATerm {
     fn arg(&self, index: usize) -> ATermRef {
         debug_assert!(
             index < self.get_head_symbol().arity(),
@@ -545,10 +541,13 @@ impl<'a> ATermTrait<'a> for ATerm {
         }
     }
 
-    fn arguments(&self) -> ATermArgs {
+    fn arguments(&self) -> ATermArgs<'_> {
         ATermArgs::new(self.borrow())
     }
 
+    fn borrow(&self) -> ATermRef<'_> {
+        ATermRef::new(self.term)
+    }
     fn is_default(&self) -> bool {
         self.term.is_null()
     }
@@ -565,13 +564,13 @@ impl<'a> ATermTrait<'a> for ATerm {
         self.borrow().is_int()
     }
 
-    fn get_head_symbol(&'a self) -> SymbolRef<'a> {
+    fn get_head_symbol(&self) -> SymbolRef<'_> {
         self.require_valid();
 
         unsafe { ffi::get_aterm_function_symbol(self.term).into() }
     }
 
-    fn iter(&self) -> TermIterator {
+    fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.borrow())
     }
 

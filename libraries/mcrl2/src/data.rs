@@ -177,6 +177,10 @@ impl DataFunctionSymbol {
         String::from(self.term.arg(0).get_head_symbol().name())
     }
 
+    pub fn borrow(&self) -> ATermRef<'_> {
+        self.term.borrow()
+    }
+
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
         debug_assert!(
