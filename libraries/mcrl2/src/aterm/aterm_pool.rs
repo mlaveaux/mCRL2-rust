@@ -95,7 +95,7 @@ fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
     }
 
     info!(
-        "Collecting garbage: protected {} terms of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {}",
+        "Collecting garbage: protected {} terms of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {})",
         protected, 
         inside_containers,
         num_containers,    

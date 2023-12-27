@@ -39,17 +39,27 @@ impl From<DataSpecification> for RewriteSpecification {
         // Convert the equations.
         let mut rewrite_rules = vec![];
         for equation in equations {
-            rewrite_rules.push(Rule {
-                conditions: vec![
-                    Condition {
-                        lhs: equation.condition,
-                        rhs: BoolSort::true_term().into(),
-                        equality: true
-                    }
-                ],
-                lhs: equation.lhs,
-                rhs: equation.rhs
-            })
+
+            if equation.condition == BoolSort::true_term().into() {
+                // Ignore the condition if it is trivial.
+                rewrite_rules.push(Rule {
+                    conditions: vec![],
+                    lhs: equation.lhs,
+                    rhs: equation.rhs
+                })
+            } else {
+                rewrite_rules.push(Rule {
+                    conditions: vec![
+                        Condition {
+                            lhs: equation.condition,
+                            rhs: BoolSort::true_term().into(),
+                            equality: true
+                        }
+                    ],
+                    lhs: equation.lhs,
+                    rhs: equation.rhs
+                })
+            }
         }
         
         RewriteSpecification { rewrite_rules, constructors: vec![] }

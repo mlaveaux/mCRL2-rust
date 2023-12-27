@@ -3,10 +3,10 @@ use std::{cell::RefCell, fmt, rc::Rc};
 // use itertools::Itertools;
 
 use itertools::Itertools;
-use log::trace;
+use log::{trace, info};
 use mcrl2::{
     aterm::{ATerm, TermPool, ATermTrait},
-    data::DataFunctionSymbol,
+    data::{DataFunctionSymbol, BoolSort},
 };
 
 use crate::{
@@ -80,8 +80,8 @@ impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: ATerm) -> ATerm {
         let mut stats = RewritingStatistics::default();
 
-        let result = InnermostRewriter::rewrite_aux(&mut self.term_pool.borrow_mut(), &self.apma, t.borrow(), &mut stats);
-        info!("rewriting depth {}, {} steps and {} comparisons", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        let result = InnermostRewriter::rewrite_aux(&mut self.term_pool.borrow_mut(), &self.apma, t, &mut stats);
+        info!("{} rewrites, {} single steps and {} matches", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
         result
     }
 }
@@ -136,7 +136,7 @@ impl InnermostRewriter {
                     let term: ATerm = if arguments.is_empty() {
                         symbol.into()
                     } else {
-                        tp.create_data_application(&symbol.into(), arguments).into()
+                        tp.create_data_application(&symbol.borrow(), arguments).into()
                     };
 
                     // Remove the arguments from the stack.
@@ -291,7 +291,12 @@ impl InnermostRewriter {
             let lhs = c.semi_compressed_lhs.evaluate(t, tp);
 
             let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
-            let lhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats);
+            let lhs_normal = if lhs == BoolSort::true_term().into() {
+                // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
+                lhs
+            } else {
+                InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats)
+            };
 
             if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {
                 return false;
