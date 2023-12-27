@@ -32,7 +32,7 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     for (name, data_spec, expressions) in [
-        ("factorial9", include_str!("../../../examples/REC/mcrl2/factorial9.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial9.expressions")),
+        ("hanoi8", include_str!("../../../examples/REC/mcrl2/hanoi8.dataspec"), include_str!("../../../examples/REC/mcrl2/hanoi8.expressions")),
         ("add8", include_str!("../../../examples/REC/mcrl2/add8.dataspec"), include_str!("../../../examples/REC/mcrl2/add8.expressions")),
     ] {
         let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), data_spec, expressions, 1);
