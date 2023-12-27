@@ -23,8 +23,12 @@ pub trait RewriteEngine {
 
 #[derive(Default)]
 pub struct RewritingStatistics {
-    pub rewrite_steps: usize,
-    pub symbol_comparisons: usize,
+    /// Count the number of rewrite rules applied
+    pub rewrite_steps: usize, 
+    /// Counts the number of times symbols are compared.
+    pub symbol_comparisons: usize, 
+    /// The number of times rewrite is called recursively (to rewrite conditions etc)
+    pub recursions: usize, 
 }
 
 pub struct SabreRewriter {
@@ -48,11 +52,8 @@ impl SabreRewriter {
 
     /// Function to rewrite a term. See the module documentation.
     pub fn stack_based_normalise(&mut self, t: ATerm) -> ATerm {
-        let mut stats = RewritingStatistics {
-            rewrite_steps: 0,
-            symbol_comparisons: 0,
-        };
-
+        let mut stats = RewritingStatistics::default();
+        
         SabreRewriter::stack_based_normalise_aux(
             &mut self.term_pool.borrow_mut(),
             &self.automaton,

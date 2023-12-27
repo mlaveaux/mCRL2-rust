@@ -20,8 +20,10 @@ use crate::{
 
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum Config {
-    Rewrite(usize), // Rewrite the top of the stack and put result at the given index.
-    Construct(DataFunctionSymbol, usize, usize), // Constructs f with arity at the given index.
+    /// Rewrite the top of the stack and put result at the given index.
+    Rewrite(usize), 
+    /// Constructs function symbol with given arity at the given index.
+    Construct(DataFunctionSymbol, usize, usize), 
 }
 
 #[derive(Default)]
@@ -78,7 +80,9 @@ impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: ATerm) -> ATerm {
         let mut stats = RewritingStatistics::default();
 
-        InnermostRewriter::rewrite_aux(&mut self.term_pool.borrow_mut(), &self.apma, t, &mut stats)
+        let result = InnermostRewriter::rewrite_aux(&mut self.term_pool.borrow_mut(), &self.apma, t.borrow(), &mut stats);
+        info!("rewriting depth {}, {} steps and {} comparisons", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        result
     }
 }
 
@@ -98,6 +102,8 @@ impl InnermostRewriter {
         term: ATerm,
         stats: &mut RewritingStatistics,
     ) -> ATerm {
+        debug_assert!(!term.is_default(), "Cannot rewrite the default term");
+        stats.recursions += 1;
         let mut stack = InnerStack::default();
         stack.terms.push(ATerm::default());
         stack.add_rewrite(term, 0);
