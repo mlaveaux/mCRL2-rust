@@ -68,9 +68,7 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
             Ok(Yield::Construct(head.into()))
         }
     }, |tp, input, args| {
-            // TODO: This conversion should be unnecessary.
-            let arguments: Vec<ATermRef> = args.iter().map(|x| { x.borrow() }).collect();
-            Ok(tp.create_data_application(&input.borrow(), &arguments).into())
+            Ok(tp.create_data_application(&input, &args).into())
         }
     ).unwrap()
 }

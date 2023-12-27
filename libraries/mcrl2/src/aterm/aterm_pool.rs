@@ -346,7 +346,7 @@ impl TermPool {
     }
 
     /// Returns true iff this is a data::application
-    pub fn is_data_application<'a>(&mut self, term: &'a impl ATermTrait<'a>) -> bool {
+    pub fn is_data_application(&mut self, term: ATermRef<'_>) -> bool {
         term.require_valid();
 
         let symbol = term.get_head_symbol();
