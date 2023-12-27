@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool};
+use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool, ATermRef};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -15,7 +15,7 @@ use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool}
 /// Then we traverse the term until we have arrived at a and replace it with 0.
 /// We then construct s(0) (using the maximally shared term pool)
 /// We then construct s(s(0)) (using the maximally shared term pool)
-pub fn substitute<'a>(tp: &mut TermPool, t: &'a impl ATermTrait<'a>, new_subterm: ATerm, p: &[usize]) -> ATerm {
+pub fn substitute<'a>(tp: &mut TermPool, t: &'a impl ATermTrait, new_subterm: ATerm, p: &[usize]) -> ATerm {
     substitute_rec(tp, t, new_subterm, p, 0)
 }
 
@@ -25,7 +25,7 @@ pub fn substitute<'a>(tp: &mut TermPool, t: &'a impl ATermTrait<'a>, new_subterm
 ///                     'depth' = 0.
 fn substitute_rec<'a>(
     tp: &mut TermPool,
-    t: &'a impl ATermTrait<'a>,
+    t: &'a impl ATermTrait,
     new_subterm: ATerm,
     p: &[usize],
     depth: usize,
@@ -68,7 +68,9 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
             Ok(Yield::Construct(head.into()))
         }
     }, |tp, input, args| {
-            Ok(tp.create_data_application(&input, args).into())
+            // TODO: This conversion should be unnecessary.
+            let arguments: Vec<ATermRef> = args.iter().map(|x| { x.borrow() }).collect();
+            Ok(tp.create_data_application(&input.borrow(), &arguments).into())
         }
     ).unwrap()
 }

@@ -548,6 +548,7 @@ impl<'a> ATermTrait for ATerm {
     fn borrow(&self) -> ATermRef<'_> {
         ATermRef::new(self.term)
     }
+    
     fn is_default(&self) -> bool {
         self.term.is_null()
     }

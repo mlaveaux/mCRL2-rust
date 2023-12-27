@@ -156,8 +156,8 @@ impl EnhancedMatchAnnouncement {
             if term.is_data_variable() {
                 positions.push((var_map.get(&term.into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
-            } else if tp.is_data_application(&term) || term.is_data_function_symbol() {
-                let arity = get_data_arguments(tp, &term.protect()).len();
+            } else if tp.is_data_application(term.borrow()) || term.is_data_function_symbol() {
+                let arity = get_data_arguments(tp, &term.borrow()).len();
                 innermost_stack.push(Config::Construct(get_data_function_symbol(tp, term.borrow()), arity, stack_size));
                 stack_size += 1;
             } else {

@@ -101,12 +101,10 @@ impl<'a> Iterator for PositionIterator<'a> {
             let (term, pos) = self.queue.pop_front().unwrap();
 
             // Put subterms in the queue
-            unsafe {
-                for (i, argument) in term.arguments().enumerate() {
-                    let mut new_position = pos.clone();
-                    new_position.indices.push(i + 1);
-                    self.queue.push_back((argument.upgrade(&term), new_position));
-                }
+            for (i, argument) in term.arguments().enumerate() {
+                let mut new_position = pos.clone();
+                new_position.indices.push(i + 1);
+                self.queue.push_back((argument.upgrade(&term), new_position));
             }
 
             Some((term, pos))

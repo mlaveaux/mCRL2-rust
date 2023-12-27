@@ -36,6 +36,8 @@ enum GoalsOrInitial {
     Goals(Vec<MatchGoal>),
 }
 
+/// Adds the given function symbol to the indexed symbols. Errors when a
+/// function symbol is overloaded with different arities.
 fn add_symbol(
     function_symbol: DataFunctionSymbol,
     arity: usize,
@@ -61,9 +63,9 @@ fn add_symbol(
 }
 
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
-fn is_supported_term(tp: &mut TermPool, t: &ATerm) -> bool {
+fn is_supported_term(tp: &mut TermPool, t: ATermRef<'_>) -> bool {
     for subterm in t.iter() {
-        if tp.is_data_application(&subterm) && !subterm.arg(0).is_data_function_symbol() {
+        if tp.is_data_application(subterm.borrow()) && !subterm.arg(0).is_data_function_symbol() {
             warn!("{} is higher order", subterm);
             return false;
         } else if subterm.is_data_abstraction()
@@ -81,12 +83,12 @@ fn is_supported_term(tp: &mut TermPool, t: &ATerm) -> bool {
 /// Checks whether the set automaton can use this rule, no higher order rules or binders.
 fn is_supported_rule(tp: &mut TermPool, rule: &Rule) -> bool {
     // There should be no terms of the shape t(t0,...,t_n)
-    if !is_supported_term(tp, &rule.rhs) || !is_supported_term(tp, &rule.lhs) {
+    if !is_supported_term(tp, rule.rhs.borrow()) || !is_supported_term(tp, rule.lhs.borrow()) {
         return false;
     }
 
     for cond in &rule.conditions {
-        if !is_supported_term(tp, &cond.rhs) || !is_supported_term(tp, &cond.lhs) {
+        if !is_supported_term(tp, cond.rhs.borrow()) || !is_supported_term(tp, cond.lhs.borrow()) {
             return false;
         }
     }
@@ -101,7 +103,7 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
     }
 
     for subterm in t.iter() {
-        if tp.is_data_application(&subterm) {
+        if tp.is_data_application(subterm.borrow()) {
             let mut args = subterm.arguments();
 
             // REC specifications should never contain this so it can be a debug error.
@@ -304,9 +306,9 @@ pub(crate) struct State {
 }
 
 /// Returns the data function symbol of the given term
-pub fn get_data_function_symbol(tp: &mut TermPool, term: ATermRef) -> DataFunctionSymbol {
+pub fn get_data_function_symbol(tp: &mut TermPool, term: ATermRef<'_>) -> DataFunctionSymbol {
     // If this is an application it is the first argument, otherwise it's the term itself
-    if tp.is_data_application(&term) {
+    if tp.is_data_application(term.borrow()) {
         term.arg(0).protect().into()
     } else {
         term.protect().into()
@@ -314,8 +316,8 @@ pub fn get_data_function_symbol(tp: &mut TermPool, term: ATermRef) -> DataFuncti
 }
 
 /// Returns the data arguments of the term
-pub fn get_data_arguments<'a>(tp: &mut TermPool, term: &'a ATerm) -> ATermArgs<'a> {
-    if tp.is_data_application(term) {
+pub fn get_data_arguments<'a>(tp: &mut TermPool, term: &'a impl ATermTrait) -> ATermArgs<'a> {
+    if tp.is_data_application(term.borrow()) {
         let mut result = term.arguments();
         result.next();
         result
@@ -462,7 +464,7 @@ impl State {
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
                         && &get_data_function_symbol(tp, mo.pattern.borrow()) == symbol
-                        && get_data_arguments(tp, &mo.pattern)
+                        && get_data_arguments(tp, &mo.pattern.borrow())
                             .all(|x| x.is_data_variable()) // Again skip the function symbol
                 })
             {
@@ -488,7 +490,7 @@ impl State {
                     if &get_data_function_symbol(tp,mo.pattern.borrow()) == symbol && mo.position == self.label
                     {
                         // Reduced match obligation
-                        for (index, t) in get_data_arguments(tp, &mo.pattern).enumerate() {
+                        for (index, t) in get_data_arguments(tp, &mo.pattern.borrow()).enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
                             if !t.is_data_variable() {
