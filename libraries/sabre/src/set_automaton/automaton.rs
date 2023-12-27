@@ -2,7 +2,7 @@ use std::{collections::VecDeque, fmt::Debug};
 
 use ahash::HashMap;
 use log::{debug, warn, log_enabled, trace};
-use mcrl2::{aterm::{ATerm, TermPool, ATermTrait, ATermRef, ATermArgs}, data::DataFunctionSymbol};
+use mcrl2::{aterm::{ATerm, TermPool, ATermTrait, ATermRef, ATermArgs}, data::{DataFunctionSymbol, DataFunctionSymbolRef}};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -113,8 +113,7 @@ fn find_symbols(tp: &mut TermPool, t: &ATerm, symbols: &mut Vec<(DataFunctionSym
                 "Higher order term rewrite systems are not supported"
             );
 
-            let function_symbol: DataFunctionSymbol = head.protect().into();
-            add_symbol(function_symbol, args.len(), symbols);
+            add_symbol(head.protect().into(), args.len(), symbols);
         }
     }
 }
@@ -306,12 +305,12 @@ pub(crate) struct State {
 }
 
 /// Returns the data function symbol of the given term
-pub fn get_data_function_symbol(tp: &mut TermPool, term: ATermRef<'_>) -> DataFunctionSymbol {
+pub fn get_data_function_symbol<'a>(tp: &mut TermPool, term: ATermRef<'a>) -> DataFunctionSymbolRef<'a> {
     // If this is an application it is the first argument, otherwise it's the term itself
     if tp.is_data_application(term.borrow()) {
-        term.arg(0).protect().into()
+        term.arg(0).upgrade(&term).into()
     } else {
-        term.protect().into()
+        term.into()
     }
 }
 
@@ -463,14 +462,14 @@ impl State {
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && &get_data_function_symbol(tp, mo.pattern.borrow()) == symbol
+                        && get_data_function_symbol(tp, mo.pattern.borrow()) == symbol.borrow()
                         && get_data_arguments(tp, &mo.pattern.borrow())
                             .all(|x| x.is_data_variable()) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
             } else if mg.obligations.iter().any(|mo| {
-                mo.position == self.label && &get_data_function_symbol(tp, mo.pattern.borrow()) != symbol
+                mo.position == self.label && get_data_function_symbol(tp, mo.pattern.borrow()) != symbol.borrow()
             }) {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
@@ -487,7 +486,7 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if &get_data_function_symbol(tp,mo.pattern.borrow()) == symbol && mo.position == self.label
+                    if get_data_function_symbol(tp,mo.pattern.borrow()) == symbol.borrow() && mo.position == self.label
                     {
                         // Reduced match obligation
                         for (index, t) in get_data_arguments(tp, &mo.pattern.borrow()).enumerate() {

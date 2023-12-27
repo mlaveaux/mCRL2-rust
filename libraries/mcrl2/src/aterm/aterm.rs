@@ -5,7 +5,7 @@ use std::{collections::VecDeque, fmt};
 
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
-use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable};
+use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable, DataFunctionSymbolRef};
 use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
 
 pub trait ATermTrait {
@@ -99,7 +99,7 @@ impl<'a> ATermRef<'a> {
         ATermRef::new(self.term)
     }
 
-    /// A local unchecked version of [upgrade] since the above one uses the iterators.
+    /// A local unchecked version of [`ATermRef::upgrade`] since the above one uses the iterators.
     unsafe fn upgrade_unchecked<'b: 'a>(&'a self, _parent: &ATermRef<'b>) -> ATermRef<'b> {
         ATermRef::new(self.term)
     }
@@ -200,7 +200,6 @@ impl<'a> ATermTrait for ATermRef<'a> {
 }
 
 
-
 impl<'a> fmt::Display for ATermRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_default() {
@@ -209,14 +208,8 @@ impl<'a> fmt::Display for ATermRef<'a> {
             write!(
                 f,
                 "{}",
-                <ATerm as Into<DataFunctionSymbol>>::into(self.protect())
+                <ATermRef as Into<DataFunctionSymbolRef>>::into(self.borrow())
             )
-        // } else if self.is_data_application() {
-        //     write!(
-        //         f,
-        //         "{}",
-        //         <ATerm as Into<DataApplication>>::into(self.clone())
-        //     )
         } else if self.is_data_variable() {
             write!(f, "{}", <ATerm as Into<DataVariable>>::into(self.protect()))
         } else {
@@ -233,15 +226,13 @@ impl<'a> fmt::Debug for ATermRef<'a> {
             unsafe {
                 write!(f, "{}", ffi::print_aterm(self.term))?;
             }
-            //for term in self.iter() {
-            //   write!(f, "{:?}: [{}]", term.get_head_symbol(), ffi::aterm_pointer(&self.term))?;
-            //}
         }
 
         Ok(())
     }
 }
 
+/// The protected version of [ATermRef], mostly derived from it.
 pub struct ATerm {
     pub(crate) term: *const ffi::_aterm,
     pub(crate) root: usize,
@@ -272,6 +263,7 @@ impl Clone for ATerm {
     }
 }
 
+// Some convenient conversions.
 impl From<UniquePtr<ffi::aterm>> for ATerm {
     fn from(value: UniquePtr<ffi::aterm>) -> Self {
         THREAD_TERM_POOL.with_borrow_mut(|tp| {
@@ -285,12 +277,6 @@ impl From<&ffi::aterm> for ATerm {
         THREAD_TERM_POOL.with_borrow_mut(|tp| {
             unsafe { tp.protect(ffi::aterm_address(value)) }
         })
-    }
-}
-
-impl<'a> From<ATermRef<'a>> for ATerm {
-    fn from(value: ATermRef<'a>) -> Self {
-        value.protect()
     }
 }
 
@@ -392,12 +378,13 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
     fn from(value: ATermRef<'a>) -> Self {
         debug_assert!(value.is_list(), "Can only convert a aterm_list");
         ATermList::<T> {
-            term: value.into(),
+            term: value.protect(),
             _marker: PhantomData,
         }
     }
 }
 
+/// An iterator over the arguments of a term.
 #[derive(Default)]
 pub struct ATermArgs<'a> {
     term: ATermRef<'a>,
@@ -462,7 +449,8 @@ pub struct ATermListIter<T> {
     current: ATermList<T>,
 }
 
-/// An iterator over all subterms of the given [ATerm].
+/// An iterator over all subterms of the given [ATerm] in preorder traversal, i.e.,
+/// for f(g(a), b) we visit f(g(a), b), g(a), a, b.
 pub struct TermIterator<'a> {
     queue: VecDeque<ATermRef<'a>>,
 }
@@ -494,6 +482,43 @@ impl<'a> Iterator for TermIterator<'a> {
 
             Some(term)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use test_log::test;
+
+    use crate::aterm::{ATermList, TermPool};
+
+    use super::*;
+
+    #[test]
+    fn test_term_iterator() {
+        let mut tp = TermPool::new();
+        let t = tp.from_string("f(g(a),b)").unwrap();
+
+        let mut result = t.iter();
+        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap().borrow());
+    }
+
+    #[test]
+    fn test_aterm_list() {
+        let mut tp = TermPool::new();
+        let list: ATermList<ATerm> = tp.from_string("[f,g,h,i]").unwrap().into();
+
+        assert!(!list.is_empty());
+
+        // Convert into normal vector.
+        let values: Vec<ATerm> = list.iter().collect();
+
+        assert_eq!(values[0], tp.from_string("f").unwrap());
+        assert_eq!(values[1], tp.from_string("g").unwrap());
+        assert_eq!(values[2], tp.from_string("h").unwrap());
+        assert_eq!(values[3], tp.from_string("i").unwrap());
     }
 }
 

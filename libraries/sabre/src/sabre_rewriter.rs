@@ -1,10 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, trace};
-use mcrl2::{
-    aterm::{ATerm, TermPool},
-    data::DataFunctionSymbol,
-};
+use mcrl2::aterm::{ATerm, TermPool};
 
 use crate::{
     RewriteSpecification,
@@ -114,7 +111,7 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let function_symbol: DataFunctionSymbol = get_data_function_symbol(
+                            let function_symbol = get_data_function_symbol(
                                 tp,
                                 get_position(&leaf.subterm, &automaton.states[leaf.state].label),
                             );

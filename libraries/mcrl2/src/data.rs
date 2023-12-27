@@ -24,9 +24,9 @@ impl From<ATerm> for DataEquation {
 
         DataEquation {
             variables: variables.iter().collect(),
-            condition: value.arg(1).into(),
-            lhs: value.arg(2).into(),
-            rhs: value.arg(3).into(),
+            condition: value.arg(1).protect(),
+            lhs: value.arg(2).protect(),
+            rhs: value.arg(3).protect(),
         }
     }
 }
@@ -142,7 +142,7 @@ impl fmt::Display for DataApplication {
 
         let head = args.next().unwrap();
         if head.is_data_function_symbol() {
-            write!(f, "{}", <ATerm as Into<DataFunctionSymbol>>::into(head.protect()))?;
+            write!(f, "{}", <ATermRef as Into<DataFunctionSymbolRef>>::into(head))?;
         } else {
             write!(f, "{:?}", head)?;
         }
@@ -167,18 +167,25 @@ impl fmt::Display for DataApplication {
     }
 }
 
-#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct DataFunctionSymbol {
-    pub(crate) term: ATerm,
+/// The data::function_symbol
+#[derive(Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct DataFunctionSymbolRef<'a> {
+    pub(crate) term: ATermRef<'a>,
 }
 
-impl DataFunctionSymbol {
+impl<'a> DataFunctionSymbolRef<'a> {
     pub fn name(&self) -> String {
         String::from(self.term.arg(0).get_head_symbol().name())
     }
 
     pub fn borrow(&self) -> ATermRef<'_> {
         self.term.borrow()
+    }
+
+    pub fn protect(&self) -> DataFunctionSymbol {
+        DataFunctionSymbol {
+            term: self.term.protect()
+        }
     }
 
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
@@ -192,17 +199,23 @@ impl DataFunctionSymbol {
     }
 }
 
-impl From<ATerm> for DataFunctionSymbol {
-    fn from(value: ATerm) -> Self {
+impl<'a> Into<ATermRef<'a>> for DataFunctionSymbolRef<'a> {
+    fn into(self) -> ATermRef<'a> {
+        self.term
+    }
+}
+
+impl<'a> From<ATermRef<'a>> for DataFunctionSymbolRef<'a> {
+    fn from(value: ATermRef<'a>) -> Self {
         debug_assert!(
             value.is_data_function_symbol(),
             "Term {value:?} is not a data function symbol"
         );
-        DataFunctionSymbol { term: value }
+        DataFunctionSymbolRef { term: value }
     }
 }
 
-impl fmt::Display for DataFunctionSymbol {
+impl<'a> fmt::Display for DataFunctionSymbolRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.term.is_default() {
             write!(f, "{}", &self.name())
@@ -236,10 +249,39 @@ impl From<ATerm> for BoolSort {
     }
 }
 
-/*pub struct JittyCompilingRewriter
-{
-  rewriter: UniquePtr<ffi::RewriterJittyCompiling>
-}*/
+#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct DataFunctionSymbol {
+    pub(crate) term: ATerm,
+}
+
+impl DataFunctionSymbol {
+    pub fn borrow(&self) -> DataFunctionSymbolRef<'_> {
+        DataFunctionSymbolRef {
+            term: self.term.borrow()
+        }
+    }
+
+    pub fn operation_id(&self) -> usize {
+        self.borrow().operation_id()
+    }
+}
+
+impl fmt::Display for DataFunctionSymbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.borrow())        
+    }
+}
+
+impl<'a> From<ATerm> for DataFunctionSymbol {
+    fn from(value: ATerm) -> Self {
+        debug_assert!(
+            value.is_data_function_symbol(),
+            "Term {value:?} is not a data function symbol"
+        );
+        DataFunctionSymbol { term: value }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
