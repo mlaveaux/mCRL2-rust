@@ -294,8 +294,8 @@ impl TermPool {
     /// Creates a data application of head applied to the given arguments.
     pub fn create_data_application(
         &mut self,
-        head: &ATerm,
-        arguments: &[ATerm],
+        head: &ATermRef,
+        arguments: &[impl ATermTrait],
     ) -> DataApplication {
         // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
         while self.data_appl.len() <= arguments.len() + 1 {
@@ -363,8 +363,8 @@ impl TermPool {
     fn create_head(
         &mut self,
         symbol: &impl SymbolTrait,
-        head: &ATerm,
-        arguments: &[ATerm],
+        head: &ATermRef,
+        arguments: &[impl ATermTrait],
     ) -> ATerm {
         let arguments = self.tmp_arguments_head(head, arguments);
 
@@ -402,7 +402,7 @@ impl TermPool {
     }
 
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments_head(&mut self, head: &ATerm, arguments: &[ATerm]) -> &[*const ffi::_aterm] {
+    fn tmp_arguments_head(&mut self, head: &ATermRef, arguments: &[impl ATermTrait]) -> &[*const ffi::_aterm] {
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() + 1 {
             self.arguments.push(std::ptr::null());

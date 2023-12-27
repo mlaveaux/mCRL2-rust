@@ -68,7 +68,7 @@ pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<Str
             Ok(Yield::Construct(head.into()))
         }
     }, |tp, input, args| {
-            Ok(tp.create_data_application(&input, &args).into())
+            Ok(tp.create_data_application(&input.borrow(), args).into())
         }
     ).unwrap()
 }
