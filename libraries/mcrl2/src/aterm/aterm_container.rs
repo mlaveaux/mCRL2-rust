@@ -35,10 +35,10 @@ impl<C> TermContainer<C> {
     /// the resulting guard to be able to insert terms into the container.
     /// Otherwise the borrow checker will note that the [ATermRef] do not
     /// outlive the guard, see [TermProtection].
-    pub fn write(&mut self) -> TermProtection<'_, Vec<ATermRef<'_>>> {
+    pub fn write(&mut self) -> TermProtector<'_, Vec<ATermRef<'_>>> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
-            TermProtection::new(transmute(self.container.write_exclusive(true)))
+            TermProtector::new(transmute(self.container.write_exclusive(true)))
         }
     }
 
@@ -70,8 +70,14 @@ impl<C> Drop for TermContainer<C> {
 /// This trait should be used on all objects and containers related to storing unprotected terms.
 pub trait Markable {
     
-    /// Marks all the ATermRefs in the object as being reachable.
+    /// Marks all the ATermRefs to prevent them from being garbage collected.
     fn mark(&mut self, todo: Pin<&mut ffi::term_mark_stack>);
+
+    /// Should return true iff the given term is contained in the object. Used for runtime checks.
+    fn contains(&self, term: &ATermRef<'_>) -> bool;
+
+    /// Returns the number of terms in the instance, used to delay garbage collection.
+    fn len(&self) -> usize;
 }
 
 impl<'a> Markable for ATermRef<'a> {
@@ -82,6 +88,14 @@ impl<'a> Markable for ATermRef<'a> {
             }
         }
     }
+
+    fn contains(&self, term: &ATermRef<'_>) -> bool {
+        term == self
+    }
+
+    fn len(&self) -> usize {
+        1
+    }
 }
 
 impl<T: Markable> Markable for Vec<T> {
@@ -89,6 +103,14 @@ impl<T: Markable> Markable for Vec<T> {
         for value in self {
             value.mark(todo.as_mut());
         }
+    }
+
+    fn contains(&self, term: &ATermRef<'_>) -> bool {
+        self.iter().any(|v| { v.contains(term) })        
+    }
+    
+    fn len(&self) -> usize {
+        self.len()
     }
 }
 
@@ -104,7 +126,6 @@ impl<T: Markable + ?Sized> BfTermPool<T> {
 }
 
 
-
 /// This is a helper struct used by TermContainer to protected terms that are
 /// inserted into the container before the guard is dropped.
 /// 
@@ -112,23 +133,23 @@ impl<T: Markable + ?Sized> BfTermPool<T> {
 /// TermContainer. However, when inserting terms with shorter lifetimes we know
 /// that their lifetime is extended by being in the container. This is enforced
 /// by runtime checks during debug for containers that implement IntoIterator.
-pub struct TermProtection<'a, C: Markable> {
+pub struct TermProtector<'a, C: Markable> {
     reference: BfTermPoolThreadWrite<'a, C>,
     
     #[cfg(debug_assertions)]
     protected: Vec<ATermRef<'static>>
 }
 
-impl<'a, C: Markable> TermProtection<'a, C> {
-    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> TermProtection<'_, C> {
+impl<'a, C: Markable> TermProtector<'a, C> {
+    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> TermProtector<'_, C> {
         #[cfg(debug_assertions)]
-        return TermProtection {
+        return TermProtector {
             reference,
             protected: vec![]
         };
         
         #[cfg(not(debug_assertions))]
-        return TermProtection {
+        return TermProtector {
             reference,
         }
     }
@@ -146,7 +167,7 @@ impl<'a, C: Markable> TermProtection<'a, C> {
     }
 }
 
-impl<'a, C: Markable> Deref for TermProtection<'a, C> {
+impl<'a, C: Markable> Deref for TermProtector<'a, C> {
     type Target = C;
     
     fn deref(&self) -> &Self::Target {
@@ -154,21 +175,21 @@ impl<'a, C: Markable> Deref for TermProtection<'a, C> {
     }
 }
 
-impl<'a, C: Markable> DerefMut for TermProtection<'a, C> {
+impl<'a, C: Markable> DerefMut for TermProtector<'a, C> {
 
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.reference        
     }    
 }
 
-impl<'a, C: Markable> Drop for TermProtection<'a, C> {
+impl<'a, C: Markable> Drop for TermProtector<'a, C> {
     fn drop(&mut self) {
         // TODO: Implement this.
         #[cfg(debug_assertions)]
         {
-            // for term in &self.protected {
-            //     debug_assert!(self.reference.into_iter().find(|t| t == term).is_some(), "Term was protected, but not actually inserted");
-            // }
+            for term in &self.protected {
+                debug_assert!(self.reference.contains(term), "Term was protected but not actually inserted");
+            }
         }
     }
 }
