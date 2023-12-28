@@ -3,12 +3,11 @@
 //!
 //!
 
-use std::{env, error::Error, process::{ExitCode}};
+use std::{env, error::Error, process::ExitCode};
 
+mod benchmark;
 mod coverage;
 mod sanitizer;
-
-use coverage::coverage;
 
 fn main() -> Result<ExitCode, Box<dyn Error>> {
     let mut args = env::args();
@@ -23,8 +22,11 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let other_arguments: Vec<String> = args.collect();
 
     match task.as_deref() {
+        Some("benchmark") => {
+            benchmark::benchmark()?
+        },
         Some("coverage") => {
-            coverage(other_arguments)?
+            coverage::coverage(other_arguments)?
         },
         Some("address-sanitizer") => {
             sanitizer::address_sanitizer(other_arguments)?
@@ -45,5 +47,5 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
 }
 
 fn print_help() {
-    println!("Available tasks: coverage, address-sanitizer, thread-sanitizer");
+    println!("Available tasks: benchmark, coverage, address-sanitizer, thread-sanitizer");
 }
