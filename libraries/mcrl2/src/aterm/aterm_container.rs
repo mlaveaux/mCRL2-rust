@@ -84,7 +84,7 @@ impl<'a> Markable for ATermRef<'a> {
     fn mark(&mut self, todo: Pin<&mut ffi::term_mark_stack>) {
         if !self.is_default() {
             unsafe {
-                ffi::aterm_mark_address(self.term, todo);
+                ffi::aterm_mark_address(self.get(), todo);
             }
         }
     }

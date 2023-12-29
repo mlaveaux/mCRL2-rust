@@ -5,7 +5,7 @@ use std::{collections::VecDeque, fmt};
 
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
-use crate::data::{BoolSort, DataApplication, DataFunctionSymbol, DataVariable, DataFunctionSymbolRef};
+use crate::data::{DataVariable, DataFunctionSymbolRef};
 use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
 
 pub trait ATermTrait {
@@ -56,7 +56,7 @@ pub trait ATermTrait {
 
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ATermRef<'a> {
-    pub(crate) term: *const ffi::_aterm,
+    term: *const ffi::_aterm,
     marker: PhantomData<&'a ()>,
 }
 
@@ -102,6 +102,14 @@ impl<'a> ATermRef<'a> {
     /// A local unchecked version of [`ATermRef::upgrade`] since the above one uses the iterators.
     unsafe fn upgrade_unchecked<'b: 'a>(&'a self, _parent: &ATermRef<'b>) -> ATermRef<'b> {
         ATermRef::new(self.term)
+    }
+
+    /// Obtains the underlying pointer
+    /// 
+    /// # Safety 
+    /// Should not be modified in any way.
+    pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
+        self.term
     }
 }
 
@@ -235,6 +243,16 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 pub struct ATerm {
     pub(crate) term: *const ffi::_aterm,
     pub(crate) root: usize,
+}
+
+impl ATerm {
+    /// Obtains the underlying pointer
+    /// 
+    /// # Safety 
+    /// Should not be modified in any way.
+    pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
+        self.term
+    }
 }
 
 impl Default for ATerm {
@@ -497,7 +515,7 @@ mod tests {
     }
 }
 
-/// TODO: These might be derivable
+/// TODO: These might be derivable and generated through proc macros.
 impl Hash for ATerm {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.borrow().hash(state)

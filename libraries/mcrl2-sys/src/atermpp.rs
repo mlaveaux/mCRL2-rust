@@ -26,8 +26,9 @@ pub mod ffi {
         /// Enable automated garbage collection.
         /// 
         /// # Warning
-        /// This will deadlock when any Rust terms are created due to the interaction with the protection sets.
-        /// Instead, call collect_garbage periodically to trigger garbage collection when needed.
+        /// This will deadlock when any Rust terms are created due to the
+        /// interaction with the busy flags. Instead, call collect_garbage
+        /// periodically to trigger garbage collection when needed.
         fn enable_automatic_garbage_collection(enabled: bool);
 
         /// Trigger garbage collection.
@@ -47,7 +48,12 @@ pub mod ffi {
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();
 
-        /// Creates a term from the given function and arguments, must be protected
+        /// Creates a term from the given function and arguments, must be
+        /// protected before the busy flags are set to false.
+        /// 
+        /// # Safety
+        /// The function symbol and arguments will not be modified unless
+        /// garbage collection marks the terms, which is done atomically. 
         unsafe fn create_aterm(function: *const _function_symbol, arguments: &[*const _aterm]) -> *const _aterm;
         
         /// Parses the given string and returns an aterm
