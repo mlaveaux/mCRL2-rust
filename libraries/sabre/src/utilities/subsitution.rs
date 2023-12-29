@@ -46,7 +46,7 @@ fn substitute_rec(
 }
 
 /// Converts an [ATerm] to an untyped data expression.
-pub fn to_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
+pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
     let mut builder = TermBuilder::<ATerm, ATerm>::new();
 
     builder.evaluate(tp, t.clone(), |tp, args, t| {
@@ -102,6 +102,6 @@ mod tests {
 
         let t = term_pool.from_string("s(s(a))").unwrap();
 
-        let _expression = to_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
+        let _expression = to_untyped_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
     }
 }

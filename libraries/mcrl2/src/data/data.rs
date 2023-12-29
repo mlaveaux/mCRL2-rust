@@ -3,6 +3,10 @@ use core::fmt;
 use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait};
 use mcrl2_sys::data::ffi;
 
+pub struct DataExpression {
+    term: ATerm,
+}
+
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DataVariable {
     pub(crate) term: ATerm,
@@ -24,26 +28,14 @@ impl From<ATerm> for DataVariable {
     }
 }
 
-impl<'a> From<ATermRef<'a>> for DataVariable {
-    fn from(value: ATermRef<'a>) -> Self {
-        debug_assert!(
-            value.is_data_variable(),
-            "Term {value} is not a data variable"
-        );
-        
-        DataVariable {
-            term: value.protect(),
-        }
-    }
-}
-
 impl fmt::Display for DataVariable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DataApplication {
     pub(crate) term: ATerm,
 }
@@ -83,6 +75,12 @@ impl fmt::Display for DataApplication {
         }
 
         Ok(())
+    }
+}
+
+impl fmt::Debug for DataApplication {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
@@ -222,5 +220,22 @@ impl Into<ATerm> for DataFunctionSymbol {
 impl Into<ATerm> for BoolSort {
     fn into(self) -> ATerm {
         self.term        
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::aterm::TermPool;
+
+
+    #[test]
+    fn test_print() {
+        let mut tp = TermPool::new();
+
+        let symbol = tp.create_data_function_symbol("f");
+        assert_eq!("f", format!("{}", symbol));
+
+        // let appl = tp.create_data_application(&symbol.borrow().into(), &[symbol]);
+
     }
 }

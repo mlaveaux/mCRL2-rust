@@ -325,6 +325,8 @@ impl TermPool {
         head: &ATermRef,
         arguments: &[impl ATermTrait],
     ) -> DataApplication {
+        debug_assert!(arguments.len() > 0, "DataApplication should have at least one argument");
+
         // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
         while self.data_appl.len() <= arguments.len() + 1 {
             let symbol = self.create_symbol("DataAppl", self.data_appl.len());

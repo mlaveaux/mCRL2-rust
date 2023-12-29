@@ -5,7 +5,6 @@ use std::{collections::VecDeque, fmt};
 
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
-use crate::data::{DataVariable, DataFunctionSymbolRef};
 use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
 
 pub trait ATermTrait {
@@ -209,19 +208,7 @@ impl<'a> ATermTrait for ATermRef<'a> {
 
 impl<'a> fmt::Display for ATermRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_default() {
-            write!(f, "{:?}", self)
-        } else if self.is_data_function_symbol() {
-            write!(
-                f,
-                "{}",
-                <ATermRef as Into<DataFunctionSymbolRef>>::into(self.borrow())
-            )
-        } else if self.is_data_variable() {
-            write!(f, "{}", <ATerm as Into<DataVariable>>::into(self.protect()))
-        } else {
-            write!(f, "{:?}", self)
-        }
+        write!(f, "{:?}", self)
     }
 }
 

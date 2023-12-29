@@ -10,17 +10,16 @@ use smallvec::SmallVec;
 
 use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
 
-/// An equivalence class is a variable with (multiple) positions.
-/// This is necessary for non-linear patterns.
-/// It is used by EnhancedMatchAnnouncement to store what positions need to be compared.
-///
-/// TODO: there is probably a better term than "equivalence class"
+/// An equivalence class is a variable with (multiple) positions. This is
+/// necessary for non-linear patterns. It is used by EnhancedMatchAnnouncement
+/// to store what positions need to be compared.
 ///
 /// # Example
-/// Suppose we have a pattern f(x,x), where x is a variable.
-/// Then it will have one equivalence class storing "x" and the positions 1 and 2.
-/// The function equivalences_hold checks whether the term has the same term on those positions.
-/// For example, it will returns false on the term f(a, b) and true on the term f(a, a).
+/// Suppose we have a pattern f(x,x), where x is a variable. Then it will have
+/// one equivalence class storing "x" and the positions 1 and 2. The function
+/// equivalences_hold checks whether the term has the same term on those
+/// positions. For example, it will returns false on the term f(a, b) and true
+/// on the term f(a, a).
 #[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct EquivalenceClass {
     pub(crate) variable: ATerm,
@@ -154,7 +153,7 @@ impl EnhancedMatchAnnouncement {
             }
 
             if term.is_data_variable() {
-                positions.push((var_map.get(&term.into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
+                positions.push((var_map.get(&term.protect().into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
             } else if tp.is_data_application(term.borrow()) || term.is_data_function_symbol() {
                 let arity = get_data_arguments(tp, &term.borrow()).len();
@@ -359,7 +358,7 @@ mod tests {
     use ahash::AHashSet;
     use mcrl2::aterm::TermPool;
 
-    use crate::{utilities::to_data_expression, test_utility::create_rewrite_rule};
+    use crate::{utilities::to_untyped_data_expression, test_utility::create_rewrite_rule};
 
     use super::*;
 
@@ -385,7 +384,7 @@ mod tests {
 
         // Check the equivalence class for an example
         let term = tp.from_string("f(a(b), h(a(b)))").unwrap();
-        let expression = to_data_expression(&mut tp, &term, &AHashSet::new());
+        let expression = to_untyped_data_expression(&mut tp, &term, &AHashSet::new());
 
         assert!(check_equivalence_classes(&expression, &eq), "The equivalence classes are not checked correctly, equivalences: {:?} and term {}", &eq, &expression);
     }

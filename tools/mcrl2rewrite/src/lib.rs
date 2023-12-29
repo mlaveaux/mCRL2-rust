@@ -11,7 +11,7 @@ use clap::ValueEnum;
 use mcrl2::aterm::{TermPool, ATerm};
 use mcrl2::data::{DataSpecification, JittyRewriter};
 use rec_tests::load_REC_from_file;
-use sabre::utilities::to_data_expression;
+use sabre::utilities::to_untyped_data_expression;
 use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter, RewriteSpecification};
 
 #[derive(ValueEnum, Debug, Clone)]
@@ -97,7 +97,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
 
             let now = Instant::now();
             for term in &syntax_terms {
-                let term = to_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
+                let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
                 let result = inner.rewrite(term);
                 if output {
                     println!("{}", result)
@@ -110,7 +110,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
         
             let now = Instant::now();
             for term in &syntax_terms {
-                let term = to_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
+                let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
                 let result = sa.rewrite(term);
                 if output {
                     println!("{}", result)

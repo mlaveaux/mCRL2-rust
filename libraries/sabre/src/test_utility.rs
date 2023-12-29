@@ -1,7 +1,7 @@
 use ahash::AHashSet;
 use mcrl2::aterm::TermPool;
 
-use crate::{utilities::to_data_expression, Rule};
+use crate::{utilities::to_untyped_data_expression, Rule};
 
 /// Create a rewrite rule lhs -> rhs with the given names being variables.
 pub(crate) fn create_rewrite_rule(
@@ -19,7 +19,7 @@ pub(crate) fn create_rewrite_rule(
 
     Rule {
         conditions: vec![],
-        lhs: to_data_expression(tp, &lhs, &vars),
-        rhs: to_data_expression(tp, &rhs, &vars),
+        lhs: to_untyped_data_expression(tp, &lhs, &vars),
+        rhs: to_untyped_data_expression(tp, &rhs, &vars),
     }
 }

@@ -147,6 +147,8 @@ impl SetAutomaton {
                 }
             }
 
+            // Add the constructors since otherwise match obligations conclude
+            // too early that matching has finished.
             for (symbol, arity) in &spec.constructors {
                 add_symbol(symbol.clone(), *arity, &mut symbols);
             }
@@ -154,7 +156,7 @@ impl SetAutomaton {
             symbols
         };
 
-        for (index, (symbol, arity))in symbols.iter().enumerate() {
+        for (index, (symbol, arity)) in symbols.iter().enumerate() {
             debug!("{}: {} {}", index, symbol, arity);
         }
 

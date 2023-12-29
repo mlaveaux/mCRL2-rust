@@ -317,7 +317,7 @@ mod tests {
     use test_log::test;
 
     use crate::{
-        utilities::to_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,
+        utilities::to_untyped_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,
     };
 
     #[test]
@@ -336,7 +336,7 @@ mod tests {
             &["a".to_string(), "b".to_string()],
             5,
         );
-        let term = to_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new());
+        let term = to_untyped_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new());
 
         assert_eq!(
             inner.rewrite(term.clone()),

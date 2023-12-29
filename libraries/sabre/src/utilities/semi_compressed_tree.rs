@@ -80,7 +80,7 @@ impl SemiCompressedTermTree {
         if t.is_data_variable() {
             Variable(
                 var_map
-                    .get(&t.into())
+                    .get(&t.protect().into())
                     .expect("var_map must contain all variables")
                     .clone(),
             )
@@ -148,7 +148,7 @@ pub fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
 
     for (term, position) in PositionIterator::new(t.borrow()) {
         if term.is_data_variable() {
-            result.insert(term.into(), position.clone());
+            result.insert(term.protect().into(), position.clone());
         }
     }
     result
