@@ -9,7 +9,7 @@ use ahash::AHashSet;
 use anyhow::{Result as AnyResult, bail};
 use clap::ValueEnum;
 use mcrl2::aterm::{TermPool, ATerm};
-use mcrl2::data::{DataSpecification, JittyRewriter};
+use mcrl2::data::{DataSpecification, JittyRewriter, DataExpressionRef};
 use rec_tests::load_REC_from_file;
 use sabre::utilities::to_untyped_data_expression;
 use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter, RewriteSpecification};
@@ -46,7 +46,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
             for term in &terms {
                 let result = jitty_rewriter.rewrite(term);
                 if output {
-                    println!("{}", result)
+                    println!("{}", DataExpressionRef::from(result.borrow()))
                 }
             }
             println!("jitty rewrite took {} ms", now.elapsed().as_millis());
@@ -60,7 +60,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
             for term in &terms {
                 let result = inner_rewriter.rewrite(term.clone());
                 if output {
-                    println!("{}", result)
+                    println!("{}", DataExpressionRef::from(result.borrow()))
                 }
             }
             println!("innermost rewrite took {} ms", now.elapsed().as_millis());
@@ -73,7 +73,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
             for term in &terms {                
                 let result = sabre_rewriter.rewrite(term.clone());
                 if output {
-                    println!("{}", result)
+                    println!("{}", DataExpressionRef::from(result.borrow()))
                 }
             }
             println!("sabre rewrite took {} ms", now.elapsed().as_millis());
@@ -100,7 +100,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
                 let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
                 let result = inner.rewrite(term);
                 if output {
-                    println!("{}", result)
+                    println!("{}", DataExpressionRef::from(result.borrow()))
                 }
             }
             println!("innermost rewrite took {} ms", now.elapsed().as_millis());
@@ -113,7 +113,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
                 let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
                 let result = sa.rewrite(term);
                 if output {
-                    println!("{}", result)
+                    println!("{}", DataExpressionRef::from(result.borrow()))
                 }
             }
             println!("sabre rewrite took {} ms", now.elapsed().as_millis());
