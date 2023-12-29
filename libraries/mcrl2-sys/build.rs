@@ -29,14 +29,15 @@ fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
         .flag_if_supported("/bigobj")
         .flag_if_supported("/W3")
         .flag_if_supported("/MP")
+        .flag_if_supported("/Zc:inline")
         .flag_if_supported("/permissive-")
         .define("WIN32", "1")
+        .define("WIN32_LEAN_AND_MEAN", "1")
         .define("NOMINMAX", "1")
         .define("_USE_MATH_DEFINES", "1")
         .define("_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES", "1")
         .define("_CRT_SECURE_NO_WARNINGS", "1")
         .define("BOOST_ALL_NO_LIB", "1");
-
 }
 
 /// Add compiler specific flags to enable C++17 compilation.
