@@ -4,7 +4,7 @@ use ahash::AHashSet;
 use mcrl2::aterm::{ATerm, TermPool};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
-    utilities::to_data_expression,
+    utilities::to_untyped_data_expression,
 };
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
@@ -36,8 +36,8 @@ impl RewriteSpecificationSyntax {
             let mut conditions = vec![];
             for c in &rule.conditions {
                 let condition = Condition {
-                    lhs: to_data_expression(tp, &c.lhs, &variables),
-                    rhs: to_data_expression(tp, &c.rhs, &variables),
+                    lhs: to_untyped_data_expression(tp, &c.lhs, &variables),
+                    rhs: to_untyped_data_expression(tp, &c.rhs, &variables),
                     equality: c.equality,
                 };
                 conditions.push(condition);
@@ -45,8 +45,8 @@ impl RewriteSpecificationSyntax {
             
 
             rewrite_rules.push(Rule {
-                lhs: to_data_expression(tp, &rule.lhs, &variables),
-                rhs: to_data_expression(tp, &rule.rhs, &variables),
+                lhs: to_untyped_data_expression(tp, &rule.lhs, &variables),
+                rhs: to_untyped_data_expression(tp, &rule.rhs, &variables),
                 conditions,
             });
         }
