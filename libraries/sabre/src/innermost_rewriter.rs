@@ -124,7 +124,7 @@ impl InnermostRewriter {
                         stack.terms.push(ATerm::default());
                     }
 
-                    stack.add_result(symbol, arguments.len(), result);
+                    stack.add_result(symbol.protect(), arguments.len(), result);
                     for (offset, arg) in arguments.into_iter().enumerate() {
                         stack.add_rewrite(arg.protect(), top_of_stack + offset);
                     }
@@ -136,7 +136,7 @@ impl InnermostRewriter {
                     let term: ATerm = if arguments.is_empty() {
                         symbol.into()
                     } else {
-                        tp.create_data_application(&symbol.borrow(), arguments).into()
+                        tp.create_data_application(&symbol.borrow().into(), arguments).into()
                     };
 
                     // Remove the arguments from the stack.
