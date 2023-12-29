@@ -1,4 +1,4 @@
-use mcrl2::data::DataApplication;
+use mcrl2::data::{DataApplication, DataExpression};
 use std::{cell::RefCell, rc::Rc};
 use test_case::test_case;
 
@@ -69,16 +69,15 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
             to_untyped_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
 
         let result = inner.rewrite(term.clone());
-        assert_eq!(
-            DataApplication::from(result.clone()),
-            DataApplication::from(expected_result.clone()),
-            "The inner rewrite result doesn't match the expected result"
+        assert_eq!(result,
+            expected_result,
+            "The inner rewrite result doesn't match the expected result",
         );
 
         let result = sa.rewrite(term.clone());
         assert_eq!(
-            DataApplication::from(result),
-            DataApplication::from(expected_result),
+            result,
+            expected_result,
             "The sabre rewrite result doesn't match the expected result"
         );
     }
