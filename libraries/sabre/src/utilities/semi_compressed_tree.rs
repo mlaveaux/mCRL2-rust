@@ -143,7 +143,7 @@ impl SemiCompressedTermTree {
 }
 
 /// Create a mapping of variables to their position in the given term
-pub(crate) fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
+pub fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
     let mut result = HashMap::new();
 
     for (term, position) in PositionIterator::new(t.borrow()) {

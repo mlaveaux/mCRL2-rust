@@ -38,10 +38,15 @@ std::unique_ptr<detail::RewriterJitty> create_jitty_rewriter(const data_specific
 }
 
 #ifdef MCRL2_ENABLE_JITTYC
-std::unique_ptr<detail::RewriterCompilingJitty> ffi_create_jittyc_rewriter(const data_specification& spec)
+std::unique_ptr<detail::RewriterCompilingJitty> create_jitty_compiling_rewriter(const data_specification& spec)
 {
   used_data_equation_selector selector;
   return std::make_unique<detail::RewriterCompilingJitty>(detail::RewriterCompilingJitty(spec, selector));
+}
+#else
+std::unique_ptr<detail::RewriterCompilingJitty> create_jitty_compiling_rewriter(const data_specification& spec)
+{
+  return std::make_unique<detail::RewriterCompilingJitty>();
 }
 #endif // MCRL2_ENABLE_JITTYC
 

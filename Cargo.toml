@@ -27,5 +27,5 @@ test-log = "0.2"
 env_logger = "0.10"
 clap = { version = "4.4", features = ["derive"] }
 
-sabre = { path = "libraries/sabre"}
+sabre = { path = "libraries/sabre" }
 mcrl2 = { path = "libraries/mcrl2" }

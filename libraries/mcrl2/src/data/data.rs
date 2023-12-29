@@ -1,90 +1,7 @@
 use core::fmt;
 
-use crate::aterm::{ATerm, ATermList, ATermRef, ATermTrait, SymbolTrait};
-use mcrl2_sys::{atermpp, cxx::UniquePtr, data::ffi};
-
-pub struct DataSpecification {
-    pub data_spec: UniquePtr<ffi::data_specification>,
-}
-
-/// A pattern is simply an aterm of the shape f(...)
-pub type DataExpression = ATerm;
-
-#[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Debug)]
-pub struct DataEquation {
-    pub variables: Vec<DataVariable>,
-    pub condition: DataExpression,
-    pub lhs: DataExpression,
-    pub rhs: DataExpression,
-}
-
-impl From<ATerm> for DataEquation {
-    fn from(value: ATerm) -> Self {
-        let variables: ATermList<DataVariable> = value.arg(0).into();
-
-        DataEquation {
-            variables: variables.iter().collect(),
-            condition: value.arg(1).protect(),
-            lhs: value.arg(2).protect(),
-            rhs: value.arg(3).protect(),
-        }
-    }
-}
-
-impl DataSpecification {
-    /// Parses the given text into a data specification
-    pub fn new(text: &str) -> Result<Self, Box<dyn Error>> {
-        let data_spec = ffi::parse_data_specification(text)?;
-
-        Ok(DataSpecification {
-            data_spec,
-        })
-    }
-
-    /// Parses the given data expression as text into a term
-    pub fn parse(&self, text: &str) -> ATerm {
-        ffi::parse_data_expression(text, &self.data_spec).into()
-    }
-
-    /// Returns the equations of the data specification.
-    pub fn equations(&self) -> Vec<DataEquation> {
-        ffi::get_data_specification_equations(&self.data_spec)
-            .iter()
-            .map(|x| ATerm::from(x).into())
-            .collect()
-    }
-}
-
-impl Clone for DataSpecification {
-    fn clone(&self) -> Self {
-        DataSpecification {
-            data_spec: ffi::data_specification_clone(&self.data_spec),
-        }
-    }
-}
-
-pub struct JittyRewriter {
-    rewriter: UniquePtr<ffi::RewriterJitty>,
-}
-
-impl JittyRewriter {
-    /// Create a rewriter instance from the given data specification.
-    pub fn new(spec: &DataSpecification) -> JittyRewriter {
-        JittyRewriter {
-            rewriter: ffi::create_jitty_rewriter(&spec.data_spec),
-        }
-    }
-
-    /// Rewrites the term with the jitty rewriter.
-    pub fn rewrite(&mut self, term: &ATerm) -> ATerm {
-        unsafe {
-            atermpp::ffi::enable_automatic_garbage_collection(true);
-            let result = ffi::rewrite(self.rewriter.pin_mut(), term.borrow().term).into();
-            atermpp::ffi::enable_automatic_garbage_collection(false);
-            result
-        }
-    }
-}
+use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait};
+use mcrl2_sys::data::ffi;
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DataVariable {
@@ -113,6 +30,7 @@ impl<'a> From<ATermRef<'a>> for DataVariable {
             value.is_data_variable(),
             "Term {value} is not a data variable"
         );
+        
         DataVariable {
             term: value.protect(),
         }
@@ -196,7 +114,7 @@ impl<'a> DataFunctionSymbolRef<'a> {
             "term {} is not a data function symbol",
             self.term
         );
-        unsafe { ffi::get_data_function_symbol_index(self.term.borrow().term) }
+        unsafe { ffi::get_data_function_symbol_index(self.term.borrow().get()) }
     }
 }
 
@@ -304,41 +222,5 @@ impl Into<ATerm> for DataFunctionSymbol {
 impl Into<ATerm> for BoolSort {
     fn into(self) -> ATerm {
         self.term        
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test_log::test;
-
-    #[test]
-    fn test_parse_data_specification() {
-        let text = "
-            sort Xbool = struct
-                Xfalse
-            | Xtrue ;
-            
-            sort Bit = struct
-                x0
-            | x1 ;
-            
-            sort Octet = struct
-                buildOctet (Bit, Bit, Bit, Bit, Bit, Bit, Bit, Bit) ;
-            
-            sort OctetSum = struct
-                buildOctetSum (Bit, Octet) ;
-            
-            sort Half = struct
-                buildHalf (Octet, Octet) ;
-            
-            sort HalfSum = struct
-                buildHalfSum (Bit, Half) ;
-            
-            map
-                notBool : Xbool -> Xbool ;
-                andBool : Xbool # Xbool -> Xbool ;";
-
-        let _data_spec = DataSpecification::new(text).unwrap();
     }
 }

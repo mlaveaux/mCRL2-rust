@@ -423,7 +423,9 @@ impl TermPool {
 
         self.arguments.clear();
         for arg in arguments {
-            self.arguments.push(arg.borrow().get());
+            unsafe {
+                self.arguments.push(arg.borrow().get());
+            }
         }
 
         &self.arguments
@@ -437,9 +439,11 @@ impl TermPool {
         }
 
         self.arguments.clear();
-        self.arguments.push(head.borrow().get());
-        for arg in arguments {
-            self.arguments.push(arg.borrow().get());
+        unsafe {
+            self.arguments.push(head.borrow().get());
+            for arg in arguments {
+                self.arguments.push(arg.borrow().get());
+            }
         }
 
         &self.arguments

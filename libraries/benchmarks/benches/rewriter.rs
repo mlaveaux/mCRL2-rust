@@ -16,7 +16,7 @@ pub fn load_case(
     max_number_expressions: usize,
 ) -> (DataSpecification, Vec<ATerm>) {
     // Read the data specification
-    let data_spec = DataSpecification::new(&data_spec_text);
+    let data_spec = DataSpecification::new(&data_spec_text).unwrap();
 
     // Read the file line by line, and return an iterator of the lines of the file.
     let expressions: Vec<ATerm> = expressions_text

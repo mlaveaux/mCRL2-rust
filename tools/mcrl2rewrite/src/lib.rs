@@ -26,7 +26,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
     
     // Read the data specification
     let data_spec_text = fs::read_to_string(filename_dataspec)?;
-    let data_spec = DataSpecification::new(&data_spec_text);
+    let data_spec = DataSpecification::new(&data_spec_text)?;
 
     // Open the file in read-only mode.
     let file = File::open(filename_terms).unwrap();
