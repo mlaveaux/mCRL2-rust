@@ -1,28 +1,49 @@
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::ItemStruct;
 
-/// For objects that are stored inside terms we provide the following
-/// convenience macro.
-/// 
-/// The shape of the struct should be
-/// 
-/// struct BoolSortRef {}
-#[proc_macro_attribute]
-pub fn mcrl2_term(attr: TokenStream, input: TokenStream) -> TokenStream {
+
+#[proc_macro_derive(Term)]
+pub fn derive_from_term(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    derive_from_term_impl(TokenStream::from(input)).into()
+}
+
+fn derive_from_term_impl(input: TokenStream) -> TokenStream {
+
     // Parse the input tokens into a syntax tree
-    //let ast = parse_macro_input!(input as DeriveInput);
+    let ast: ItemStruct = syn::parse2(input).unwrap();
 
     // Every term has a borrow and protect function.
-    // let name = &ast.ident;
-    // let expanded = quote! {
-    //     impl Into<ATermRef<'a>> for #name {            
-    //         fn into(self) -> ATermRef<'a> {
-    //             self.term
-    //         }
-    //     }
-    // };
+    let name: String = ast.ident.to_string();
+    let expanded = quote! {
+        impl From<ATerm> for #name {            
+            fn from(term: ATerm) -> Self {
+                Self {
+                    term
+                }
+            }
+        }
+    };
 
     // Hand the output tokens back to the compiler
-    input
+    expanded.into()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn derive_test() {
+        let input = "
+            struct Test {}
+        ";
+        
+        let tokens = TokenStream::from_str(input).unwrap();
+        let result = derive_from_term_impl(tokens);
+
+        assert_eq!(format!("{}", result), "");
+    }
 }
