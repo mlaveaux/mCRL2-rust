@@ -7,7 +7,7 @@
 #include "mcrl2/data/detail/rewrite/jitty.h"
 #include "mcrl2/data/parse.h"
 
-#ifdef MCRL2_JITTYC_AVAILABLE
+#ifdef MCRL2_ENABLE_JITTYC
 #include "mcrl2/data/detail/rewrite/jittyc.h"
 #else
 namespace mcrl2::data::detail
@@ -15,7 +15,7 @@ namespace mcrl2::data::detail
 class RewriterCompilingJitty
 {};
 } // namespace mcrl2::data::detail
-#endif // MCRL2_JITTYC_AVAILABLE
+#endif // MCRL2_ENABLE_JITTYC
 
 namespace mcrl2::data
 {
@@ -37,13 +37,13 @@ std::unique_ptr<detail::RewriterJitty> create_jitty_rewriter(const data_specific
   return std::make_unique<detail::RewriterJitty>(detail::RewriterJitty(spec, selector));
 }
 
-#ifdef MCRL2_JITTYC_AVAILABLE
+#ifdef MCRL2_ENABLE_JITTYC
 std::unique_ptr<detail::RewriterCompilingJitty> ffi_create_jittyc_rewriter(const data_specification& spec)
 {
   used_data_equation_selector selector;
   return std::make_unique<detail::RewriterCompilingJitty>(detail::RewriterCompilingJitty(spec, selector));
 }
-#endif // MCRL2_JITTYC_AVAILABLE
+#endif // MCRL2_ENABLE_JITTYC
 
 std::unique_ptr<atermpp::aterm> rewrite(detail::RewriterJitty& rewriter, const atermpp::detail::_aterm* term)
 {

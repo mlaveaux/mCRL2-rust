@@ -9,8 +9,8 @@ pub mod ffi {
         #[namespace = "mcrl2::data::detail"]
         type RewriterJitty;
         
-        //#[namespace = "mcrl2::data::detail"]
-        //type RewriterCompilingJitty;
+        #[namespace = "mcrl2::data::detail"]
+        type RewriterCompilingJitty;
 
         #[namespace = "atermpp"]
         type aterm = crate::atermpp::ffi::aterm;
@@ -34,7 +34,7 @@ pub mod ffi {
         fn create_jitty_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJitty>;
 
         /// Creates an instance of the compiling jitty rewriter.
-        //fn create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJittyCompiling>;
+        fn create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterCompilingJitty>;
 
         /// Rewrites the given term to normal form.
         unsafe fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: *const _aterm) -> UniquePtr<aterm>;   

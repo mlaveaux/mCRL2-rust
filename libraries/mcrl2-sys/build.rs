@@ -175,6 +175,9 @@ fn main() {
         ))
         .file(mcrl2_workarounds_path + "mcrl2_syntax.c"); // This is to avoid generating the dparser grammer.
 
+    #[cfg(feature = "jittyc")]
+    build.define("MCRL2_ENABLE_JITTYC");
+
     // Disable assertions and other checks in release mode.
     let profile = std::env::var("PROFILE").expect("cargo should always set this variable");
     match profile.as_str() {
