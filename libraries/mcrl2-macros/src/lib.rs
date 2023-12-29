@@ -2,16 +2,27 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(MyMacro)]
-pub fn my_macro(input: TokenStream) -> TokenStream {
+/// For objects that are stored inside terms we provide the following
+/// convenience macro.
+/// 
+/// The shape of the struct should be
+/// 
+/// struct BoolSortRef {}
+#[proc_macro_attribute]
+pub fn mcrl2_term(attr: TokenStream, input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
-    let _input = parse_macro_input!(input as DeriveInput);
+    //let ast = parse_macro_input!(input as DeriveInput);
 
-    // Build the output, possibly using quasi-quotation
-    let expanded = quote! {
-        // ...
-    };
+    // Every term has a borrow and protect function.
+    // let name = &ast.ident;
+    // let expanded = quote! {
+    //     impl Into<ATermRef<'a>> for #name {            
+    //         fn into(self) -> ATermRef<'a> {
+    //             self.term
+    //         }
+    //     }
+    // };
 
     // Hand the output tokens back to the compiler
-    TokenStream::from(expanded)
+    input
 }
