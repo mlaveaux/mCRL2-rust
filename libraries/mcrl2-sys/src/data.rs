@@ -50,5 +50,16 @@ pub mod ffi {
 
         /// Create the data::false term
         fn false_term() -> UniquePtr<aterm>;
+        
+        // For data::variable
+        unsafe fn is_data_variable(term: *const _aterm) -> bool;
+
+        // For data::function_symbol        
+        unsafe fn is_data_function_symbol(term: *const _aterm) -> bool;
+
+        // For data::data_expression        
+        unsafe fn is_data_where_clause(term: *const _aterm) -> bool;
+        unsafe fn is_data_abstraction(term: *const _aterm) -> bool;
+        unsafe fn is_data_untyped_identifier(term: *const _aterm) -> bool;
     }
 }

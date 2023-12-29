@@ -99,24 +99,13 @@ pub mod ffi {
         unsafe fn drop_function_symbol(symbol: *const _function_symbol);
 
         /// Obtain the address of the given function symbol.
-        unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;
-
-        // For data::variable
-        unsafe fn is_data_variable(term: *const _aterm) -> bool;
+        unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;        
 
         /// Creates an unprotected data variable, must be within in a critical section.
         fn create_data_variable(name: String) -> *const _aterm;
 
-        // For data::function_symbol        
-        unsafe fn is_data_function_symbol(term: *const _aterm) -> bool;
-
         /// Creates an unprotected data function symbol, must be within in a critical section.
         fn create_data_function_symbol(name: String) -> *const _aterm;
-
-        // For data::data_expression        
-        unsafe fn is_data_where_clause(term: *const _aterm) -> bool;
-        unsafe fn is_data_abstraction(term: *const _aterm) -> bool;
-        unsafe fn is_data_untyped_identifier(term: *const _aterm) -> bool;
 
         /// This function is to generate necessary data types
         fn generate_types() -> UniquePtr<CxxVector<aterm>>;
