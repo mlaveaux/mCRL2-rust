@@ -10,11 +10,11 @@ use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool}
 ///                     given as a slice of position indexes
 ///
 /// # Example
+/// 
 /// The term is constructed bottom up. As an an example take the term s(s(a)).
-/// Lets say we want to replace the a with the term 0.
-/// Then we traverse the term until we have arrived at a and replace it with 0.
-/// We then construct s(0) (using the maximally shared term pool)
-/// We then construct s(s(0)) (using the maximally shared term pool)
+/// Lets say we want to replace the a with the term 0. Then we traverse the term
+/// until we have arrived at a and replace it with 0. We then construct s(0)
+/// and then construct s(s(0)).
 pub fn substitute(tp: &mut TermPool, t: &impl ATermTrait, new_subterm: ATerm, p: &[usize]) -> ATerm {
     substitute_rec(tp, t, new_subterm, p, 0)
 }

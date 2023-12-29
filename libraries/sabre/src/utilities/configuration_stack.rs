@@ -8,7 +8,7 @@ use super::{substitute, get_position};
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
-///     1. the index of a sate
+///     1. the index of a state
 ///     2. The subterm at the position of the configuration.
 ///     3. The difference of position compared to the parent configuration (None for the root).
 ///         Note that it stores a reference to a position. It references the position listed on

@@ -33,11 +33,12 @@ impl From<ATerm> for DataEquation {
 
 impl DataSpecification {
     /// Parses the given text into a data specification
-    pub fn new(text: &str) -> Self {
-        DataSpecification {
-            data_spec: ffi::parse_data_specification(text)
-                .expect("failed to parse data specification"),
-        }
+    pub fn new(text: &str) -> Result<Self, Box<dyn Error>> {
+        let data_spec = ffi::parse_data_specification(text)?;
+
+        Ok(DataSpecification {
+            data_spec,
+        })
     }
 
     /// Parses the given data expression as text into a term
@@ -282,6 +283,29 @@ impl<'a> From<ATerm> for DataFunctionSymbol {
     }
 }
 
+impl Into<ATerm> for DataVariable {
+    fn into(self) -> ATerm {
+        self.term        
+    }
+}
+
+impl Into<ATerm> for DataApplication {
+    fn into(self) -> ATerm {
+        self.term        
+    }
+}
+
+impl Into<ATerm> for DataFunctionSymbol {
+    fn into(self) -> ATerm {
+        self.term        
+    }
+}
+
+impl Into<ATerm> for BoolSort {
+    fn into(self) -> ATerm {
+        self.term        
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -315,6 +339,6 @@ mod tests {
                 notBool : Xbool -> Xbool ;
                 andBool : Xbool # Xbool -> Xbool ;";
 
-        let _data_spec = DataSpecification::new(text);
+        let _data_spec = DataSpecification::new(text).unwrap();
     }
 }

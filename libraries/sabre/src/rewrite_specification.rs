@@ -6,7 +6,7 @@ use mcrl2::{
     data::{DataFunctionSymbol, DataSpecification, BoolSort}
 };
 
-/// A rewrite specification contains the bare info we need for rewriting (in particular no type information).
+/// A rewrite specification contains the bare info we need for rewriting (can be untyped).
 #[derive(Debug,Clone)]
 pub struct RewriteSpecification 
 {

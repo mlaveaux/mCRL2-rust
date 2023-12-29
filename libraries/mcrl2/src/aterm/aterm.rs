@@ -199,7 +199,6 @@ impl<'a> ATermTrait for ATermRef<'a> {
     }
 }
 
-
 impl<'a> fmt::Display for ATermRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_default() {
@@ -280,36 +279,6 @@ impl From<&ffi::aterm> for ATerm {
     }
 }
 
-impl From<DataVariable> for ATerm {
-    fn from(value: DataVariable) -> Self {
-        value.term
-    }
-}
-
-impl From<DataApplication> for ATerm {
-    fn from(value: DataApplication) -> Self {
-        value.term
-    }
-}
-
-impl From<DataFunctionSymbol> for ATerm {
-    fn from(value: DataFunctionSymbol) -> Self {
-        value.term
-    }
-}
-
-impl<T> From<ATermList<T>> for ATerm {
-    fn from(value: ATermList<T>) -> Self {
-        value.term
-    }
-}
-
-impl From<BoolSort> for ATerm {
-    fn from(value: BoolSort) -> Self {
-        value.term
-    }
-}
-
 pub struct ATermList<T> {
     term: ATerm,
     _marker: PhantomData<T>,
@@ -347,6 +316,12 @@ impl<T> Clone for ATermList<T> {
             term: self.term.clone(),
             _marker: PhantomData,
         }
+    }
+}
+
+impl<T> From<ATermList<T>> for ATerm {
+    fn from(value: ATermList<T>) -> Self {
+        value.term
     }
 }
 
