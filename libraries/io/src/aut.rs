@@ -75,7 +75,10 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
     lines.advance();
     let header = lines.get().unwrap(); //.ok_or(IOError::InvalidHeader("The first line should be the header"))??;
 
+    // Regex for des (<initial>: Nat, <num_of_states>: Nat, <num_of_transitions>: Nat)
     let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
+    
+    // Regex for (<from>: Nat, <label>: str, <to>: Nat)
     let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(["a-zA-Z0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
 
     let (_, [grp1, grp2, grp3]) = header_regex.captures(header).ok_or(IOError::InvalidHeader("does not match des (<init>, <num_states>, <num_transitions>)"))?

@@ -21,9 +21,11 @@ pub fn benchmark() -> Result<(), Box<dyn Error>> {
             
             // Strip the beginning UNC path even through technically correct hyperfine does not deal with it properly.
 
-            cmd!("target/release/mcrl2rewrite.exe",
-                "--rewriter",
-                "innermost",
+            cmd!("timeout",
+                "600",
+                "../mCRL2/build/stage/bin/mcrl2rewrite",
+                "-rjitty",
+                "--timings",
                 format!("{}", data_spec.to_string_lossy()), 
                 format!("{}", expressions.to_string_lossy())
             ).run()?;
