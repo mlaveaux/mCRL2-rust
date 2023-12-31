@@ -7,22 +7,25 @@ fn main() {
 
 use std::marker::PhantomData;
 
-#[derive(Default)]
+#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct ATerm {}
 
 impl ATerm {
+    #[allow(unused)]
     pub fn borrow(&self) -> ATermRef<'_> {
         Default::default()
     }
     
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct ATermRef<'a> {
     marker: PhantomData<&'a ()>
 }
 
 impl<'a> ATermRef<'a> {
+
+    #[allow(unused)]
     pub fn protect(&self) -> ATerm {
         Default::default()
     }
@@ -31,13 +34,16 @@ impl<'a> ATermRef<'a> {
 #[mcrl2_term]
 mod term {
     use super::*;
+    use mcrl2_macros::term;
 
+    #[term()]
     struct BoolSort {
         term: ATerm
     }
 
     impl BoolSort {
     
+        #[allow(unused)]
         pub fn test(&self) -> bool {
             true
         }
