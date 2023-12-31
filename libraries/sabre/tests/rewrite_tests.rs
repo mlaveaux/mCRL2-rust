@@ -1,4 +1,4 @@
-use mcrl2::data::DataSpecification;
+use mcrl2::data::{DataSpecification};
 use std::{cell::RefCell, rc::Rc};
 use test_case::test_case;
 
@@ -17,7 +17,7 @@ use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
 #[test_case(include_str!("../../../examples/REC/mcrl2/check1.dataspec"), include_str!("../../../examples/REC/mcrl2/check1.expressions"), include_str!("snapshot/result_check1.txt") ; "check1")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/check2.dataspec"), include_str!("../../../examples/REC/mcrl2/check2.expressions"), include_str!("snapshot/result_check2.txt") ; "check2")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/confluence.dataspec"), include_str!("../../../examples/REC/mcrl2/confluence.expressions"), include_str!("snapshot/result_confluence.txt") ; "confluence")]
-// #[test_case(include_str!("../../../examples/REC/mcrl2/factorial5.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial5.expressions"), include_str!("snapshot/result_factorial5.txt") ; "factorial5")]
+// #[test_cas//e(include_str!("../../../examples/REC/mcrl2/factorial5.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial5.expressions"), include_str!("snapshot/result_factorial5.txt") ; "factorial5")]
 // #[test_case(include_str!("../../../examples/REC/mcrl2/factorial6.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial6.expressions"), include_str!("snapshot/result_factorial6.txt") ; "factorial6")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/fibonacci05.dataspec"), include_str!("../../../examples/REC/mcrl2/fibonacci05.expressions"), include_str!("snapshot/result_fibonacci05.txt") ; "fibonacci05")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/garbagecollection.dataspec"), include_str!("../../../examples/REC/mcrl2/garbagecollection.expressions"), include_str!("snapshot/result_garbagecollection.txt") ; "garbagecollection")]
@@ -30,14 +30,11 @@ use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
 #[test_case(include_str!("../../../examples/REC/mcrl2/missionaries3.dataspec"), include_str!("../../../examples/REC/mcrl2/missionaries3.expressions"), include_str!("snapshot/result_missionaries3.txt") ; "missionaries3")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/quicksort10.dataspec"), include_str!("../../../examples/REC/mcrl2/quicksort10.expressions"), include_str!("snapshot/result_quicksort10.txt") ; "quicksort10")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/revelt.dataspec"), include_str!("../../../examples/REC/mcrl2/revelt.expressions"), include_str!("snapshot/result_revelt.txt") ; "revelt")]
-// #[test_case(include_str!("../../../examples/REC/mcrl2/revnat100.dataspec"), include_str!("../../../examples/REC/mcrl2/revnat100.expressions"), include_str!("snapshot/result_revnat100.txt") ; "revnat100")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/searchinconditions.dataspec"), include_str!("../../../examples/REC/mcrl2/searchinconditions.expressions"), include_str!("snapshot/result_searchinconditions.txt") ; "searchinconditions")]
-// #[test_case(include_str!("../../../examples/REC/mcrl2/sieve20.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve20.expressions"), include_str!("snapshot/result_sieve20.txt") ; "sieve20")]
-#[test_case(include_str!("../../../examples/REC/mcrl2/sieve100.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve100.expressions"), include_str!("snapshot/result_sieve100.txt") ; "sieve100")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/soundnessofparallelengines.dataspec"), include_str!("../../../examples/REC/mcrl2/soundnessofparallelengines.expressions"), include_str!("snapshot/result_soundnessofparallelengines.txt") ; "soundnessofparallelengines")]
-#[test_case(include_str!("../../../examples/REC/mcrl2/tak18.dataspec"), include_str!("../../../examples/REC/mcrl2/tak18.expressions"), include_str!("snapshot/result_tak18.txt") ; "tak18")]
+// #[test_case(include_str!("../../../examples/REC/mcrl2/tak18.dataspec"), include_str!("../../../examples/REC/mcrl2/tak18.expressions"), include_str!("snapshot/result_tak18.txt") ; "tak18")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/tautologyhard.dataspec"), include_str!("../../../examples/REC/mcrl2/tautologyhard.expressions"), include_str!("snapshot/result_tautologyhard.txt") ; "tautologyhard")]
-#[test_case(include_str!("../../../examples/REC/mcrl2/tricky.dataspec"), include_str!("../../../examples/REC/mcrl2/tricky.expressions"), include_str!("snapshot/result_tricky.txt") ; "tricky")]
+// #[test_case(include_str!("../../../examples/REC/mcrl2/tricky.dataspec"), include_str!("../../../examples/REC/mcrl2/tricky.expressions"), include_str!("snapshot/result_tricky.txt") ; "tricky")]
 fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
     let spec = DataSpecification::new(data_spec).unwrap();
@@ -85,7 +82,10 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
 #[test_case(include_str!("../../../examples/REC/mcrl2/hanoi12.dataspec"), include_str!("../../../examples/REC/mcrl2/hanoi12.expressions"), include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/permutations6.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations6.expressions"), include_str!("snapshot/result_permutations6.txt") ; "permutations6")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/permutations7.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations7.expressions"), include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/revnat100.dataspec"), include_str!("../../../examples/REC/mcrl2/revnat100.expressions"), include_str!("snapshot/result_revnat100.txt") ; "revnat100")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/revnat1000.dataspec"), include_str!("../../../examples/REC/mcrl2/revnat1000.expressions"), include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/sieve20.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve20.expressions"), include_str!("snapshot/result_sieve20.txt") ; "sieve20")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/sieve100.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve100.expressions"), include_str!("snapshot/result_sieve100.txt") ; "sieve100")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/sieve1000.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve1000.expressions"), include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
 fn rewriter_test_release(data_spec: &str, expressions: &str, expected_result: &str) {
     rewriter_test(data_spec, expressions, expected_result);

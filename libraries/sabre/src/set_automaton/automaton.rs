@@ -100,21 +100,22 @@ fn is_supported_rule(rule: &Rule) -> bool {
 fn find_symbols(t: ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
     if t.is_data_function_symbol() {
         add_symbol(t.protect().into(), 0, symbols);
-    }
+    } else if t.is_data_application() {
+        let mut args = t.arguments();
 
-    for subterm in t.iter() {
-        if subterm.is_data_application() {
-            let mut args = subterm.arguments();
+        // REC specifications should never contain this so it can be a debug error.
+        let head = args.next().unwrap();
+        assert!(
+            head.is_data_function_symbol(),
+            "Higher order term rewrite systems are not supported"
+        );
 
-            // REC specifications should never contain this so it can be a debug error.
-            let head = args.next().unwrap();
-            assert!(
-                head.is_data_function_symbol(),
-                "Higher order term rewrite systems are not supported"
-            );
-
-            add_symbol(head.protect().into(), args.len(), symbols);
+        add_symbol(head.protect().into(), args.len(), symbols);
+        for arg in args {
+            find_symbols(arg, symbols);
         }
+    } else if !t.is_data_variable() {
+        panic!("Unexpected term {:?}", t);
     }
 }
 
@@ -144,15 +145,9 @@ impl SetAutomaton {
                 find_symbols(rule.rhs.borrow(), &mut symbols);
 
                 for cond in &rule.conditions {
-                    find_symbols( cond.lhs.borrow(), &mut symbols);
+                    find_symbols(cond.lhs.borrow(), &mut symbols);
                     find_symbols(cond.rhs.borrow(), &mut symbols);
                 }
-            }
-
-            // Add the constructors since otherwise match obligations conclude
-            // too early that matching has finished.
-            for (symbol, arity) in &spec.constructors {
-                add_symbol(symbol.clone(), *arity, &mut symbols);
             }
 
             symbols
@@ -203,6 +198,10 @@ impl SetAutomaton {
         while !queue.is_empty() {
             // Pick a state to explore
             let s_index = queue.pop_front().unwrap();
+
+            // TODO: It might be sensible to check if match obligations even
+            // have a matching symbol at all, otherwise some constructors have
+            // been omitted.
 
             // Compute the transitions from the states
             let transitions_per_symbol: Vec<_> = symbols
