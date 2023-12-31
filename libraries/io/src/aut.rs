@@ -11,8 +11,11 @@ pub struct State {
     outgoing: Vec<(Label, usize)>,
 }
 
-pub struct LTS {
+pub struct LTS {    
+    #[allow(unused)]
     initial_state: usize,
+
+    #[allow(unused)]
     states: Vec<State>,
 }
 
