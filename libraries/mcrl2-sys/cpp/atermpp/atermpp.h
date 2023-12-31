@@ -209,52 +209,6 @@ const detail::_function_symbol*  create_function_symbol(rust::String name, std::
   return leak.m_val.address();
 }
 
-// For the data namespace
-
-bool is_data_function_symbol(const detail::_aterm* term)
-{
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_function_symbol(static_cast<const aterm_appl&>(t));
-}
-
-bool is_data_variable(const detail::_aterm* term)
-{
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_variable(static_cast<const aterm&>(t));
-}
-
-const detail::_aterm* create_data_variable(rust::String name)
-{
-  unprotected_aterm result(nullptr);
-  make_variable(reinterpret_cast<aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), mcrl2::data::sort_expression());
-  return detail::address(result);
-}
-
-bool is_data_where_clause(const detail::_aterm* term)
-{
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_where_clause(static_cast<const aterm_appl&>(t));
-}
-
-bool is_data_abstraction(const detail::_aterm* term)
-{
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_abstraction(static_cast<const aterm_appl&>(t));
-}
-
-bool is_data_untyped_identifier(const detail::_aterm* term)
-{
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_untyped_identifier(static_cast<const aterm_appl&>(t));
-}
-
-const detail::_aterm* create_data_function_symbol(rust::String name)
-{
-  unprotected_aterm result(nullptr);
-  make_function_symbol(reinterpret_cast<aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
-  return detail::address(result);
-}
-
 std::unique_ptr<std::vector<aterm>> generate_types()
 {
   return std::make_unique<std::vector<aterm>>();

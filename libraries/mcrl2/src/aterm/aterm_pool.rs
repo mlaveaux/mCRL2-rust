@@ -346,7 +346,7 @@ impl TermPool {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
 
-                let term = ffi::create_data_variable(name.to_string());
+                let term = mcrl2_sys::data::ffi::create_data_variable(name.to_string());
                 DataVariable {
                     term: protect_with(protection_set,  tp.index, term),
                 }
@@ -364,7 +364,7 @@ impl TermPool {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
 
-                let term = ffi::create_data_function_symbol(name.to_string());
+                let term = mcrl2_sys::data::ffi::create_data_function_symbol(name.to_string());
                 DataFunctionSymbol {
                     term: protect_with(protection_set,  tp.index, term),
                 }

@@ -54,9 +54,15 @@ pub mod ffi {
         // For data::variable
         unsafe fn is_data_variable(term: *const _aterm) -> bool;
 
+        /// Creates an unprotected data variable, must be within in a critical section.
+        fn create_data_variable(name: String) -> *const _aterm;
+
         // For data::function_symbol        
         unsafe fn is_data_function_symbol(term: *const _aterm) -> bool;
 
+        /// Creates an unprotected data function symbol, must be within in a critical section.
+        fn create_data_function_symbol(name: String) -> *const _aterm;
+        
         // For data::data_expression        
         unsafe fn is_data_where_clause(term: *const _aterm) -> bool;
         unsafe fn is_data_abstraction(term: *const _aterm) -> bool;

@@ -101,12 +101,6 @@ pub mod ffi {
         /// Obtain the address of the given function symbol.
         unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;        
 
-        /// Creates an unprotected data variable, must be within in a critical section.
-        fn create_data_variable(name: String) -> *const _aterm;
-
-        /// Creates an unprotected data function symbol, must be within in a critical section.
-        fn create_data_function_symbol(name: String) -> *const _aterm;
-
         /// This function is to generate necessary data types
         fn generate_types() -> UniquePtr<CxxVector<aterm>>;
     }

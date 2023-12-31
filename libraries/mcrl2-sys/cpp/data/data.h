@@ -4,6 +4,7 @@
 #include "rust/cxx.h"
 
 #include "mcrl2/atermpp/aterm.h"
+#include "mcrl2/core/identifier_string.h"
 #include "mcrl2/data/detail/rewrite/jitty.h"
 #include "mcrl2/data/parse.h"
 
@@ -16,6 +17,8 @@ class RewriterCompilingJitty
 {};
 } // namespace mcrl2::data::detail
 #endif // MCRL2_ENABLE_JITTYC
+
+using namespace mcrl2::core;
 
 namespace mcrl2::data
 {
@@ -75,6 +78,51 @@ std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_equations(co
 {
   auto equations = data_spec.equations();
   return std::make_unique<std::vector<atermpp::aterm>>(equations.begin(), equations.end());
+}
+
+bool is_data_where_clause(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return is_where_clause(static_cast<const atermpp::aterm_appl&>(t));
+}
+
+bool is_data_abstraction(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return is_abstraction(static_cast<const atermpp::aterm_appl&>(t));
+}
+
+bool is_data_untyped_identifier(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return is_untyped_identifier(static_cast<const atermpp::aterm_appl&>(t));
+}
+
+
+bool is_data_function_symbol(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return mcrl2::data::is_function_symbol(static_cast<const atermpp::aterm_appl&>(t));
+}
+
+bool is_data_variable(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return mcrl2::data::is_variable(static_cast<const atermpp::aterm&>(t));
+}
+
+const atermpp::detail::_aterm* create_data_variable(rust::String name)
+{
+  atermpp::unprotected_aterm result(nullptr);
+  make_variable(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), sort_expression());
+  return atermpp::detail::address(result);
+}
+
+const atermpp::detail::_aterm* create_data_function_symbol(rust::String name)
+{
+  atermpp::unprotected_aterm result(nullptr);
+  make_function_symbol(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
+  return atermpp::detail::address(result);
 }
 
 std::unique_ptr<atermpp::aterm> true_term() 
