@@ -22,7 +22,11 @@ Tests can be performed using `cargo test`, only tests of the Sabre crate can be 
 
 ## Benchmarks
 
-Benchmarks can be executed using `cargo bench`. Additionally, we can also install `cargo-criterion` and run `cargo criterion` instead to keep track of more information, such as changes over time.
+Micro-benchmarks can be executed using `cargo bench`. Additionally, we can also install `cargo-criterion` and run `cargo criterion` instead to keep track of more information such as changes over time. There is a benchmark task that can be executed with `cargo xtask benchmark` that runs multiple longer running benchmarks.
+
+## Code Generation
+
+There are a few procedural macros used to replace the code generation performed in the mCRL2 toolset. Working on procedural macros is typically difficult, but there are unit and integration tests to showcase common patterns. Alternatively, install `cargo install cargo-expand` and run the command `cargo expand` in for example `libraries/mcrl2-macros` to print the Rust code with the macros expanded.
 
 ## LLVM Sanitizer
 
