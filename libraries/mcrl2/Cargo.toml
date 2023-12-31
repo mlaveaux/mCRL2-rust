@@ -9,6 +9,8 @@ parking_lot = "0.12"
 ahash.workspace = true
 rand.workspace = true
 log.workspace = true
+
+mcrl2-macros.workspace = true
 mcrl2-sys = { path="../mcrl2-sys" }
 utilities = { path="../utilities" }
 
