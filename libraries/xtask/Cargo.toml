@@ -10,3 +10,4 @@ edition.workspace = true
 duct = "0.13"
 fs_extra = "1.0"
 glob = "0.3"
+which = "5.0"
