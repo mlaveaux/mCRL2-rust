@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 bitstream-io = "2.2"
-regex = "1.10"
 thiserror = "1"
 streaming-iterator = "0.1"
 fxhash = "0.2"
+regex.workspace = true
