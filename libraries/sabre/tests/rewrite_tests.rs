@@ -1,4 +1,4 @@
-use mcrl2::data::{DataApplication, DataSpecification, self};
+use mcrl2::data::DataSpecification;
 use std::{cell::RefCell, rc::Rc};
 use test_case::test_case;
 

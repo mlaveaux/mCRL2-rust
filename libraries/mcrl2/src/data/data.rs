@@ -1,7 +1,6 @@
 use core::fmt;
 
-use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait, ATermArgs};
-use mcrl2_macros::Term;
+use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait};
 use mcrl2_sys::data::ffi;
 
 pub fn is_data_variable(term: ATermRef<'_>) -> bool {
@@ -32,11 +31,6 @@ pub fn is_data_abstraction(term: ATermRef<'_>) -> bool {
 pub fn is_data_untyped_identifier(term: ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_untyped_identifier(term.get()) }
-}
-
-pub fn is_data_application(term: ATermRef<'_>) -> bool {
-    false
-}
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

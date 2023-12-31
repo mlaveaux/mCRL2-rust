@@ -96,7 +96,7 @@ pub(crate) fn mcrl2_term_impl(_attributes: TokenStream, input: TokenStream) -> T
                         added.push(Item::Verbatim(generated));
                     }
                 }
-                Item::Impl(implementation) => {
+                Item::Impl(_implementation) => {
 
 
                 }
@@ -133,7 +133,7 @@ mod tests {
         ";
         
         let tokens = TokenStream::from_str(input).unwrap();
-        let result = mcrl2_term_impl(TokenStream::default(), tokens);
+        let _result = mcrl2_term_impl(TokenStream::default(), tokens);
 
         //assert_eq!(format!("{}", result), "");
     }

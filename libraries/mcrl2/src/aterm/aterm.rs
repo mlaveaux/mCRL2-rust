@@ -35,7 +35,19 @@ pub trait ATermTrait {
     /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
     fn iter(&self) -> TermIterator<'_>;
 
-    /// Returns true iff the term is not default.
+    /// Returns true iff this is a data::variable
+    fn is_data_variable(&self) -> bool;
+
+    /// Returns true iff this is a data::function_symbol
+    fn is_data_function_symbol(&self) -> bool;
+
+    fn is_data_where_clause(&self) -> bool;
+
+    fn is_data_abstraction(&self) -> bool;
+
+    fn is_data_untyped_identifier(&self) -> bool;
+
+    /// Panics if the term is default
     fn require_valid(&self);
 }
 
@@ -157,6 +169,31 @@ impl<'a> ATermTrait for ATermRef<'a> {
 
     fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.borrow())
+    }
+
+    fn is_data_variable(&self) -> bool {
+        self.require_valid();
+        unsafe { mcrl2_sys::data::ffi::is_data_variable(self.term) }
+    }
+
+    fn is_data_function_symbol(&self) -> bool {
+        self.require_valid();
+        unsafe { mcrl2_sys::data::ffi::is_data_function_symbol(self.term) }
+    }
+
+    fn is_data_where_clause(&self) -> bool {
+        self.require_valid();
+        unsafe { mcrl2_sys::data::ffi::is_data_where_clause(self.term) }
+    }
+
+    fn is_data_abstraction(&self) -> bool {
+        self.require_valid();
+        unsafe { mcrl2_sys::data::ffi::is_data_abstraction(self.term) }
+    }
+
+    fn is_data_untyped_identifier(&self) -> bool {
+        self.require_valid();
+        unsafe { mcrl2_sys::data::ffi::is_data_untyped_identifier(self.term) }
     }
 
     fn require_valid(&self) {
@@ -539,6 +576,26 @@ impl ATermTrait for ATerm {
 
     fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.borrow())
+    }
+
+    fn is_data_variable(&self) -> bool {
+        self.borrow().is_data_variable()
+    }
+
+    fn is_data_function_symbol(&self) -> bool {
+        self.borrow().is_data_function_symbol()
+    }
+
+    fn is_data_where_clause(&self) -> bool {
+        self.borrow().is_data_where_clause()
+    }
+
+    fn is_data_abstraction(&self) -> bool {
+        self.borrow().is_data_abstraction()
+    }
+
+    fn is_data_untyped_identifier(&self) -> bool {
+        self.borrow().is_data_untyped_identifier()
     }
 
     fn require_valid(&self) {

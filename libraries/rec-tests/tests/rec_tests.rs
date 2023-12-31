@@ -1,4 +1,3 @@
-use mcrl2::data::{DataApplication, DataExpression};
 use std::{cell::RefCell, rc::Rc};
 use test_case::test_case;
 
