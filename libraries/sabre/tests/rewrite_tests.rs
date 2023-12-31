@@ -38,7 +38,6 @@ use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter};
 #[test_case(include_str!("../../../examples/REC/mcrl2/tak18.dataspec"), include_str!("../../../examples/REC/mcrl2/tak18.expressions"), include_str!("snapshot/result_tak18.txt") ; "tak18")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/tautologyhard.dataspec"), include_str!("../../../examples/REC/mcrl2/tautologyhard.expressions"), include_str!("snapshot/result_tautologyhard.txt") ; "tautologyhard")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/tricky.dataspec"), include_str!("../../../examples/REC/mcrl2/tricky.expressions"), include_str!("snapshot/result_tricky.txt") ; "tricky")]
-
 fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
     let spec = DataSpecification::new(data_spec).unwrap();
@@ -55,12 +54,39 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
 
         let result = inner.rewrite(term.clone());
         assert_eq!(
-            result.clone(),
-            expected_result.clone(),
+            result,
+            expected_result,
             "The inner rewrite result doesn't match the expected result"
         );
 
         // let result = sa.rewrite(term.clone());
         // assert_eq!(DataApplication::from(result), DataApplication::from(expected_result), "The sabre rewrite result doesn't match the expected result");
     }
+}
+
+#[cfg(not(debug_assertions))]
+#[test_case(include_str!("../../../examples/REC/mcrl2/benchexpr20.dataspec"), include_str!("../../../examples/REC/mcrl2/benchexpr20.expressions"), include_str!("snapshot/result_benchexpr20.txt") ; "benchexpr20")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/benchsym20.dataspec"), include_str!("../../../examples/REC/mcrl2/benchsym20.expressions"), include_str!("snapshot/result_benchsym20.txt") ; "benchsym20")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/closure.dataspec"), include_str!("../../../examples/REC/mcrl2/closure.expressions"), include_str!("snapshot/result_closure.txt") ; "closure")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/dart.dataspec"), include_str!("../../../examples/REC/mcrl2/dart.expressions"), include_str!("snapshot/result_dart.txt") ; "dart")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/empty.dataspec"), include_str!("../../../examples/REC/mcrl2/empty.expressions"), include_str!("snapshot/result_empty.txt") ; "empty")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/evalexpr.dataspec"), include_str!("../../../examples/REC/mcrl2/evalexpr.expressions"), include_str!("snapshot/result_evalexpr.txt") ; "evalexpr")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/evaltree.dataspec"), include_str!("../../../examples/REC/mcrl2/evaltree.expressions"), include_str!("snapshot/result_evaltree.txt") ; "evaltree")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/factorial7.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial7.expressions"), include_str!("snapshot/result_factorial7.txt") ; "factorial7")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/factorial8.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial8.expressions"), include_str!("snapshot/result_factorial8.txt") ; "factorial8")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/factorial9.dataspec"), include_str!("../../../examples/REC/mcrl2/factorial9.expressions"), include_str!("snapshot/result_factorial9.txt") ; "factorial9")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/fibonacci18.dataspec"), include_str!("../../../examples/REC/mcrl2/fibonacci18.expressions"), include_str!("snapshot/result_fibonacci18.txt") ; "fibonacci18")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/fibonacci19.dataspec"), include_str!("../../../examples/REC/mcrl2/fibonacci19.expressions"), include_str!("snapshot/result_fibonacci19.txt") ; "fibonacci19")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/fibonacci20.dataspec"), include_str!("../../../examples/REC/mcrl2/fibonacci20.expressions"), include_str!("snapshot/result_fibonacci20.txt") ; "fibonacci20")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/fibonacci21.dataspec"), include_str!("../../../examples/REC/mcrl2/fibonacci21.expressions"), include_str!("snapshot/result_fibonacci21.txt") ; "fibonacci21")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/natlist.dataspec"), include_str!("../../../examples/REC/mcrl2/natlist.expressions"), include_str!("snapshot/result_natlist.txt") ; "natlist")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/oddeven.dataspec"), include_str!("../../../examples/REC/mcrl2/oddeven.expressions"), include_str!("snapshot/result_oddeven.txt") ; "oddeven")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/order.dataspec"), include_str!("../../../examples/REC/mcrl2/order.expressions"), include_str!("snapshot/result_order.txt") ; "order")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/hanoi12.dataspec"), include_str!("../../../examples/REC/mcrl2/hanoi12.expressions"), include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/permutations6.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations6.expressions"), include_str!("snapshot/result_permutations6.txt") ; "permutations6")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/permutations7.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations7.expressions"), include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/revnat1000.dataspec"), include_str!("../../../examples/REC/mcrl2/revnat1000.expressions"), include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
+#[test_case(include_str!("../../../examples/REC/mcrl2/sieve1000.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve1000.expressions"), include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
+fn rewriter_test_release(data_spec: &str, expressions: &str, expected_result: &str) {
+    rewriter_test(data_spec, expressions, expected_result);
 }
