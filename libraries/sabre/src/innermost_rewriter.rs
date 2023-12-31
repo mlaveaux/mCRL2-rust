@@ -90,7 +90,7 @@ impl InnermostRewriter {
     pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
         InnermostRewriter {
             term_pool: term_pool.clone(),
-            apma: SetAutomaton::new(&mut term_pool.borrow_mut(), spec, true),
+            apma: SetAutomaton::new(spec, true),
         }
     }
 
@@ -115,8 +115,8 @@ impl InnermostRewriter {
                 Config::Rewrite(result) => {
                     let term = stack.terms.pop().unwrap();
 
-                    let symbol = get_data_function_symbol(tp, term.borrow());
-                    let arguments = get_data_arguments(tp, &term);
+                    let symbol = get_data_function_symbol(term.borrow());
+                    let arguments = get_data_arguments(&term);
 
                     // For all the argument we reserve space on the stack.
                     let top_of_stack = stack.terms.len();
@@ -249,7 +249,7 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let symbol = get_data_function_symbol(tp, get_position(t, &state.label));
+            let symbol = get_data_function_symbol(get_position(t, &state.label));
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = state.transitions.get(symbol.operation_id()) {

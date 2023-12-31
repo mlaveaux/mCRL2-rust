@@ -15,7 +15,7 @@ use crate::{
     data::{DataApplication, DataFunctionSymbol, DataVariable},
 };
 
-use super::ATermRef;
+use super::{ATermRef, SymbolRef};
 
 /// This newtype is necessary since plain pointers cannot be marked as Send.
 /// However since terms are immutable pointers it is fine to read them in multiple
@@ -134,6 +134,9 @@ pub struct ThreadTermPool {
     // TODO: On macOS destroying the callback causes issues. However, this should be fine since the related thread_aterm_pool is destroyed.
     _callback: ManuallyDrop<UniquePtr<ffi::callback_container>>,
     index: usize,
+
+    /// Function symbols to represent 'DataAppl' with any number of arguments.
+    data_appl: Vec<Symbol>, 
 }
 
 /// Protects the given aterm address and returns the term.
@@ -179,6 +182,7 @@ impl ThreadTermPool {
             container_protection_set,
             _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
             index: protection_sets.len() - 1,
+            data_appl: vec![],
         }
     }
 
@@ -233,6 +237,18 @@ impl ThreadTermPool {
             container_protection_set.unprotect(container_root);
         }
     }
+
+    /// Returns true iff the given term is a data application.
+    pub fn is_data_application(&mut self, term: ATermRef<'_>) -> bool {     
+        let symbol = term.get_head_symbol();   
+        // It can be that data_applications are created without create_data_application in the mcrl2 ffi.
+        while self.data_appl.len() <= symbol.arity() {
+            let symbol = Symbol::take(ffi::create_function_symbol(String::from("DataAppl"), self.data_appl.len()));
+            self.data_appl.push(symbol);
+        }
+
+        symbol == self.data_appl[symbol.arity()].borrow()
+    }
 }
 
 impl Default for ThreadTermPool {
@@ -267,14 +283,12 @@ impl Drop for ThreadTermPool {
 /// This is the thread local term pool.
 pub struct TermPool {
     arguments: Vec<*const ffi::_aterm>,
-    data_appl: Vec<Symbol>, // Function symbols to represent 'DataAppl' with any number of arguments.
 }
 
 impl TermPool {
     pub fn new() -> TermPool {
         TermPool {
             arguments: vec![],
-            data_appl: vec![],
         }
     }
 
@@ -328,12 +342,15 @@ impl TermPool {
         debug_assert!(arguments.len() > 0, "DataApplication should have at least one argument");
 
         // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
-        while self.data_appl.len() <= arguments.len() + 1 {
-            let symbol = self.create_symbol("DataAppl", self.data_appl.len());
-            self.data_appl.push(symbol);
-        }
+        let symbol = THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            while tp.data_appl.len() <= arguments.len() + 1 {
+                let symbol = self.create_symbol("DataAppl", tp.data_appl.len());
+                tp.data_appl.push(symbol);
+            }
 
-        let symbol = self.data_appl[arguments.len() + 1].borrow();
+            tp.data_appl[arguments.len() + 1].borrow()
+        });
+
         let term = self.create_head(&symbol, head, arguments);
 
         DataApplication { term }
@@ -373,20 +390,6 @@ impl TermPool {
 
         self.collect();
         result
-    }
-
-    /// Returns true iff this is a data::application
-    pub fn is_data_application(&mut self, term: ATermRef<'_>) -> bool {
-        term.require_valid();
-
-        let symbol = term.get_head_symbol();
-        // It can be that data_applications are created without create_data_application in the mcrl2 ffi.
-        while self.data_appl.len() <= symbol.arity() {
-            let symbol = self.create_symbol("DataAppl", self.data_appl.len());
-            self.data_appl.push(symbol);
-        }
-
-        symbol == self.data_appl[symbol.arity()].borrow()
     }
 
     /// Creates an [ATerm] with the given symbol, first and other arguments.

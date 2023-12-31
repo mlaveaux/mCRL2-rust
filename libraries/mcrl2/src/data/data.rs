@@ -79,7 +79,7 @@ impl fmt::Display for DataApplication {
 
         let head = args.next().unwrap();
         if head.is_data_function_symbol() {
-            write!(f, "{}", <ATermRef as Into<DataFunctionSymbolRef>>::into(head))?;
+            write!(f, "{}", DataFunctionSymbolRef::from(head))?;
         } else {
             write!(f, "{:?}", head)?;
         }
@@ -92,7 +92,13 @@ impl fmt::Display for DataApplication {
                 write!(f, "(")?;
             }
 
-            write!(f, "{}", arg)?;
+            if arg.is_data_application() {
+                write!(f, "{}", DataApplication::from(arg.protect()))?;
+            } else if arg.is_data_function_symbol() {
+                write!(f, "{}", DataFunctionSymbolRef::from(arg))?;
+            } else {
+                write!(f, "{}", arg)?;
+            }
             first = false;
         }
 
@@ -251,17 +257,34 @@ impl Into<ATerm> for BoolSort {
 
 #[cfg(test)]
 mod tests {
-    use crate::aterm::TermPool;
-
+    use crate::aterm::{TermPool, ATerm, ATermTrait};
 
     #[test]
     fn test_print() {
         let mut tp = TermPool::new();
 
-        let symbol = tp.create_data_function_symbol("f");
-        assert_eq!("f", format!("{}", symbol));
+        let a = tp.create_data_function_symbol("a");
+        assert_eq!("a", format!("{}", a));
 
-        // let appl = tp.create_data_application(&symbol.borrow().into(), &[symbol]);
+        // Check printing of data applications.
+        let f = tp.create_data_function_symbol("f");
+        let a_term: ATerm = a.clone().into();
+        let appl = tp.create_data_application(&f.borrow().into(), &[a_term]);
+        assert_eq!("f(a)", format!("{}", appl));
+    }
+
+    #[test]
+    fn test_recognizers() {
+        let mut tp = TermPool::new();
+        
+        let a = tp.create_data_function_symbol("a");
+        let f = tp.create_data_function_symbol("f");
+        let a_term: ATerm = a.clone().into();
+        let appl = tp.create_data_application(&f.borrow().into(), &[a_term]);
+
+        let term: ATerm = appl.into();
+        assert!(term.is_data_application());
+       ;
 
     }
 }

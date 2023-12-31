@@ -35,6 +35,9 @@ pub trait ATermTrait {
     /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
     fn iter(&self) -> TermIterator<'_>;
 
+    /// Returns true iff this is a data::application
+    fn is_data_application(&self) -> bool;
+
     /// Returns true iff this is a data::variable
     fn is_data_variable(&self) -> bool;
 
@@ -201,6 +204,14 @@ impl<'a> ATermTrait for ATermRef<'a> {
             !self.is_default(),
             "This function can only be called on valid terms, i.e., not default terms"
         );
+    }
+
+    fn is_data_application(&self) -> bool {
+        self.require_valid();
+
+        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            tp.is_data_application(self.borrow())
+        })
     }
 }
 
@@ -576,6 +587,10 @@ impl ATermTrait for ATerm {
 
     fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.borrow())
+    }
+
+    fn is_data_application(&self) -> bool {
+        self.borrow().is_data_application()
     }
 
     fn is_data_variable(&self) -> bool {

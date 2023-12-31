@@ -5,7 +5,7 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
-use mcrl2::aterm::{ATerm, TermPool, ATermTrait, ATermRef};
+use mcrl2::aterm::{ATerm, ATermTrait, ATermRef};
 use smallvec::SmallVec;
 
 use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
@@ -118,7 +118,7 @@ impl EnhancedMatchAnnouncement {
     
     /// For a match announcement derives an EnhancedMatchAnnouncement, which precompiles some information
     /// for faster rewriting.
-    pub(crate) fn new(tp: &mut TermPool, announcement: MatchAnnouncement) -> EnhancedMatchAnnouncement {
+    pub(crate) fn new(announcement: MatchAnnouncement) -> EnhancedMatchAnnouncement {
         
         // Compute the extra information for the InnermostRewriter.
         // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
@@ -155,9 +155,9 @@ impl EnhancedMatchAnnouncement {
             if term.is_data_variable() {
                 positions.push((var_map.get(&term.protect().into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
-            } else if tp.is_data_application(term.borrow()) || term.is_data_function_symbol() {
-                let arity = get_data_arguments(tp, &term.borrow()).len();
-                innermost_stack.push(Config::Construct(get_data_function_symbol(tp, term.borrow()).protect(), arity, stack_size));
+            } else if term.is_data_application() || term.is_data_function_symbol() {
+                let arity = get_data_arguments(&term.borrow()).len();
+                innermost_stack.push(Config::Construct(get_data_function_symbol(term.borrow()).protect(), arity, stack_size));
                 stack_size += 1;
             } else {
                 // Skip intermediate terms such as UntypeSortUnknown and SortId(@NoValue)
@@ -399,7 +399,7 @@ mod tests {
             symbols_seen: 0,
         };
 
-        let ema = EnhancedMatchAnnouncement::new(&mut tp, announcement);
+        let ema = EnhancedMatchAnnouncement::new(announcement);
 
         // Check if the resulting construction succeeded.
         assert_eq!(ema.innermost_stack, 
@@ -423,7 +423,7 @@ mod tests {
             symbols_seen: 0,
         };
 
-        let ema = EnhancedMatchAnnouncement::new(&mut tp, announcement);
+        let ema = EnhancedMatchAnnouncement::new(announcement);
 
         // Check if the resulting construction succeeded.
         assert!(ema.innermost_stack.is_empty(), "The resulting config stack is not as expected");

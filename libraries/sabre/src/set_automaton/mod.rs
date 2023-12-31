@@ -9,4 +9,6 @@ mod display;
 
 pub use automaton::*;
 pub use announcement::*;
+
+#[allow(unused)]
 pub use display::*;

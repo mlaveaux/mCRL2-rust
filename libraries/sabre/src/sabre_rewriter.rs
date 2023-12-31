@@ -43,7 +43,7 @@ impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
         SabreRewriter {
             term_pool: tp.clone(),
-            automaton: SetAutomaton::new(&mut tp.borrow_mut(), spec, false),
+            automaton: SetAutomaton::new(spec, false),
         }
     }
 
@@ -112,7 +112,6 @@ impl SabreRewriter {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
                             let function_symbol = get_data_function_symbol(
-                                tp,
                                 get_position(&leaf.subterm, &automaton.states[leaf.state].label),
                             );
                             stats.symbol_comparisons += 1;
@@ -170,6 +169,10 @@ impl SabreRewriter {
                                     let tr_slice = tr.destinations.as_slice();
                                     cs.grow(leaf_index, tr_slice);
                                 }
+                            } else {
+                                // There is no outgoing edges for the head symbol of this term and the stack is empty.
+                                // TODO: Not sure if this is necessary or returning leaf.subterm is sufficient.
+                                return cs.compute_final_term(tp);
                             }
                         }
                         Some(sit) => {
