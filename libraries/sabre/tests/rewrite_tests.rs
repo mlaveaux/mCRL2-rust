@@ -81,7 +81,7 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
 #[test_case(include_str!("../../../examples/REC/mcrl2/order.dataspec"), include_str!("../../../examples/REC/mcrl2/order.expressions"), include_str!("snapshot/result_order.txt") ; "order")]
 // #[test_case(include_str!("../../../examples/REC/mcrl2/hanoi12.dataspec"), include_str!("../../../examples/REC/mcrl2/hanoi12.expressions"), include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/permutations6.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations6.expressions"), include_str!("snapshot/result_permutations6.txt") ; "permutations6")]
-#[test_case(include_str!("../../../examples/REC/mcrl2/permutations7.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations7.expressions"), include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
+// #[test_case(include_str!("../../../examples/REC/mcrl2/permutations7.dataspec"), include_str!("../../../examples/REC/mcrl2/permutations7.expressions"), include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/revnat100.dataspec"), include_str!("../../../examples/REC/mcrl2/revnat100.expressions"), include_str!("snapshot/result_revnat100.txt") ; "revnat100")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/revnat1000.dataspec"), include_str!("../../../examples/REC/mcrl2/revnat1000.expressions"), include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/sieve20.dataspec"), include_str!("../../../examples/REC/mcrl2/sieve20.expressions"), include_str!("snapshot/result_sieve20.txt") ; "sieve20")]

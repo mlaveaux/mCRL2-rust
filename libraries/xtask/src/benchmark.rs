@@ -32,7 +32,9 @@ pub fn benchmark() -> Result<(), Box<dyn Error>> {
             
             // Strip the beginning UNC path even through technically correct hyperfine does not deal with it properly.
 
-            match cmd!(&mcrl2_rewrite,
+            match cmd!("timeout",
+                "600",
+                &mcrl2_rewrite,
                 "--rewriter",
                 "innermost",
                 format!("{}", data_spec.to_string_lossy()), 

@@ -370,7 +370,5 @@ mod tests {
 
         let term: ATerm = appl.into();
         assert!(is_data_application(term.borrow()));
-       ;
-
     }
 }
