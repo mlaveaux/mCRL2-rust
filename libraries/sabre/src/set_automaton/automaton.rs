@@ -4,6 +4,7 @@ use ahash::HashMap;
 use log::{debug, warn, log_enabled, trace, info};
 use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, ATermArgs}, data::{DataFunctionSymbol, DataFunctionSymbolRef, is_data_variable, is_data_application, is_data_function_symbol, is_data_abstraction, is_data_where_clause, is_data_untyped_identifier}};
 use smallvec::{smallvec, SmallVec};
+use rayon::iter::IntoParallelRefIterator;
 
 use crate::{
     rewrite_specification::{RewriteSpecification, Rule},
@@ -195,13 +196,10 @@ impl SetAutomaton {
         map_goals_state.insert(match_goals, 0);
 
         let mut states = vec![initial_state];
-        while !queue.is_empty() {
-            // Pick a state to explore
-            let s_index = queue.pop_front().unwrap();
+        let mut num_of_transitions = 0;
 
-            // TODO: It might be sensible to check if match obligations even
-            // have a matching symbol at all, otherwise some constructors have
-            // been omitted.
+        // Pick a state to explore
+        while let Some(s_index) = queue.pop_front() {
 
             // Compute the transitions from the states
             let transitions_per_symbol: Vec<_> = symbols
@@ -210,7 +208,7 @@ impl SetAutomaton {
                     (
                         symbol.clone(),
                         states.get(s_index).unwrap().derive_transition(
-                            symbol.clone(),
+                            &symbol,
                             *arity,
                             &supported_rules,
                             apma,
@@ -274,6 +272,8 @@ impl SetAutomaton {
                     .transitions
                     .push(transition);
             }
+
+            info!("Queue size {}, created {} states", queue.len(), states.len());
         }
 
         // Clear the match goals since they are only for debugging purposes.
@@ -282,11 +282,11 @@ impl SetAutomaton {
                 state.match_goals.clear();
             }
         }
+        info!("Created set automaton (states: {}, transitions: {}, apma: {}) in {} ms", states.len(), num_of_transitions, apma, (Instant::now() - start).as_millis());
 
         let result = SetAutomaton { states };
         debug!("{}", result);
-        info!("Created set automaton in {} ms", (Instant::now() - start).as_millis());
-
+        
         result
     }
 }
@@ -337,7 +337,7 @@ impl State {
     /// Parameter symbol is the symbol for which the transition is computed
     fn derive_transition(
         &self,
-        symbol: DataFunctionSymbol,
+        symbol: &DataFunctionSymbol,
         arity: usize,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
@@ -345,6 +345,11 @@ impl State {
         Vec<MatchAnnouncement>,
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
+        if symbol.is_default() {
+            // For the default symbols nothing will be created
+            return (vec![], vec![]);
+        }
+
         // Computes the derivative containing the goals that are completed, unchanged and reduced
         let mut derivative = self.compute_derivative(&symbol, arity);
 

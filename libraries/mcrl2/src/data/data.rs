@@ -296,6 +296,10 @@ impl DataFunctionSymbol {
         }
     }
 
+    pub fn is_default(&self) -> bool {
+        self.term.is_default()
+    }
+
     pub fn operation_id(&self) -> usize {
         self.borrow().operation_id()
     }
