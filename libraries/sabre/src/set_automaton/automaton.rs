@@ -2,7 +2,7 @@ use std::{collections::VecDeque, fmt::Debug, time::Instant};
 
 use ahash::HashMap;
 use log::{debug, warn, log_enabled, trace, info};
-use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, ATermArgs}, data::{DataFunctionSymbol, DataFunctionSymbolRef}};
+use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, ATermArgs}, data::{DataFunctionSymbol, DataFunctionSymbolRef, is_data_variable, is_data_application, is_data_function_symbol, is_data_abstraction, is_data_where_clause, is_data_untyped_identifier}};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -65,12 +65,12 @@ fn add_symbol(
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
 fn is_supported_term(t: ATermRef<'_>) -> bool {
     for subterm in t.iter() {
-        if subterm.is_data_application() && !subterm.arg(0).is_data_function_symbol() {
+        if is_data_application(subterm.borrow()) && !is_data_function_symbol(subterm.arg(0)) {
             warn!("{} is higher order", subterm);
             return false;
-        } else if subterm.is_data_abstraction()
-            || subterm.is_data_where_clause()
-            || subterm.is_data_untyped_identifier()
+        } else if is_data_abstraction(subterm.borrow())
+            || is_data_where_clause(subterm.borrow())
+            || is_data_untyped_identifier(subterm.borrow())
         {
             warn!("{} contains unsupported construct", subterm);
             return false;
@@ -98,15 +98,15 @@ fn is_supported_rule(rule: &Rule) -> bool {
 
 /// Finds all data symbols in the term and adds them to the symbol index.
 fn find_symbols(t: ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
-    if t.is_data_function_symbol() {
+    if is_data_function_symbol(t.borrow()) {
         add_symbol(t.protect().into(), 0, symbols);
-    } else if t.is_data_application() {
+    } else if is_data_application(t.borrow()) {
         let mut args = t.arguments();
 
         // REC specifications should never contain this so it can be a debug error.
         let head = args.next().unwrap();
         assert!(
-            head.is_data_function_symbol(),
+            is_data_function_symbol(head.borrow()),
             "Higher order term rewrite systems are not supported"
         );
 
@@ -114,7 +114,7 @@ fn find_symbols(t: ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>)
         for arg in args {
             find_symbols(arg, symbols);
         }
-    } else if !t.is_data_variable() {
+    } else if !is_data_variable(t.borrow()) {
         panic!("Unexpected term {:?}", t);
     }
 }
@@ -310,7 +310,7 @@ pub(crate) struct State {
 /// Returns the data function symbol of the given term
 pub fn get_data_function_symbol(term: ATermRef<'_>) -> DataFunctionSymbolRef<'_> {
     // If this is an application it is the first argument, otherwise it's the term itself
-    if term.is_data_application() {
+    if is_data_application(term.borrow()) {
         term.arg(0).upgrade(&term).into()
     } else {
         term.into()
@@ -319,7 +319,7 @@ pub fn get_data_function_symbol(term: ATermRef<'_>) -> DataFunctionSymbolRef<'_>
 
 /// Returns the data arguments of the term
 pub fn get_data_arguments(term: &impl ATermTrait) -> ATermArgs<'_> {
-    if term.is_data_application() {
+    if is_data_application(term.borrow()) {
         let mut result = term.arguments();
         result.next();
         result
@@ -465,7 +465,7 @@ impl State {
                     mo.position == self.label
                         && get_data_function_symbol(mo.pattern.borrow()) == symbol.borrow()
                         && get_data_arguments(&mo.pattern.borrow())
-                            .all(|x| x.is_data_variable()) // Again skip the function symbol
+                            .all(|x| is_data_variable(x.borrow())) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
@@ -493,7 +493,7 @@ impl State {
                         for (index, t) in get_data_arguments(&mo.pattern.borrow()).enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
-                            if !t.is_data_variable() {
+                            if !is_data_variable(t.borrow()) {
                                 let mut new_pos = mo.position.clone();
                                 new_pos.indices.push(index + 2);
                                 new_obligations.push(MatchObligation {

@@ -1,6 +1,7 @@
 use core::fmt;
 
-use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait};
+use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait, ATermArgs, THREAD_TERM_POOL};
+use mcrl2_macros::mcrl2_term;
 use mcrl2_sys::data::ffi;
 
 pub fn is_data_variable(term: ATermRef<'_>) -> bool {
@@ -10,7 +11,8 @@ pub fn is_data_variable(term: ATermRef<'_>) -> bool {
 
 pub fn is_data_expression(term: ATermRef<'_>) -> bool {
     term.require_valid();
-    unsafe { ffi::is_data_variable(term.get()) }
+    is_data_function_symbol(term.borrow())
+        || is_data_application(term.borrow())
 }
 
 pub fn is_data_function_symbol(term: ATermRef<'_>) -> bool {
@@ -33,6 +35,94 @@ pub fn is_data_untyped_identifier(term: ATermRef<'_>) -> bool {
     unsafe { ffi::is_data_untyped_identifier(term.get()) }
 }
 
+pub fn is_data_application(term: ATermRef<'_>) -> bool {
+    term.require_valid();
+
+    THREAD_TERM_POOL.with_borrow_mut(|tp| {
+        tp.is_data_application(term)
+    })
+}
+// This module is only used internally to run the proc macro.
+#[mcrl2_term]
+mod inner {
+    use super::*;
+    use mcrl2_macros::term;
+
+    /// A data expression:
+    ///     - a function symbol, i.e. f without arguments.
+    ///     - a term applied to a number of arguments, i.e., t_0(t1, ..., tn).
+    #[term(is_data_expression)]
+    #[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    pub struct DataExpression {
+        term: ATerm,
+    }
+    
+    impl DataExpression {    
+
+        /// Returns the head symbol a data expression
+        ///     - function symbol   f -> f
+        ///     - application       f(t_0, ..., t_n) -> f
+        pub fn data_function_symbol(&self) -> DataFunctionSymbolRef<'_> {
+            if is_data_application(self.term.borrow()) {
+                self.term.arg(0).upgrade(&self.term.borrow()).into()
+            } else {
+                self.term.borrow().into()
+            }
+        }
+
+        /// Returns the arguments of a data expression
+        ///     - function symbol   f -> []
+        ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
+        pub fn arguments<'a>(&'a self) -> ATermArgs<'a> {
+            if is_data_application(self.term.borrow()) {
+                let mut result =self.term.arguments();
+                result.next();
+                result
+            } else {
+                Default::default()
+            }
+        }
+    }
+
+    impl<'b> DataExpressionRef<'b> {    
+
+        /// Returns the head symbol a data expression
+        ///     - function symbol   f -> f
+        ///     - application       f(t_0, ..., t_n) -> f
+        pub fn data_function_symbol(&self) -> DataFunctionSymbolRef<'_> {
+            if is_data_application(self.term.borrow()) {
+                self.term.arg(0).upgrade(&self.term.borrow()).into()
+            } else {
+                self.term.borrow().into()
+            }
+        }
+
+        /// Returns the arguments of a data expression
+        ///     - function symbol   f -> []
+        ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
+        pub fn arguments<'a>(&'a self) -> ATermArgs<'a> {
+            if is_data_application(self.term.borrow()) {
+                let mut result =self.term.arguments();
+                result.next();
+                result
+            } else {
+                Default::default()
+            }
+        }
+    }
+
+    impl fmt::Display for DataExpression {        
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            if is_data_function_symbol(self.term.borrow()) {
+                write!(f, "{}", DataFunctionSymbolRef::from(self.term.borrow()))
+            } else {
+                write!(f, "test")
+            }
+        }
+    }
+}
+
+pub use inner::*;
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DataVariable {
     pub(crate) term: ATerm,
@@ -45,12 +135,8 @@ impl DataVariable {
 }
 
 impl From<ATerm> for DataVariable {
-    fn from(value: ATerm) -> Self {
-        debug_assert!(
-            value.is_data_variable(),
-            "Term {value} is not a data variable"
-        );
-        DataVariable { term: value }
+    fn from(term: ATerm) -> Self {
+        DataVariable { term }
     }
 }
 
@@ -78,7 +164,7 @@ impl fmt::Display for DataApplication {
         let mut args = self.term.arguments();
 
         let head = args.next().unwrap();
-        if head.is_data_function_symbol() {
+        if is_data_function_symbol(head.borrow()) {
             write!(f, "{}", DataFunctionSymbolRef::from(head))?;
         } else {
             write!(f, "{:?}", head)?;
@@ -92,9 +178,9 @@ impl fmt::Display for DataApplication {
                 write!(f, "(")?;
             }
 
-            if arg.is_data_application() {
+            if is_data_application(arg.borrow()) {
                 write!(f, "{}", DataApplication::from(arg.protect()))?;
-            } else if arg.is_data_function_symbol() {
+            } else if is_data_function_symbol(arg.borrow()) {
                 write!(f, "{}", DataFunctionSymbolRef::from(arg))?;
             } else {
                 write!(f, "{}", arg)?;
@@ -140,7 +226,7 @@ impl<'a> DataFunctionSymbolRef<'a> {
     /// Returns the internal id known for every [aterm] that is a data::function_symbol.
     pub fn operation_id(&self) -> usize {
         debug_assert!(
-            self.term.is_data_function_symbol(),
+            is_data_function_symbol(self.term.borrow()),
             "term {} is not a data function symbol",
             self.term
         );
@@ -157,7 +243,7 @@ impl<'a> Into<ATermRef<'a>> for DataFunctionSymbolRef<'a> {
 impl<'a> From<ATermRef<'a>> for DataFunctionSymbolRef<'a> {
     fn from(value: ATermRef<'a>) -> Self {
         debug_assert!(
-            value.is_data_function_symbol(),
+            is_data_function_symbol(value.borrow()),
             "Term {value:?} is not a data function symbol"
         );
         DataFunctionSymbolRef { term: value }
@@ -224,7 +310,7 @@ impl fmt::Display for DataFunctionSymbol {
 impl<'a> From<ATerm> for DataFunctionSymbol {
     fn from(value: ATerm) -> Self {
         debug_assert!(
-            value.is_data_function_symbol(),
+            is_data_function_symbol(value.borrow()),
             "Term {value:?} is not a data function symbol"
         );
         DataFunctionSymbol { term: value }
@@ -257,7 +343,7 @@ impl Into<ATerm> for BoolSort {
 
 #[cfg(test)]
 mod tests {
-    use crate::aterm::{TermPool, ATerm, ATermTrait};
+    use crate::{aterm::{TermPool, ATerm, ATermTrait}, data::is_data_application};
 
     #[test]
     fn test_print() {
@@ -283,7 +369,7 @@ mod tests {
         let appl = tp.create_data_application(&f.borrow().into(), &[a_term]);
 
         let term: ATerm = appl.into();
-        assert!(term.is_data_application());
+        assert!(is_data_application(term.borrow()));
        ;
 
     }

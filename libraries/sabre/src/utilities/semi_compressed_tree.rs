@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use crate::utilities::ExplicitPosition;
 use mcrl2::{
     aterm::{ATerm, TermPool, ATermTrait, ATermRef, Symbol, TermBuilder, Yield},
-    data::DataVariable
+    data::{DataVariable, is_data_variable}
 };
 
 /// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a syntax tree and is used
@@ -77,7 +77,7 @@ impl SemiCompressedTermTree {
         t: ATermRef,
         var_map: &HashMap<DataVariable, ExplicitPosition>,
     ) -> SemiCompressedTermTree {
-        if t.is_data_variable() {
+        if is_data_variable(t.borrow()) {
             Variable(
                 var_map
                     .get(&t.protect().into())
@@ -147,7 +147,7 @@ pub fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
     let mut result = HashMap::new();
 
     for (term, position) in PositionIterator::new(t.borrow()) {
-        if term.is_data_variable() {
+        if is_data_variable(term.borrow()) {
             result.insert(term.protect().into(), position.clone());
         }
     }

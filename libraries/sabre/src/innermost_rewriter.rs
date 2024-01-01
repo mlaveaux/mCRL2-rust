@@ -105,7 +105,7 @@ impl InnermostRewriter {
         debug_assert!(!term.is_default(), "Cannot rewrite the default term");
         stats.recursions += 1;
         let mut stack = InnerStack::default();
-        stack.terms.push(ATerm::default());
+        stack.terms.push(Default::default());
         stack.add_rewrite(term, 0);
         
         trace!("{}", stack);
@@ -148,7 +148,7 @@ impl InnermostRewriter {
                             let top_of_stack = stack.terms.len();
                             stack.terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
                             for _ in 0..ema.stack_size - 1 {
-                                stack.terms.push(ATerm::default());
+                                stack.terms.push(Default::default());
                             }
 
                             let mut first = true;

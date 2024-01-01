@@ -5,7 +5,7 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
-use mcrl2::aterm::{ATerm, ATermTrait, ATermRef};
+use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef}, data::{is_data_variable, is_data_expression}};
 use smallvec::SmallVec;
 
 use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
@@ -63,7 +63,7 @@ fn derive_equivalence_classes(announcement: &MatchAnnouncement) -> Vec<Equivalen
     let mut var_equivalences = vec![];
 
     for (term, pos) in PositionIterator::new(announcement.rule.lhs.borrow()) {
-        if term.is_data_variable() {
+        if is_data_variable(term.borrow()) {
             // Register the position of the variable
             update_equivalences(&mut var_equivalences, term, pos);
         }
@@ -152,10 +152,10 @@ impl EnhancedMatchAnnouncement {
                 }
             }
 
-            if term.is_data_variable() {
+            if is_data_variable(term.borrow()) {
                 positions.push((var_map.get(&term.protect().into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
-            } else if term.is_data_application() || term.is_data_function_symbol() {
+            } else if is_data_expression(term.borrow()) {
                 let arity = get_data_arguments(&term.borrow()).len();
                 innermost_stack.push(Config::Construct(get_data_function_symbol(term.borrow()).protect(), arity, stack_size));
                 stack_size += 1;
