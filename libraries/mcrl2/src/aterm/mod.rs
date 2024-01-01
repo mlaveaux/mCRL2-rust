@@ -13,6 +13,7 @@
 
 pub mod aterm_builder;
 pub mod aterm_container;
+pub mod global_aterm_pool;
 pub mod aterm_pool;
 pub mod aterm;
 pub mod busy_forbidden;

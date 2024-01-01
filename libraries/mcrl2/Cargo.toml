@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 parking_lot = "0.12"
+once_cell = "1.19"
 ahash.workspace = true
 rand.workspace = true
 log.workspace = true

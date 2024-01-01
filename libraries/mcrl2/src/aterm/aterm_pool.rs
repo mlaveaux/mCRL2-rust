@@ -1,8 +1,7 @@
 use core::fmt;
-use std::{cell::RefCell, fmt::Debug, sync::Arc, pin::Pin, mem::ManuallyDrop};
+use std::{cell::RefCell, fmt::Debug, sync::Arc, mem::ManuallyDrop};
 
-use log::{info, trace};
-use parking_lot::Mutex;
+use log::trace;
 
 use mcrl2_sys::{
     atermpp::ffi,
@@ -15,112 +14,7 @@ use crate::{
     data::{DataApplication, DataFunctionSymbol, DataVariable},
 };
 
-use super::ATermRef;
-
-/// This newtype is necessary since plain pointers cannot be marked as Send.
-/// However since terms are immutable pointers it is fine to read them in multiple
-/// threads.
-#[derive(Clone, Debug)]
-struct ATermPtr {
-    ptr: *const ffi::_aterm,
-}
-
-impl ATermPtr {
-    fn new(ptr: *const ffi::_aterm) -> ATermPtr {
-        ATermPtr { 
-            ptr,
-        }
-    }
-}
-
-unsafe impl Send for ATermPtr {}
-
-/// The protection set for terms.
-type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
-
-/// The protection set for containers. Note that we store ATermRef<'static> here because we manage lifetime ourselves.
-type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<BfTermPool<Vec<ATermRef<'static>>>>>>>;
-
-/// This is the global set of protection sets that are managed by the ThreadTermPool
-static PROTECTION_SETS: Mutex<Vec<Option<SharedProtectionSet>>> = Mutex::new(vec![]);
-static CONTAINER_PROTECTION_SETS: Mutex<Vec<Option<SharedContainerProtectionSet>>> = Mutex::new(vec![]);
-
-/// Marks the terms in all protection sets.
-fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
-    let mut protected = 0;
-    let mut total = 0;
-    let mut max = 0;
-    
-    trace!("Marking terms:");
-    for set in PROTECTION_SETS.lock().iter().flatten() {
-        // Do not lock since we acquired a global lock.
-        unsafe {
-            let protection_set = set.write_exclusive(false);
-
-            for (term, root) in protection_set.iter() {
-                ffi::aterm_mark_address(term.ptr, todo.as_mut());
-
-                trace!("Marked {:?}, index {root}", term.ptr);
-            }
-
-            protected += protection_set.len();
-            total += protection_set.number_of_insertions();
-            max += protection_set.maximum_size();
-        }
-    }
-
-    let mut num_containers = 0;
-    let mut max_containers = 0;
-    let mut total_containers = 0;
-    let mut inside_containers = 0;
-    for set in CONTAINER_PROTECTION_SETS.lock().iter().flatten() {
-        // Do not lock since we acquired a global lock.
-        unsafe {
-            let protection_set = set.write_exclusive(false);
-
-            for (container, root) in protection_set.iter() {
-                container.mark(todo.as_mut());
-
-                let length = container.read().len();
-
-                trace!("Marked container index {root}, size {}", length);
-
-                inside_containers += length;
-            }
-            
-            num_containers += protection_set.len();
-            total_containers += protection_set.number_of_insertions();
-            max_containers += protection_set.maximum_size();
-        }
-    }
-
-    info!(
-        "Collecting garbage: protected {} terms of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {})",
-        protected, 
-        inside_containers,
-        num_containers,    
-        total, 
-        max,
-        total_containers,
-        max_containers,    
-    );
-}
-
-/// Counts the number of terms in all protection sets.
-fn protection_set_size() -> usize {
-    let mut result = 0;
-    for set in PROTECTION_SETS.lock().iter().flatten() {
-        result += set.read().len();
-    }
-    
-    // Gather the sizes of all containers
-    for set in CONTAINER_PROTECTION_SETS.lock().iter().flatten() {
-        for (container, _index) in set.read().iter() {
-            result += container.read().len();
-        }
-    }
-    result
-}
+use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}};
 
 thread_local! {
     /// This is the thread specific term pool that manages the protection sets.
@@ -131,12 +25,13 @@ pub struct ThreadTermPool {
     protection_set: SharedProtectionSet,
     container_protection_set: SharedContainerProtectionSet,
     
-    // TODO: On macOS destroying the callback causes issues. However, this should be fine since the related thread_aterm_pool is destroyed.
-    _callback: ManuallyDrop<UniquePtr<ffi::callback_container>>,
     index: usize,
 
     /// Function symbols to represent 'DataAppl' with any number of arguments.
-    data_appl: Vec<Symbol>, 
+    data_appl: Vec<Symbol>,
+
+    // TODO: On macOS destroying the callback causes issues. However, this should be fine since the related thread_aterm_pool is destroyed.
+    _callback: ManuallyDrop<UniquePtr<ffi::callback_container>>,
 }
 
 /// Protects the given aterm address and returns the term.
@@ -159,29 +54,15 @@ fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, i
 
 impl ThreadTermPool {
     pub fn new() -> ThreadTermPool {
-        // Initialise the C++ aterm library.
-        ffi::initialise();
 
-        // For the protection sets we disable automatic garbage collection, and call it when it is allowed.
-        ffi::enable_automatic_garbage_collection(false);
-
-        // TODO: use existing free spots.
         // Register a protection set into the global set.
-        let protection_set = Arc::new(BfTermPool::new(ProtectionSet::new()));
-        let mut protection_sets = PROTECTION_SETS.lock();
-        protection_sets.push(Some(protection_set.clone()));
+        let (protection_set, container_protection_set, index) = GLOBAL_TERM_POOL.lock().register_thread_term_pool();
 
-        
-        let container_protection_set = Arc::new(BfTermPool::new(ProtectionSet::new()));
-        let mut protection_sets = CONTAINER_PROTECTION_SETS.lock();
-        protection_sets.push(Some(container_protection_set.clone()));
-
-        trace!("Registered ThreadTermPool {}", protection_sets.len() - 1);
         ThreadTermPool {
             protection_set,
             container_protection_set,
+            index,
             _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
-            index: protection_sets.len() - 1,
             data_appl: vec![],
         }
     }
@@ -273,10 +154,7 @@ impl Debug for ThreadTermPool {
 impl Drop for ThreadTermPool {
     fn drop(&mut self) {
         debug_assert!(self.protection_set.read().len() == 0, "The protection set should be empty");
-
-        PROTECTION_SETS.lock()[self.index] = None;
-
-        trace!("Removed ThreadTermPool {}", self.index);
+        GLOBAL_TERM_POOL.lock().drop_thread_term_pool(self.index);
     }
 }
 
