@@ -1,32 +1,40 @@
 use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, format_ident};
-use syn::{ItemMod, Item};
+use syn::{ItemMod, Item, Path, PathSegment, parse_quote};
 
-pub(crate) fn mcrl2_term_impl(_attributes: TokenStream, input: TokenStream) -> TokenStream {
+pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStream) -> TokenStream {
 
     // Parse the input tokens into a syntax tree
     let mut ast: ItemMod = syn::parse2(input.clone()).expect("mcrl2_term can only be applied to a module");
 
     if let Some((_, content)) = &mut ast.content {
 
-        // Added code blocks are added to this list.
+        // Generated code blocks are added to this list.
         let mut added = vec![];
 
-        // We keep track of term structs since their implementation blocks must be adapted.
-        let mut objects = vec![];
-
-        for item in content.iter() {
+        for item in content.iter_mut() {
             match item {
                 Item::Struct(object) => {
                     // If the struct is annotated with term we process it as a term.
-                    if object.attrs.iter().find(|attr| {
-                        attr.meta.path().is_ident("term")
-                    }).is_some() {
+                    if let Some(attr) = object.attrs.iter().find(|attr| {
+                        attr.meta.path().is_ident("mcrl2_term")
+                    }) {
                         // The #term(assertion) annotation must contain an assertion
-                        //let args: Path = term.parse_args().expect("Required");
+                        let assertion = 
+                            match attr.parse_args::<syn::Ident>()
+                            {
+                                Ok(assertion) => {
+                                    let assertion_msg = format!("Term does not satisfy {assertion}");
+                                    quote!(debug_assert!(#assertion(term.borrow()), #assertion_msg))
+                                },
+                                Err(_x) => {
+                                    quote!()
+                                }
+                            };
 
-                        // TODO: Use the term assertion, and derive visibility from the struct.
+                        // Add the expected derive macros to the input struct.
+                        object.attrs.push(parse_quote!(#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]));
 
                         // ALL structs in this module must contain the term.
                         assert!(object.fields.iter().any(|field| { 
@@ -38,8 +46,7 @@ pub(crate) fn mcrl2_term_impl(_attributes: TokenStream, input: TokenStream) -> T
                         }), "The struct {} in mod {} has no field 'term: ATerm'", object.ident, ast.ident);
 
                         let name = format_ident!("{}", object.ident);
-                        objects.push(name.clone());
-
+                        
                         // Add a <name>Ref struct that contains the ATermRef<'a> and
                         // the implementation and both protect and borrow. Also add
                         // the conversion from and to a ATerm.
@@ -53,7 +60,7 @@ pub(crate) fn mcrl2_term_impl(_attributes: TokenStream, input: TokenStream) -> T
 
                             impl From<ATerm> for #name {
                                 fn from(term: ATerm) -> #name {
-                                    // Add assertion
+                                    #assertion;
                                     #name {
                                         term
                                     }
@@ -79,7 +86,7 @@ pub(crate) fn mcrl2_term_impl(_attributes: TokenStream, input: TokenStream) -> T
 
                             impl<'a> From<ATermRef<'a>> for #name_ref<'a> {
                                 fn from(term: ATermRef<'a>) -> #name_ref<'a> {
-                                    // Add assertion
+                                    #assertion;
                                     #name_ref {
                                         term
                                     }
@@ -96,16 +103,25 @@ pub(crate) fn mcrl2_term_impl(_attributes: TokenStream, input: TokenStream) -> T
                         added.push(Item::Verbatim(generated));
                     }
                 }
-                Item::Impl(_implementation) => {
+                Item::Impl(implementation) => {
+                    // Duplicate the implementation for the ATermRef struct that is generated above.
+                    // let mut ref_implementation = implementation.clone();
+                    // println!("{:?}", ref_implementation);
 
+                    // if let syn::Type::Path(path) = ref_implementation.self_ty.as_ref() {
+                    //     let name_ref = format_ident!("{}Ref", path.path.get_ident().unwrap());
+                    //     let path = Path::from(PathSegment::from(name_ref));
 
+                    //     ref_implementation.self_ty = Box::new(syn::Type::Path(syn::TypePath { qself: None, path }));
+    
+                    //     added.push(Item::Verbatim(ref_implementation.into_token_stream()));
+                    // }
                 }
                 _ => {
                     // Ignore the rest.
                 }
             }
         }
-
 
         content.append(&mut added);
     }
@@ -125,16 +141,23 @@ mod tests {
         let input = "
             mod anything {
 
-                #[term(test)]
+                #[mcrl2_term(test)]
+                #[derive(Debug)]
                 struct Test {
                     term: ATerm,
+                }
+
+                impl Test<'a> {
+                    fn a_function() {
+
+                    }
                 }
             }
         ";
         
         let tokens = TokenStream::from_str(input).unwrap();
-        let _result = mcrl2_term_impl(TokenStream::default(), tokens);
+        let result = mcrl2_derive_terms_impl(TokenStream::default(), tokens);
 
-        //assert_eq!(format!("{}", result), "");
+        println!("{result}");
     }
 }

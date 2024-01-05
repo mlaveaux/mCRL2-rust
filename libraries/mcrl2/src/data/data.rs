@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait, ATermArgs, THREAD_TERM_POOL};
-use mcrl2_macros::mcrl2_term;
+use mcrl2_macros::{mcrl2_term, mcrl2_derive_terms};
 use mcrl2_sys::data::ffi;
 
 pub fn is_data_variable(term: ATermRef<'_>) -> bool {
@@ -43,16 +43,15 @@ pub fn is_data_application(term: ATermRef<'_>) -> bool {
     })
 }
 // This module is only used internally to run the proc macro.
-#[mcrl2_term]
+#[mcrl2_derive_terms]
 mod inner {
     use super::*;
-    use mcrl2_macros::term;
+    use mcrl2_macros::mcrl2_term;
 
     /// A data expression:
     ///     - a function symbol, i.e. f without arguments.
     ///     - a term applied to a number of arguments, i.e., t_0(t1, ..., tn).
-    #[term(is_data_expression)]
-    #[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[mcrl2_term(is_data_expression)]
     pub struct DataExpression {
         term: ATerm,
     }

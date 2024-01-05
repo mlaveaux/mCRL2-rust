@@ -38,7 +38,10 @@ pub(crate) type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<
 /// The single global (singleton) term pool.
 pub(crate) struct GlobalTermPool {
 
+    /// The protection set for global terms.
     protection_set: ProtectionSet<ATermPtr>,
+    
+    /// The protection sets for thread local terms.
     thread_protection_sets: Vec<Option<SharedProtectionSet>>,
     thread_container_sets: Vec<Option<SharedContainerProtectionSet>>,
 }

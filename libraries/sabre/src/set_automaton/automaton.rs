@@ -4,7 +4,6 @@ use ahash::HashMap;
 use log::{debug, warn, log_enabled, trace, info};
 use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, ATermArgs}, data::{DataFunctionSymbol, DataFunctionSymbolRef, is_data_variable, is_data_application, is_data_function_symbol, is_data_abstraction, is_data_where_clause, is_data_untyped_identifier}};
 use smallvec::{smallvec, SmallVec};
-use rayon::iter::IntoParallelRefIterator;
 
 use crate::{
     rewrite_specification::{RewriteSpecification, Rule},
@@ -264,16 +263,17 @@ impl SetAutomaton {
                     }
                 }
 
-                // Add the resulting transition to the state
+                // Add the resulting outgoing transition to the state.
                 transition.destinations = dest_states;
                 states
                     .get_mut(s_index)
                     .unwrap()
                     .transitions
                     .push(transition);
+                num_of_transitions += 1;
             }
 
-            info!("Queue size {}, created {} states", queue.len(), states.len());
+            info!("Queue size {}, currently {} states and {} transitions", queue.len(), states.len(), num_of_transitions);
         }
 
         // Clear the match goals since they are only for debugging purposes.
@@ -593,7 +593,7 @@ mod tests {
 
     //use super::SetAutomaton;
 
-    // Creating this auomaton takes too much time.
+    // Creating this automaton takes too much time.
     /*#[test]
     fn test_automaton_from_data_spec() {
         let data_spec_text = include_str!("../../../benchmarks/cases/add16.dataspec");

@@ -1,4 +1,4 @@
-use mcrl2_macros::mcrl2_term;
+use mcrl2_macros::{mcrl2_derive_terms, mcrl2_term};
 
 // This is boilerplate since the macro crate cannot depend on the other crate.
 fn main() {
@@ -31,12 +31,11 @@ impl<'a> ATermRef<'a> {
     }
 }
 
-#[mcrl2_term]
+#[mcrl2_derive_terms]
 mod term {
     use super::*;
-    use mcrl2_macros::term;
 
-    #[term()]
+    #[mcrl2_term()]
     struct BoolSort {
         term: ATerm
     }
