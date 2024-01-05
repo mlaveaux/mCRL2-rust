@@ -34,7 +34,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                             };
 
                         // Add the expected derive macros to the input struct.
-                        object.attrs.push(parse_quote!(#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]));
+                        object.attrs.push(parse_quote!(#[derive(Clone, Default, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]));
 
                         // ALL structs in this module must contain the term.
                         assert!(object.fields.iter().any(|field| { 
