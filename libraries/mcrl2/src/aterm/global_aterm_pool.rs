@@ -9,7 +9,7 @@ use utilities::protection_set::ProtectionSet;
 
 use crate::aterm::BfTermPool;
 
-use super::ATermRef;
+use super::{ATermRef, ATermGlobal, ATermTrait};
 
 /// This newtype is necessary since plain pointers cannot be marked as Send.
 /// However since terms are immutable pointers it is fine to read them in multiple
@@ -59,6 +59,33 @@ impl GlobalTermPool {
             thread_protection_sets: vec![],
             thread_container_sets: vec![],
         }
+    }
+
+    /// Protects the given aterm address and returns the term.
+    pub fn protect(&mut self, term: *const ffi::_aterm) -> ATermGlobal {    
+        debug_assert!(!term.is_null(), "Can only protect valid terms");
+        let aterm = ATermPtr::new(term);
+        let root = self.protection_set.protect(aterm.clone());
+
+        trace!(
+            "Protected term {:?} global, index {}",
+            aterm.ptr,
+            root,
+        );
+
+        ATermGlobal { term, root }
+    }
+
+    /// Removes the [ATermGlobal] from the protection set.
+    pub fn drop_term(&mut self, term: &ATermGlobal) {
+        term.require_valid();
+
+        trace!(
+            "Dropped term {:?} global, index {}",
+            term.term,
+            term.root,
+        );
+        self.protection_set.unprotect(term.root);
     }
 
     /// Register a new thread term pool to manage thread specific aspects.l

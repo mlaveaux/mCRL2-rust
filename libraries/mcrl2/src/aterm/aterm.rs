@@ -7,6 +7,8 @@ use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
 use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
 
+use super::global_aterm_pool::GLOBAL_TERM_POOL;
+
 pub trait ATermTrait {
     /// Returns the indexed argument of the term
     fn arg(&self, index: usize) -> ATermRef<'_>;
@@ -57,11 +59,22 @@ impl<'a> Default for ATermRef<'a> {
 }
 
 impl<'a> ATermRef<'a> {
+    
+    /// Protects the reference on the thread local protection pool.
     pub fn protect(&self) -> ATerm {
         if self.is_default() {
             ATerm::default()
         } else {
             THREAD_TERM_POOL.with_borrow_mut(|tp| { tp.protect(self.term) })
+        }
+    }
+    
+    /// Protects the reference on the global protection pool.
+    pub fn protect_global(&self) -> ATermGlobal {
+        if self.is_default() {
+            ATermGlobal::default()
+        } else {
+            GLOBAL_TERM_POOL.lock().protect(self.term)
         }
     }
 
@@ -326,6 +339,47 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
     }
 }
 
+/// The same as [ATerm] but protected on the global protection set. This allows
+/// the term to be Send and Sync among threads.
+pub struct ATermGlobal {
+    pub(crate) term: *const ffi::_aterm,
+    pub(crate) root: usize,
+}
+
+impl ATermGlobal {
+    /// Obtains the underlying pointer
+    /// 
+    /// # Safety 
+    /// Should not be modified in any way.
+    pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
+        self.term
+    }
+}
+
+impl Default for ATermGlobal {
+    fn default() -> Self {
+        ATermGlobal {
+            term: std::ptr::null(),
+            root: 0,
+        }
+    }
+}
+
+impl Drop for ATermGlobal {
+    fn drop(&mut self) {
+        if !self.is_default() {
+            GLOBAL_TERM_POOL.lock().drop_term(self);
+        }
+    }
+}
+
+impl Clone for ATermGlobal {
+    fn clone(&self) -> Self {
+        self.borrow().protect_global()
+    }
+}
+
+
 /// An iterator over the arguments of a term.
 #[derive(Default)]
 pub struct ATermArgs<'a> {
@@ -554,6 +608,74 @@ impl fmt::Display for ATerm {
 }
 
 impl fmt::Debug for ATerm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.borrow())
+    }
+
+}
+impl ATermTrait for ATermGlobal {
+    fn arg(&self, index: usize) -> ATermRef {
+        debug_assert!(
+            index < self.get_head_symbol().arity(),
+            "arg({index}) is not defined for term {:?}",
+            self
+        );
+
+        self.require_valid();
+        unsafe {
+            ATermRef {
+                term: ffi::get_term_argument(self.term, index),
+                marker: PhantomData,
+            }
+        }
+    }
+
+    fn arguments(&self) -> ATermArgs<'_> {
+        ATermArgs::new(self.borrow())
+    }
+
+    fn borrow(&self) -> ATermRef<'_> {
+        ATermRef::new(self.term)
+    }
+    
+    fn is_default(&self) -> bool {
+        self.term.is_null()
+    }
+
+    fn is_list(&self) -> bool {
+        self.borrow().is_list()
+    }
+
+    fn is_empty_list(&self) -> bool {
+        self.borrow().is_empty_list()
+    }
+
+    fn is_int(&self) -> bool {
+        self.borrow().is_int()
+    }
+
+    fn get_head_symbol(&self) -> SymbolRef<'_> {
+        self.require_valid();
+
+        unsafe { ffi::get_aterm_function_symbol(self.term).into() }
+    }
+
+    fn iter(&self) -> TermIterator<'_> {
+        TermIterator::new(self.borrow())
+    }
+
+    fn require_valid(&self) {
+        assert!(!self.is_default(), "Requires valid term");
+    }
+}
+
+impl fmt::Display for ATermGlobal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.borrow())
+    }
+}
+
+impl fmt::Debug for ATermGlobal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.borrow())
     }
