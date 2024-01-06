@@ -5,6 +5,8 @@ use criterion::Criterion;
 
 use mcrl2::aterm::{ATerm, TermPool};
 use mcrl2::data::{DataSpecification, JittyRewriter};
+use rec_tests::load_REC_from_strings;
+use sabre::set_automaton::SetAutomaton;
 use sabre::{InnermostRewriter, RewriteEngine};
 
 
@@ -29,12 +31,12 @@ pub fn load_case(
 }
 
 pub fn criterion_benchmark_jitty(c: &mut Criterion) {
-    let tp = Rc::new(RefCell::new(TermPool::new()));
 
     for (name, data_spec, expressions) in [
         ("hanoi8", include_str!("../../../examples/REC/mcrl2/hanoi8.dataspec"), include_str!("../../../examples/REC/mcrl2/hanoi8.expressions")),
         ("add8", include_str!("../../../examples/REC/mcrl2/add8.dataspec"), include_str!("../../../examples/REC/mcrl2/add8.expressions")),
     ] {
+        let tp = Rc::new(RefCell::new(TermPool::new()));
         let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), data_spec, expressions, 1);
 
         let mut jitty = JittyRewriter::new(&data_spec);
@@ -50,6 +52,30 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
             bencher.iter(|| {
                 let _ = black_box(jitty.rewrite(&expressions[0]));
             })
+        });
+    }
+}
+
+pub fn criterion_benchmark_set_automaton(c: &mut Criterion) {
+
+    for (name, rec_files) in [
+        ("hanoi8", [include_str!("../../../examples/REC/rec/fibfree.rec")])
+    ] {
+        let tp = Rc::new(RefCell::new(TermPool::new()));
+        let (syntax_spec, _) =
+            load_REC_from_strings(&mut tp.borrow_mut(), &rec_files).unwrap();
+        let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
+
+        c.bench_function(&format!("set automaton {}", name), |bencher| {
+            bencher.iter(|| {
+                let _ = black_box(SetAutomaton::new(&result, false));
+            });
+        });
+
+        c.bench_function(&format!("apma automaton {}", name), |bencher| {
+            bencher.iter(|| {
+                let _ = black_box(SetAutomaton::new(&result, true));
+            });
         });
     }
 }
