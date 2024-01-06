@@ -200,24 +200,14 @@ impl SetAutomaton {
         // Pick a state to explore
         while let Some(s_index) = queue.pop_front() {
 
-            // Compute the transitions from the states
-            let transitions_per_symbol: Vec<_> = symbols
-                .iter()
-                .map(|(symbol, arity)| {
-                    (
-                        symbol.clone(),
-                        states.get(s_index).unwrap().derive_transition(
-                            &symbol,
-                            *arity,
-                            &supported_rules,
-                            apma,
-                        ),
-                    )
-                })
-                .collect();
+            for (symbol, arity) in &symbols {
+                let (outputs, destinations) = states.get(s_index).unwrap().derive_transition(
+                        &symbol,
+                        *arity,
+                        &supported_rules,
+                        apma,
+                    );                    
 
-            // Loop over all the possible symbols and the associated hypertransition
-            for (symbol, (outputs, destinations)) in transitions_per_symbol {
                 // Associate an EnhancedMatchAnnouncement to every transition
                 let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
                     .into_iter()
