@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::{collections::VecDeque, fmt};
 
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
@@ -16,8 +17,8 @@ pub trait ATermTrait {
     /// Returns the list of arguments as a collection
     fn arguments(&self) -> ATermArgs<'_>;
 
-    /// Take a borrow of the term
-    fn borrow(&self) -> ATermRef<'_>;
+    /// Makes a copy of the term with the same lifetime as itself.
+    fn copy(& self) -> ATermRef<'_>;
 
     /// Returns whether the term is the default term (not initialised)
     fn is_default(&self) -> bool;
@@ -41,7 +42,9 @@ pub trait ATermTrait {
     fn require_valid(&self);
 }
 
-#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+/// This represents a lifetime bound reference to an existing ATerm that is
+/// protected somewhere. Can be 'static if the term is protected in a container.
+#[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ATermRef<'a> {
     term: *const ffi::_aterm,
     marker: PhantomData<&'a ()>,
@@ -92,7 +95,7 @@ impl<'a> ATermRef<'a> {
     /// This function might only be used if witness is a parent term of the
     /// current term.
     pub fn upgrade<'b: 'a>(&'a self, parent: &ATermRef<'b>) -> ATermRef<'b> {
-        debug_assert!(parent.iter().any(|t| t.borrow() == *self), "Upgrade has been used on a witness that is not a parent term");
+        debug_assert!(parent.iter().any(|t| t.copy() == *self), "Upgrade has been used on a witness that is not a parent term");
 
         ATermRef::new(self.term)
     }
@@ -112,7 +115,7 @@ impl<'a> ATermRef<'a> {
 }
 
 impl<'a> ATermRef<'a> {
-    fn new(term: *const ffi::_aterm) -> ATermRef<'a> {
+    pub(crate) fn new(term: *const ffi::_aterm) -> ATermRef<'a> {
         ATermRef {
             term,
             marker: PhantomData,
@@ -140,10 +143,10 @@ impl<'a> ATermTrait for ATermRef<'a> {
     fn arguments(&self) -> ATermArgs<'_> {
         self.require_valid();
 
-        ATermArgs::new(self.borrow())
+        ATermArgs::new(self.copy())
     }
     
-    fn borrow(&self) -> ATermRef<'_> {
+    fn copy(&self) -> ATermRef<'_> {
         ATermRef::new(self.term)
     }
 
@@ -169,7 +172,7 @@ impl<'a> ATermTrait for ATermRef<'a> {
     }
 
     fn iter(&self) -> TermIterator<'_> {
-        TermIterator::new(self.borrow())
+        TermIterator::new(self.copy())
     }
 
     fn require_valid(&self) {
@@ -203,7 +206,7 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 
 /// The protected version of [ATermRef], mostly derived from it.
 pub struct ATerm {
-    pub(crate) term: *const ffi::_aterm,
+    pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,
 }
 
@@ -213,14 +216,14 @@ impl ATerm {
     /// # Safety 
     /// Should not be modified in any way.
     pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
-        self.term
+        self.term.get()
     }
 }
 
 impl Default for ATerm {
     fn default() -> Self {
         ATerm {
-            term: std::ptr::null(),
+            term: ATermRef::default(),
             root: 0,
         }
     }
@@ -238,7 +241,15 @@ impl Drop for ATerm {
 
 impl Clone for ATerm {
     fn clone(&self) -> Self {
-        self.borrow().protect()
+        self.copy().protect()
+    }
+}
+
+impl Deref for ATerm {
+    type Target = ATermRef<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.term        
     }
 }
 
@@ -274,12 +285,12 @@ impl<T: From<ATerm>> ATermList<T> {
 impl<T> ATermList<T> {
     /// Returns true iff the list is empty.
     pub fn is_empty(&self) -> bool {
-        self.term.borrow().is_empty_list()
+        self.term.is_empty_list()
     }
 
     /// Obtain the tail, i.e. the remainder, of the list.
     pub fn tail(&self) -> ATermList<T> {
-        self.term.borrow().arg(1).into()
+        self.term.arg(1).into()
     }
 
     /// Returns an iterator over all elements in the list.
@@ -321,7 +332,7 @@ impl<T: From<ATerm>> Iterator for ATermListIter<T> {
 
 impl<T> From<ATerm> for ATermList<T> {
     fn from(value: ATerm) -> Self {
-        debug_assert!(value.borrow().is_list(), "Can only convert a aterm_list");
+        debug_assert!(value.term.is_list(), "Can only convert a aterm_list");
         ATermList::<T> {
             term: value,
             _marker: PhantomData,
@@ -342,7 +353,7 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
 /// The same as [ATerm] but protected on the global protection set. This allows
 /// the term to be Send and Sync among threads.
 pub struct ATermGlobal {
-    pub(crate) term: *const ffi::_aterm,
+    pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,
 }
 
@@ -352,14 +363,14 @@ impl ATermGlobal {
     /// # Safety 
     /// Should not be modified in any way.
     pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
-        self.term
+        self.term.get()
     }
 }
 
 impl Default for ATermGlobal {
     fn default() -> Self {
         ATermGlobal {
-            term: std::ptr::null(),
+            term: ATermRef::default(),
             root: 0,
         }
     }
@@ -375,7 +386,7 @@ impl Drop for ATermGlobal {
 
 impl Clone for ATermGlobal {
     fn clone(&self) -> Self {
-        self.borrow().protect_global()
+        self.copy().protect_global()
     }
 }
 
@@ -495,10 +506,10 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         let mut result = t.iter();
-        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap().borrow());
-        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap().borrow());
-        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap().borrow());
-        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap().borrow());
+        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap().copy());
+        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap().copy());
+        assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap().copy());
+        assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap().copy());
     }
 
     #[test]
@@ -521,25 +532,25 @@ mod tests {
 /// TODO: These might be derivable and generated through proc macros.
 impl Hash for ATerm {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.borrow().hash(state)
+        self.term.hash(state)
     }
 }
 
 impl PartialEq for ATerm {
     fn eq(&self, other: &Self) -> bool {
-        self.borrow().eq(&other.borrow())
+        self.term.eq(&other.term)
     }
 }
 
 impl PartialOrd for ATerm {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.borrow().cmp(&other.borrow()))
+        Some(self.term.cmp(&other.term))
     }
 }
 
 impl Ord for ATerm {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.borrow().cmp(&other.borrow())
+        self.term.cmp(&other.term)
     }
 }
 
@@ -556,44 +567,44 @@ impl ATermTrait for ATerm {
         self.require_valid();
         unsafe {
             ATermRef {
-                term: ffi::get_term_argument(self.term, index),
+                term: ffi::get_term_argument(self.term.get(), index),
                 marker: PhantomData,
             }
         }
     }
 
     fn arguments(&self) -> ATermArgs<'_> {
-        ATermArgs::new(self.borrow())
+        ATermArgs::new(self.copy())
     }
 
-    fn borrow(&self) -> ATermRef<'_> {
-        ATermRef::new(self.term)
+    fn copy(&self) -> ATermRef<'_> {
+        self.term.copy()
     }
     
     fn is_default(&self) -> bool {
-        self.term.is_null()
+        self.term.term.is_null()
     }
 
     fn is_list(&self) -> bool {
-        self.borrow().is_list()
+        self.term.is_list()
     }
 
     fn is_empty_list(&self) -> bool {
-        self.borrow().is_empty_list()
+        self.term.is_empty_list()
     }
 
     fn is_int(&self) -> bool {
-        self.borrow().is_int()
+        self.term.is_int()
     }
 
     fn get_head_symbol(&self) -> SymbolRef<'_> {
         self.require_valid();
 
-        unsafe { ffi::get_aterm_function_symbol(self.term).into() }
+        unsafe { ffi::get_aterm_function_symbol(self.term.get()).into() }
     }
 
     fn iter(&self) -> TermIterator<'_> {
-        TermIterator::new(self.borrow())
+        TermIterator::new(self.copy())
     }
 
     fn require_valid(&self) {
@@ -603,13 +614,13 @@ impl ATermTrait for ATerm {
 
 impl fmt::Display for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.borrow())
+        write!(f, "{}", self.term)
     }
 }
 
 impl fmt::Debug for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.borrow())
+        write!(f, "{:?}", self.term)
     }
 
 }
@@ -624,44 +635,44 @@ impl ATermTrait for ATermGlobal {
         self.require_valid();
         unsafe {
             ATermRef {
-                term: ffi::get_term_argument(self.term, index),
+                term: ffi::get_term_argument(self.term.get(), index),
                 marker: PhantomData,
             }
         }
     }
 
     fn arguments(&self) -> ATermArgs<'_> {
-        ATermArgs::new(self.borrow())
+        ATermArgs::new(self.term.copy())
     }
 
-    fn borrow(&self) -> ATermRef<'_> {
-        ATermRef::new(self.term)
+    fn copy(&self) -> ATermRef<'_> {
+        self.term.copy()
     }
     
     fn is_default(&self) -> bool {
-        self.term.is_null()
+        self.term.term.is_null()
     }
 
     fn is_list(&self) -> bool {
-        self.borrow().is_list()
+        self.term.is_list()
     }
 
     fn is_empty_list(&self) -> bool {
-        self.borrow().is_empty_list()
+        self.term.is_empty_list()
     }
 
     fn is_int(&self) -> bool {
-        self.borrow().is_int()
+        self.term.is_int()
     }
 
     fn get_head_symbol(&self) -> SymbolRef<'_> {
         self.require_valid();
 
-        unsafe { ffi::get_aterm_function_symbol(self.term).into() }
+        unsafe { ffi::get_aterm_function_symbol(self.term.get()).into() }
     }
 
     fn iter(&self) -> TermIterator<'_> {
-        TermIterator::new(self.borrow())
+        TermIterator::new(self.copy())
     }
 
     fn require_valid(&self) {
@@ -669,14 +680,22 @@ impl ATermTrait for ATermGlobal {
     }
 }
 
+impl Deref for ATermGlobal {
+    type Target = ATermRef<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.term        
+    }
+}
+
 impl fmt::Display for ATermGlobal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.borrow())
+        write!(f, "{}", self.copy())
     }
 }
 
 impl fmt::Debug for ATermGlobal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.borrow())
+        write!(f, "{:?}", self.copy())
     }
 }
