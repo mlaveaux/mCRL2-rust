@@ -126,6 +126,14 @@ impl GlobalTermPool {
                 }
             }
         }
+        
+        for (term, root) in &self.protection_set {
+            unsafe {
+                ffi::aterm_mark_address(term.ptr, todo.as_mut());
+
+                trace!("Marked global {:?}, index {root}", term.ptr);
+            }
+        }
 
         for set in self.thread_container_sets.iter().flatten() {
             // Do not lock since we acquired a global lock.
