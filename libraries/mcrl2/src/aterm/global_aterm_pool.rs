@@ -9,7 +9,7 @@ use utilities::protection_set::ProtectionSet;
 
 use crate::aterm::BfTermPool;
 
-use super::{ATermRef, ATermGlobal, ATermTrait};
+use super::{ATermGlobal, ATermTrait, Markable};
 
 /// This newtype is necessary since plain pointers cannot be marked as Send.
 /// However since terms are immutable pointers it is fine to read them in multiple
@@ -33,7 +33,7 @@ unsafe impl Send for ATermPtr {}
 pub(crate) type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
 
 /// The protection set for containers. Note that we store ATermRef<'static> here because we manage lifetime ourselves.
-pub(crate) type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<BfTermPool<Vec<ATermRef<'static>>>>>>>;
+pub(crate) type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<dyn Markable + Sync + Send>>>>;
 
 /// The single global (singleton) term pool.
 pub(crate) struct GlobalTermPool {
@@ -135,7 +135,7 @@ impl GlobalTermPool {
                 for (container, root) in protection_set.iter() {
                     container.mark(todo.as_mut());
 
-                    let length = container.read().len();
+                    let length = container.len();
 
                     trace!("Marked container index {root}, size {}", length);
                 }
@@ -157,7 +157,7 @@ impl GlobalTermPool {
         // Gather the sizes of all containers
         for set in self.thread_container_sets.iter().flatten() {
             for (container, _index) in set.read().iter() {
-                result += container.read().len();
+                result += container.len();
             }
         }
         result

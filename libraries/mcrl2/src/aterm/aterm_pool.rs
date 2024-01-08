@@ -10,11 +10,11 @@ use mcrl2_sys::{
 use utilities::protection_set::ProtectionSet;
 
 use crate::{
-    aterm::{ATerm, ATermTrait, BfTermPool, BfTermPoolThreadWrite, Symbol, SymbolTrait},
+    aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait},
     data::{DataApplication, DataFunctionSymbol, DataVariable},
 };
 
-use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}};
+use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable};
 
 thread_local! {
     /// This is the thread specific term pool that manages the protection sets.
@@ -75,7 +75,7 @@ impl ThreadTermPool {
     }
 
     /// Protects the given aterm address and returns the term.
-    pub fn protect_container(&mut self, container: Arc<BfTermPool<Vec<ATermRef<'static>>>>) -> usize {
+    pub fn protect_container(&mut self, container: Arc<dyn Markable + Send + Sync>) -> usize {
         let root = unsafe {
             self.container_protection_set.write_exclusive(true).protect(container)
         };

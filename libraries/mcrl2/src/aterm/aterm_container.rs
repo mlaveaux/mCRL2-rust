@@ -1,4 +1,4 @@
-use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}};
+use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug};
 
 use mcrl2_sys::atermpp::ffi;
 
@@ -9,22 +9,22 @@ use super::{BfTermPoolRead, ATermTrait};
 /// A container of objects, typically either terms or objects containing terms,
 /// that are of trait Markable. These store ATermRef<'static> that are protected
 /// during garbage collection by being in the container itself.
-pub struct TermContainer<C> {
-    container: Arc<BfTermPool<Vec<ATermRef<'static>>>>,
+pub struct Protected<C> {
+    container: Arc<BfTermPool<C>>,
     root: usize,
     marker: PhantomData<C>,
 }
 
-impl<C> TermContainer<C> {
+impl<C: Markable + Send +'static> Protected<C> {
 
-    pub fn new(container: Vec<ATermRef<'static>>) -> TermContainer<C> {
+    pub fn new(container: C) -> Protected<C> {
         let shared = Arc::new(BfTermPool::new(container));
 
         let root = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             tp.protect_container(shared.clone())
         });
 
-        TermContainer {
+        Protected {
             container: shared,
             root,
             marker: Default::default(),
@@ -35,15 +35,15 @@ impl<C> TermContainer<C> {
     /// the resulting guard to be able to insert terms into the container.
     /// Otherwise the borrow checker will note that the [ATermRef] do not
     /// outlive the guard, see [TermProtection].
-    pub fn write(&mut self) -> TermProtector<'_, Vec<ATermRef<'_>>> {
+    pub fn write(&mut self) -> Protector<'_, C> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
-            TermProtector::new(transmute(self.container.write_exclusive(true)))
+            Protector::new(transmute(self.container.write_exclusive(true)))
         }
     }
 
     /// Provides immutable access to the underlying container.
-    pub fn read(&self) -> BfTermPoolRead<'_, Vec<ATermRef<'_>>> {
+    pub fn read(&self) -> BfTermPoolRead<'_, C> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
             transmute(self.container.read())
@@ -52,13 +52,53 @@ impl<C> TermContainer<C> {
 
 }
 
-impl<C: Default> Default for TermContainer<C> {
+impl<C: Default + Markable + Send + 'static> Default for Protected<C> {
     fn default() -> Self {
-        TermContainer::new(Default::default())
+        Protected::new(Default::default())
     }
 }
 
-impl<C> Drop for TermContainer<C> {
+impl<C: Clone + Markable + Send + 'static> Clone for Protected<C> {
+    fn clone(&self) -> Self {
+        Protected::new(self.container.read().clone())
+    }
+}
+
+impl<C: Hash + Markable> Hash for Protected<C> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.container.read().hash(state)
+    }
+}
+
+impl<C: PartialEq + Markable> PartialEq for Protected<C> {
+    fn eq(&self, other: &Self) -> bool {
+        self.container.read().eq(&other.container.read())
+    }
+}
+
+impl<C: PartialOrd + Markable> PartialOrd for Protected<C> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let c: &C = &other.container.read();
+        self.container.read().partial_cmp(c)
+    }
+}
+
+impl<C: Debug + Markable> Debug for Protected<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let c: &C = &self.container.read();
+        write!(f, "{:?}", c)
+    }
+}
+
+impl<C: Eq + PartialEq + Markable> Eq for Protected<C> {}
+impl<C: Ord + PartialEq + PartialOrd + Markable> Ord for Protected<C> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let c: &C = &other.container.read();
+        self.container.read().partial_cmp(c).unwrap()
+    }
+}
+
+impl<C> Drop for Protected<C> {
 
     fn drop(&mut self) {
         THREAD_TERM_POOL.with_borrow_mut(|tp| {
@@ -67,11 +107,14 @@ impl<C> Drop for TermContainer<C> {
     }
 }
 
+/// A type for the todo queue.
+pub type Todo<'a> = Pin<&'a mut ffi::term_mark_stack>;
+
 /// This trait should be used on all objects and containers related to storing unprotected terms.
 pub trait Markable {
     
     /// Marks all the ATermRefs to prevent them from being garbage collected.
-    fn mark(&mut self, todo: Pin<&mut ffi::term_mark_stack>);
+    fn mark(&self, todo: Todo);
 
     /// Should return true iff the given term is contained in the object. Used for runtime checks.
     fn contains(&self, term: &ATermRef<'_>) -> bool;
@@ -81,7 +124,7 @@ pub trait Markable {
 }
 
 impl<'a> Markable for ATermRef<'a> {
-    fn mark(&mut self, todo: Pin<&mut ffi::term_mark_stack>) {
+    fn mark(&self, todo: Pin<&mut ffi::term_mark_stack>) {
         if !self.is_default() {
             unsafe {
                 ffi::aterm_mark_address(self.get(), todo);
@@ -99,7 +142,7 @@ impl<'a> Markable for ATermRef<'a> {
 }
 
 impl<T: Markable> Markable for Vec<T> {
-    fn mark(&mut self, mut todo: Pin<&mut ffi::term_mark_stack>) {
+    fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
         for value in self {
             value.mark(todo.as_mut());
         }
@@ -114,17 +157,24 @@ impl<T: Markable> Markable for Vec<T> {
     }
 }
 
-impl<T: Markable + ?Sized> BfTermPool<T> {
-    pub fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
+impl<T: Markable + ?Sized> Markable for BfTermPool<T> {
+    fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
         // Marking will done while an exclusive lock is already held, also this
         // does not implement the Markable trait since self must be immutable
         // here.
         unsafe {
             self.write_exclusive(false).mark(todo.as_mut());
         }
+    }    
+
+    fn contains(&self, term: &ATermRef<'_>) -> bool {
+        self.read().contains(term)
+    }
+
+    fn len(&self) -> usize {
+        self.read().len()
     }
 }
-
 
 /// This is a helper struct used by TermContainer to protected terms that are
 /// inserted into the container before the guard is dropped.
@@ -133,28 +183,28 @@ impl<T: Markable + ?Sized> BfTermPool<T> {
 /// TermContainer. However, when inserting terms with shorter lifetimes we know
 /// that their lifetime is extended by being in the container. This is enforced
 /// by runtime checks during debug for containers that implement IntoIterator.
-pub struct TermProtector<'a, C: Markable> {
+pub struct Protector<'a, C: Markable> {
     reference: BfTermPoolThreadWrite<'a, C>,
     
     #[cfg(debug_assertions)]
     protected: Vec<ATermRef<'static>>
 }
 
-impl<'a, C: Markable> TermProtector<'a, C> {
-    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> TermProtector<'_, C> {
+impl<'a, C: Markable> Protector<'a, C> {
+    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> Protector<'_, C> {
         #[cfg(debug_assertions)]
-        return TermProtector {
+        return Protector {
             reference,
             protected: vec![]
         };
         
         #[cfg(not(debug_assertions))]
-        return TermProtector {
+        return Protector {
             reference,
         }
     }
     
-    pub fn protect(&mut self, term: ATermRef<'_>) -> ATermRef<'static>{
+    pub fn protect(&mut self, term: &ATermRef<'_>) -> ATermRef<'static>{
 
         unsafe {
             // Store terms that are marked as protected to check if they are
@@ -167,7 +217,7 @@ impl<'a, C: Markable> TermProtector<'a, C> {
     }
 }
 
-impl<'a, C: Markable> Deref for TermProtector<'a, C> {
+impl<'a, C: Markable> Deref for Protector<'a, C> {
     type Target = C;
     
     fn deref(&self) -> &Self::Target {
@@ -175,14 +225,14 @@ impl<'a, C: Markable> Deref for TermProtector<'a, C> {
     }
 }
 
-impl<'a, C: Markable> DerefMut for TermProtector<'a, C> {
+impl<'a, C: Markable> DerefMut for Protector<'a, C> {
 
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.reference        
     }    
 }
 
-impl<'a, C: Markable> Drop for TermProtector<'a, C> {
+impl<'a, C: Markable> Drop for Protector<'a, C> {
     fn drop(&mut self) {
         // TODO: Implement this.
         #[cfg(debug_assertions)]
@@ -207,10 +257,12 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
         
         // First test the trait for a standard container.
-        let mut container = TermContainer::<Vec::<ATermRef>>::new(vec![]);
+        let mut container = Protected::<Vec::<ATermRef>>::new(vec![]);
 
         for _ in 0..1000 {
-            container.write().push(t.borrow());
+            let mut write = container.write();
+            let u = write.protect(&t.borrow());
+            write.push(u);
         }
     }
 }
