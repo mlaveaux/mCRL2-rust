@@ -63,6 +63,9 @@ pub mod ffi {
 
         /// Creates an unprotected data function symbol, must be within in a critical section.
         fn create_data_function_symbol(name: String) -> *const _aterm;
+
+        // For data::sort_expression
+        unsafe fn is_data_sort_expression(term: *const _aterm) -> bool;
         
         // For data::data_expression        
         unsafe fn is_data_where_clause(term: *const _aterm) -> bool;

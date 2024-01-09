@@ -6,6 +6,7 @@
 #include "mcrl2/atermpp/aterm.h"
 #include "mcrl2/core/identifier_string.h"
 #include "mcrl2/data/detail/rewrite/jitty.h"
+#include "mcrl2/data/sort_expression.h"
 #include "mcrl2/data/parse.h"
 
 #ifdef MCRL2_ENABLE_JITTYC
@@ -105,6 +106,13 @@ bool is_data_function_symbol(const atermpp::detail::_aterm* term)
   return mcrl2::data::is_function_symbol(static_cast<const atermpp::aterm_appl&>(t));
 }
 
+const atermpp::detail::_aterm* create_data_function_symbol(rust::String name)
+{
+  atermpp::unprotected_aterm result(nullptr);
+  make_function_symbol(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
+  return atermpp::detail::address(result);
+}
+
 bool is_data_variable(const atermpp::detail::_aterm* term)
 {
   atermpp::unprotected_aterm t(term);
@@ -118,11 +126,10 @@ const atermpp::detail::_aterm* create_data_variable(rust::String name)
   return atermpp::detail::address(result);
 }
 
-const atermpp::detail::_aterm* create_data_function_symbol(rust::String name)
+bool is_data_sort_expression(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm result(nullptr);
-  make_function_symbol(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
-  return atermpp::detail::address(result);
+  atermpp::unprotected_aterm t(term);
+  return mcrl2::data::is_sort_expression(static_cast<const atermpp::aterm_appl&>(t));
 }
 
 std::unique_ptr<atermpp::aterm> true_term() 
