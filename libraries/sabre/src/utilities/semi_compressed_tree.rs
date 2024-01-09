@@ -51,7 +51,7 @@ impl SemiCompressedTermTree {
     /// evaluate will encounter an ExplicitNode and make two recursive calls to get the subterms.
     /// Both these recursive calls will return the term '0'.
     /// The term pool will be used to construct the term minus(0, 0).
-    pub fn evaluate(&self, t: &ATerm, tp: &mut TermPool) -> ATerm {
+    pub fn evaluate(&self, t: &ATermRef<'_>, tp: &mut TermPool) -> ATerm {
         let mut builder = TermBuilder::<&SemiCompressedTermTree, &Symbol>::new();
 
         builder.evaluate(tp, self, |_tp, args, node| {

@@ -1,6 +1,6 @@
 //! Module for storing positions of terms
 use core::fmt;
-use mcrl2::aterm::{ATerm, ATermTrait, ATermRef};
+use mcrl2::aterm::{ATermTrait, ATermRef};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -38,7 +38,7 @@ impl ExplicitPosition {
 }
 
 /// Returns the subterm at the specific position
-pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRef<'a> {
+pub fn get_position<'a>(term: &'a impl ATermTrait, position: &ExplicitPosition) -> ATermRef<'a> {
     let mut result = term.copy();
 
     for index in &position.indices {

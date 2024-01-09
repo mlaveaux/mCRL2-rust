@@ -54,12 +54,14 @@ impl SabreRewriter {
     pub fn stack_based_normalise(&mut self, t: ATerm) -> ATerm {
         let mut stats = RewritingStatistics::default();
         
-        SabreRewriter::stack_based_normalise_aux(
+        let result = SabreRewriter::stack_based_normalise_aux(
             &mut self.term_pool.borrow_mut(),
             &self.automaton,
             t,
             &mut stats,
-        )
+        );
+        info!("{} rewrites, {} single steps and {} matches", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        result
     }
 
     /// The _aux function splits the [TermPool] pool and the [SetAutomaton] to make borrow checker happy.
@@ -263,17 +265,21 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let subterm = &get_position(&leaf.subterm, &ema.announcement.position).protect();
+            let subterm = get_position(&leaf.subterm, &ema.announcement.position);
 
-            let rhs = c.semi_compressed_rhs.evaluate(subterm, tp);
-            let lhs = c.semi_compressed_lhs.evaluate(subterm, tp);
+            let rhs = c.semi_compressed_rhs.evaluate(&subterm, tp);
+            let lhs = c.semi_compressed_lhs.evaluate(&subterm, tp);
 
             // Equality => lhs == rhs.
             if !c.equality || lhs != rhs {
                 let rhs_normal =
-                    SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs.clone(), stats);
-                let lhs_normal =
-                    SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs.clone(), stats);
+                    SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs, stats);
+                let lhs_normal = if lhs == BoolSort::true_term().into() {
+                    // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
+                    lhs
+                } else {
+                    SabreRewriter::stack_based_normalise_aux(tp, automaton, lhs, stats)
+                };
 
                 // If lhs != rhs && !equality OR equality && lhs == rhs.
                 if (!c.equality && lhs_normal == rhs_normal)
