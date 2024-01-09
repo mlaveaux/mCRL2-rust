@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, trace, info};
-use mcrl2::{aterm::{ATerm, TermPool}, data::DataExpressionRef};
+use mcrl2::{aterm::{ATerm, TermPool}, data::{DataExpressionRef, BoolSort}};
 
 use crate::{
     RewriteSpecification,
