@@ -60,7 +60,7 @@ impl SabreRewriter {
             t,
             &mut stats,
         );
-        info!("{} rewrites, {} single steps and {} matches", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        info!("{} rewrites, {} single steps and {} symbol comparisons", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
         result
     }
 

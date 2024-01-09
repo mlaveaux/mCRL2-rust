@@ -81,7 +81,7 @@ impl RewriteEngine for InnermostRewriter {
         let mut stats = RewritingStatistics::default();
 
         let result = InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &self.apma, t, &mut stats);
-        info!("{} rewrites, {} single steps and {} matches", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        info!("{} rewrites, {} single steps and {} symbol comparisons", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
         result
     }
 }

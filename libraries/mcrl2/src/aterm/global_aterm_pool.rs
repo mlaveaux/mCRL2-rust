@@ -214,7 +214,7 @@ impl Debug for GlobalTermPool {
         }
 
         write!(f,
-            "{} terms, max capacity {}, {} variables in root set of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {})",
+            "{} terms, max capacity {}, {} variables in thread root sets and {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {})",
             self.len(),
             self.capacity(),
             protected, 
