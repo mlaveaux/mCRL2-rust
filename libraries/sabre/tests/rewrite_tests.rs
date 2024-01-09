@@ -28,8 +28,7 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
     let spec = DataSpecification::new(data_spec).unwrap();
     let terms: Vec<ATerm> = expressions.lines().map(|text| spec.parse(text)).collect();
 
-    // Test Sabre rewriter
-    // let mut sa = SabreRewriter::new(tp.clone(), &spec.into());
+    // let mut sa = SabreRewriter::new(tp.clone(), &spec.clone().into());
     let mut inner = InnermostRewriter::new(tp.clone(), &spec.clone().into());
 
     let mut expected = expected_result.split('\n');
@@ -45,7 +44,7 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
         );
 
         // let result = sa.rewrite(term.clone());
-        // assert_eq!(DataApplication::from(result), DataApplication::from(expected_result), "The sabre rewrite result doesn't match the expected result");
+        // assert_eq!(result, expected_result, "The sabre rewrite result doesn't match the expected result");
     }
 }
 

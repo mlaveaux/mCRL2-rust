@@ -101,11 +101,27 @@ mod inner {
                 write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
             } else if is_data_application(&self.term) {
                 write!(f, "{}", DataApplicationRef::from(self.term.copy()))
+            } else if is_data_variable(&self.term) {
+                write!(f, "{}", DataVariableRef::from(self.term.copy()))
             } else {
                 write!(f, "{}", self.term)
             }
         }
     }    
+
+    impl fmt::Display for DataExpressionRef<'_> {        
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            if is_data_function_symbol(&self.term) {
+                write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
+            } else if is_data_application(&self.term) {
+                write!(f, "{}", DataApplicationRef::from(self.term.copy()))
+            } else if is_data_variable(&self.term) {
+                write!(f, "{}", DataVariableRef::from(self.term.copy()))
+            } else {
+                write!(f, "{}", self.term)
+            }
+        }
+    }
 
     #[mcrl2_term(is_data_function_symbol)]
     pub struct DataFunctionSymbol {
@@ -145,6 +161,18 @@ mod inner {
         }
     }
     
+    impl DataVariableRef<'_> {
+        pub fn name(&self) -> String {
+            String::from(self.term.arg(0).get_head_symbol().name())
+        }
+    }
+
+    impl fmt::Display for DataVariableRef<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.name())
+        }
+    }
+
     #[mcrl2_term(is_data_application)]
     pub struct DataApplication {
         pub(crate) term: ATerm,
@@ -155,11 +183,7 @@ mod inner {
             let mut args = self.term.arguments();
     
             let head = args.next().unwrap();
-            if is_data_function_symbol(&head) {
-                write!(f, "{}", DataFunctionSymbolRef::from(head))?;
-            } else {
-                write!(f, "{:?}", head)?;
-            }
+            write!(f, "{}", DataExpressionRef::from(head))?;
     
             let mut first = true;
             for arg in args {
@@ -169,13 +193,7 @@ mod inner {
                     write!(f, "(")?;
                 }
     
-                if is_data_application(&arg) {
-                    write!(f, "{}", DataApplication::from(arg.protect()))?;
-                } else if is_data_function_symbol(&arg) {
-                    write!(f, "{}", DataFunctionSymbolRef::from(arg))?;
-                } else {
-                    write!(f, "{}", arg)?;
-                }
+                write!(f, "{}", DataExpressionRef::from(arg.copy()))?;
                 first = false;
             }
     
@@ -192,11 +210,7 @@ mod inner {
             let mut args = self.term.arguments();
     
             let head = args.next().unwrap();
-            if is_data_function_symbol(&head) {
-                write!(f, "{}", DataFunctionSymbolRef::from(head))?;
-            } else {
-                write!(f, "{:?}", head)?;
-            }
+            write!(f, "{}", DataExpressionRef::from(head))?;
     
             let mut first = true;
             for arg in args {
@@ -206,13 +220,7 @@ mod inner {
                     write!(f, "(")?;
                 }
     
-                if is_data_application(&arg) {
-                    write!(f, "{}", DataApplication::from(arg.protect()))?;
-                } else if is_data_function_symbol(&arg) {
-                    write!(f, "{}", DataFunctionSymbolRef::from(arg))?;
-                } else {
-                    write!(f, "{}", arg)?;
-                }
+                write!(f, "{}", DataExpressionRef::from(arg.copy()))?;
                 first = false;
             }
     
@@ -224,17 +232,6 @@ mod inner {
         }
     }
         
-    impl fmt::Display for DataExpressionRef<'_> {        
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            if is_data_function_symbol(&self.term) {
-                write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
-            } else if is_data_application(&self.term) {
-                write!(f, "{}", DataApplicationRef::from(self.term.copy()))
-            } else {
-                write!(f, "{}", self.term)
-            }
-        }
-    }
 
     #[mcrl2_term(is_bool_sort)]
     pub struct BoolSort {

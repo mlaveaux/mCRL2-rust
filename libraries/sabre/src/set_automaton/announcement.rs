@@ -5,7 +5,7 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
-use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, Markable}, data::{is_data_variable, is_data_expression, DataExpressionRef}};
+use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef}, data::{is_data_variable, is_data_expression, DataExpressionRef}};
 use smallvec::SmallVec;
 
 use super::MatchObligation;

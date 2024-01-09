@@ -276,7 +276,6 @@ impl InnermostRewriter {
                     state_index = transition.destinations.first().unwrap().1;
                 }
             } else {
-                // Function symbol does not occur in the set automaton, so cannot match.
                 return None;
             }
         }

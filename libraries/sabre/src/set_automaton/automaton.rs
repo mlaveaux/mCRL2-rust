@@ -84,9 +84,9 @@ impl SetAutomaton {
 
         // The initial state has a match goals for each pattern. For each pattern l there is a match goal
         // with one obligation l@ε and announcement l@ε.
-        let mut match_goals = Vec::<MatchGoal>::new();
+        let mut initial_match_goals = Vec::<MatchGoal>::new();
         for rr in &supported_rules {
-            match_goals.push(MatchGoal {
+            initial_match_goals.push(MatchGoal {
                 obligations: vec![MatchObligation {
                     pattern: rr.lhs.clone(),
                     position: ExplicitPosition::empty_pos(),
@@ -101,13 +101,13 @@ impl SetAutomaton {
 
         // Match goals need to be sorted so that we can easily check whether a state with a certain
         // set of match goals already exists.
-        match_goals.sort();
+        initial_match_goals.sort();
 
         // Create the initial state
         let initial_state = State {
             label: ExplicitPosition::empty_pos(),
             transitions: Vec::with_capacity(symbols.len()),
-            match_goals: match_goals.clone(),
+            match_goals: initial_match_goals.clone(),
         };
 
         // HashMap from goals to state number
@@ -117,7 +117,7 @@ impl SetAutomaton {
         let mut queue = VecDeque::new();
         queue.push_back(0);
 
-        map_goals_state.insert(match_goals, 0);
+        map_goals_state.insert(initial_match_goals, 0);
 
         let mut states = vec![initial_state];
         let mut num_of_transitions = 0;
@@ -126,60 +126,64 @@ impl SetAutomaton {
         while let Some(s_index) = queue.pop_front() {
 
             for (symbol, arity) in &symbols {
-                let (outputs, destinations) = states.get(s_index).unwrap().derive_transition(
-                        symbol,
-                        *arity,
-                        &supported_rules,
-                        apma,
-                    );                    
-
-                // Associate an EnhancedMatchAnnouncement to every transition
-                let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
-                    .into_iter()
-                    .map(|x| {
-                        EnhancedMatchAnnouncement::new(x)
-                    })
-                    .collect();
-
-                announcements.sort_by(|ema1, ema2| {
-                    ema1.announcement.position.cmp(&ema2.announcement.position)
-                });
-
+                
                 // Create transition
                 let mut transition = Transition {
                     symbol: symbol.clone(),
-                    announcements,
+                    announcements: smallvec![],
                     destinations: smallvec![],
                 };
 
-                // For the destinations we convert the match goal destinations to states
-                let mut dest_states = smallvec![];
+                if !symbol.is_default() {
+                    let (outputs, destinations) = states.get(s_index).unwrap().derive_transition(
+                            symbol,
+                            *arity,
+                            &supported_rules,
+                            apma,
+                        );                    
 
-                // Loop over the hypertransitions
-                for (pos, goals_or_initial) in destinations {
-                    // Match goals need to be sorted so that we can easily check whether a state with a certain
-                    // set of match goals already exists.
-                    if let GoalsOrInitial::Goals(goals) = goals_or_initial {
-                        if map_goals_state.contains_key(&goals) {
-                            // The destination state already exists
-                            dest_states.push((pos, *map_goals_state.get(&goals).unwrap()))
-                        } else if !goals.is_empty() {
-                            // The destination state does not yet exist, create it
-                            let new_state = State::new(goals.clone(), symbols.len());
-                            states.push(new_state);
-                            dest_states.push((pos, state_counter));
-                            map_goals_state.insert(goals, state_counter);
-                            queue.push_back(state_counter);
-                            state_counter += 1;
+                    // Associate an EnhancedMatchAnnouncement to every transition
+                    let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
+                        .into_iter()
+                        .map(|x| {
+                            EnhancedMatchAnnouncement::new(x)
+                        })
+                        .collect();
+
+                    announcements.sort_by(|ema1, ema2| {
+                        ema1.announcement.position.cmp(&ema2.announcement.position)
+                    });
+                    // For the destinations we convert the match goal destinations to states
+                    let mut dest_states = smallvec![];
+
+                    // Loop over the hypertransitions
+                    for (pos, goals_or_initial) in destinations {
+                        // Match goals need to be sorted so that we can easily check whether a state with a certain
+                        // set of match goals already exists.
+                        if let GoalsOrInitial::Goals(goals) = goals_or_initial {
+                            if map_goals_state.contains_key(&goals) {
+                                // The destination state already exists
+                                dest_states.push((pos, *map_goals_state.get(&goals).unwrap()))
+                            } else if !goals.is_empty() {
+                                // The destination state does not yet exist, create it
+                                let new_state = State::new(goals.clone(), symbols.len());
+                                states.push(new_state);
+                                dest_states.push((pos, state_counter));
+                                map_goals_state.insert(goals, state_counter);
+                                queue.push_back(state_counter);
+                                state_counter += 1;
+                            }
+                        } else {
+                            // The transition is to the initial state
+                            dest_states.push((pos, 0));
                         }
-                    } else {
-                        // The transition is to the initial state
-                        dest_states.push((pos, 0));
                     }
+
+                    // Add the resulting outgoing transition to the state.
+                    transition.announcements = announcements;
+                    transition.destinations = dest_states;
                 }
 
-                // Add the resulting outgoing transition to the state.
-                transition.destinations = dest_states;
                 states
                     .get_mut(s_index)
                     .unwrap()
@@ -234,6 +238,7 @@ pub(crate) struct State {
 }
 
 impl State {
+
     /// Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
     /// The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
     /// We don't use the struct Transition as it requires that the destination is a full state, with name.
@@ -250,11 +255,6 @@ impl State {
         Vec<MatchAnnouncement>,
         Vec<(ExplicitPosition, GoalsOrInitial)>,
     ) {
-        if symbol.is_default() {
-            // For the default symbols nothing will be created
-            return (vec![], vec![]);
-        }
-
         // Computes the derivative containing the goals that are completed, unchanged and reduced
         let mut derivative = self.compute_derivative(symbol, arity);
 
