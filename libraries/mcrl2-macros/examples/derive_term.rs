@@ -19,7 +19,7 @@ impl ATerm {
 }
 
 #[derive(Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct ATermRef<'a> {
+pub struct ATermRef<'a> {
     marker: PhantomData<&'a ()>
 }
 
@@ -39,6 +39,7 @@ impl<'a> ATermRef<'a> {
 #[mcrl2_derive_terms]
 mod term {
     use super::*;
+    use std::ops::Deref;
 
     #[mcrl2_term()]
     struct BoolSort {

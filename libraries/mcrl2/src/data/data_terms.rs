@@ -52,6 +52,8 @@ pub fn is_data_application(term: &ATermRef<'_>) -> bool {
 #[mcrl2_derive_terms]
 mod inner {
     use super::*;
+    
+    use std::ops::Deref;
     use mcrl2_macros::mcrl2_term;
 
     /// A data expression:

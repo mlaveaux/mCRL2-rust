@@ -181,7 +181,6 @@ impl<'a> ATermTrait for ATermRef<'a> {
             "This function can only be called on valid terms, i.e., not default terms"
         );
     }
-
 }
 
 impl<'a> fmt::Display for ATermRef<'a> {
@@ -245,6 +244,38 @@ impl Deref for ATerm {
         &self.term        
     }
 }
+
+impl fmt::Debug for ATerm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.copy())
+    }
+}
+
+impl Hash for ATerm {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.term.hash(state)
+    }
+}
+
+impl PartialEq for ATerm {
+    fn eq(&self, other: &Self) -> bool {
+        self.term.eq(&other.term)
+    }
+}
+
+impl PartialOrd for ATerm {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.term.cmp(&other.term))
+    }
+}
+
+impl Ord for ATerm {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.term.cmp(&other.term)
+    }
+}
+
+impl Eq for ATerm {}
 
 // Some convenient conversions.
 impl From<UniquePtr<ffi::aterm>> for ATerm {
@@ -504,154 +535,9 @@ mod tests {
     }
 }
 
-/// TODO: These might be derivable and generated through proc macros.
-impl Hash for ATerm {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.term.hash(state)
-    }
-}
-
-impl PartialEq for ATerm {
-    fn eq(&self, other: &Self) -> bool {
-        self.term.eq(&other.term)
-    }
-}
-
-impl PartialOrd for ATerm {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.term.cmp(&other.term))
-    }
-}
-
-impl Ord for ATerm {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.term.cmp(&other.term)
-    }
-}
-
-impl Eq for ATerm {}
-
-impl ATermTrait for ATerm {
-    fn arg(&self, index: usize) -> ATermRef {
-        debug_assert!(
-            index < self.get_head_symbol().arity(),
-            "arg({index}) is not defined for term {:?}",
-            self
-        );
-
-        self.require_valid();
-        unsafe {
-            ATermRef {
-                term: ffi::get_term_argument(self.term.get(), index),
-                marker: PhantomData,
-            }
-        }
-    }
-
-    fn arguments(&self) -> ATermArgs<'_> {
-        ATermArgs::new(self.copy())
-    }
-
-    fn copy(&self) -> ATermRef<'_> {
-        self.term.copy()
-    }
-    
-    fn is_default(&self) -> bool {
-        self.term.term.is_null()
-    }
-
-    fn is_list(&self) -> bool {
-        self.term.is_list()
-    }
-
-    fn is_empty_list(&self) -> bool {
-        self.term.is_empty_list()
-    }
-
-    fn is_int(&self) -> bool {
-        self.term.is_int()
-    }
-
-    fn get_head_symbol(&self) -> SymbolRef<'_> {
-        self.require_valid();
-
-        unsafe { ffi::get_aterm_function_symbol(self.term.get()).into() }
-    }
-
-    fn iter(&self) -> TermIterator<'_> {
-        TermIterator::new(self.copy())
-    }
-
-    fn require_valid(&self) {
-        assert!(!self.is_default(), "Requires valid term");
-    }
-}
-
 impl fmt::Display for ATerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.term)
-    }
-}
-
-impl fmt::Debug for ATerm {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.term)
-    }
-
-}
-impl ATermTrait for ATermGlobal {
-    fn arg(&self, index: usize) -> ATermRef {
-        debug_assert!(
-            index < self.get_head_symbol().arity(),
-            "arg({index}) is not defined for term {:?}",
-            self
-        );
-
-        self.require_valid();
-        unsafe {
-            ATermRef {
-                term: ffi::get_term_argument(self.term.get(), index),
-                marker: PhantomData,
-            }
-        }
-    }
-
-    fn arguments(&self) -> ATermArgs<'_> {
-        ATermArgs::new(self.term.copy())
-    }
-
-    fn copy(&self) -> ATermRef<'_> {
-        self.term.copy()
-    }
-    
-    fn is_default(&self) -> bool {
-        self.term.term.is_null()
-    }
-
-    fn is_list(&self) -> bool {
-        self.term.is_list()
-    }
-
-    fn is_empty_list(&self) -> bool {
-        self.term.is_empty_list()
-    }
-
-    fn is_int(&self) -> bool {
-        self.term.is_int()
-    }
-
-    fn get_head_symbol(&self) -> SymbolRef<'_> {
-        self.require_valid();
-
-        unsafe { ffi::get_aterm_function_symbol(self.term.get()).into() }
-    }
-
-    fn iter(&self) -> TermIterator<'_> {
-        TermIterator::new(self.copy())
-    }
-
-    fn require_valid(&self) {
-        assert!(!self.is_default(), "Requires valid term");
     }
 }
 
@@ -663,6 +549,32 @@ impl Deref for ATermGlobal {
     }
 }
 
+impl Hash for ATermGlobal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.term.hash(state)
+    }
+}
+
+impl PartialEq for ATermGlobal {
+    fn eq(&self, other: &Self) -> bool {
+        self.term.eq(&other.term)
+    }
+}
+
+impl PartialOrd for ATermGlobal {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.term.cmp(&other.term))
+    }
+}
+
+impl Ord for ATermGlobal {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.term.cmp(&other.term)
+    }
+}
+
+impl Eq for ATermGlobal {}
+
 impl fmt::Display for ATermGlobal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.copy())
@@ -672,5 +584,90 @@ impl fmt::Display for ATermGlobal {
 impl fmt::Debug for ATermGlobal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.copy())
+    }
+}
+
+// This is just boiler plate unfortunately
+impl<'a> ATermTrait for ATerm {
+    fn arg(&self, index: usize) -> ATermRef {
+        self.term.arg(index)
+    }
+
+    fn arguments(&self) -> ATermArgs<'_> {
+        self.term.arguments()
+    }
+    
+    fn copy(&self) -> ATermRef<'_> {
+        self.term.copy()
+    }
+
+    fn is_default(&self) -> bool {
+        self.term.is_default()
+    }
+
+    fn is_list(&self) -> bool {
+        self.term.is_list()
+    }
+
+    fn is_empty_list(&self) -> bool {
+        self.term.is_empty_list()
+    }
+
+    fn is_int(&self) -> bool {
+        self.term.is_int()
+    }
+
+    fn get_head_symbol(&self) -> SymbolRef<'_> {
+        self.term.get_head_symbol()
+    }
+
+    fn iter(&self) -> TermIterator<'_> {
+        self.term.iter()
+    }
+
+    fn require_valid(&self) {
+        self.term.require_valid();
+    }
+}
+
+impl<'a> ATermTrait for ATermGlobal {
+    fn arg(&self, index: usize) -> ATermRef {
+        self.term.arg(index)
+    }
+
+    fn arguments(&self) -> ATermArgs<'_> {
+        self.term.arguments()
+    }
+    
+    fn copy(&self) -> ATermRef<'_> {
+        self.term.copy()
+    }
+
+    fn is_default(&self) -> bool {
+        self.term.is_default()
+    }
+
+    fn is_list(&self) -> bool {
+        self.term.is_list()
+    }
+
+    fn is_empty_list(&self) -> bool {
+        self.term.is_empty_list()
+    }
+
+    fn is_int(&self) -> bool {
+        self.term.is_int()
+    }
+
+    fn get_head_symbol(&self) -> SymbolRef<'_> {
+        self.term.get_head_symbol()
+    }
+
+    fn iter(&self) -> TermIterator<'_> {
+        self.term.iter()
+    }
+
+    fn require_valid(&self) {
+        self.term.require_valid();
     }
 }
