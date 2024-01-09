@@ -5,8 +5,8 @@ use std::{cell::RefCell, fmt, rc::Rc};
 use itertools::Itertools;
 use log::{trace, info};
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait},
-    data::{DataFunctionSymbol, BoolSort, DataExpressionRef},
+    aterm::{ATerm, TermPool, ATermTrait, Protected, ATermRef, Markable, Todo, Protector},
+    data::{BoolSort, DataExpressionRef, DataFunctionSymbolRef},
 };
 
 use crate::{
@@ -17,58 +17,6 @@ use crate::{
     utilities::get_position,
     RewriteEngine, RewriteSpecification, RewritingStatistics,
 };
-
-#[derive(Hash, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub enum Config {
-    /// Rewrite the top of the stack and put result at the given index.
-    Rewrite(usize), 
-    /// Constructs function symbol with given arity at the given index.
-    Construct(DataFunctionSymbol, usize, usize), 
-}
-
-#[derive(Default)]
-struct InnerStack {
-    configs: Vec<Config>,
-    terms: Vec<ATerm>,
-}
-
-impl fmt::Display for InnerStack {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Terms: [")?;
-        for (i, term) in self.terms.iter().enumerate() {
-            writeln!(f, "{}\t{}", i, term)?;
-        }
-        writeln!(f, "]")?;
-
-        writeln!(f, "Configs: [")?;
-        for config in &self.configs {
-            writeln!(f, "\t{}", config)?;
-        }
-        write!(f, "]")
-    }
-}
-
-impl fmt::Display for Config {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Config::Rewrite(result) => write!(f, "Rewrite({})", result),
-            Config::Construct(symbol, arity, result) => {
-                write!(f, "Construct({}, {}, {})", symbol, arity, result)
-            }
-        }
-    }
-}
-
-impl InnerStack {
-    fn add_result(&mut self, symbol: DataFunctionSymbol, arity: usize, index: usize) {
-        self.configs.push(Config::Construct(symbol, arity, index));
-    }
-
-    fn add_rewrite(&mut self, term: ATerm, index: usize) {
-        self.configs.push(Config::Rewrite(index));
-        self.terms.push(term);
-    }
-}
 
 /// Innermost Adaptive Pattern Matching Automaton (APMA) rewrite engine.
 pub struct InnermostRewriter {
@@ -106,137 +54,159 @@ impl InnermostRewriter {
         stats: &mut RewritingStatistics,
     ) -> ATerm {
         debug_assert!(!term.is_default(), "Cannot rewrite the default term");
+
         stats.recursions += 1;
-        let mut stack = InnerStack::default();
-        stack.terms.push(Default::default());
-        stack.add_rewrite(term, 0);
+
+        let mut stack = InnerStack::default();        
+        let mut write_terms =  stack.terms.write();
+        let mut write_configs =  stack.configs.write();
+        write_terms.push(ATermRef::default());
+        InnerStack::add_rewrite(&mut write_configs, &mut write_terms, term.copy(), 0);
+        drop(write_terms);
+        drop(write_configs);
         
         trace!("{}", stack);
 
-        while let Some(config) = stack.configs.pop() {
-            match config {
-                Config::Rewrite(result) => {
-                    let term = stack.terms.pop().unwrap();
+        loop {
+            let mut write_configs = stack.configs.write();
+            if let Some(config) = write_configs.pop() {
+                match config {
+                    Config::Rewrite(result) => {
+                        let mut write_terms = stack.terms.write();
+                        let term = write_terms.pop().unwrap();
 
-                    let term = DataExpressionRef::from(term.copy());
-                    let symbol = term.data_function_symbol();
-                    let arguments = term.data_arguments();
+                        let term = DataExpressionRef::from(term.copy());
+                        let symbol = term.data_function_symbol();
+                        let arguments = term.data_arguments();
 
-                    // For all the argument we reserve space on the stack.
-                    let top_of_stack = stack.terms.len();
-                    for _ in 0..arguments.len() {
-                        stack.terms.push(ATerm::default());
+                        // For all the argument we reserve space on the stack.
+                        let top_of_stack = write_terms.len();
+                        for _ in 0..arguments.len() {
+                            write_terms.push(Default::default());
+                        }
+
+                        //stack.add_result(symbol, arguments.len(), result);
+                        let symbol = write_configs.protect(&symbol.into());
+                        write_configs.push(Config::Construct(symbol.into(), arguments.len(), result));
+                        for (offset, arg) in arguments.into_iter().enumerate() {
+                            InnerStack::add_rewrite(&mut write_configs, &mut write_terms, arg, top_of_stack + offset);
+                        }
                     }
+                    Config::Construct(symbol, arity, index) => {
+                        // Take the last arity arguments.
+                        let mut terms = stack.terms.write();
+                        let length = terms.len();
 
-                    stack.add_result(symbol.protect(), arguments.len(), result);
-                    for (offset, arg) in arguments.into_iter().enumerate() {
-                        stack.add_rewrite(arg.protect(), top_of_stack + offset);
-                    }
-                }
-                Config::Construct(symbol, arity, index) => {
-                    // Take the last arity arguments.
-                    let arguments = &stack.terms[stack.terms.len() - arity..];
+                        let arguments = &terms[length - arity..];
 
-                    let term: ATerm = if arguments.is_empty() {
-                        symbol.into()
-                    } else {
-                        tp.create_data_application(&symbol.copy().into(), arguments).into()
-                    };
+                        let term: ATerm = if arguments.is_empty() {
+                            symbol.protect().into()
+                        } else {
+                            tp.create_data_application(&symbol.copy().into(), arguments).into()
+                        };
 
-                    // Remove the arguments from the stack.
-                    stack.terms.drain(stack.terms.len() - arity..);
+                        // Remove the arguments from the stack.
+                        terms.drain(length - arity..);
 
-                    match InnermostRewriter::find_match(tp, automaton, &term, stats) {
-                        Some(ema) => {
-                            // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
-                            let top_of_stack = stack.terms.len();
-                            stack.terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
-                            for _ in 0..ema.stack_size - 1 {
-                                stack.terms.push(Default::default());
-                            }
+                        match InnermostRewriter::find_match(tp, automaton, &term, stats) {
+                            Some(ema) => {
+                                // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
+                                let top_of_stack = terms.len();
+                                terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
+                                for _ in 0..ema.stack_size - 1 {
+                                    terms.push(Default::default());
+                                }
 
-                            let mut first = true;
-                            for config in &ema.innermost_stack {
-                                match config {
-                                    Config::Construct(symbol, arity, offset) => {
-                                        if first {
-                                            // The first result must be placed on the original result index.
-                                            stack.add_result(symbol.clone(), *arity, index);
-                                        } else {
-                                            // Otherwise, we put it on the end of the stack.
-                                            stack.add_result(
-                                                symbol.clone(),
-                                                *arity,
-                                                top_of_stack + offset - 1,
-                                            );
+                                let mut first = true;
+                                for config in (&ema.innermost_stack.read()).iter() {
+                                    match config {
+                                        Config::Construct(symbol, arity, offset) => {
+                                            if first {
+                                                // The first result must be placed on the original result index.
+                                                InnerStack::add_result(&mut write_configs, symbol.copy(), *arity, index);
+                                            } else {
+                                                // Otherwise, we put it on the end of the stack.
+                                                InnerStack::add_result(&mut write_configs,
+                                                    symbol.copy(),
+                                                    *arity,
+                                                    top_of_stack + offset - 1,
+                                                );                  
+                                            }
+                                        }
+                                        Config::Rewrite(_) => {
+                                            panic!("This case should not happen");
                                         }
                                     }
-                                    Config::Rewrite(_) => {
-                                        panic!("This case should not happen");
+                                    first = false;
+                                }
+                                trace!(
+                                    "{}, {}, {}",
+                                    ema.stack_size,
+                                    ema.variables.iter().format_with(", ", |element, f| {
+                                        f(&format_args!("{} -> {}", element.0, element.1))
+                                    }),
+                                    ema.innermost_stack.read().iter().format("\n")
+                                );
+
+                                debug_assert!(ema.stack_size != 1 || ema.variables.len() <= 1, "There can only be a single variable in the right hand side");
+                                if ema.stack_size == 1 && ema.variables.len() == 1{
+                                    // This is a special case where we place the result on the correct position immediately.
+                                    // The right hand side is only a variable
+                                    let t = terms.protect(&get_position(&term, &ema.variables[0].0));
+                                    terms[index] = t
+                                } else {
+                                    for (position, index) in &ema.variables {
+                                        // Add the positions to the stack.
+                                        let t = terms.protect(&get_position(&term, position));
+                                        terms[top_of_stack + index - 1] = t;
                                     }
                                 }
-                                first = false;
+
+                                stats.rewrite_steps += 1;
+                                trace!("applying rule {}", ema.announcement.rule);
                             }
-
-                            trace!(
-                                "{}, {}, {}",
-                                ema.stack_size,
-                                ema.variables.iter().format_with(", ", |element, f| {
-                                    f(&format_args!("{} -> {}", element.0, element.1))
-                                }),
-                                ema.innermost_stack.iter().format("\n")
-                            );
-
-                            debug_assert!(ema.stack_size != 1 || ema.variables.len() <= 1, "There can only be a single variable in the right hand side");
-                            if ema.stack_size == 1 && ema.variables.len() == 1{
-                                // This is a special case where we place the result on the correct position immediately.
-                                // The right hand side is only a variable
-                                stack.terms[index] = get_position(&term, &ema.variables[0].0).protect();
-                            } else {
-                                for (position, index) in &ema.variables {
-                                    // Add the positions to the stack.
-                                    stack.terms[top_of_stack + index - 1] =
-                                        get_position(&term, position).protect();
-                                }
+                            None => {
+                                // Add the term on the stack.
+                                let t = terms.protect(&term);
+                                terms[index] = t;
                             }
-
-                            stats.rewrite_steps += 1;
-                            trace!("applying rule {}", ema.announcement.rule);
-                        }
-                        None => {
-                            // Add the term on the stack.
-                            stack.terms[index] = term;
                         }
                     }
                 }
-            }
 
-            trace!("{}", stack);
+                //trace!("{}", stack);
 
-            for (index, term) in stack.terms.iter().enumerate() {
-                if term.is_default() {
-                    debug_assert!(
-                        stack.configs.iter().any(|x| {
-                            match x {
-                                Config::Construct(_, _, result) => index == *result,
-                                Config::Rewrite(result) => index == *result,
-                            }
-                        }),
-                        "This default term {index} is not a result of any operation."
-                    );
+                for (index, term) in stack.terms.write().iter().enumerate() {
+                    if term.is_default() {
+                        debug_assert!(
+                            write_configs.iter().any(|x| {
+                                match x {
+                                    Config::Construct(_, _, result) => index == *result,
+                                    Config::Rewrite(result) => index == *result,
+                                }
+                            }),
+                            "This default term {index} is not a result of any operation."
+                        );
+                    }
                 }
+            } else {
+                break;
             }
         }
 
         debug_assert!(
-            stack.terms.len() == 1,
+            stack.terms.read().len() == 1,
             "Expect exactly one term on the result stack"
         );
 
-        stack
+        let mut write_terms = stack
             .terms
+            .write();
+
+        write_terms
             .pop()
             .expect("The result should be the last element on the stack")
+            .protect()
     }
 
     /// Use the APMA to find a match for the given term.
@@ -308,6 +278,103 @@ impl InnermostRewriter {
         }
 
         true
+    }
+}
+
+#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub enum Config {
+    ///
+    // Result(usize),
+    /// Rewrite the top of the stack and put result at the given index.
+    Rewrite(usize), 
+    /// Constructs function symbol with given arity at the given index.
+    Construct(DataFunctionSymbolRef<'static>, usize, usize), 
+}
+
+impl Markable for Config {
+    fn mark(&self, todo: Todo<'_>) {
+        match self {
+            Config::Construct(t, _, _) => {
+                let t: ATermRef<'_> = t.copy().into();
+                t.mark(todo);
+            },
+            _ => {
+
+            }
+        }
+    }
+
+    fn contains_term(&self, term: &ATermRef<'_>) -> bool {
+        match self {
+            Config::Construct(t, _, _) => {
+                term == &<DataFunctionSymbolRef as Into<ATermRef>>::into(t.copy())
+            },
+            _ => {
+                false
+            }
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Config::Construct(_, _, _) => {
+                1
+            },
+            _ => {
+                0
+            }
+        }
+    }
+}
+
+/// This stack is used to avoid recursion and also to keep track of terms in
+/// normal forms by explicitly representing the rewrites of a right hand
+/// side.
+#[derive(Default)]
+struct InnerStack {
+    configs: Protected<Vec<Config>>,
+    terms: Protected<Vec<ATermRef<'static>>>,
+}
+ 
+impl fmt::Display for InnerStack {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Terms: [")?;
+        for (i, term) in self.terms.read().iter().enumerate() {
+            writeln!(f, "{}\t{:?}", i, term)?;
+        }
+        writeln!(f, "]")?;
+
+        writeln!(f, "Configs: [")?;
+        for config in self.configs.read().iter() {
+            writeln!(f, "\t{}", config)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Config::Rewrite(result) => write!(f, "Rewrite({})", result),
+            Config::Construct(symbol, arity, result) => {
+                write!(f, "Construct({}, {}, {})", symbol, arity, result)
+            }
+        }
+    }
+}
+
+impl InnerStack {
+
+    /// Indicate that the given 
+    fn add_result<'a>(write_configs: &mut Protector<Vec<Config>>, symbol: DataFunctionSymbolRef<'a>, arity: usize, index: usize) {
+        let symbol = write_configs.protect(&symbol.into());
+        write_configs.push(Config::Construct(symbol.into(), arity, index));
+    }
+
+    fn add_rewrite<'a>(write_configs: &mut Protector<Vec<Config>>, write_terms: &mut Protector<Vec<ATermRef<'static>>>, term: ATermRef<'a>, index: usize) {
+        let term = write_terms.protect(&term);
+        write_configs.push(Config::Rewrite(index));
+        write_terms.push(term);
     }
 }
 
