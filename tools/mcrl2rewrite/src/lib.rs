@@ -49,7 +49,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                     println!("{}", DataApplication::from(result))
                 }
             }
-            println!("jitty rewrite took {} ms", now.elapsed().as_millis());
+            println!("Jitty rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Innermost => {    
             let rewrite_spec = RewriteSpecification::from(data_spec.clone());
@@ -63,7 +63,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                     println!("{}", DataApplication::from(result))
                 }
             }
-            println!("innermost rewrite took {} ms", now.elapsed().as_millis());
+            println!("Innermost rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Sabre => {                
             let rewrite_spec = RewriteSpecification::from(data_spec.clone());
@@ -76,7 +76,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                     println!("{}", DataApplication::from(result))
                 }
             }
-            println!("sabre rewrite took {} ms", now.elapsed().as_millis());
+            println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
         }
     }
 
@@ -103,7 +103,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
                     println!("{}", DataApplication::from(result))
                 }
             }
-            println!("innermost rewrite took {} ms", now.elapsed().as_millis());
+            println!("Innermost rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Sabre => {
             let mut sa = SabreRewriter::new(tp.clone(), &spec);        
@@ -116,7 +116,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
                     println!("{}", DataApplication::from(result))
                 }
             }
-            println!("sabre rewrite took {} ms", now.elapsed().as_millis());
+            println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
         },
         Rewriter::Jitty => {
             bail!("Cannot use REC specifications with mCRL2's jitty rewriter");

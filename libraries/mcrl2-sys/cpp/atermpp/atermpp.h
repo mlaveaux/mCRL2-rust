@@ -65,6 +65,17 @@ void enable_automatic_garbage_collection(bool enabled)
   detail::g_term_pool().enable_garbage_collection(enabled);
 }
 
+/// Returns the number of terms in the pool.
+std::size_t aterm_pool_size() {
+  return detail::g_term_pool().size();
+}
+
+/// Returns the capacity of the pool, for terms of all arities so this is slightly misleading.
+std::size_t aterm_pool_capacity()
+{
+  return detail::g_term_pool().capacity();
+}
+
 inline 
 void collect_garbage()
 {

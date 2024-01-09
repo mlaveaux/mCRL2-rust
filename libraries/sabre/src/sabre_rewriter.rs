@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use log::{debug, trace};
+use log::{debug, trace, info};
 use mcrl2::aterm::{ATerm, TermPool};
 
 use crate::{
@@ -41,9 +41,12 @@ impl RewriteEngine for SabreRewriter {
 
 impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
+
+        let automaton =  SetAutomaton::new(spec, false);
+        info!("ATerm pool: {}", tp.borrow());
         SabreRewriter {
             term_pool: tp.clone(),
-            automaton: SetAutomaton::new(spec, false),
+            automaton,
         }
     }
 

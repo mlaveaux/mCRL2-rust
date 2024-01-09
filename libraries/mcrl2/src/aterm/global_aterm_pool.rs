@@ -112,9 +112,6 @@ impl GlobalTermPool {
         
     /// Marks the terms in all protection sets.
     fn mark_protection_sets(&mut self, mut todo: Pin<&mut ffi::term_mark_stack>) {
-        let mut protected = 0;
-        let mut total = 0;
-        let mut max = 0;
         
         trace!("Marking terms:");
         for set in self.thread_protection_sets.iter().flatten() {
@@ -127,17 +124,9 @@ impl GlobalTermPool {
 
                     trace!("Marked {:?}, index {root}", term.ptr);
                 }
-
-                protected += protection_set.len();
-                total += protection_set.number_of_insertions();
-                max += protection_set.maximum_size();
             }
         }
 
-        let mut num_containers = 0;
-        let mut max_containers = 0;
-        let mut total_containers = 0;
-        let mut inside_containers = 0;
         for set in self.thread_container_sets.iter().flatten() {
             // Do not lock since we acquired a global lock.
             unsafe {
@@ -149,25 +138,12 @@ impl GlobalTermPool {
                     let length = container.read().len();
 
                     trace!("Marked container index {root}, size {}", length);
-
-                    inside_containers += length;
                 }
-                
-                num_containers += protection_set.len();
-                total_containers += protection_set.number_of_insertions();
-                max_containers += protection_set.maximum_size();
             }
         }
 
         info!(
-            "Collecting garbage: protected {} terms of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {})",
-            protected, 
-            inside_containers,
-            num_containers,    
-            total, 
-            max,
-            total_containers,
-            max_containers,    
+            "Collecting garbage \n{:?}", self
         );
     }
     
@@ -186,7 +162,61 @@ impl GlobalTermPool {
         }
         result
     }
+    
+    /// Returns the number of terms in the pool.
+    pub fn len(&self) -> usize {
+        ffi::aterm_pool_size()
+    }
 
+    /// Returns the number of terms in the pool.
+    pub fn capacity(&self) -> usize {
+        ffi::aterm_pool_capacity()
+    }
+
+}
+
+impl Debug for GlobalTermPool {
+
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut protected = 0;
+        let mut total = 0;
+        let mut max = 0;
+        
+        for set in self.thread_protection_sets.iter().flatten() {
+            let protection_set = set.read();
+            protected += protection_set.len();
+            total += protection_set.number_of_insertions();
+            max += protection_set.maximum_size();
+        }
+
+        let mut num_containers = 0;
+        let mut max_containers = 0;
+        let mut total_containers = 0;
+        let mut inside_containers = 0;
+        for set in self.thread_container_sets.iter().flatten() {
+            let protection_set = set.read();
+            num_containers += protection_set.len();
+            total_containers += protection_set.number_of_insertions();
+            max_containers += protection_set.maximum_size();
+            
+            for (container, _) in protection_set.iter() {
+                inside_containers += container.read().len();
+            }
+        }
+
+        write!(f,
+            "{} terms, max capacity {}, {} variables in root set of which {} in {} containers (term set {} insertions, max {}; container set {} insertions, max {})",
+            self.len(),
+            self.capacity(),
+            protected, 
+            inside_containers,
+            num_containers,    
+            total, 
+            max,
+            total_containers,
+            max_containers,    
+        )
+    }
 }
 
 /// This is the global set of protection sets that are managed by the ThreadTermPool

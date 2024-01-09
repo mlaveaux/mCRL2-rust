@@ -70,7 +70,6 @@ impl fmt::Display for RewriteSpecification
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
     {
-        writeln!(f, "Rewrite rules: ")?;
         for rule in &self.rewrite_rules 
         {
             writeln!(f, "{}", rule)?;

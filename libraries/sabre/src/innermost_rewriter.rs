@@ -72,7 +72,7 @@ impl InnerStack {
 
 /// Innermost Adaptive Pattern Matching Automaton (APMA) rewrite engine.
 pub struct InnermostRewriter {
-    term_pool: Rc<RefCell<TermPool>>,
+    tp: Rc<RefCell<TermPool>>,
     apma: SetAutomaton,
 }
 
@@ -80,17 +80,20 @@ impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: ATerm) -> ATerm {
         let mut stats = RewritingStatistics::default();
 
-        let result = InnermostRewriter::rewrite_aux(&mut self.term_pool.borrow_mut(), &self.apma, t, &mut stats);
+        let result = InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &self.apma, t, &mut stats);
         info!("{} rewrites, {} single steps and {} matches", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
         result
     }
 }
 
 impl InnermostRewriter {
-    pub fn new(term_pool: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
+    pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
+
+        let apma =  SetAutomaton::new(spec, true);
+        info!("ATerm pool: {}", tp.borrow());
         InnermostRewriter {
-            term_pool: term_pool.clone(),
-            apma: SetAutomaton::new(spec, true),
+            tp: tp.clone(),
+            apma,
         }
     }
 

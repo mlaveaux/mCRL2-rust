@@ -15,6 +15,7 @@ use super::{EnhancedMatchAnnouncement, MatchAnnouncement, MatchGoal};
 // The Set Automaton used for matching based on
 pub struct SetAutomaton {
     pub(crate) states: Vec<State>,
+    num_of_transitions: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -122,6 +123,8 @@ fn find_symbols(t: ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>)
 impl SetAutomaton {
     pub fn new(spec: &RewriteSpecification, apma: bool) -> SetAutomaton {
         let start = Instant::now();
+
+        info!("Specification: \n{}", spec);
 
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
@@ -274,7 +277,7 @@ impl SetAutomaton {
         }
         info!("Created set automaton (states: {}, transitions: {}, apma: {}) in {} ms", states.len(), num_of_transitions, apma, (Instant::now() - start).as_millis());
 
-        let result = SetAutomaton { states };
+        let result = SetAutomaton { states, num_of_transitions };
         debug!("{}", result);
         
         result

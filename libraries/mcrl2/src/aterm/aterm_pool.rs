@@ -138,19 +138,6 @@ impl Default for ThreadTermPool {
     }
 }
 
-impl Debug for ThreadTermPool {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let protection_set = self.protection_set.read();
-        write!(
-            f,
-            "{} variables in root set ({} max, {} insertions)",
-            protection_set.len(),
-            protection_set.maximum_size(),
-            protection_set.number_of_insertions()
-        )
-    }
-}
-
 impl Drop for ThreadTermPool {
     fn drop(&mut self) {
         debug_assert!(self.protection_set.read().len() == 0, "The protection set should be empty");
@@ -344,7 +331,7 @@ impl fmt::Display for TermPool {
         // TODO: This will always print, but only depends on aterm_configuration.h
         ffi::print_metrics();
 
-        THREAD_TERM_POOL.with_borrow(|tp| write!(f, "{:?}", tp))
+        write!(f, "{:?}", GLOBAL_TERM_POOL.lock())
     }
 }
 

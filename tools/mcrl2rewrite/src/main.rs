@@ -3,6 +3,7 @@ use std::{rc::Rc, cell::RefCell};
 use anyhow::Result as AnyResult;
 use clap::Parser;
 
+use log::info;
 use mcrl2::aterm::TermPool;
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 
@@ -52,6 +53,6 @@ fn main() -> AnyResult<()>
         }
     }
 
-    println!("pool: {}", tp.borrow());
+    info!("ATerm pool: {}", tp.borrow());
     Ok(())
 }

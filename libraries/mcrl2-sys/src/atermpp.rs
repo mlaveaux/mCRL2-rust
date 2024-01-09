@@ -31,6 +31,12 @@ pub mod ffi {
         /// periodically to trigger garbage collection when needed.
         fn enable_automatic_garbage_collection(enabled: bool);
 
+        /// Returns the number of terms in the pool.
+        fn aterm_pool_size() -> usize;
+
+        /// Returns the capacity of the pool, for terms of all arities so this is slightly misleading.
+        fn aterm_pool_capacity() -> usize;
+
         /// Trigger garbage collection.
         fn collect_garbage();
 
