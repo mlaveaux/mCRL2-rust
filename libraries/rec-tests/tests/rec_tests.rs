@@ -48,7 +48,7 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
             result,
             syntax_terms
                 .iter()
-                .map(|t| to_untyped_data_expression(&mut tp.borrow_mut(), t, &AHashSet::new()))
+                .map(|t| to_untyped_data_expression(&mut tp.borrow_mut(), t, &AHashSet::new()).into())
                 .collect(),
         )
     };
@@ -69,14 +69,14 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
 
         let result = inner.rewrite(term.clone());
         assert_eq!(result,
-            expected_result,
+            expected_result.clone().into(),
             "The inner rewrite result doesn't match the expected result",
         );
 
         let result = sa.rewrite(term.clone());
         assert_eq!(
             result,
-            expected_result,
+            expected_result.into(),
             "The sabre rewrite result doesn't match the expected result"
         );
     }

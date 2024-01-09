@@ -6,12 +6,12 @@ use itertools::Itertools;
 use log::{trace, info};
 use mcrl2::{
     aterm::{ATerm, TermPool, ATermTrait},
-    data::{DataFunctionSymbol, BoolSort},
+    data::{DataFunctionSymbol, BoolSort, DataExpressionRef},
 };
 
 use crate::{
     set_automaton::{
-        check_equivalence_classes, get_data_arguments, get_data_function_symbol,
+        check_equivalence_classes,
         EnhancedMatchAnnouncement, SetAutomaton,
     },
     utilities::get_position,
@@ -118,8 +118,9 @@ impl InnermostRewriter {
                 Config::Rewrite(result) => {
                     let term = stack.terms.pop().unwrap();
 
-                    let symbol = get_data_function_symbol(&term);
-                    let arguments = get_data_arguments(&term);
+                    let term = DataExpressionRef::from(term.copy());
+                    let symbol = term.data_function_symbol();
+                    let arguments = term.data_arguments();
 
                     // For all the argument we reserve space on the stack.
                     let top_of_stack = stack.terms.len();
@@ -252,8 +253,8 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let pos = get_position(t, &state.label);
-            let symbol = get_data_function_symbol(&pos);
+            let pos: DataExpressionRef = get_position(t, &state.label).into();
+            let symbol = pos.data_function_symbol();
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = state.transitions.get(symbol.operation_id()) {
@@ -343,8 +344,8 @@ mod tests {
         let term = to_untyped_data_expression(&mut tp.borrow_mut(), &term, &AHashSet::new());
 
         assert_eq!(
-            inner.rewrite(term.clone()),
-            term,
+            inner.rewrite(term.clone().into()),
+            term.into(),
             "Should be in normal form for no rewrite rules"
         );
     }

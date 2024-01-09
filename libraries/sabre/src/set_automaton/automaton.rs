@@ -1,8 +1,15 @@
 use std::{collections::VecDeque, fmt::Debug, time::Instant};
 
 use ahash::HashMap;
-use log::{debug, warn, log_enabled, trace, info};
-use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, ATermArgs}, data::{DataFunctionSymbol, DataFunctionSymbolRef, is_data_variable, is_data_application, is_data_function_symbol, is_data_abstraction, is_data_where_clause, is_data_untyped_identifier}};
+use log::{debug, info, log_enabled, trace, warn};
+use mcrl2::{
+    aterm::{ATermRef, ATermTrait},
+    data::{
+        is_data_abstraction, is_data_application, is_data_function_symbol,
+        is_data_untyped_identifier, is_data_variable, is_data_where_clause, DataExpression,
+        DataExpressionRef, DataFunctionSymbol,
+    },
+};
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
@@ -27,7 +34,7 @@ pub struct Transition {
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(crate) struct MatchObligation {
-    pub pattern: ATerm,
+    pub pattern: DataExpression,
     pub position: ExplicitPosition,
 }
 
@@ -50,9 +57,7 @@ impl SetAutomaton {
         let supported_rules: Vec<Rule> = spec
             .rewrite_rules
             .iter()
-            .filter(|rule| {
-                is_supported_rule(rule)
-            })
+            .filter(|rule| is_supported_rule(rule))
             .map(Rule::clone)
             .collect();
 
@@ -61,12 +66,12 @@ impl SetAutomaton {
             let mut symbols = vec![];
 
             for rule in &supported_rules {
-                find_symbols(&rule.lhs, &mut symbols);
-                find_symbols(&rule.rhs, &mut symbols);
+                find_symbols(&rule.lhs.copy(), &mut symbols);
+                find_symbols(&rule.rhs.copy(), &mut symbols);
 
                 for cond in &rule.conditions {
-                    find_symbols(&cond.lhs, &mut symbols);
-                    find_symbols(&cond.rhs, &mut symbols);
+                    find_symbols(&cond.lhs.copy(), &mut symbols);
+                    find_symbols(&cond.rhs.copy(), &mut symbols);
                 }
             }
 
@@ -228,27 +233,6 @@ pub(crate) struct State {
     pub(crate) match_goals: Vec<MatchGoal>,
 }
 
-/// Returns the data function symbol of the given term
-pub fn get_data_function_symbol<'a>(term: &'a ATermRef<'_>) -> DataFunctionSymbolRef<'a> {
-    // If this is an application it is the first argument, otherwise it's the term itself
-    if is_data_application(term) {
-        term.arg(0).upgrade(term).into()
-    } else {
-        term.copy().into()
-    }
-}
-
-/// Returns the data arguments of the term
-pub fn get_data_arguments<'a>(term: &'a ATermRef<'_>) -> ATermArgs<'a> {
-    if is_data_application(term) {
-        let mut result = term.arguments();
-        result.next();
-        result
-    } else {
-        Default::default()
-    }
-}
-
 impl State {
     /// Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
     /// The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
@@ -342,7 +326,7 @@ impl State {
                         if let GoalsOrInitial::Goals(goals) = &mut destinations[key].1 {
                             goals.push(MatchGoal {
                                 obligations: vec![MatchObligation {
-                                    pattern: rr.lhs.clone(),
+                                    pattern: rr.lhs.clone().into(),
                                     position: pos.clone(),
                                 }],
                                 announcement: MatchAnnouncement {
@@ -389,14 +373,14 @@ impl State {
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && get_data_function_symbol(&mo.pattern) == symbol.copy()
-                        && get_data_arguments(&mo.pattern)
+                        && mo.pattern.data_function_symbol() == symbol.copy()
+                        && mo.pattern.data_arguments()
                             .all(|x| is_data_variable(&x)) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
             } else if mg.obligations.iter().any(|mo| {
-                mo.position == self.label && get_data_function_symbol(&mo.pattern) != symbol.copy()
+                mo.position == self.label && mo.pattern.data_function_symbol() != symbol.copy()
             }) {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
@@ -413,17 +397,17 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if get_data_function_symbol(&mo.pattern) == symbol.copy() && mo.position == self.label
+                    if mo.pattern.data_function_symbol() == symbol.copy() && mo.position == self.label
                     {
                         // Reduced match obligation
-                        for (index, t) in get_data_arguments(&mo.pattern).enumerate() {
+                        for (index, t) in mo.pattern.data_arguments().enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
                             if !is_data_variable(&t) {
                                 let mut new_pos = mo.position.clone();
                                 new_pos.indices.push(index + 2);
                                 new_obligations.push(MatchObligation {
-                                    pattern: t.protect(),
+                                    pattern: t.protect().into(),
                                     position: new_pos,
                                 });
                             }
@@ -536,7 +520,7 @@ fn add_symbol(
 }
 
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
-fn is_supported_term(t: &ATermRef<'_>) -> bool {
+fn is_supported_term(t: &DataExpression) -> bool {
     for subterm in t.iter() {
         if is_data_application(&subterm) && !is_data_function_symbol(&subterm.arg(0)) {
             warn!("{} is higher order", &subterm);
@@ -570,22 +554,21 @@ fn is_supported_rule(rule: &Rule) -> bool {
 }
 
 /// Finds all data symbols in the term and adds them to the symbol index.
-fn find_symbols(t: &ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
     if is_data_function_symbol(t) {
+        let t: &ATermRef<'_> = &t;
         add_symbol(t.protect().into(), 0, symbols);
     } else if is_data_application(t) {
-        let mut args = t.arguments();
-
         // REC specifications should never contain this so it can be a debug error.
-        let head = args.next().unwrap();
         assert!(
-            is_data_function_symbol(&head),
-            "Higher order term rewrite systems are not supported"
+            is_data_function_symbol(&t.data_function_symbol()),
+            "Error in term {}, higher order term rewrite systems are not supported",
+            t
         );
 
-        add_symbol(head.protect().into(), args.len(), symbols);
-        for arg in args {
-            find_symbols(&arg, symbols);
+        add_symbol(t.data_function_symbol().protect(), t.data_arguments().len(), symbols);
+        for arg in t.data_arguments() {
+            find_symbols(&arg.into(), symbols);
         }
     } else if !is_data_variable(t) {
         panic!("Unexpected term {:?}", t);

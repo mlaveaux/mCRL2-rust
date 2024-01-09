@@ -8,7 +8,7 @@ fn main() {
 use std::marker::PhantomData;
 
 #[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct ATerm {}
+pub struct ATerm {}
 
 impl ATerm {
     #[allow(unused)]

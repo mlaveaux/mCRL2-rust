@@ -2,7 +2,7 @@ use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
 
 use crate::aterm::{ATerm, ATermList, ATermTrait};
 
-use super::DataVariable;
+use super::{DataVariable, DataExpression};
 
 /// A safe abstraction for the mCRL2 data specification.
 pub struct DataSpecification {
@@ -44,9 +44,9 @@ impl Clone for DataSpecification {
 #[derive(PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Debug)]
 pub struct DataEquation {
     pub variables: Vec<DataVariable>,
-    pub condition: ATerm,
-    pub lhs: ATerm,
-    pub rhs: ATerm,
+    pub condition: DataExpression,
+    pub lhs: DataExpression,
+    pub rhs: DataExpression,
 }
 
 impl From<ATerm> for DataEquation {
@@ -55,9 +55,9 @@ impl From<ATerm> for DataEquation {
 
         DataEquation {
             variables: variables.iter().collect(),
-            condition: value.arg(1).protect(),
-            lhs: value.arg(2).protect(),
-            rhs: value.arg(3).protect(),
+            condition: value.arg(1).protect().into(),
+            lhs: value.arg(2).protect().into(),
+            rhs: value.arg(3).protect().into(),
         }
     }
 }

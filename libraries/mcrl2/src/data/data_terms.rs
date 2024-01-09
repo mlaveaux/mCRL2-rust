@@ -11,8 +11,11 @@ pub fn is_data_variable(term: &ATermRef<'_>) -> bool {
 
 pub fn is_data_expression(term: &ATermRef<'_>) -> bool {
     term.require_valid();
-    is_data_function_symbol(term)
+    is_data_variable(term)
+        || is_data_function_symbol(term)
         || is_data_application(term)
+        || is_data_abstraction(term)
+        || is_data_where_clause(term)
 }
 
 pub fn is_data_function_symbol(term: &ATermRef<'_>) -> bool {
@@ -80,7 +83,7 @@ mod inner {
         /// Returns the arguments of a data expression
         ///     - function symbol   f -> []
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
-        pub fn arguments(&self) -> ATermArgs<'_> {
+        pub fn data_arguments(&self) -> ATermArgs<'_> {
             if is_data_application(&self.term) {
                 let mut result =self.term.arguments();
                 result.next();
@@ -96,12 +99,13 @@ mod inner {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if is_data_function_symbol(&self.term) {
                 write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
+            } else if is_data_application(&self.term) {
+                write!(f, "{}", DataApplicationRef::from(self.term.copy()))
             } else {
-                write!(f, "test")
+                write!(f, "{}", self.term)
             }
         }
-    }
-    
+    }    
 
     #[mcrl2_term(is_data_function_symbol)]
     pub struct DataFunctionSymbol {
@@ -182,7 +186,56 @@ mod inner {
             Ok(())
         }
     }
+
+    impl fmt::Display for DataApplicationRef<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let mut args = self.term.arguments();
+    
+            let head = args.next().unwrap();
+            if is_data_function_symbol(&head) {
+                write!(f, "{}", DataFunctionSymbolRef::from(head))?;
+            } else {
+                write!(f, "{:?}", head)?;
+            }
+    
+            let mut first = true;
+            for arg in args {
+                if !first {
+                    write!(f, ", ")?;
+                } else {
+                    write!(f, "(")?;
+                }
+    
+                if is_data_application(&arg) {
+                    write!(f, "{}", DataApplication::from(arg.protect()))?;
+                } else if is_data_function_symbol(&arg) {
+                    write!(f, "{}", DataFunctionSymbolRef::from(arg))?;
+                } else {
+                    write!(f, "{}", arg)?;
+                }
+                first = false;
+            }
+    
+            if !first {
+                write!(f, ")")?;
+            }
+    
+            Ok(())
+        }
+    }
         
+    impl fmt::Display for DataExpressionRef<'_> {        
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            if is_data_function_symbol(&self.term) {
+                write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
+            } else if is_data_application(&self.term) {
+                write!(f, "{}", DataApplicationRef::from(self.term.copy()))
+            } else {
+                write!(f, "{}", self.term)
+            }
+        }
+    }
+
     #[mcrl2_term(is_bool_sort)]
     pub struct BoolSort {
         pub(crate) term: ATerm,
@@ -219,7 +272,7 @@ mod inner {
         /// Returns the arguments of a data expression
         ///     - function symbol   f -> []
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
-        pub fn arguments(&self) -> ATermArgs<'_> {
+        pub fn data_arguments(&self) -> ATermArgs<'_> {
             if is_data_application(&self.term) {
                 let mut result =self.term.arguments();
                 result.next();

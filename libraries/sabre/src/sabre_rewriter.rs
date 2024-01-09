@@ -1,12 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, trace, info};
-use mcrl2::aterm::{ATerm, TermPool};
+use mcrl2::{aterm::{ATerm, TermPool}, data::DataExpressionRef};
 
 use crate::{
     RewriteSpecification,
     set_automaton::{
-        check_equivalence_classes, get_data_function_symbol, EnhancedMatchAnnouncement,
+        check_equivalence_classes, EnhancedMatchAnnouncement,
         SetAutomaton,
     },
     utilities::{get_position, Configuration, ConfigurationStack, SideInfo, SideInfoType},
@@ -114,10 +114,8 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos = get_position(&leaf.subterm, &automaton.states[leaf.state].label);
-                            let function_symbol = get_data_function_symbol(
-                                &pos
-                            );
+                            let pos: DataExpressionRef = get_position(&leaf.subterm, &automaton.states[leaf.state].label).into();
+                            let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol

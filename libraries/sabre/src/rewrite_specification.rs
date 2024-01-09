@@ -3,7 +3,7 @@ use std::fmt;
 use itertools::Itertools;
 use mcrl2::{
     aterm::ATerm,
-    data::{DataFunctionSymbol, DataSpecification, BoolSort}
+    data::{DataFunctionSymbol, DataSpecification, BoolSort, DataExpression}
 };
 
 /// A rewrite specification contains the bare info we need for rewriting (can be untyped).
@@ -18,8 +18,8 @@ pub struct RewriteSpecification
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct Condition
 {
-    pub lhs: ATerm,
-    pub rhs: ATerm,
+    pub lhs: DataExpression,
+    pub rhs: DataExpression,
     pub equality: bool,
 }
 
@@ -28,8 +28,8 @@ pub struct Rule
 {
     /// A conjunction of clauses
     pub conditions: Vec<Condition>, 
-    pub lhs: ATerm,
-    pub rhs: ATerm
+    pub lhs: DataExpression,
+    pub rhs: DataExpression
 }
 
 impl From<DataSpecification> for RewriteSpecification {
@@ -40,7 +40,7 @@ impl From<DataSpecification> for RewriteSpecification {
         let mut rewrite_rules = vec![];
         for equation in equations {
 
-            if equation.condition == BoolSort::true_term().into() {
+            if *equation.condition == *BoolSort::true_term() {
                 // Ignore the condition if it is trivial.
                 rewrite_rules.push(Rule {
                     conditions: vec![],
@@ -48,11 +48,13 @@ impl From<DataSpecification> for RewriteSpecification {
                     rhs: equation.rhs
                 })
             } else {
+                let t: ATerm = BoolSort::true_term().into();
+
                 rewrite_rules.push(Rule {
                     conditions: vec![
                         Condition {
                             lhs: equation.condition,
-                            rhs: BoolSort::true_term().into(),
+                            rhs: t.into(),
                             equality: true
                         }
                     ],

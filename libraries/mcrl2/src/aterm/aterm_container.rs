@@ -117,7 +117,7 @@ pub trait Markable {
     fn mark(&self, todo: Todo);
 
     /// Should return true iff the given term is contained in the object. Used for runtime checks.
-    fn contains(&self, term: &ATermRef<'_>) -> bool;
+    fn contains_term(&self, term: &ATermRef<'_>) -> bool;
 
     /// Returns the number of terms in the instance, used to delay garbage collection.
     fn len(&self) -> usize;
@@ -137,7 +137,7 @@ impl<'a> Markable for ATermRef<'a> {
         }
     }
 
-    fn contains(&self, term: &ATermRef<'_>) -> bool {
+    fn contains_term(&self, term: &ATermRef<'_>) -> bool {
         term == self
     }
 
@@ -153,8 +153,8 @@ impl<T: Markable> Markable for Vec<T> {
         }
     }
 
-    fn contains(&self, term: &ATermRef<'_>) -> bool {
-        self.iter().any(|v| { v.contains(term) })        
+    fn contains_term(&self, term: &ATermRef<'_>) -> bool {
+        self.iter().any(|v| { v.contains_term(term) })        
     }
     
     fn len(&self) -> usize {
@@ -172,8 +172,8 @@ impl<T: Markable + ?Sized> Markable for BfTermPool<T> {
         }
     }    
 
-    fn contains(&self, term: &ATermRef<'_>) -> bool {
-        self.read().contains(term)
+    fn contains_term(&self, term: &ATermRef<'_>) -> bool {
+        self.read().contains_term(term)
     }
 
     fn len(&self) -> usize {
@@ -243,7 +243,7 @@ impl<'a, C: Markable> Drop for Protector<'a, C> {
         #[cfg(debug_assertions)]
         {
             for term in &self.protected {
-                debug_assert!(self.reference.contains(term), "Term was protected but not actually inserted");
+                debug_assert!(self.reference.contains_term(term), "Term was protected but not actually inserted");
             }
         }
     }

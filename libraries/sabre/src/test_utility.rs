@@ -19,7 +19,7 @@ pub(crate) fn create_rewrite_rule(
 
     Rule {
         conditions: vec![],
-        lhs: to_untyped_data_expression(tp, &lhs, &vars),
-        rhs: to_untyped_data_expression(tp, &rhs, &vars),
+        lhs: to_untyped_data_expression(tp, &lhs, &vars).into(),
+        rhs: to_untyped_data_expression(tp, &rhs, &vars).into(),
     }
 }

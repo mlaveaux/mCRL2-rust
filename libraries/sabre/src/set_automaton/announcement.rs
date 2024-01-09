@@ -5,10 +5,10 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
-use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef}, data::{is_data_variable, is_data_expression}};
+use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, Markable}, data::{is_data_variable, is_data_expression, DataExpressionRef}};
 use smallvec::SmallVec;
 
-use super::{MatchObligation, get_data_function_symbol, get_data_arguments};
+use super::MatchObligation;
 
 /// An equivalence class is a variable with (multiple) positions. This is
 /// necessary for non-linear patterns. It is used by EnhancedMatchAnnouncement
@@ -62,7 +62,7 @@ fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: ATermRef, pos: 
 fn derive_equivalence_classes(announcement: &MatchAnnouncement) -> Vec<EquivalenceClass> {
     let mut var_equivalences = vec![];
 
-    for (term, pos) in PositionIterator::new(announcement.rule.lhs.copy()) {
+    for (term, pos) in PositionIterator::new(announcement.rule.lhs.copy().into()) {
         if is_data_variable(&term) {
             // Register the position of the variable
             update_equivalences(&mut var_equivalences, term, pos);
@@ -124,14 +124,14 @@ impl EnhancedMatchAnnouncement {
         // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
         // rhs of the rewrite rule and for lhs and rhs of each condition.
         // Also see the documentation of SemiCompressedTermTree
-        let var_map = create_var_map(&announcement.rule.lhs);
-        let sctt_rhs = SemiCompressedTermTree::from_term(&announcement.rule.rhs, &var_map);
+        let var_map = create_var_map(&announcement.rule.lhs.clone().into());
+        let sctt_rhs = SemiCompressedTermTree::from_term(&announcement.rule.rhs.copy().into(), &var_map);
         let mut conditions = vec![];
 
         for c in &announcement.rule.conditions {
             let ema_condition = EMACondition {
-                semi_compressed_lhs: SemiCompressedTermTree::from_term(&c.lhs, &var_map),
-                semi_compressed_rhs: SemiCompressedTermTree::from_term(&c.rhs, &var_map),
+                semi_compressed_lhs: SemiCompressedTermTree::from_term(&c.lhs.copy().into(), &var_map),
+                semi_compressed_rhs: SemiCompressedTermTree::from_term(&c.rhs.copy().into(), &var_map),
                 equality: c.equality,
             };
             conditions.push(ema_condition);
@@ -145,7 +145,7 @@ impl EnhancedMatchAnnouncement {
         let mut positions = vec![];
         let mut stack_size = 0;
 
-        for (term, position) in PositionIterator::new(announcement.rule.rhs.copy()) {
+        for (term, position) in PositionIterator::new(announcement.rule.rhs.copy().into()) {
             if let Some(index) = position.indices.last() {
                 if *index == 1 {
                     continue; // Skip the function symbol.
@@ -156,8 +156,9 @@ impl EnhancedMatchAnnouncement {
                 positions.push((var_map.get(&term.protect().into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
             } else if is_data_expression(&term) {
-                let arity = get_data_arguments(&term).len();
-                innermost_stack.push(Config::Construct(get_data_function_symbol(&term).protect(), arity, stack_size));
+                let t: DataExpressionRef = term.into();
+                let arity = t.data_arguments().len();
+                innermost_stack.push(Config::Construct(t.data_function_symbol().protect(), arity, stack_size));
                 stack_size += 1;
             } else {
                 // Skip intermediate terms such as UntypeSortUnknown and SortId(@NoValue)

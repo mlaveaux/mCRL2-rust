@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool};
+use mcrl2::{aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool}, data::DataExpression};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -46,7 +46,7 @@ fn substitute_rec(
 }
 
 /// Converts an [ATerm] to an untyped data expression.
-pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
+pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> DataExpression {
     let mut builder = TermBuilder::<ATerm, ATerm>::new();
 
     builder.evaluate(tp, t.clone(), |tp, args, t| {
@@ -70,7 +70,7 @@ pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHas
     }, |tp, input, args| {
             Ok(tp.create_data_application(&input, args).into())
         }
-    ).unwrap()
+    ).unwrap().into()
 }
 
 #[cfg(test)]
