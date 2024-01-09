@@ -36,7 +36,7 @@ impl fmt::Display for MatchAnnouncement {
         write!(
             f,
             "{}@{}",
-            self.rule.lhs.clone(),
+            self.rule.lhs,
             self.position
         )
     }
@@ -47,7 +47,7 @@ impl fmt::Display for MatchObligation {
         write!(
             f,
             "{}@{}",
-            self.pattern.clone(),
+            self.pattern,
             self.position
         )
     }

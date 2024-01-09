@@ -210,9 +210,9 @@ impl<'a, C: Markable> Protector<'a, C> {
             // Store terms that are marked as protected to check if they are
             // actually in the container when the protection is dropped.
             #[cfg(debug_assertions)]
-            self.protected.push(transmute(term.borrow()));
+            self.protected.push(transmute(term.copy()));
 
-            transmute(term)
+            transmute(term.copy())
         }
     }
 }
@@ -261,7 +261,7 @@ mod tests {
 
         for _ in 0..1000 {
             let mut write = container.write();
-            let u = write.protect(&t.borrow());
+            let u = write.protect(&t);
             write.push(u);
         }
     }

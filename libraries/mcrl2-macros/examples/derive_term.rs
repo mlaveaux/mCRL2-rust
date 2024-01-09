@@ -12,19 +12,24 @@ struct ATerm {}
 
 impl ATerm {
     #[allow(unused)]
-    pub fn borrow(&self) -> ATermRef<'_> {
+    pub fn copy(&self) -> ATermRef<'_> {
         Default::default()
     }
     
 }
 
-#[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct ATermRef<'a> {
     marker: PhantomData<&'a ()>
 }
 
 impl<'a> ATermRef<'a> {
 
+    #[allow(unused)]
+    pub fn copy(&self) -> ATermRef<'_> {
+        Default::default()
+    }
+    
     #[allow(unused)]
     pub fn protect(&self) -> ATerm {
         Default::default()

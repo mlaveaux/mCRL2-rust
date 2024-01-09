@@ -41,10 +41,10 @@ pub fn check_equivalence_classes(term: &ATerm, eqs: &[EquivalenceClass]) -> bool
 /// Adds the position of a variable to the equivalence classes
 fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: ATermRef, pos: ExplicitPosition) {
     // Check if the variable was seen before
-    if ve.iter().any(|ec| ec.variable.borrow() == variable) {
+    if ve.iter().any(|ec| ec.variable.copy() == variable) {
         for ec in ve.iter_mut() {
             // Find the equivalence class and add the position
-            if ec.variable.borrow() == variable && !ec.positions.iter().any(|x| x == &pos) {
+            if ec.variable.copy() == variable && !ec.positions.iter().any(|x| x == &pos) {
                 ec.positions.push(pos);
                 break;
             }
@@ -62,8 +62,8 @@ fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: ATermRef, pos: 
 fn derive_equivalence_classes(announcement: &MatchAnnouncement) -> Vec<EquivalenceClass> {
     let mut var_equivalences = vec![];
 
-    for (term, pos) in PositionIterator::new(announcement.rule.lhs.borrow()) {
-        if is_data_variable(term.borrow()) {
+    for (term, pos) in PositionIterator::new(announcement.rule.lhs.copy()) {
+        if is_data_variable(&term) {
             // Register the position of the variable
             update_equivalences(&mut var_equivalences, term, pos);
         }
@@ -125,13 +125,13 @@ impl EnhancedMatchAnnouncement {
         // rhs of the rewrite rule and for lhs and rhs of each condition.
         // Also see the documentation of SemiCompressedTermTree
         let var_map = create_var_map(&announcement.rule.lhs);
-        let sctt_rhs = SemiCompressedTermTree::from_term(announcement.rule.rhs.borrow(), &var_map);
+        let sctt_rhs = SemiCompressedTermTree::from_term(&announcement.rule.rhs, &var_map);
         let mut conditions = vec![];
 
         for c in &announcement.rule.conditions {
             let ema_condition = EMACondition {
-                semi_compressed_lhs: SemiCompressedTermTree::from_term(c.lhs.borrow(), &var_map),
-                semi_compressed_rhs: SemiCompressedTermTree::from_term(c.rhs.borrow(), &var_map),
+                semi_compressed_lhs: SemiCompressedTermTree::from_term(&c.lhs, &var_map),
+                semi_compressed_rhs: SemiCompressedTermTree::from_term(&c.rhs, &var_map),
                 equality: c.equality,
             };
             conditions.push(ema_condition);
@@ -145,19 +145,19 @@ impl EnhancedMatchAnnouncement {
         let mut positions = vec![];
         let mut stack_size = 0;
 
-        for (term, position) in PositionIterator::new(announcement.rule.rhs.borrow()) {
+        for (term, position) in PositionIterator::new(announcement.rule.rhs.copy()) {
             if let Some(index) = position.indices.last() {
                 if *index == 1 {
                     continue; // Skip the function symbol.
                 }
             }
 
-            if is_data_variable(term.borrow()) {
+            if is_data_variable(&term) {
                 positions.push((var_map.get(&term.protect().into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
-            } else if is_data_expression(term.borrow()) {
-                let arity = get_data_arguments(&term.borrow()).len();
-                innermost_stack.push(Config::Construct(get_data_function_symbol(term.borrow()).protect(), arity, stack_size));
+            } else if is_data_expression(&term) {
+                let arity = get_data_arguments(&term).len();
+                innermost_stack.push(Config::Construct(get_data_function_symbol(&term).protect(), arity, stack_size));
                 stack_size += 1;
             } else {
                 // Skip intermediate terms such as UntypeSortUnknown and SortId(@NoValue)

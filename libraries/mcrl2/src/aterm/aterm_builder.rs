@@ -52,26 +52,31 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
         }
     }
 
-    /// The `transformer` function is applied to every instance I, which can put more
-    /// more inputs onto the argument stack and some instance C that is used to construct
-    /// the result term. Or yield a result term directly.
+    /// This can be used to construct a term from a given input of (inductive)
+    /// type I, without using the system stack, i.e. recursion.
+    /// 
+    /// The `transformer` function is applied to every instance I, which can put
+    /// more generate more inputs using a so-called argument stack and some
+    /// instance C that is used to construct the result term. Alternatively, it
+    /// yields a result term directly.
     ///
-    /// The `construct` function takes an instance C and the arguments pushed to stack
-    /// where the transformer was applied.
+    /// The `construct` function takes an instance C and the arguments pushed to
+    /// stack where the transformer was applied for every input pushed onto the
+    /// stack previously.
     ///
     /// # Example
     ///
     /// A simple example could be to transform a term into another term using a
-    /// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is the
-    /// input, and C will be the Symbol from which we can construct the recursive
-    /// term.
+    /// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is
+    /// the input, and C will be the Symbol from which we can construct the
+    /// recursive term.
     ///
-    /// `transformer` takes the input and applies f(input). Then either we return
-    /// Yield(x) when f returns some term, or Construct(head(input)) with the
-    /// arguments of the input term pushed to stack.
+    /// `transformer` takes the input and applies f(input). Then either we
+    /// return Yield(x) when f returns some term, or Construct(head(input)) with
+    /// the arguments of the input term pushed to stack.
     ///
-    /// `construct` simply constructs the term from the symbol and the arguments on
-    /// the stack.
+    /// `construct` simply constructs the term from the symbol and the arguments
+    /// on the stack.
     ///
     /// However, it can also be that I is some syntax tree from which we want to
     /// construct a term.
@@ -179,7 +184,7 @@ impl<I: fmt::Debug, C: fmt::Debug> fmt::Debug for TermBuilder<I, C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Terms: [")?;
         for (i, term) in self.terms.iter().enumerate() {
-            writeln!(f, "{}\t{}", i, term)?;
+            writeln!(f, "{}\t{:?}", i, term)?;
         }
         writeln!(f, "]")?;
 
@@ -220,7 +225,8 @@ pub fn random_term(
 
     let mut subterms = AHashSet::<ATerm>::from_iter(constants.iter().map(|name| {
         let symbol = tp.create_symbol(name, 0);
-        tp.create(&symbol, &[])
+        let a: &[ATerm] = &[];
+        tp.create(&symbol, a)
     }));
 
     let mut rng = rand::thread_rng();

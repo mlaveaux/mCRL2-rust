@@ -68,7 +68,7 @@ pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHas
             Ok(Yield::Construct(head.into()))
         }
     }, |tp, input, args| {
-            Ok(tp.create_data_application(&input.borrow(), args).into())
+            Ok(tp.create_data_application(&input, args).into())
         }
     ).unwrap()
 }

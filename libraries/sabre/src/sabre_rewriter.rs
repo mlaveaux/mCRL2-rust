@@ -114,8 +114,9 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
+                            let pos = get_position(&leaf.subterm, &automaton.states[leaf.state].label);
                             let function_symbol = get_data_function_symbol(
-                                get_position(&leaf.subterm, &automaton.states[leaf.state].label),
+                                &pos
                             );
                             stats.symbol_comparisons += 1;
 

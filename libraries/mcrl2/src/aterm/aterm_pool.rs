@@ -42,9 +42,10 @@ fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, i
     let aterm = ATermPtr::new(term);
     let root = guard.protect(aterm.clone());
 
+    let term = ATermRef::new(term);
     trace!(
         "Protected term {:?}, index {}, protection set {}",
-        aterm.ptr,
+        term,
         root,
         index
     );
@@ -120,7 +121,7 @@ impl ThreadTermPool {
     }
 
     /// Returns true iff the given term is a data application.
-    pub fn is_data_application(&mut self, term: ATermRef<'_>) -> bool {     
+    pub fn is_data_application(&mut self, term: &ATermRef<'_>) -> bool {     
         let symbol = term.get_head_symbol();   
         // It can be that data_applications are created without create_data_application in the mcrl2 ffi.
         while self.data_appl.len() <= symbol.arity() {
@@ -171,7 +172,7 @@ impl TermPool {
     }
 
     /// Creates an [ATerm] with the given symbol and arguments.
-    pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[ATerm]) -> ATerm {
+    pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[impl ATermTrait]) -> ATerm {
         let arguments = self.tmp_arguments(arguments);
 
         debug_assert_eq!(
@@ -285,7 +286,7 @@ impl TermPool {
     }
 
     /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments(&mut self, arguments: &[ATerm]) -> &[*const ffi::_aterm] {
+    fn tmp_arguments(&mut self, arguments: &[impl ATermTrait]) -> &[*const ffi::_aterm] {
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() {
             self.arguments.push(std::ptr::null());
@@ -294,7 +295,7 @@ impl TermPool {
         self.arguments.clear();
         for arg in arguments {
             unsafe {
-                self.arguments.push(arg.borrow().get());
+                self.arguments.push(arg.copy().get());
             }
         }
 
@@ -310,9 +311,9 @@ impl TermPool {
 
         self.arguments.clear();
         unsafe {
-            self.arguments.push(head.borrow().get());
+            self.arguments.push(head.get());
             for arg in arguments {
-                self.arguments.push(arg.borrow().get());
+                self.arguments.push(arg.copy().get());
             }
         }
 

@@ -7,7 +7,7 @@ use parking_lot::Mutex;
 use mcrl2_sys::atermpp::ffi;
 use utilities::protection_set::ProtectionSet;
 
-use crate::aterm::BfTermPool;
+use crate::aterm::{BfTermPool, ATermRef};
 
 use super::{ATermGlobal, ATermTrait, Markable};
 
@@ -67,9 +67,10 @@ impl GlobalTermPool {
         let aterm = ATermPtr::new(term);
         let root = self.protection_set.protect(aterm.clone());
 
+        let term = ATermRef::new(term);
         trace!(
             "Protected term {:?} global, index {}",
-            aterm.ptr,
+            term,
             root,
         );
 
@@ -90,7 +91,7 @@ impl GlobalTermPool {
 
     /// Register a new thread term pool to manage thread specific aspects.l
     pub(crate) fn register_thread_term_pool(&mut self) -> (SharedProtectionSet, SharedContainerProtectionSet, usize) {
-        trace!("Registered ThreadTermPool {}", self.thread_protection_sets.len() - 1);
+        trace!("Registered ThreadTermPool {}", self.thread_protection_sets.len());
         
         // Register a protection set into the global set.
         // TODO: use existing free spots.
@@ -233,7 +234,7 @@ pub(crate) static GLOBAL_TERM_POOL: Lazy<Mutex<GlobalTermPool>> = Lazy::new(|| {
 });
 
 /// Marks the terms in all protection sets using the global aterm pool.
-pub(crate) fn mark_protection_sets(mut todo: Pin<&mut ffi::term_mark_stack>) {
+pub(crate) fn mark_protection_sets(todo: Pin<&mut ffi::term_mark_stack>) {
     GLOBAL_TERM_POOL.lock().mark_protection_sets(todo);
 }
 

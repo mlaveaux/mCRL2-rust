@@ -5,7 +5,7 @@ use std::{cell::RefCell, fmt, rc::Rc};
 use itertools::Itertools;
 use log::{trace, info};
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait},
+    aterm::{ATerm, TermPool, ATermTrait, ATermRef},
     data::{DataFunctionSymbol, BoolSort},
 };
 
@@ -102,14 +102,14 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton,
-        term: ATerm,
+        term: &ATermRef<'_>,
         stats: &mut RewritingStatistics,
     ) -> ATerm {
         debug_assert!(!term.is_default(), "Cannot rewrite the default term");
         stats.recursions += 1;
         let mut stack = InnerStack::default();
         stack.terms.push(Default::default());
-        stack.add_rewrite(term, 0);
+        stack.add_rewrite(term.protect(), 0);
         
         trace!("{}", stack);
 
@@ -118,7 +118,7 @@ impl InnermostRewriter {
                 Config::Rewrite(result) => {
                     let term = stack.terms.pop().unwrap();
 
-                    let symbol = get_data_function_symbol(term.borrow());
+                    let symbol = get_data_function_symbol(&term);
                     let arguments = get_data_arguments(&term);
 
                     // For all the argument we reserve space on the stack.
@@ -139,7 +139,7 @@ impl InnermostRewriter {
                     let term: ATerm = if arguments.is_empty() {
                         symbol.into()
                     } else {
-                        tp.create_data_application(&symbol.borrow().into(), arguments).into()
+                        tp.create_data_application(&symbol.copy().into(), arguments).into()
                     };
 
                     // Remove the arguments from the stack.
@@ -252,7 +252,8 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let symbol = get_data_function_symbol(get_position(t, &state.label));
+            let pos = get_position(t, &state.label);
+            let symbol = get_data_function_symbol(&pos);
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = state.transitions.get(symbol.operation_id()) {
@@ -293,12 +294,12 @@ impl InnermostRewriter {
             let rhs = c.semi_compressed_rhs.evaluate(t, tp);
             let lhs = c.semi_compressed_lhs.evaluate(t, tp);
 
-            let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
+            let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, &rhs, stats);
             let lhs_normal = if lhs == BoolSort::true_term().into() {
                 // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
                 lhs
             } else {
-                InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats)
+                InnermostRewriter::rewrite_aux(tp, automaton, &lhs, stats)
             };
 
             if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {

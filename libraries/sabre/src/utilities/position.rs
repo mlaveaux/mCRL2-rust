@@ -39,7 +39,7 @@ impl ExplicitPosition {
 
 /// Returns the subterm at the specific position
 pub fn get_position<'a>(term: &'a ATerm, position: &ExplicitPosition) -> ATermRef<'a> {
-    let mut result = term.borrow();
+    let mut result = term.copy();
 
     for index in &position.indices {
         result = result.arg(index - 1).upgrade(&result); // Note that positions are 1 indexed.
@@ -121,7 +121,7 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
-        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), expected.borrow());
+        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), expected.copy());
     }
 
     #[test]
@@ -129,12 +129,12 @@ mod tests {
         let mut tp = TermPool::new();
         let t = tp.from_string("f(g(a),b)").unwrap();
 
-        for (term, pos) in PositionIterator::new(t.borrow()) {
+        for (term, pos) in PositionIterator::new(t.copy()) {
             assert_eq!(get_position(&t, &pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
         }
 
         assert_eq!(
-            PositionIterator::new(t.borrow()).count(),
+            PositionIterator::new(t.copy()).count(),
             4,
             "The number of subterms doesn't match the expected value"
         );

@@ -186,6 +186,7 @@ impl<'a> ATermTrait for ATermRef<'a> {
 
 impl<'a> fmt::Display for ATermRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.require_valid();        
         write!(f, "{:?}", self)
     }
 }
@@ -355,16 +356,6 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
 pub struct ATermGlobal {
     pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,
-}
-
-impl ATermGlobal {
-    /// Obtains the underlying pointer
-    /// 
-    /// # Safety 
-    /// Should not be modified in any way.
-    pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
-        self.term.get()
-    }
 }
 
 impl Default for ATermGlobal {

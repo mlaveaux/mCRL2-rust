@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, format_ident};
-use syn::{ItemMod, Item, Path, PathSegment, parse_quote};
+use syn::{ItemMod, Item, parse_quote};
 
 pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStream) -> TokenStream {
 
@@ -25,8 +25,8 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                             match attr.parse_args::<syn::Ident>()
                             {
                                 Ok(assertion) => {
-                                    let assertion_msg = format!("Term does not satisfy {assertion}");
-                                    quote!(debug_assert!(#assertion(term.borrow()), #assertion_msg))
+                                    let assertion_msg = format!("{assertion}");
+                                    quote!(debug_assert!(#assertion(&term), "Term {:?} does not satisfy {}", term, #assertion_msg))
                                 },
                                 Err(_x) => {
                                     quote!()
@@ -53,8 +53,8 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                         let name_ref = format_ident!("{}Ref", object.ident);
                         let generated: TokenStream = quote!(
                             impl #name {
-                                pub fn borrow(&self) -> #name_ref<'_> {
-                                    self.term.borrow().into()
+                                pub fn copy<'a>(&'a self) -> #name_ref<'a> {
+                                    self.term.copy().into()
                                 }
                             }
 
@@ -73,12 +73,16 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                                 }
                             }
 
-                            #[derive(Clone, Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+                            #[derive(Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                             pub struct #name_ref<'a> {
                                 term: ATermRef<'a>
                             }
 
                             impl<'a> #name_ref<'a> {
+                                pub fn copy<'b>(&'b self) -> #name_ref<'b> {
+                                    self.term.copy().into()
+                                }
+
                                 pub fn protect(&self) -> #name {                                
                                     self.term.protect().into()
                                 }
@@ -103,7 +107,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                         added.push(Item::Verbatim(generated));
                     }
                 }
-                Item::Impl(implementation) => {
+                Item::Impl(_implementation) => {
                     // Duplicate the implementation for the ATermRef struct that is generated above.
                     // let mut ref_implementation = implementation.clone();
                     // println!("{:?}", ref_implementation);

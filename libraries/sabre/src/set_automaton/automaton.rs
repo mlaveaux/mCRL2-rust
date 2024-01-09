@@ -64,14 +64,14 @@ fn add_symbol(
 }
 
 /// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
-fn is_supported_term(t: ATermRef<'_>) -> bool {
+fn is_supported_term(t: &ATermRef<'_>) -> bool {
     for subterm in t.iter() {
-        if is_data_application(subterm.borrow()) && !is_data_function_symbol(subterm.arg(0)) {
-            warn!("{} is higher order", subterm);
+        if is_data_application(&subterm) && !is_data_function_symbol(&subterm.arg(0)) {
+            warn!("{} is higher order", &subterm);
             return false;
-        } else if is_data_abstraction(subterm.borrow())
-            || is_data_where_clause(subterm.borrow())
-            || is_data_untyped_identifier(subterm.borrow())
+        } else if is_data_abstraction(&subterm)
+            || is_data_where_clause(&subterm)
+            || is_data_untyped_identifier(&subterm)
         {
             warn!("{} contains unsupported construct", subterm);
             return false;
@@ -84,12 +84,12 @@ fn is_supported_term(t: ATermRef<'_>) -> bool {
 /// Checks whether the set automaton can use this rule, no higher order rules or binders.
 fn is_supported_rule(rule: &Rule) -> bool {
     // There should be no terms of the shape t(t0,...,t_n)
-    if !is_supported_term(rule.rhs.borrow()) || !is_supported_term(rule.lhs.borrow()) {
+    if !is_supported_term(&rule.rhs) || !is_supported_term(&rule.lhs) {
         return false;
     }
 
     for cond in &rule.conditions {
-        if !is_supported_term(cond.rhs.borrow()) || !is_supported_term(cond.lhs.borrow()) {
+        if !is_supported_term(&cond.rhs) || !is_supported_term(&cond.lhs) {
             return false;
         }
     }
@@ -98,24 +98,24 @@ fn is_supported_rule(rule: &Rule) -> bool {
 }
 
 /// Finds all data symbols in the term and adds them to the symbol index.
-fn find_symbols(t: ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
-    if is_data_function_symbol(t.borrow()) {
+fn find_symbols(t: &ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+    if is_data_function_symbol(t) {
         add_symbol(t.protect().into(), 0, symbols);
-    } else if is_data_application(t.borrow()) {
+    } else if is_data_application(t) {
         let mut args = t.arguments();
 
         // REC specifications should never contain this so it can be a debug error.
         let head = args.next().unwrap();
         assert!(
-            is_data_function_symbol(head.borrow()),
+            is_data_function_symbol(&head),
             "Higher order term rewrite systems are not supported"
         );
 
         add_symbol(head.protect().into(), args.len(), symbols);
         for arg in args {
-            find_symbols(arg, symbols);
+            find_symbols(&arg, symbols);
         }
-    } else if !is_data_variable(t.borrow()) {
+    } else if !is_data_variable(t) {
         panic!("Unexpected term {:?}", t);
     }
 }
@@ -144,12 +144,12 @@ impl SetAutomaton {
             let mut symbols = vec![];
 
             for rule in &supported_rules {
-                find_symbols(rule.lhs.borrow(), &mut symbols);
-                find_symbols(rule.rhs.borrow(), &mut symbols);
+                find_symbols(&rule.lhs, &mut symbols);
+                find_symbols(&rule.rhs, &mut symbols);
 
                 for cond in &rule.conditions {
-                    find_symbols(cond.lhs.borrow(), &mut symbols);
-                    find_symbols(cond.rhs.borrow(), &mut symbols);
+                    find_symbols(&cond.lhs, &mut symbols);
+                    find_symbols(&cond.rhs, &mut symbols);
                 }
             }
 
@@ -301,18 +301,18 @@ pub(crate) struct State {
 }
 
 /// Returns the data function symbol of the given term
-pub fn get_data_function_symbol(term: ATermRef<'_>) -> DataFunctionSymbolRef<'_> {
+pub fn get_data_function_symbol<'a>(term: &'a ATermRef<'_>) -> DataFunctionSymbolRef<'a> {
     // If this is an application it is the first argument, otherwise it's the term itself
-    if is_data_application(term.borrow()) {
+    if is_data_application(term) {
         term.arg(0).upgrade(&term).into()
     } else {
-        term.into()
+        term.copy().into()
     }
 }
 
 /// Returns the data arguments of the term
-pub fn get_data_arguments(term: &impl ATermTrait) -> ATermArgs<'_> {
-    if is_data_application(term.borrow()) {
+pub fn get_data_arguments<'a>(term: &'a ATermRef<'_>) -> ATermArgs<'a> {
+    if is_data_application(term) {
         let mut result = term.arguments();
         result.next();
         result
@@ -461,14 +461,14 @@ impl State {
             if mg.obligations.len() == 1
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
-                        && get_data_function_symbol(mo.pattern.borrow()) == symbol.borrow()
-                        && get_data_arguments(&mo.pattern.borrow())
-                            .all(|x| is_data_variable(x.borrow())) // Again skip the function symbol
+                        && get_data_function_symbol(&mo.pattern) == symbol.copy()
+                        && get_data_arguments(&mo.pattern)
+                            .all(|x| is_data_variable(&x)) // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
             } else if mg.obligations.iter().any(|mo| {
-                mo.position == self.label && get_data_function_symbol(mo.pattern.borrow()) != symbol.borrow()
+                mo.position == self.label && get_data_function_symbol(&mo.pattern) != symbol.copy()
             }) {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
@@ -485,13 +485,13 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if get_data_function_symbol(mo.pattern.borrow()) == symbol.borrow() && mo.position == self.label
+                    if get_data_function_symbol(&mo.pattern) == symbol.copy() && mo.position == self.label
                     {
                         // Reduced match obligation
-                        for (index, t) in get_data_arguments(&mo.pattern.borrow()).enumerate() {
+                        for (index, t) in get_data_arguments(&mo.pattern).enumerate() {
                             assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
 
-                            if !is_data_variable(t.borrow()) {
+                            if !is_data_variable(&t) {
                                 let mut new_pos = mo.position.clone();
                                 new_pos.indices.push(index + 2);
                                 new_obligations.push(MatchObligation {

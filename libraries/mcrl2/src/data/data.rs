@@ -1,46 +1,46 @@
 use core::fmt;
 
 use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait, ATermArgs, THREAD_TERM_POOL};
-use mcrl2_macros::{mcrl2_term, mcrl2_derive_terms};
+use mcrl2_macros::mcrl2_derive_terms;
 use mcrl2_sys::data::ffi;
 
-pub fn is_data_variable(term: ATermRef<'_>) -> bool {
+pub fn is_data_variable(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_variable(term.get()) }
 }
 
-pub fn is_data_expression(term: ATermRef<'_>) -> bool {
+pub fn is_data_expression(term: &ATermRef<'_>) -> bool {
     term.require_valid();
-    is_data_function_symbol(term.borrow())
-        || is_data_application(term.borrow())
+    is_data_function_symbol(term)
+        || is_data_application(term)
 }
 
-pub fn is_data_function_symbol(term: ATermRef<'_>) -> bool {
+pub fn is_data_function_symbol(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_function_symbol(term.get()) }
 }
 
-pub fn is_data_where_clause(term: ATermRef<'_>) -> bool {
+pub fn is_data_where_clause(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_where_clause(term.get()) }
 }
 
-pub fn is_data_abstraction(term: ATermRef<'_>) -> bool {
+pub fn is_data_abstraction(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_abstraction(term.get()) }
 }
 
-pub fn is_data_untyped_identifier(term: ATermRef<'_>) -> bool {
+pub fn is_data_untyped_identifier(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_untyped_identifier(term.get()) }
 }
 
-pub fn is_bool_sort(term: ATermRef<'_>) -> bool {
+pub fn is_bool_sort(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     true
 }
 
-pub fn is_data_application(term: ATermRef<'_>) -> bool {
+pub fn is_data_application(term: &ATermRef<'_>) -> bool {
     term.require_valid();
 
     THREAD_TERM_POOL.with_borrow_mut(|tp| {
@@ -68,10 +68,10 @@ mod inner {
         ///     - function symbol   f -> f
         ///     - application       f(t_0, ..., t_n) -> f
         pub fn data_function_symbol(&self) -> DataFunctionSymbolRef<'_> {
-            if is_data_application(self.term.borrow()) {
-                self.term.arg(0).upgrade(&self.term.borrow()).into()
+            if is_data_application(&self.term) {
+                self.term.arg(0).upgrade(&self.term).into()
             } else {
-                self.term.borrow().into()
+                self.term.copy().into()
             }
         }
 
@@ -79,7 +79,7 @@ mod inner {
         ///     - function symbol   f -> []
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
         pub fn arguments<'a>(&'a self) -> ATermArgs<'a> {
-            if is_data_application(self.term.borrow()) {
+            if is_data_application(&self.term) {
                 let mut result =self.term.arguments();
                 result.next();
                 result
@@ -92,8 +92,8 @@ mod inner {
 
     impl fmt::Display for DataExpression {        
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            if is_data_function_symbol(self.term.borrow()) {
-                write!(f, "{}", DataFunctionSymbolRef::from(self.term.borrow()))
+            if is_data_function_symbol(&self.term) {
+                write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
             } else {
                 write!(f, "test")
             }
@@ -112,13 +112,13 @@ mod inner {
         }
 
         pub fn operation_id(&self) -> usize {
-            self.borrow().operation_id()
+            self.copy().operation_id()
         }
     }
 
     impl fmt::Display for DataFunctionSymbol {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.borrow())        
+            write!(f, "{}", self.copy())        
         }
     }
 
@@ -149,7 +149,7 @@ mod inner {
             let mut args = self.term.arguments();
     
             let head = args.next().unwrap();
-            if is_data_function_symbol(head.borrow()) {
+            if is_data_function_symbol(&head) {
                 write!(f, "{}", DataFunctionSymbolRef::from(head))?;
             } else {
                 write!(f, "{:?}", head)?;
@@ -163,9 +163,9 @@ mod inner {
                     write!(f, "(")?;
                 }
     
-                if is_data_application(arg.borrow()) {
+                if is_data_application(&arg) {
                     write!(f, "{}", DataApplication::from(arg.protect()))?;
-                } else if is_data_function_symbol(arg.borrow()) {
+                } else if is_data_function_symbol(&arg) {
                     write!(f, "{}", DataFunctionSymbolRef::from(arg))?;
                 } else {
                     write!(f, "{}", arg)?;
@@ -207,10 +207,10 @@ mod inner {
         ///     - function symbol   f -> f
         ///     - application       f(t_0, ..., t_n) -> f
         pub fn data_function_symbol(&self) -> DataFunctionSymbolRef<'_> {
-            if is_data_application(self.term.borrow()) {
-                self.term.arg(0).upgrade(&self.term.borrow()).into()
+            if is_data_application(&self.term) {
+                self.term.arg(0).upgrade(&self.term).into()
             } else {
-                self.term.borrow().into()
+                self.term.copy().into()
             }
         }
 
@@ -218,7 +218,7 @@ mod inner {
         ///     - function symbol   f -> []
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
         pub fn arguments<'a>(&'a self) -> ATermArgs<'a> {
-            if is_data_application(self.term.borrow()) {
+            if is_data_application(&self.term) {
                 let mut result =self.term.arguments();
                 result.next();
                 result
@@ -236,11 +236,11 @@ mod inner {
         /// Returns the internal id known for every [aterm] that is a data::function_symbol.
         pub fn operation_id(&self) -> usize {
             debug_assert!(
-                is_data_function_symbol(self.term.borrow()),
+                is_data_function_symbol(&self.term),
                 "term {} is not a data function symbol",
                 self.term
             );
-            unsafe { ffi::get_data_function_symbol_index(self.term.borrow().get()) }
+            unsafe { ffi::get_data_function_symbol_index(self.term.get()) }
         }
     }
     
@@ -259,7 +259,7 @@ pub use inner::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::{aterm::{TermPool, ATerm, ATermTrait}, data::is_data_application};
+    use crate::{aterm::{TermPool, ATerm}, data::is_data_application};
 
     #[test]
     fn test_print() {
@@ -271,7 +271,7 @@ mod tests {
         // Check printing of data applications.
         let f = tp.create_data_function_symbol("f");
         let a_term: ATerm = a.clone().into();
-        let appl = tp.create_data_application(&f.borrow().into(), &[a_term]);
+        let appl = tp.create_data_application(&f.copy().into(), &[a_term]);
         assert_eq!("f(a)", format!("{}", appl));
     }
 
@@ -282,9 +282,9 @@ mod tests {
         let a = tp.create_data_function_symbol("a");
         let f = tp.create_data_function_symbol("f");
         let a_term: ATerm = a.clone().into();
-        let appl = tp.create_data_application(&f.borrow().into(), &[a_term]);
+        let appl = tp.create_data_application(&f.copy().into(), &[a_term]);
 
         let term: ATerm = appl.into();
-        assert!(is_data_application(term.borrow()));
+        assert!(is_data_application(&term));
     }
 }
