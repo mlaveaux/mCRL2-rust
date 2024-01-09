@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{cell::RefCell, fmt::Debug, sync::Arc, mem::ManuallyDrop};
+use std::{cell::RefCell, sync::Arc, mem::ManuallyDrop};
 
 use log::trace;
 
@@ -205,7 +205,7 @@ impl TermPool {
         head: &ATermRef,
         arguments: &[impl ATermTrait],
     ) -> DataApplication {
-        debug_assert!(arguments.len() > 0, "DataApplication should have at least one argument");
+        debug_assert!(!arguments.is_empty(), "DataApplication should have at least one argument");
 
         // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
         let symbol = THREAD_TERM_POOL.with_borrow_mut(|tp| {

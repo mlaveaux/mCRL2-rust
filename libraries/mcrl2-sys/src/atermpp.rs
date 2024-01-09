@@ -1,4 +1,5 @@
 #[cxx::bridge(namespace = "atermpp")]
+#[allow(clippy::missing_safety_doc)]
 pub mod ffi {
 
     unsafe extern "C++" {

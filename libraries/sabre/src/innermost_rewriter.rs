@@ -5,7 +5,7 @@ use std::{cell::RefCell, fmt, rc::Rc};
 use itertools::Itertools;
 use log::{trace, info};
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait, ATermRef},
+    aterm::{ATerm, TermPool, ATermTrait},
     data::{DataFunctionSymbol, BoolSort},
 };
 
@@ -102,14 +102,14 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton,
-        term: &ATermRef<'_>,
+        term: ATerm,
         stats: &mut RewritingStatistics,
     ) -> ATerm {
         debug_assert!(!term.is_default(), "Cannot rewrite the default term");
         stats.recursions += 1;
         let mut stack = InnerStack::default();
         stack.terms.push(Default::default());
-        stack.add_rewrite(term.protect(), 0);
+        stack.add_rewrite(term, 0);
         
         trace!("{}", stack);
 
@@ -294,12 +294,12 @@ impl InnermostRewriter {
             let rhs = c.semi_compressed_rhs.evaluate(t, tp);
             let lhs = c.semi_compressed_lhs.evaluate(t, tp);
 
-            let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, &rhs, stats);
+            let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
             let lhs_normal = if lhs == BoolSort::true_term().into() {
                 // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
                 lhs
             } else {
-                InnermostRewriter::rewrite_aux(tp, automaton, &lhs, stats)
+                InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats)
             };
 
             if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {

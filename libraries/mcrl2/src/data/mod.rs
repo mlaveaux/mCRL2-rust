@@ -17,9 +17,9 @@
 //! 
 
 pub mod data_specification;
-pub mod data;
+pub mod data_terms;
 pub mod jitty;
 
 pub use data_specification::*;
-pub use data::*;
+pub use data_terms::*;
 pub use jitty::*;

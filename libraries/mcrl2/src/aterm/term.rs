@@ -206,6 +206,7 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 }
 
 /// The protected version of [ATermRef], mostly derived from it.
+#[derive(Default)]
 pub struct ATerm {
     pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,
@@ -218,15 +219,6 @@ impl ATerm {
     /// Should not be modified in any way.
     pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
         self.term.get()
-    }
-}
-
-impl Default for ATerm {
-    fn default() -> Self {
-        ATerm {
-            term: ATermRef::default(),
-            root: 0,
-        }
     }
 }
 
@@ -353,18 +345,10 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
 
 /// The same as [ATerm] but protected on the global protection set. This allows
 /// the term to be Send and Sync among threads.
+#[derive(Default)]
 pub struct ATermGlobal {
     pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,
-}
-
-impl Default for ATermGlobal {
-    fn default() -> Self {
-        ATermGlobal {
-            term: ATermRef::default(),
-            root: 0,
-        }
-    }
 }
 
 impl Drop for ATermGlobal {

@@ -15,11 +15,11 @@ pub mod aterm_builder;
 pub mod aterm_container;
 pub mod global_aterm_pool;
 pub mod aterm_pool;
-pub mod aterm;
+pub mod term;
 pub mod busy_forbidden;
 pub mod symbol;
 
-pub use aterm::*;
+pub use term::*;
 pub use aterm_builder::*;
 pub use aterm_container::*;
 pub use aterm_pool::*;

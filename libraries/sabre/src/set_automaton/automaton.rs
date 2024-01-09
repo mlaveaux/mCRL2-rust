@@ -37,89 +37,6 @@ enum GoalsOrInitial {
     Goals(Vec<MatchGoal>),
 }
 
-/// Adds the given function symbol to the indexed symbols. Errors when a
-/// function symbol is overloaded with different arities.
-fn add_symbol(
-    function_symbol: DataFunctionSymbol,
-    arity: usize,
-    symbols: &mut Vec<(DataFunctionSymbol, usize)>,
-) {
-    let index = function_symbol.operation_id();
-
-    if index >= symbols.len() {
-        symbols.resize(index + 1, Default::default());
-    }
-
-    if symbols[index] == Default::default() {
-        symbols[index] = (function_symbol, arity);
-    } else {
-        assert!(
-            symbols[index].1 == arity,
-            "Function symbol {} occurs with arity {} and {}",
-            function_symbol,
-            arity,
-            &symbols[index].1
-        );
-    }
-}
-
-/// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
-fn is_supported_term(t: &ATermRef<'_>) -> bool {
-    for subterm in t.iter() {
-        if is_data_application(&subterm) && !is_data_function_symbol(&subterm.arg(0)) {
-            warn!("{} is higher order", &subterm);
-            return false;
-        } else if is_data_abstraction(&subterm)
-            || is_data_where_clause(&subterm)
-            || is_data_untyped_identifier(&subterm)
-        {
-            warn!("{} contains unsupported construct", subterm);
-            return false;
-        }
-    }
-
-    true
-}
-
-/// Checks whether the set automaton can use this rule, no higher order rules or binders.
-fn is_supported_rule(rule: &Rule) -> bool {
-    // There should be no terms of the shape t(t0,...,t_n)
-    if !is_supported_term(&rule.rhs) || !is_supported_term(&rule.lhs) {
-        return false;
-    }
-
-    for cond in &rule.conditions {
-        if !is_supported_term(&cond.rhs) || !is_supported_term(&cond.lhs) {
-            return false;
-        }
-    }
-
-    true
-}
-
-/// Finds all data symbols in the term and adds them to the symbol index.
-fn find_symbols(t: &ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
-    if is_data_function_symbol(t) {
-        add_symbol(t.protect().into(), 0, symbols);
-    } else if is_data_application(t) {
-        let mut args = t.arguments();
-
-        // REC specifications should never contain this so it can be a debug error.
-        let head = args.next().unwrap();
-        assert!(
-            is_data_function_symbol(&head),
-            "Higher order term rewrite systems are not supported"
-        );
-
-        add_symbol(head.protect().into(), args.len(), symbols);
-        for arg in args {
-            find_symbols(&arg, symbols);
-        }
-    } else if !is_data_variable(t) {
-        panic!("Unexpected term {:?}", t);
-    }
-}
-
 impl SetAutomaton {
     pub fn new(spec: &RewriteSpecification, apma: bool) -> SetAutomaton {
         let start = Instant::now();
@@ -205,7 +122,7 @@ impl SetAutomaton {
 
             for (symbol, arity) in &symbols {
                 let (outputs, destinations) = states.get(s_index).unwrap().derive_transition(
-                        &symbol,
+                        symbol,
                         *arity,
                         &supported_rules,
                         apma,
@@ -282,6 +199,17 @@ impl SetAutomaton {
         
         result
     }
+
+    /// Returns the number of states
+    pub fn num_of_states(&self) -> usize {
+        self.states.len()
+    }
+
+    /// Returns the number of transitions
+    pub fn num_of_transitions(&self) -> usize {
+        self.num_of_transitions
+    }
+
 }
 
 #[derive(Debug)]
@@ -304,7 +232,7 @@ pub(crate) struct State {
 pub fn get_data_function_symbol<'a>(term: &'a ATermRef<'_>) -> DataFunctionSymbolRef<'a> {
     // If this is an application it is the first argument, otherwise it's the term itself
     if is_data_application(term) {
-        term.arg(0).upgrade(&term).into()
+        term.arg(0).upgrade(term).into()
     } else {
         term.copy().into()
     }
@@ -344,7 +272,7 @@ impl State {
         }
 
         // Computes the derivative containing the goals that are completed, unchanged and reduced
-        let mut derivative = self.compute_derivative(&symbol, arity);
+        let mut derivative = self.compute_derivative(symbol, arity);
 
         // The outputs/matching patterns of the transitions are those who are completed
         let outputs = derivative
@@ -577,6 +505,90 @@ impl State {
             transitions: Vec::with_capacity(num_transitions), // Transitions need to be added later
             match_goals: goals,
         }
+    }
+}
+
+
+/// Adds the given function symbol to the indexed symbols. Errors when a
+/// function symbol is overloaded with different arities.
+fn add_symbol(
+    function_symbol: DataFunctionSymbol,
+    arity: usize,
+    symbols: &mut Vec<(DataFunctionSymbol, usize)>,
+) {
+    let index = function_symbol.operation_id();
+
+    if index >= symbols.len() {
+        symbols.resize(index + 1, Default::default());
+    }
+
+    if symbols[index] == Default::default() {
+        symbols[index] = (function_symbol, arity);
+    } else {
+        assert!(
+            symbols[index].1 == arity,
+            "Function symbol {} occurs with arity {} and {}",
+            function_symbol,
+            arity,
+            &symbols[index].1
+        );
+    }
+}
+
+/// Returns false iff this is a higher order term, of the shape t(t_0, ..., t_n), or an unknown term.
+fn is_supported_term(t: &ATermRef<'_>) -> bool {
+    for subterm in t.iter() {
+        if is_data_application(&subterm) && !is_data_function_symbol(&subterm.arg(0)) {
+            warn!("{} is higher order", &subterm);
+            return false;
+        } else if is_data_abstraction(&subterm)
+            || is_data_where_clause(&subterm)
+            || is_data_untyped_identifier(&subterm)
+        {
+            warn!("{} contains unsupported construct", subterm);
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Checks whether the set automaton can use this rule, no higher order rules or binders.
+fn is_supported_rule(rule: &Rule) -> bool {
+    // There should be no terms of the shape t(t0,...,t_n)
+    if !is_supported_term(&rule.rhs) || !is_supported_term(&rule.lhs) {
+        return false;
+    }
+
+    for cond in &rule.conditions {
+        if !is_supported_term(&cond.rhs) || !is_supported_term(&cond.lhs) {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Finds all data symbols in the term and adds them to the symbol index.
+fn find_symbols(t: &ATermRef<'_>, symbols: &mut Vec<(DataFunctionSymbol, usize)>) {
+    if is_data_function_symbol(t) {
+        add_symbol(t.protect().into(), 0, symbols);
+    } else if is_data_application(t) {
+        let mut args = t.arguments();
+
+        // REC specifications should never contain this so it can be a debug error.
+        let head = args.next().unwrap();
+        assert!(
+            is_data_function_symbol(&head),
+            "Higher order term rewrite systems are not supported"
+        );
+
+        add_symbol(head.protect().into(), args.len(), symbols);
+        for arg in args {
+            find_symbols(&arg, symbols);
+        }
+    } else if !is_data_variable(t) {
+        panic!("Unexpected term {:?}", t);
     }
 }
 

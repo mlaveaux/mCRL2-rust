@@ -193,7 +193,7 @@ impl MatchGoal {
         }
 
         // Initialise the prefix with the first match goal, can only shrink afterwards
-        let first_match_pos = &goals.get(0).unwrap().announcement.position;
+        let first_match_pos = &goals.first().unwrap().announcement.position;
         let mut gcp_length = first_match_pos.len();
         let prefix = &first_match_pos.clone();
 

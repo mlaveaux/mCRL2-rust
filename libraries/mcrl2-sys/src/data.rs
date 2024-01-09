@@ -1,4 +1,5 @@
 #[cxx::bridge(namespace = "mcrl2::data")]
+#[allow(clippy::missing_safety_doc)]
 pub mod ffi {
 
     unsafe extern "C++" {

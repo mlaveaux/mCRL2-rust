@@ -209,7 +209,7 @@ impl Debug for GlobalTermPool {
             max_containers += protection_set.maximum_size();
             
             for (container, _) in protection_set.iter() {
-                inside_containers += container.read().len();
+                inside_containers += container.len();
             }
         }
 

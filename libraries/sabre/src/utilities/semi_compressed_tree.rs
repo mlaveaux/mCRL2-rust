@@ -68,7 +68,7 @@ impl SemiCompressedTermTree {
                     Variable(p) => Ok(Yield::Term(get_position(t, p).protect())),
                 }
             }, 
-            |tp, symbol, args| { Ok(tp.create(symbol, &args)) } ).unwrap()
+            |tp, symbol, args| { Ok(tp.create(symbol, args)) } ).unwrap()
     }
 
     /// Creates a SCTT from a term. The var_map parameter should specify where the variable can be

@@ -121,6 +121,11 @@ pub trait Markable {
 
     /// Returns the number of terms in the instance, used to delay garbage collection.
     fn len(&self) -> usize;
+
+    /// Returns true iff the container is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl<'a> Markable for ATermRef<'a> {

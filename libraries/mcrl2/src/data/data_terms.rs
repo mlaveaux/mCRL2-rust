@@ -78,7 +78,7 @@ mod inner {
         /// Returns the arguments of a data expression
         ///     - function symbol   f -> []
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
-        pub fn arguments<'a>(&'a self) -> ATermArgs<'a> {
+        pub fn arguments(&self) -> ATermArgs<'_> {
             if is_data_application(&self.term) {
                 let mut result =self.term.arguments();
                 result.next();
@@ -217,7 +217,7 @@ mod inner {
         /// Returns the arguments of a data expression
         ///     - function symbol   f -> []
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
-        pub fn arguments<'a>(&'a self) -> ATermArgs<'a> {
+        pub fn arguments(&self) -> ATermArgs<'_> {
             if is_data_application(&self.term) {
                 let mut result =self.term.arguments();
                 result.next();
