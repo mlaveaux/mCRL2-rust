@@ -23,6 +23,11 @@ pub fn is_data_function_symbol(term: &ATermRef<'_>) -> bool {
     unsafe { ffi::is_data_function_symbol(term.get()) }
 }
 
+pub fn is_sort_expression(term: &ATermRef<'_>) -> bool {
+    term.require_valid();
+    unsafe { ffi::is_data_sort_expression(term.get()) }
+}
+
 pub fn is_data_where_clause(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_where_clause(term.get()) }
@@ -151,23 +156,15 @@ mod inner {
 
     impl DataVariable {
         pub fn name(&self) -> String {
-            String::from(self.term.arg(0).get_head_symbol().name())
+            String::from(self.arg(0).get_head_symbol().name())
+        }
+
+        pub fn sort(&self) -> SortExpressionRef<'_> {
+            self.arg(1).into()
         }
     }
 
     impl fmt::Display for DataVariable {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.name())
-        }
-    }
-    
-    impl DataVariableRef<'_> {
-        pub fn name(&self) -> String {
-            String::from(self.term.arg(0).get_head_symbol().name())
-        }
-    }
-
-    impl fmt::Display for DataVariableRef<'_> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "{}", self.name())
         }
@@ -205,34 +202,6 @@ mod inner {
         }
     }
 
-    impl fmt::Display for DataApplicationRef<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let mut args = self.term.arguments();
-    
-            let head = args.next().unwrap();
-            write!(f, "{}", DataExpressionRef::from(head))?;
-    
-            let mut first = true;
-            for arg in args {
-                if !first {
-                    write!(f, ", ")?;
-                } else {
-                    write!(f, "(")?;
-                }
-    
-                write!(f, "{}", DataExpressionRef::from(arg.copy()))?;
-                first = false;
-            }
-    
-            if !first {
-                write!(f, ")")?;
-            }
-    
-            Ok(())
-        }
-    }
-        
-
     #[mcrl2_term(is_bool_sort)]
     pub struct BoolSort {
         pub(crate) term: ATerm,
@@ -250,6 +219,11 @@ mod inner {
                 term: ffi::false_term().into(),
             }
         }
+    }
+
+    #[mcrl2_term(is_sort_expression)]
+    pub struct SortExpression {
+        term: ATerm,
     }
 
     // TODO: This should be derived by the macro.
@@ -305,6 +279,46 @@ mod inner {
             }
         }
     }
+
+    impl fmt::Display for DataApplicationRef<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let mut args = self.term.arguments();
+    
+            let head = args.next().unwrap();
+            write!(f, "{}", DataExpressionRef::from(head))?;
+    
+            let mut first = true;
+            for arg in args {
+                if !first {
+                    write!(f, ", ")?;
+                } else {
+                    write!(f, "(")?;
+                }
+    
+                write!(f, "{}", DataExpressionRef::from(arg.copy()))?;
+                first = false;
+            }
+    
+            if !first {
+                write!(f, ")")?;
+            }
+    
+            Ok(())
+        }
+    }
+
+    impl DataVariableRef<'_> {
+        pub fn name(&self) -> String {
+            String::from(self.term.arg(0).get_head_symbol().name())
+        }
+    }
+
+    impl fmt::Display for DataVariableRef<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.name())
+        }
+    }
+
 }
 
 pub use inner::*;

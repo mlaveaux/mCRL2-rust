@@ -81,6 +81,14 @@ std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_equations(co
   return std::make_unique<std::vector<atermpp::aterm>>(equations.begin(), equations.end());
 }
 
+std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_constructors(const data_specification& data_spec, const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  sort_expression sort(static_cast<const atermpp::aterm_appl&>(t));
+  auto constructors = data_spec.constructors(sort);
+  return std::make_unique<std::vector<atermpp::aterm>>(constructors.begin(), constructors.end());
+}
+
 bool is_data_where_clause(const atermpp::detail::_aterm* term)
 {
   atermpp::unprotected_aterm t(term);

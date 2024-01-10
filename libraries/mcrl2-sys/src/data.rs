@@ -31,6 +31,9 @@ pub mod ffi {
         /// Returns the data equations for the given specification.
         fn get_data_specification_equations(data_spec: &data_specification) -> UniquePtr<CxxVector<aterm>>;
 
+        /// Returns the data constructors for the given sort.
+        unsafe fn get_data_specification_constructors(data_spec: &data_specification, sort: *const _aterm) -> UniquePtr<CxxVector<aterm>>;
+
         /// Creates an instance of the jitty rewriter.
         fn create_jitty_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJitty>;
 

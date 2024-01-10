@@ -1,8 +1,8 @@
 use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
 
-use crate::aterm::{ATerm, ATermList, ATermTrait};
+use crate::aterm::{ATerm, ATermList, ATermTrait, ATermRef};
 
-use super::{DataVariable, DataExpression};
+use super::{DataVariable, DataExpression, DataFunctionSymbol, SortExpressionRef};
 
 /// A safe abstraction for the mCRL2 data specification.
 pub struct DataSpecification {
@@ -30,6 +30,17 @@ impl DataSpecification {
             .iter()
             .map(|x| ATerm::from(x).into())
             .collect()
+    }
+
+    /// Returns the constructors for the given sort expression.
+    pub fn constructors(&self, sort: &SortExpressionRef<'_>) -> Vec<DataFunctionSymbol> {
+        let t: ATermRef<'_> = sort.copy().into();
+        unsafe {
+            ffi::get_data_specification_constructors(&self.data_spec, t.get())
+            .iter()
+            .map(|x| ATerm::from(x).into())
+            .collect()
+        }
     }
 }
 

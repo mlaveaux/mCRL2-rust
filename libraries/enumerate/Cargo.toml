@@ -1,0 +1,9 @@
+[package]
+name = "enumerate"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sabre.workspace = true
+mcrl2.workspace = true
