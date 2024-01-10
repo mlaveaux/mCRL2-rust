@@ -76,11 +76,6 @@ impl fmt::Display for State {
             "Label: {}, ",
             self.label
         )?;
-        writeln!(f, "Transitions: [")?;
-        for t in &self.transitions {
-            writeln!(f, "\t {}", t)?;
-        }
-        writeln!(f, "],")?;
         writeln!(f, "Match goals: [")?;
         for m in &self.match_goals {
             writeln!(f, "\t {}", m)?;
@@ -92,9 +87,19 @@ impl fmt::Display for State {
 impl fmt::Display for SetAutomaton {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "States: {{")?;
+
         for (state_index, s) in self.states.iter().enumerate() {
-            writeln!(f, "State {}\n{{\n{}\n}}", state_index, s)?;
+            writeln!(f, "State {} {{\n{}", state_index, s)?;
+
+            writeln!(f, "Transitions: {{")?;
+            for ((from, _), tr) in self.transitions.iter() {
+                if state_index == *from {
+                    writeln!(f, "\t {}", tr)?;
+                }
+            }
+            writeln!(f, "}}")?;
         }
+
         writeln!(f, "}}")
     }
 }
@@ -132,39 +137,37 @@ impl SetAutomaton {
             )?;
         }
 
-        for (i, s) in self.states.iter().enumerate() {
-            for tr in s.transitions.iter() {
-                let mut announcements = "".to_string();
+        for ((i, _), tr) in &self.transitions {
+            let mut announcements = "".to_string();
 
-                for a in &tr.announcements {
-                    announcements +=
-                        &format!(", {}@{}", &a.announcement.rule.lhs, a.announcement.position);
-                }
+            for a in &tr.announcements {
+                announcements +=
+                    &format!(", {}@{}", &a.announcement.rule.lhs, a.announcement.position);
+            }
 
-                if tr.destinations.is_empty() {
+            if tr.destinations.is_empty() {
+                writeln!(
+                    &mut f,
+                    "  s{}-> final [label=\"{}{}\"]",
+                    i, tr.symbol, announcements
+                )?;
+            } else {
+                writeln!(&mut f, "  s{}{}[shape=point]", i, tr.symbol).unwrap();
+                writeln!(
+                    &mut f,
+                    "  s{}->s{}{}[label=\"{}{}\"]",
+                    i, i, tr.symbol, tr.symbol, announcements
+                )?;
+
+                for (pos, des) in &tr.destinations {
                     writeln!(
                         &mut f,
-                        "  s{}-> final [label=\"{}{}\"]",
-                        i, tr.symbol, announcements
+                        "  s{}{}->s{} [label =\"{}\"]",
+                        i,
+                        tr.symbol,
+                        des,
+                        pos
                     )?;
-                } else {
-                    writeln!(&mut f, "  s{}{}[shape=point]", i, tr.symbol).unwrap();
-                    writeln!(
-                        &mut f,
-                        "  s{}->s{}{}[label=\"{}{}\"]",
-                        i, i, tr.symbol, tr.symbol, announcements
-                    )?;
-
-                    for (pos, des) in &tr.destinations {
-                        writeln!(
-                            &mut f,
-                            "  s{}{}->s{} [label =\"{}\"]",
-                            i,
-                            tr.symbol,
-                            des,
-                            pos
-                        )?;
-                    }
                 }
             }
         }

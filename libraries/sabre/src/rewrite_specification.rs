@@ -76,7 +76,7 @@ impl fmt::Display for RewriteSpecification
         {
             writeln!(f, "{}", rule)?;
         }
-        writeln!(f)
+        Ok(())
     }
 }
 

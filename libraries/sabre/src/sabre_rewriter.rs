@@ -28,6 +28,8 @@ pub struct RewritingStatistics {
     pub recursions: usize, 
 }
 
+// A set automaton based rewrite engine described in  Mark Bouwman, Rick Erkens:
+// Term Rewriting Based On Set Automaton Matching. CoRR abs/2202.08687 (2022)
 pub struct SabreRewriter {
     term_pool: Rc<RefCell<TermPool>>,
     automaton: SetAutomaton,
@@ -85,31 +87,46 @@ impl SabreRewriter {
                 if let Some(leaf_index) = cs.get_unexplored_leaf() {
                     let leaf = &mut cs.stack[leaf_index];
 
-                    // A "side stack" is used besides the configuration stack to remember a couple of things.
-                    // There are 4 options.
+                    // A "side stack" is used besides the configuration stack to
+                    // remember a couple of things. There are 4 options.
 
-                    // 1. There is nothing on the side stack for this configuration. This means we have
-                    // never seen this configuration before. It is a bud that needs to be explored.
+                    // 1. There is nothing on the side stack for this
+                    //    configuration. This means we have never seen this
+                    //    configuration before. It is a bud that needs to be
+                    //    explored.
 
-                    // In the remaining three cases we have seen the configuration before and have pruned back,
-                    // either because of applying a rewrite rule or just because our depth first search
-                    // has hit the bottom and needs to explore a new branch.
-                    // 2. There is a side branch. That means we had a hyper transition.
-                    // The configuration has multiple children in the overall tree.
-                    // We have already explored some of these child configurations and parked the remaining
-                    // on the side stack. We are going to explore the next child configuration.
-                    // 3. There is a delayed rewrite rule. We had found a matching rewrite rule the first time
-                    // visiting this configuration but did not want to apply it yet.
-                    // At the moment this is the case for "duplicating" rewrite rules that copy some subterms.
-                    // We first examine side branches on the side stack, meaning that we have explored all
-                    // child configurations. Which, in turn, means that the subterms of the term
-                    // in the current configuration are in normal form.
-                    // Thus the duplicating rewrite rule only duplicates terms that are in normal form.
-                    // 4. There is another type of delayed rewrite rule: one that is non-linear or has
-                    //  a condition. We had found a matching rewrite rule the first time
-                    // visiting this configuration but our strategy dictates that we only perform
-                    // the condition check and check on the equivalence of positions when the subterms
-                    // are in normal form. We perform the checks and apply the rewrite rule if it indeed matches.
+                    // In the remaining three cases we have seen the
+                    // configuration before and have pruned back, either because
+                    // of applying a rewrite rule or just because our depth
+                    // first search has hit the bottom and needs to explore a
+                    // new branch.
+
+                    // 2. There is a side branch. That means we had a hyper
+                    //    transition. The configuration has multiple children in
+                    //    the overall tree. We have already explored some of these
+                    //    child configurations and parked the remaining on the side
+                    //    stack. We are going to explore the next child
+                    //    configuration.
+
+                    // 3. There is a delayed rewrite rule. We had found a
+                    //    matching rewrite rule the first time visiting this
+                    //    configuration but did not want to apply it yet. At the
+                    //    moment this is the case for "duplicating" rewrite rules
+                    //    that copy some subterms. We first examine side branches
+                    //    on the side stack, meaning that we have explored all
+                    //    child configurations. Which, in turn, means that the
+                    //    subterms of the term in the current configuration are in
+                    //    normal form. Thus the duplicating rewrite rule only
+                    //    duplicates terms that are in normal form.
+
+                    // 4. There is another type of delayed rewrite rule: one
+                    //    that is non-linear or has a condition. We had found a
+                    //    matching rewrite rule the first time visiting this
+                    //    configuration but our strategy dictates that we only
+                    //    perform the condition check and check on the equivalence
+                    //    of positions when the subterms are in normal form. We
+                    //    perform the checks and apply the rewrite rule if it
+                    //    indeed matches.
                     match ConfigurationStack::pop_side_branch_leaf(
                         &mut cs.side_branch_stack,
                         leaf_index,
@@ -121,9 +138,9 @@ impl SabreRewriter {
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
-                            if let Some(tr) = &automaton.states[leaf.state]
+                            if let Some(tr) = &automaton
                                 .transitions
-                                .get(function_symbol.operation_id())
+                                .get(&(leaf.state, function_symbol.operation_id()))
                             {
                                 // Loop over the match announcements of the transition
                                 for ema in &tr.announcements {
@@ -142,7 +159,6 @@ impl SabreRewriter {
                                                 tp,
                                                 automaton,
                                                 ema,
-                                                leaf.subterm.clone(),
                                                 leaf_index,
                                                 &mut cs,
                                                 stats,
@@ -191,7 +207,6 @@ impl SabreRewriter {
                                         tp,
                                         automaton,
                                         ema,
-                                        leaf.subterm.clone(),
                                         leaf_index,
                                         &mut cs,
                                         stats,
@@ -209,7 +224,6 @@ impl SabreRewriter {
                                             tp,
                                             automaton,
                                             ema,
-                                            leaf.subterm.clone(),
                                             leaf_index,
                                             &mut cs,
                                             stats,
@@ -234,17 +248,17 @@ impl SabreRewriter {
         tp: &mut TermPool,
         automaton: &SetAutomaton,
         ema: &EnhancedMatchAnnouncement,
-        leaf_subterm: ATerm,
         leaf_index: usize,
-        cs: &mut ConfigurationStack,
+        cs: &mut ConfigurationStack<'_>,
         stats: &mut RewritingStatistics,
     ) {
         stats.rewrite_steps += 1;
+        let leaf_subterm = &cs.stack[leaf_index].subterm;
 
         // Computes the new subterm of the configuration
         let new_subterm = ema
             .semi_compressed_rhs
-            .evaluate(&get_position(&leaf_subterm, &ema.announcement.position).protect(), tp);
+            .evaluate(&get_position(leaf_subterm, &ema.announcement.position), tp);
 
         debug!(
             "rewrote {} to {} using rule {}",

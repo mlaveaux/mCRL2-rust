@@ -5,6 +5,7 @@ use crate::{
     utilities::{create_var_map, get_position, ExplicitPosition, SemiCompressedTermTree, PositionIterator}, Config,
 };
 use ahash::{HashMap, HashMapExt};
+use log::trace;
 use mcrl2::{aterm::{ATerm, ATermTrait, ATermRef, Protected}, data::{is_data_variable, is_data_expression, DataExpressionRef}};
 use smallvec::SmallVec;
 
@@ -303,19 +304,19 @@ impl MatchGoal {
             if p1.len() == index || p2.len() == index {
                 return true;
             }
+
             if p1.indices[index] != p2.indices[index] {
+               
                 return false;
             }
             index += 1;
         }
     }
 
-    /// Partition a set of match goals (a transition is split into different states).
-    /// There are multiple options for partitioning.
-    /// What is now implemented is that goals are related if there match announcement positions
-    /// are comparable (they are the same or one is higher), checked using pos_comparable.
-    ///
-    /// Returns a Vec where each element is a partition containing the goals and the positions.
+    /// Returns a Vec where each element is a partition containing the goals and
+    /// the positions. This partitioning can be done in multiple ways, but
+    /// currently match goals are equivalent when their match announcements have
+    /// a comparable position.
     pub fn partition(goals: Vec<MatchGoal>) -> Vec<(Vec<MatchGoal>, Vec<ExplicitPosition>)> {
         let mut partitions = vec![];
 
@@ -334,11 +335,7 @@ impl MatchGoal {
         // Create a mapping from positions to goals, goals are represented with an index
         // on function parameter goals
         let mut position_to_goals = HashMap::new();
-        let mut all_positions = Vec::new();
         for (i, g) in goals.iter().enumerate() {
-            if !all_positions.contains(&g.announcement.position) {
-                all_positions.push(g.announcement.position.clone())
-            }
             if !position_to_goals.contains_key(&g.announcement.position) {
                 position_to_goals.insert(g.announcement.position.clone(), vec![i]);
             } else {
@@ -348,6 +345,9 @@ impl MatchGoal {
         }
 
         // Sort the positions. They are now in depth first order.
+        let mut all_positions: Vec<ExplicitPosition> = position_to_goals.iter().map(|(pos, _)| {
+           pos.clone()
+        }).collect();
         all_positions.sort_unstable();
 
         // Compute the partitions, finished when all positions are processed
@@ -355,8 +355,7 @@ impl MatchGoal {
         while p_index < all_positions.len() {
             // Start the partition with a position
             let p = &all_positions[p_index];
-            let mut pos_in_partition = vec![];
-            pos_in_partition.push(p.clone());
+            let mut pos_in_partition = vec![p.clone()];
             let mut goals_in_partition = vec![];
 
             // put the goals with position p in the partition
@@ -381,8 +380,28 @@ impl MatchGoal {
                 }
                 p_index += 1;
             }
+
             partitions.push((goals_in_partition, pos_in_partition));
         }
+
+        trace!("=== partition(match_goals = [ ===");
+        for mg in &goals {
+            trace!("\t {}", mg);
+        }
+        trace!("]");
+
+        for (goals, pos) in &partitions {
+            trace!("pos {{");
+            for mg in pos {
+                trace!("\t {}", mg);
+            }
+            trace!("}} -> {{");
+            for mg in goals {
+                trace!("\t {}", mg);
+            }
+            trace!("}}");
+        }
+
         partitions
     }
 }
