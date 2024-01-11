@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use criterion::Criterion;
 
-use mcrl2::aterm::{ATerm, TermPool};
-use mcrl2::data::{DataSpecification, JittyRewriter};
+use mcrl2::aterm::TermPool;
+use mcrl2::data::{DataSpecification, JittyRewriter, DataExpression};
 use rec_tests::load_REC_from_strings;
 use sabre::set_automaton::SetAutomaton;
 use sabre::{InnermostRewriter, RewriteEngine};
@@ -16,12 +16,12 @@ pub fn load_case(
     data_spec_text: &str,
     expressions_text: &str,
     max_number_expressions: usize,
-) -> (DataSpecification, Vec<ATerm>) {
+) -> (DataSpecification, Vec<DataExpression>) {
     // Read the data specification
     let data_spec = DataSpecification::new(&data_spec_text).unwrap();
 
     // Read the file line by line, and return an iterator of the lines of the file.
-    let expressions: Vec<ATerm> = expressions_text
+    let expressions: Vec<DataExpression> = expressions_text
         .lines()
         .take(max_number_expressions)
         .map(|x| data_spec.parse(x))

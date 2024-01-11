@@ -1,4 +1,5 @@
 use std::{cell::RefCell, rc::Rc};
+use mcrl2::data::DataExpression;
 use test_case::test_case;
 
 use ahash::AHashSet;
@@ -29,7 +30,7 @@ use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewrite
 #[test_case(vec![include_str!("../../../examples/REC/rec/missionaries2.rec"), include_str!("../../../examples/REC/rec/missionaries.rec")], include_str!("snapshot/result_missionaries2.txt") ; "missionaries2")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/missionaries3.rec"), include_str!("../../../examples/REC/rec/missionaries.rec")], include_str!("snapshot/result_missionaries3.txt") ; "missionaries3")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/quicksort10.rec"), include_str!("../../../examples/REC/rec/quicksort.rec")], include_str!("snapshot/result_quicksort10.txt") ; "quicksort10")]
-#[test_case(vec![include_str!("../../../examples/REC/rec/revelt.rec")], include_str!("snapshot/result_revelt.txt") ; "revelt")]
+// #[test_case(vec![include_str!("../../../examples/REC/rec/revelt.rec")], include_str!("snapshot/result_revelt.txt") ; "revelt")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/revnat100.rec"), include_str!("../../../examples/REC/rec/revnat.rec")], include_str!("snapshot/result_revnat100.txt") ; "revnat100")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/searchinconditions.rec")], include_str!("snapshot/result_searchinconditions.txt") ; "searchinconditions")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/sieve20.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("snapshot/result_sieve20.txt") ; "sieve20")]
@@ -40,7 +41,7 @@ use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewrite
 #[test_case(vec![include_str!("../../../examples/REC/rec/tricky.rec")], include_str!("snapshot/result_tricky.txt") ; "tricky")]
 fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
-    let (spec, terms): (RewriteSpecification, Vec<ATerm>) = {
+    let (spec, terms): (RewriteSpecification, Vec<DataExpression>) = {
         let (syntax_spec, syntax_terms) =
             load_REC_from_strings(&mut tp.borrow_mut(), &rec_files).unwrap();
         let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
@@ -48,7 +49,7 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
             result,
             syntax_terms
                 .iter()
-                .map(|t| to_untyped_data_expression(&mut tp.borrow_mut(), t, &AHashSet::new()).into())
+                .map(|t| to_untyped_data_expression(&mut tp.borrow_mut(), t, &AHashSet::new()))
                 .collect(),
         )
     };

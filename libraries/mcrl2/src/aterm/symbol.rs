@@ -183,7 +183,6 @@ impl SymbolTrait for Symbol {
     }
 }
 
-
 impl Hash for Symbol {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.copy().hash(state)

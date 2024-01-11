@@ -1,6 +1,6 @@
 use std::{thread, cell::RefCell, rc::Rc};
 
-use mcrl2::{aterm::{TermPool, ATerm}, data::DataSpecification};
+use mcrl2::{aterm::{TermPool, ATerm}, data::{DataSpecification, DataExpression}};
 use sabre::{InnermostRewriter, RewriteEngine};
 
 
@@ -18,7 +18,7 @@ fn test_parallism() {
 
             let tp = Rc::new(RefCell::new(TermPool::new()));
             let spec = DataSpecification::new(data_spec).unwrap();
-            let terms: Vec<ATerm> = expressions.lines().map(|text| spec.parse(text)).collect();
+            let terms: Vec<DataExpression> = expressions.lines().map(|text| spec.parse(text)).collect();
             let mut expected = expected_result.split('\n');
 
             let mut inner = InnermostRewriter::new(tp.clone(), &spec.clone().into());                

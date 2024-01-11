@@ -102,7 +102,7 @@ impl InnermostRewriter {
                         let term: DataExpression = if arguments.is_empty() {
                             symbol.protect().into()
                         } else {
-                            DataApplication::new(tp, &symbol.copy().into(), arguments).into()
+                            DataApplication::from_refs(tp, &symbol.copy().into(), arguments).into()
                         };
 
                         // Remove the arguments from the stack.

@@ -211,6 +211,12 @@ mod inner {
                 term: tp.create_data_application(head, arguments)
             }
         }
+        
+        pub fn from_refs(tp: &mut TermPool, head: &ATermRef<'_>, arguments: &[DataExpressionRef<'_>]) -> DataApplication{
+            DataApplication {
+                term: tp.create_data_application2(head, arguments)
+            }
+        }
     }
         
     impl fmt::Display for DataApplication {

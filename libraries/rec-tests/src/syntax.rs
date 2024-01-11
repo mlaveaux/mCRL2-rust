@@ -1,7 +1,7 @@
 use core::fmt;
 
 use ahash::AHashSet;
-use mcrl2::aterm::{ATerm, TermPool};
+use mcrl2::{aterm::{ATerm, TermPool}, data::DataFunctionSymbol};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
     utilities::to_untyped_data_expression,
@@ -25,7 +25,7 @@ impl RewriteSpecificationSyntax {
         // Store the constructors
         let mut constructors = Vec::new();
         for (name, arity) in &self.constructors {
-            constructors.push((tp.create_data_function_symbol(name), *arity));
+            constructors.push((DataFunctionSymbol::new(tp, name), *arity));
         }
 
         // Store the rewrite rules in the maximally shared term storage

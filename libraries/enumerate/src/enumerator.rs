@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use mcrl2::{aterm::ATerm, data::DataSpecification};
+use mcrl2::{aterm::ATerm, data::{DataSpecification, DataExpression}};
 use sabre::{RewriteEngine, utilities::create_var_map};
 
 
@@ -37,7 +37,7 @@ impl<R: RewriteEngine> Enumerator<R> {
         }
     }
 
-    pub fn enumerate(&self, expression: ATerm) {
+    pub fn enumerate(&self, expression: DataExpression) {
 
         // Typically we have some static expression c that we want to enumerate and subsitute certain variable for.
         let variables = create_var_map(&expression);

@@ -20,8 +20,9 @@ impl DataSpecification {
     }
 
     /// Parses the given data expression as text into a term
-    pub fn parse(&self, text: &str) -> ATerm {
-        ffi::parse_data_expression(text, &self.data_spec).into()
+    pub fn parse(&self, text: &str) -> DataExpression {
+        let term: ATerm = ffi::parse_data_expression(text, &self.data_spec).into();
+        term.into()
     }
 
     /// Returns the equations of the data specification.
