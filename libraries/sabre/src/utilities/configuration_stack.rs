@@ -1,8 +1,10 @@
 use std::fmt;
+use std::ops::Deref;
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
-use mcrl2::aterm::{ATerm, TermPool};
+use mcrl2::aterm::{TermPool, ATermRef};
+use mcrl2::data::DataExpression;
 
 use super::{substitute, get_position};
 
@@ -16,7 +18,7 @@ use super::{substitute, get_position};
 #[derive(Debug)]
 pub(crate) struct Configuration<'a> {
     pub state: usize,
-    pub subterm: ATerm,
+    pub subterm: DataExpression,
     pub position: Option<&'a ExplicitPosition>,
 }
 
@@ -52,7 +54,7 @@ pub(crate) struct ConfigurationStack<'a> {
 
 impl<'a> ConfigurationStack<'a> {
     /// Initialise the stack with one Configuration containing 'term' and the initial state of the set automaton
-    pub fn new(state: usize, term: ATerm) -> ConfigurationStack<'a> {
+    pub fn new(state: usize, term: DataExpression) -> ConfigurationStack<'a> {
         let mut conf_list = ConfigurationStack {
             stack: Vec::with_capacity(8),
             side_branch_stack: vec![],
@@ -95,7 +97,7 @@ impl<'a> ConfigurationStack<'a> {
         // Create a new configuration and push it onto the stack
         let new_leaf = Configuration {
             state: *des,
-            subterm: get_position(&leaf.subterm, pos).protect(),
+            subterm: get_position(leaf.subterm.deref(), pos).protect().into(),
             position: Some(pos),
         };
         self.stack.push(new_leaf);
@@ -104,7 +106,7 @@ impl<'a> ConfigurationStack<'a> {
 
     /// When rewriting prune "prunes" the configuration tree/stack to the place where the first symbol
     /// of the matching rewrite rule was observed (at index 'depth').
-    pub fn prune(&mut self, tp: &mut TermPool, automaton: &SetAutomaton, depth: usize, new_subterm: ATerm) {
+    pub fn prune(&mut self, tp: &mut TermPool, automaton: &SetAutomaton, depth: usize, new_subterm: DataExpression) {
         self.current_node = Some(depth);
 
         // Reroll the configuration stack by truncating the Vec (which is a constant time operation)
@@ -114,7 +116,7 @@ impl<'a> ConfigurationStack<'a> {
 
         // Update the subterm stored at the prune point.
         // Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
-        self.stack[depth].subterm = substitute(tp, &self.stack[depth].subterm, new_subterm, &automaton.states[self.stack[depth].state].label.indices);
+        self.stack[depth].subterm = substitute(tp, self.stack[depth].subterm.deref(), new_subterm.into(), &automaton.states[self.stack[depth].state].label.indices).into();
         self.oldest_reliable_subterm = depth;
     }
 
@@ -172,10 +174,10 @@ impl<'a> ConfigurationStack<'a> {
                 None => subterm,
                 Some(p) => substitute(
                     tp,
-                    &self.stack[up_to_date - 1].subterm,
-                    subterm,
+                    self.stack[up_to_date - 1].subterm.deref(),
+                    subterm.into(),
                     &p.indices,
-                ),
+                ).into(),
             };
             up_to_date -= 1;
             if store_intermediate {
@@ -187,7 +189,7 @@ impl<'a> ConfigurationStack<'a> {
     }
 
     /// Final term computed by integrating all subterms up to the root configuration
-    pub fn compute_final_term(&mut self, tp: &mut TermPool) -> ATerm {
+    pub fn compute_final_term(&mut self, tp: &mut TermPool) -> DataExpression {
         self.jump_back(0, tp);
         self.stack[0].subterm.clone()
     }

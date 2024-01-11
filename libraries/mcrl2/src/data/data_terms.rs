@@ -62,7 +62,9 @@ mod inner {
     use super::*;
     
     use std::ops::Deref;
+    
     use mcrl2_macros::mcrl2_term;
+    use crate::aterm::{Markable, Todo, TermPool};
 
     /// A data expression:
     ///     - a function symbol, i.e. f without arguments.
@@ -96,6 +98,18 @@ mod inner {
             } else {
                 Default::default()
             }
+        }
+    }
+
+    impl From<DataFunctionSymbol> for DataExpression {
+        fn from(value: DataFunctionSymbol) -> DataExpression {
+            value.term.into()
+        }
+    }
+
+    impl From<DataApplication> for DataExpression {
+        fn from(value: DataApplication) -> DataExpression {
+            value.term.into()
         }
     }
 
@@ -134,6 +148,14 @@ mod inner {
     }
 
     impl DataFunctionSymbol {
+        pub fn new(tp: &mut TermPool, name: &str) -> DataFunctionSymbol {
+            DataFunctionSymbol {
+                term: tp.create_with(|| {
+                    mcrl2_sys::data::ffi::create_data_function_symbol(name.to_string())
+                })
+            }
+        }
+
         pub fn is_default(&self) -> bool {
             self.term.is_default()
         }
@@ -155,6 +177,14 @@ mod inner {
     }
 
     impl DataVariable {
+        pub fn new(tp: &mut TermPool, name: &str) -> DataVariable {
+            DataVariable {
+                term: tp.create_with(|| {
+                    mcrl2_sys::data::ffi::create_data_variable(name.to_string())
+                }),
+            }
+        }
+
         pub fn name(&self) -> String {
             String::from(self.arg(0).get_head_symbol().name())
         }
@@ -173,6 +203,14 @@ mod inner {
     #[mcrl2_term(is_data_application)]
     pub struct DataApplication {
         pub(crate) term: ATerm,
+    }
+
+    impl DataApplication {
+        pub fn new(tp: &mut TermPool, head: &ATermRef<'_>, arguments: &[impl ATermTrait]) -> DataApplication{
+            DataApplication {
+                term: tp.create_data_application(head, arguments)
+            }
+        }
     }
         
     impl fmt::Display for DataApplication {
@@ -208,14 +246,14 @@ mod inner {
     }
     
     impl BoolSort {
-        pub fn true_term() -> BoolSort {
-            BoolSort {
+        pub fn true_term() -> DataExpression {
+            DataExpression {
                 term: ffi::true_term().into(),
             }
         }
     
-        pub fn false_term() -> BoolSort {
-            BoolSort {
+        pub fn false_term() -> DataExpression {
+            DataExpression {
                 term: ffi::false_term().into(),
             }
         }
@@ -325,19 +363,19 @@ pub use inner::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::{aterm::{TermPool, ATerm}, data::is_data_application};
+    use crate::{aterm::{TermPool, ATerm}, data::{is_data_application, DataFunctionSymbol, DataApplication}};
 
     #[test]
     fn test_print() {
         let mut tp = TermPool::new();
 
-        let a = tp.create_data_function_symbol("a");
+        let a = DataFunctionSymbol::new(&mut tp, "a");
         assert_eq!("a", format!("{}", a));
 
         // Check printing of data applications.
-        let f = tp.create_data_function_symbol("f");
+        let f = DataFunctionSymbol::new(&mut tp, "f");
         let a_term: ATerm = a.clone().into();
-        let appl = tp.create_data_application(&f.copy().into(), &[a_term]);
+        let appl = DataApplication::new(&mut tp, &f.copy().into(), &[a_term]);
         assert_eq!("f(a)", format!("{}", appl));
     }
 
@@ -345,10 +383,10 @@ mod tests {
     fn test_recognizers() {
         let mut tp = TermPool::new();
         
-        let a = tp.create_data_function_symbol("a");
-        let f = tp.create_data_function_symbol("f");
+        let a = DataFunctionSymbol::new(&mut tp, "a");
+        let f = DataFunctionSymbol::new(&mut tp, "f");
         let a_term: ATerm = a.clone().into();
-        let appl = tp.create_data_application(&f.copy().into(), &[a_term]);
+        let appl = DataApplication::new(&mut tp, &f.copy().into(), &[a_term]);
 
         let term: ATerm = appl.into();
         assert!(is_data_application(&term));

@@ -1,7 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, ops::Deref};
 
 use log::{debug, trace, info};
-use mcrl2::{aterm::{ATerm, TermPool}, data::{DataExpressionRef, BoolSort}};
+use mcrl2::{aterm::{TermPool, ATerm}, data::{DataExpressionRef, BoolSort, DataExpression}};
 
 use crate::{
     RewriteSpecification,
@@ -15,7 +15,7 @@ use crate::{
 /// A shared trait for all the rewriters
 pub trait RewriteEngine {
     /// Rewrites the given term into normal form.
-    fn rewrite(&mut self, term: ATerm) -> ATerm;
+    fn rewrite(&mut self, term: DataExpression) -> DataExpression;
 }
 
 #[derive(Default)]
@@ -36,7 +36,7 @@ pub struct SabreRewriter {
 }
 
 impl RewriteEngine for SabreRewriter {
-    fn rewrite(&mut self, term: ATerm) -> ATerm {
+    fn rewrite(&mut self, term: DataExpression) -> DataExpression {
         self.stack_based_normalise(term)
     }
 }
@@ -53,7 +53,7 @@ impl SabreRewriter {
     }
 
     /// Function to rewrite a term. See the module documentation.
-    pub fn stack_based_normalise(&mut self, t: ATerm) -> ATerm {
+    pub fn stack_based_normalise(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
         
         let result = SabreRewriter::stack_based_normalise_aux(
@@ -71,9 +71,9 @@ impl SabreRewriter {
     fn stack_based_normalise_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton,
-        t: ATerm,
+        t: DataExpression,
         stats: &mut RewritingStatistics,
-    ) -> ATerm {
+    ) -> DataExpression {
         // We explore the configuration tree depth first using a ConfigurationStack
         let mut cs = ConfigurationStack::new(0, t);
 
@@ -133,7 +133,7 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos: DataExpressionRef = get_position(&leaf.subterm, &automaton.states[leaf.state].label).into();
+                            let pos: DataExpressionRef = get_position(leaf.subterm.deref(), &automaton.states[leaf.state].label).into();
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
 
@@ -258,7 +258,7 @@ impl SabreRewriter {
         // Computes the new subterm of the configuration
         let new_subterm = ema
             .semi_compressed_rhs
-            .evaluate(&get_position(leaf_subterm, &ema.announcement.position), tp);
+            .evaluate(&get_position(leaf_subterm.deref(), &ema.announcement.position), tp).into();
 
         debug!(
             "rewrote {} to {} using rule {}",
@@ -279,10 +279,10 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let subterm = get_position(&leaf.subterm, &ema.announcement.position);
+            let subterm = get_position(leaf.subterm.deref(), &ema.announcement.position);
 
-            let rhs = c.semi_compressed_rhs.evaluate(&subterm, tp);
-            let lhs = c.semi_compressed_lhs.evaluate(&subterm, tp);
+            let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&subterm, tp).into();
+            let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&subterm, tp).into();
 
             // Equality => lhs == rhs.
             if !c.equality || lhs != rhs {

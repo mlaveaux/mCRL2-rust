@@ -173,7 +173,7 @@ mod tests {
         apply(tp, t, &|tp, arg| {
             if variables.contains(arg.get_head_symbol().name()) {
                 // Convert a constant variable, for example 'x', into an untyped variable.
-                Some(tp.create_variable(&arg.get_head_symbol().name()).into())
+                Some(DataVariable::new(tp, &arg.get_head_symbol().name()).into())
             } else {
                 None
             }
@@ -211,7 +211,7 @@ mod tests {
         };
 
         let mut map = HashMap::new();
-        map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
+        map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[2]));
 
         let sctt = SemiCompressedTermTree::from_term(&t, &map);
 
@@ -237,7 +237,7 @@ mod tests {
 
         // Make a variable map with only x@2.
         let mut map = HashMap::new();
-        map.insert(tp.create_variable("x"), ExplicitPosition::new(&[2]));
+        map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[2]));
 
         let sctt = SemiCompressedTermTree::from_term(&t, &map);
         let en = Explicit(ExplicitNode {
@@ -261,7 +261,7 @@ mod tests {
 
         // Make a variable map with only x@2.
         let mut map = HashMap::new();
-        map.insert(tp.create_variable("x"), ExplicitPosition::new(&[1]));
+        map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
 
         let sctt = SemiCompressedTermTree::from_term(&t_rhs, &map);
 
@@ -276,7 +276,7 @@ mod tests {
             let tmp = tp.from_string("f(x,x)").unwrap();
             tag_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
         };
-        let x = tp.create_variable("x");
+        let x = DataVariable::new(&mut tp, "x");
 
         let map = create_var_map(&t);
         assert!(map.contains_key(&x));

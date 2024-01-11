@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt, rc::Rc};
+use std::{cell::RefCell, fmt, rc::Rc, ops::Deref};
 
 // use itertools::Itertools;
 
@@ -6,7 +6,7 @@ use itertools::Itertools;
 use log::{trace, info};
 use mcrl2::{
     aterm::{ATerm, TermPool, ATermTrait, Protected, ATermRef, Markable, Todo, Protector},
-    data::{BoolSort, DataExpressionRef, DataFunctionSymbolRef},
+    data::{BoolSort, DataExpressionRef, DataFunctionSymbolRef, DataExpression, DataApplication},
 };
 
 use crate::{
@@ -25,7 +25,7 @@ pub struct InnermostRewriter {
 }
 
 impl RewriteEngine for InnermostRewriter {
-    fn rewrite(&mut self, t: ATerm) -> ATerm {
+    fn rewrite(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
 
         let result = InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &self.apma, t, &mut stats);
@@ -50,9 +50,9 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton,
-        term: ATerm,
+        term: DataExpression,
         stats: &mut RewritingStatistics,
-    ) -> ATerm {
+    ) -> DataExpression {
         debug_assert!(!term.is_default(), "Cannot rewrite the default term");
 
         stats.recursions += 1;
@@ -60,7 +60,7 @@ impl InnermostRewriter {
         let mut stack = InnerStack::default();        
         let mut write_terms =  stack.terms.write();
         let mut write_configs =  stack.configs.write();
-        write_terms.push(ATermRef::default());
+        write_terms.push(DataExpressionRef::default());
         InnerStack::add_rewrite(&mut write_configs, &mut write_terms, term.copy(), 0);
         drop(write_terms);
         drop(write_configs);
@@ -89,7 +89,7 @@ impl InnermostRewriter {
                         let symbol = write_configs.protect(&symbol.into());
                         write_configs.push(Config::Construct(symbol.into(), arguments.len(), result));
                         for (offset, arg) in arguments.into_iter().enumerate() {
-                            InnerStack::add_rewrite(&mut write_configs, &mut write_terms, arg, top_of_stack + offset);
+                            InnerStack::add_rewrite(&mut write_configs, &mut write_terms, arg.into(), top_of_stack + offset);
                         }
                     }
                     Config::Construct(symbol, arity, index) => {
@@ -99,10 +99,10 @@ impl InnermostRewriter {
 
                         let arguments = &terms[length - arity..];
 
-                        let term: ATerm = if arguments.is_empty() {
+                        let term: DataExpression = if arguments.is_empty() {
                             symbol.protect().into()
                         } else {
-                            tp.create_data_application(&symbol.copy().into(), arguments).into()
+                            DataApplication::new(tp, &symbol.copy().into(), arguments).into()
                         };
 
                         // Remove the arguments from the stack.
@@ -152,13 +152,13 @@ impl InnermostRewriter {
                                 if ema.stack_size == 1 && ema.variables.len() == 1{
                                     // This is a special case where we place the result on the correct position immediately.
                                     // The right hand side is only a variable
-                                    let t = terms.protect(&get_position(&term, &ema.variables[0].0));
-                                    terms[index] = t
+                                    let t = terms.protect(&get_position(term.deref(), &ema.variables[0].0));
+                                    terms[index] = t.into();
                                 } else {
                                     for (position, index) in &ema.variables {
                                         // Add the positions to the stack.
-                                        let t = terms.protect(&get_position(&term, position));
-                                        terms[top_of_stack + index - 1] = t;
+                                        let t = terms.protect(&get_position(term.deref(), position));
+                                        terms[top_of_stack + index - 1] = t.into();
                                     }
                                 }
 
@@ -168,7 +168,7 @@ impl InnermostRewriter {
                             None => {
                                 // Add the term on the stack.
                                 let t = terms.protect(&term);
-                                terms[index] = t;
+                                terms[index] = t.into();
                             }
                         }
                     }
@@ -213,7 +213,7 @@ impl InnermostRewriter {
     fn find_match<'a>(
         tp: &mut TermPool,
         automaton: &'a SetAutomaton,
-        t: &ATerm,
+        t: &DataExpression,
         stats: &mut RewritingStatistics,
     ) -> Option<&'a EnhancedMatchAnnouncement> {
         // Start at the initial state
@@ -223,7 +223,7 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let pos: DataExpressionRef = get_position(t, &state.label).into();
+            let pos: DataExpressionRef = get_position(t.deref(), &state.label).into();
             let symbol = pos.data_function_symbol();
 
             // Get the transition for the label and check if there is a pattern match
@@ -261,8 +261,8 @@ impl InnermostRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let rhs = c.semi_compressed_rhs.evaluate(t, tp);
-            let lhs = c.semi_compressed_lhs.evaluate(t, tp);
+            let rhs: DataExpression = c.semi_compressed_rhs.evaluate(t, tp).into();
+            let lhs: DataExpression = c.semi_compressed_lhs.evaluate(t, tp).into();
 
             let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
             let lhs_normal = if lhs == BoolSort::true_term().into() {
@@ -333,7 +333,7 @@ impl Markable for Config {
 #[derive(Default)]
 struct InnerStack {
     configs: Protected<Vec<Config>>,
-    terms: Protected<Vec<ATermRef<'static>>>,
+    terms: Protected<Vec<DataExpressionRef<'static>>>,
 }
  
 impl fmt::Display for InnerStack {
@@ -371,10 +371,10 @@ impl InnerStack {
         write_configs.push(Config::Construct(symbol.into(), arity, index));
     }
 
-    fn add_rewrite<'a>(write_configs: &mut Protector<Vec<Config>>, write_terms: &mut Protector<Vec<ATermRef<'static>>>, term: ATermRef<'a>, index: usize) {
+    fn add_rewrite<'a>(write_configs: &mut Protector<Vec<Config>>, write_terms: &mut Protector<Vec<DataExpressionRef<'static>>>, term: DataExpressionRef<'a>, index: usize) {
         let term = write_terms.protect(&term);
         write_configs.push(Config::Rewrite(index));
-        write_terms.push(term);
+        write_terms.push(term.into());
     }
 }
 

@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::{aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool}, data::DataExpression};
+use mcrl2::{aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool}, data::{DataExpression, DataVariable, DataFunctionSymbol}};
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -54,12 +54,12 @@ pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHas
 
         if variables.contains(t.get_head_symbol().name()) {
             // Convert a constant variable, for example 'x', into an untyped variable.
-            Ok(Yield::Term(tp.create_variable(t.get_head_symbol().name()).into()))
+            Ok(Yield::Term(DataVariable::new(tp, t.get_head_symbol().name()).into()))
         } else if t.get_head_symbol().arity() == 0 {
-            Ok(Yield::Term(tp.create_data_function_symbol(t.get_head_symbol().name()).into()))
+            Ok(Yield::Term(DataFunctionSymbol::new(tp, t.get_head_symbol().name()).into()))
         } else {
             // This is a function symbol applied to a number of arguments (higher order terms not allowed)
-            let head = tp.create_data_function_symbol(t.get_head_symbol().name());
+            let head = DataFunctionSymbol::new(tp, t.get_head_symbol().name());
             
             for arg in t.arguments() {
                 args.push(arg.protect());

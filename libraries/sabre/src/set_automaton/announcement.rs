@@ -409,7 +409,7 @@ impl MatchGoal {
 #[cfg(test)]
 mod tests {
     use ahash::AHashSet;
-    use mcrl2::aterm::TermPool;
+    use mcrl2::{aterm::TermPool, data::{DataFunctionSymbol, DataVariable}};
 
     use crate::{utilities::to_untyped_data_expression, test_utility::create_rewrite_rule};
 
@@ -430,7 +430,7 @@ mod tests {
         assert_eq!(eq,
             vec![
                 EquivalenceClass {
-                    variable: tp.create_variable("x").into(),
+                    variable: DataVariable::new(&mut tp, "x").into(),
                     positions: vec![ExplicitPosition::new(&[2]), ExplicitPosition::new(&[3, 2])]
                 },
             ], "The resulting config stack is not as expected");
@@ -457,13 +457,13 @@ mod tests {
         let mut expected = Protected::new(vec![]);
 
         let mut write = expected.write();
-        let t = write.protect(&tp.create_data_function_symbol("times").copy().into());
+        let t = write.protect(&DataFunctionSymbol::new(&mut tp, "times").copy().into());
         write.push(Config::Construct(t.into(), 2, 0));
 
-        let t = write.protect(&tp.create_data_function_symbol("s").copy().into());
+        let t = write.protect(&DataFunctionSymbol::new(&mut tp, "s").copy().into());
         write.push(Config::Construct(t.into(), 1, 1));
 
-        let t = write.protect(&tp.create_data_function_symbol("face").copy().into());
+        let t = write.protect(&DataFunctionSymbol::new(&mut tp, "face").copy().into());
         write.push(Config::Construct(t.into(), 1, 2));
 
         // Check if the resulting construction succeeded.
