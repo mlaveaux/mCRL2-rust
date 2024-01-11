@@ -9,12 +9,9 @@ use mcrl2_sys::{
 };
 use utilities::protection_set::ProtectionSet;
 
-use crate::{
-    aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait},
-    data::{DataApplication, DataFunctionSymbol, DataVariable},
-};
+use crate::aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait};
 
-use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable};
+use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable, SymbolRef};
 
 thread_local! {
     /// This is the thread specific term pool that manages the protection sets.
@@ -129,7 +126,7 @@ impl ThreadTermPool {
             self.data_appl.push(symbol);
         }
 
-        symbol == self.data_appl[symbol.arity()].borrow()
+        symbol == self.data_appl[symbol.arity()].copy()
     }
 }
 
@@ -158,7 +155,7 @@ impl TermPool {
         }
     }
 
-    /// Trigger a garbage collection if necessary, we disable global garbage collection so ffi will never garbage collect themselves.
+    /// Trigger a garbage collection if necessary, we disable global garbage collection so ffi will never garbage collect itself.
     pub fn collect(&mut self) {
         ffi::collect_garbage();
     }
@@ -173,120 +170,6 @@ impl TermPool {
 
     /// Creates an [ATerm] with the given symbol and arguments.
     pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[impl ATermTrait]) -> ATerm {
-        let arguments = self.tmp_arguments(arguments);
-
-        debug_assert_eq!(
-            symbol.arity(),
-            arguments.len(),
-            "Number of arguments does not match arity"
-        );
-
-        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            unsafe {
-                // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
-                let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), arguments);
-                protect_with(protection_set, tp.index, term)
-            }
-        });
-
-        self.collect();
-        result
-    }
-
-    /// Creates a function symbol with the given name and arity.
-    pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol {
-        Symbol::take(ffi::create_function_symbol(String::from(name), arity))
-    }
-
-    /// Creates a data application of head applied to the given arguments.
-    pub fn create_data_application(
-        &mut self,
-        head: &ATermRef,
-        arguments: &[impl ATermTrait],
-    ) -> DataApplication {
-        debug_assert!(!arguments.is_empty(), "DataApplication should have at least one argument");
-
-        // The ffi function to create a DataAppl is not thread safe, so implemented here locally.
-        let symbol = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            while tp.data_appl.len() <= arguments.len() + 1 {
-                let symbol = self.create_symbol("DataAppl", tp.data_appl.len());
-                tp.data_appl.push(symbol);
-            }
-
-            tp.data_appl[arguments.len() + 1].borrow()
-        });
-
-        let term = self.create_head(&symbol, head, arguments);
-
-        DataApplication { term }
-    }
-
-    /// Creates a data variable with the given name.
-    pub fn create_variable(&mut self, name: &str) -> DataVariable {
-        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            unsafe {
-                // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
-
-                let term = mcrl2_sys::data::ffi::create_data_variable(name.to_string());
-                DataVariable {
-                    term: protect_with(protection_set,  tp.index, term),
-                }
-            }
-        });
-
-        self.collect();
-        result
-    }
-
-    /// Creates a data function symbol with the given name.
-    pub fn create_data_function_symbol(&mut self, name: &str) -> DataFunctionSymbol {
-        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            unsafe {
-                // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
-
-                let term = mcrl2_sys::data::ffi::create_data_function_symbol(name.to_string());
-                DataFunctionSymbol {
-                    term: protect_with(protection_set,  tp.index, term),
-                }
-            }
-        });
-
-        self.collect();
-        result
-    }
-
-    /// Creates an [ATerm] with the given symbol, first and other arguments.
-    fn create_head(
-        &mut self,
-        symbol: &impl SymbolTrait,
-        head: &ATermRef,
-        arguments: &[impl ATermTrait],
-    ) -> ATerm {
-        let arguments = self.tmp_arguments_head(head, arguments);
-
-        debug_assert_eq!(
-            symbol.arity(),
-            arguments.len(),
-            "Number of arguments does not match arity"
-        );
-
-        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            unsafe {
-                let protection_set = tp.protection_set.write_exclusive(true);
-                let term = ffi::create_aterm(symbol.address(), arguments);
-                protect_with(protection_set,  tp.index, term)
-            }
-        });
-
-        self.collect();
-        result
-    }
-
-    /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments(&mut self, arguments: &[impl ATermTrait]) -> &[*const ffi::_aterm] {
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() {
             self.arguments.push(std::ptr::null());
@@ -299,25 +182,87 @@ impl TermPool {
             }
         }
 
-        &self.arguments
-    }
+        debug_assert_eq!(
+            symbol.arity(),
+            arguments.len(),
+            "Number of arguments does not match arity"
+        );
 
-    /// Converts the [ATerm] slice into a [ffi::aterm_ref] slice.
-    fn tmp_arguments_head(&mut self, head: &ATermRef, arguments: &[impl ATermTrait]) -> &[*const ffi::_aterm] {
+        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            unsafe {
+                // ThreadPool is not Sync, so only one has access.
+                let protection_set = tp.protection_set.write_exclusive(true);
+                let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
+                protect_with(protection_set, tp.index, term)
+            }
+        });
+
+        self.collect();
+        result
+    }   
+    
+     /// Creates an [ATerm] with the given symbol, head argument and other arguments.
+    pub fn create_data_application(&mut self, head: &impl ATermTrait, arguments: &[impl ATermTrait]) -> ATerm { 
         // Make the temp vector sufficient length.
-        while self.arguments.len() < arguments.len() + 1 {
+        while self.arguments.len() < arguments.len() {
             self.arguments.push(std::ptr::null());
         }
 
         self.arguments.clear();
         unsafe {
-            self.arguments.push(head.get());
+            self.arguments.push(head.copy().get());
             for arg in arguments {
-                self.arguments.push(arg.copy().get());
+                    self.arguments.push(arg.copy().get());
             }
-        }
+        }    
 
-        &self.arguments
+        THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            while tp.data_appl.len() <= arguments.len() + 1 {
+                let symbol = self.create_symbol("DataAppl", tp.data_appl.len());
+                tp.data_appl.push(symbol);
+            }
+
+            let symbol = &tp.data_appl[arguments.len() + 1];
+
+            debug_assert_eq!(
+                symbol.arity(),
+                arguments.len(),
+                "Number of arguments does not match arity"
+            );
+
+            let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
+                unsafe {
+                    // ThreadPool is not Sync, so only one has access.
+                    let protection_set = tp.protection_set.write_exclusive(true);
+                    let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
+                    protect_with(protection_set, tp.index, term)
+                }
+            });
+
+            self.collect();
+            result
+        })
+    }
+
+    /// Creates a function symbol with the given name and arity.
+    pub fn create_symbol(&mut self, name: &str, arity: usize) -> Symbol {
+        Symbol::take(ffi::create_function_symbol(String::from(name), arity))
+    }
+
+    /// Creates a term with the FFI while taking care of the protection and garbage collection.
+    pub fn create_with<F>(&mut self, create: F) -> ATerm 
+        where F: Fn() -> *const ffi::_aterm,
+    {
+        let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
+            unsafe {
+                // ThreadPool is not Sync, so only one has access.
+                let protection_set = tp.protection_set.write_exclusive(true);
+                protect_with(protection_set, tp.index, create())
+            }
+        });
+
+        self.collect();
+        result
     }
 }
 

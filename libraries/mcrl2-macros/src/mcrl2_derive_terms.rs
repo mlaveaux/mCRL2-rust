@@ -81,6 +81,20 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                                 }
                             }
 
+                            impl Markable for #name {
+                                fn mark(&self, todo: Todo) {
+                                    self.term.mark(todo);
+                                }
+
+                                fn contains_term(&self, term: &ATermRef<'_>) -> bool {
+                                    &self.term.copy() == term
+                                }
+
+                                fn len(&self) -> usize {
+                                    1
+                                }
+                            }
+
                             #[derive(Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                             pub struct #name_ref<'a> {
                                 term: ATermRef<'a>
@@ -116,6 +130,20 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
 
                                 fn deref(&self) -> &Self::Target {
                                     &self.term        
+                                }
+                            }
+
+                            impl<'a> Markable for #name_ref<'a> {
+                                fn mark(&self, todo: Todo) {
+                                    self.term.mark(todo);
+                                }
+
+                                fn contains_term(&self, term: &ATermRef<'_>) -> bool {
+                                    &self.term == term
+                                }
+
+                                fn len(&self) -> usize {
+                                    1
                                 }
                             }
                         );

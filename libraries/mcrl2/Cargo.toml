@@ -17,3 +17,4 @@ utilities = { path="../utilities" }
 
 [dev-dependencies]
 test-log.workspace = true
+trybuild = "1.0"
