@@ -4,6 +4,9 @@ version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
 
+[features]
+measure_allocs = []
+
 [dependencies]
 anyhow = "1.0"
 mcrl2 = { path = "../../libraries/mcrl2" }

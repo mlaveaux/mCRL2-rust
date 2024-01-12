@@ -7,6 +7,11 @@ use log::info;
 use mcrl2::aterm::TermPool;
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 
+mod counting_allocator;
+
+#[cfg(measure_allocs)]
+#[global_allocator]
+static A: counting_allocator::AllocCounter = counting_allocator::AllocCounter;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -54,5 +59,8 @@ fn main() -> AnyResult<()>
     }
 
     info!("ATerm pool: {}", tp.borrow());
+    #[cfg(measure_allocs)]
+    info!("Allocations: {}",  A.number_of_allocations());
+    
     Ok(())
 }
