@@ -3,7 +3,7 @@ use std::ops::Deref;
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
-use mcrl2::aterm::{TermPool, ATermRef};
+use mcrl2::aterm::TermPool;
 use mcrl2::data::DataExpression;
 
 use super::{substitute, get_position};

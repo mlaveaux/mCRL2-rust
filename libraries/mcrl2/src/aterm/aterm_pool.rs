@@ -11,7 +11,7 @@ use utilities::protection_set::ProtectionSet;
 
 use crate::{aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait}, data::DataExpressionRef};
 
-use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable, SymbolRef};
+use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable};
 
 thread_local! {
     /// This is the thread specific term pool that manages the protection sets.

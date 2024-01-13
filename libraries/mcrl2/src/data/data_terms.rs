@@ -167,7 +167,11 @@ mod inner {
 
     impl fmt::Display for DataFunctionSymbol {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.copy())        
+            if !self.is_default() {
+                write!(f, "{}'{}", self.copy(), self.operation_id()) 
+            } else {
+                write!(f, "<default>")
+            }       
         }
     }
 
@@ -270,6 +274,14 @@ mod inner {
         term: ATerm,
     }
 
+    impl SortExpression {
+
+        /// Returns the name of the sort.
+        pub fn name(&self) -> String {
+            String::from(self.arg(0).get_head_symbol().name())
+        }
+    }
+
     // TODO: This should be derived by the macro.
     impl<'b> DataExpressionRef<'b> {    
 
@@ -317,7 +329,7 @@ mod inner {
     impl<'a> fmt::Display for DataFunctionSymbolRef<'a> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if !self.term.is_default() {
-                write!(f, "{}", &self.name())
+                write!(f, "{}'{}", self.name(), self.operation_id())  
             } else {
                 write!(f, "<default>")
             }
@@ -355,9 +367,25 @@ mod inner {
         pub fn name(&self) -> String {
             String::from(self.term.arg(0).get_head_symbol().name())
         }
+
+        pub fn sort(&self) -> SortExpressionRef<'_> {
+            self.arg(1).into()
+        }
     }
 
     impl fmt::Display for DataVariableRef<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}: {}", self.name(), self.sort())
+        }
+    }
+
+    impl SortExpressionRef<'_> {
+        pub fn name(&self) -> String {
+            String::from(self.term.arg(0).get_head_symbol().name())
+        }
+    }
+
+    impl fmt::Display for SortExpressionRef<'_> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "{}", self.name())
         }
