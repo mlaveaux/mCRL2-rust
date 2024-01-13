@@ -51,8 +51,7 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
 ///
 pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut arguments: Vec<String> = vec![
-        "nextest".to_string(),
-        "run".to_string(),
+        "test".to_string(),
         "-Zbuild-std".to_string(),
     ];
 
