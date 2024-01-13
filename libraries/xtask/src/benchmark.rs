@@ -11,7 +11,7 @@ pub fn benchmark() -> Result<(), Box<dyn Error>> {
     let cwd = env::current_dir()?;
     let mcrl2_rewrite = which::which_in("mcrl2rewrite", Some("target/release/"), cwd)?;
 
-    let mcrl2_rewrite_timing = Regex::new(r#"rewriting: ([0-9]*) milliseconds."#).unwrap();
+    let mcrl2_rewrite_timing = Regex::new(r#"Innermost took ([0-9]*) ms"#).unwrap();
 
     // Keep track of the resulting timing for every benchmark.
     let mut results = vec![];
