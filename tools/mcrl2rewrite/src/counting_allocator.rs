@@ -10,6 +10,7 @@ static NUMBER_OF_ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
 impl AllocCounter {
 
     /// Returns the total number of allocations since program start.
+    #[allow(dead_code)]
     pub fn number_of_allocations(&self) -> usize {
         NUMBER_OF_ALLOCATIONS.load(Relaxed)
     }

@@ -199,10 +199,7 @@ impl SetAutomaton {
 
         let result = SetAutomaton { states, transitions };
         debug!("{}", result);
-
-        let output = File::create("automaton.dot").unwrap();
-        result.to_dot_graph(output).unwrap();
-        
+         
         result
     }
 
