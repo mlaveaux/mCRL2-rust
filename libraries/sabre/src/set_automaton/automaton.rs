@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, fmt::Debug, time::Instant};
+use std::{collections::VecDeque, fmt::Debug, time::Instant, io, fs::File};
 
 use ahash::HashMap;
 use log::{debug, info, log_enabled, trace, warn};
@@ -131,15 +131,8 @@ impl SetAutomaton {
         // Pick a state to explore
         while let Some(s_index) = queue.pop_front() {
 
-            for (symbol, arity) in &symbols {                
-                // Create transition
-                let mut transition = Transition {
-                    symbol: symbol.clone(),
-                    announcements: smallvec![],
-                    destinations: smallvec![],
-                };
-
-                let (outputs, destinations) = states.get(s_index).unwrap().derive_transition(
+            for (symbol, arity) in &symbols {
+                let (outputs, pos_to_goals) = states.get(s_index).unwrap().derive_transition(
                         symbol,
                         *arity,
                         &supported_rules,
@@ -159,37 +152,38 @@ impl SetAutomaton {
                 });
 
                 // For the destinations we convert the match goal destinations to states
-                let mut dest_states = smallvec![];
+                let mut destinations = smallvec![];
 
                 // Loop over the hypertransitions
-                for (pos, goals_or_initial) in destinations {
+                for (pos, goals_or_initial) in pos_to_goals {
                     // Match goals need to be sorted so that we can easily check whether a state with a certain
                     // set of match goals already exists.
                     if let GoalsOrInitial::Goals(goals) = goals_or_initial {
                         if map_goals_state.contains_key(&goals) {
                             // The destination state already exists
-                            dest_states.push((pos, *map_goals_state.get(&goals).unwrap()))
+                            destinations.push((pos, *map_goals_state.get(&goals).unwrap()))
                         } else if !goals.is_empty() {
                             // The destination state does not yet exist, create it
                             let new_state = State::new(goals.clone());
                             states.push(new_state);
-                            dest_states.push((pos, state_counter));
+                            destinations.push((pos, state_counter));
                             map_goals_state.insert(goals, state_counter);
                             queue.push_back(state_counter);
                             state_counter += 1;
                         }
                     } else {
                         // The transition is to the initial state
-                        dest_states.push((pos, 0));
+                        destinations.push((pos, 0));
                     }
                 }
 
                 // Add the resulting outgoing transition to the state.
-                transition.announcements = announcements;
-                transition.destinations = dest_states;
-
                 debug_assert!(!&transitions.contains_key(&(s_index, symbol.operation_id())), "Set automaton should not contain duplicated transitions");
-                transitions.insert((s_index, symbol.operation_id()), transition);
+                transitions.insert((s_index, symbol.operation_id()), Transition {
+                    symbol: symbol.clone(),
+                    announcements,
+                    destinations,
+                });
             }
 
             info!("Queue size {}, currently {} states and {} transitions", queue.len(), states.len(), transitions.len());
@@ -205,6 +199,9 @@ impl SetAutomaton {
 
         let result = SetAutomaton { states, transitions };
         debug!("{}", result);
+
+        let output = File::create("automaton.dot").unwrap();
+        result.to_dot_graph(output).unwrap();
         
         result
     }

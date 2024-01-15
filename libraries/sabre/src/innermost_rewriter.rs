@@ -110,6 +110,8 @@ impl InnermostRewriter {
 
                         match InnermostRewriter::find_match(tp, automaton, &term, stats) {
                             Some(ema) => {
+                                trace!("applying rule {}", ema.announcement.rule);
+
                                 // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
                                 let top_of_stack = terms.len();
                                 terms.reserve(ema.stack_size - 1); // We already reserved space for the result.
@@ -140,7 +142,7 @@ impl InnermostRewriter {
                                     first = false;
                                 }
                                 trace!(
-                                    "{}, {}, {}",
+                                    "\t applied stack size: {}, substitution: {}, stack: [{}]",
                                     ema.stack_size,
                                     ema.variables.iter().format_with(", ", |element, f| {
                                         f(&format_args!("{} -> {}", element.0, element.1))
@@ -163,7 +165,6 @@ impl InnermostRewriter {
                                 }
 
                                 stats.rewrite_steps += 1;
-                                trace!("applying rule {}", ema.announcement.rule);
                             }
                             None => {
                                 // Add the term on the stack.

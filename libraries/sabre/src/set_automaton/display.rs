@@ -34,8 +34,8 @@ impl fmt::Display for MatchAnnouncement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}@{}",
-            self.rule.lhs,
+            "({})@{}",
+            self.rule,
             self.position
         )
     }
@@ -137,10 +137,10 @@ impl SetAutomaton {
         for ((i, _), tr) in &self.transitions {
             let mut announcements = "".to_string();
 
-            for a in &tr.announcements {
-                announcements +=
-                    &format!(", {}@{}", &a.announcement.rule.lhs, a.announcement.position);
-            }
+
+            let announcements = tr.announcements.iter().format_with(", ", |announcement, f| {
+                f(announcement)
+            });
 
             if tr.destinations.is_empty() {
                 writeln!(
@@ -159,7 +159,7 @@ impl SetAutomaton {
                 for (pos, des) in &tr.destinations {
                     writeln!(
                         &mut f,
-                        "  \"s{}{}\" -> s{} [label =\"{}\"]",
+                        "  \"s{}{}\" -> s{} [label = \"{}\"]",
                         i,
                         tr.symbol,
                         des,

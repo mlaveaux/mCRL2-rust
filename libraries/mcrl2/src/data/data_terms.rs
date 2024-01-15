@@ -116,15 +116,7 @@ mod inner {
 
     impl fmt::Display for DataExpression {        
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            if is_data_function_symbol(&self.term) {
-                write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
-            } else if is_data_application(&self.term) {
-                write!(f, "{}", DataApplicationRef::from(self.term.copy()))
-            } else if is_data_variable(&self.term) {
-                write!(f, "{}", DataVariableRef::from(self.term.copy()))
-            } else {
-                write!(f, "{}", self.term)
-            }
+            write!(f, "{}", self.copy())
         }
     }    
 
