@@ -156,6 +156,10 @@ mod inner {
             }
         }
 
+        pub fn name(&self) -> String {
+            String::from(self.term.arg(0).get_head_symbol().name())
+        }
+
         pub fn is_default(&self) -> bool {
             self.term.is_default()
         }
@@ -168,7 +172,7 @@ mod inner {
     impl fmt::Display for DataFunctionSymbol {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if !self.is_default() {
-                write!(f, "{}'{}", self.copy(), self.operation_id()) 
+                write!(f, "{}", self.name()) 
             } else {
                 write!(f, "<default>")
             }       
@@ -329,7 +333,7 @@ mod inner {
     impl<'a> fmt::Display for DataFunctionSymbolRef<'a> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if !self.term.is_default() {
-                write!(f, "{}'{}", self.name(), self.operation_id())  
+                write!(f, "{}", self.name())  
             } else {
                 write!(f, "<default>")
             }

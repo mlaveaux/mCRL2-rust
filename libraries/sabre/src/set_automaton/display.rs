@@ -4,7 +4,6 @@ use itertools::Itertools;
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, State};
 use core::fmt;
-use std::fs::File;
 use std::io::Write;
 
 use super::{Transition, MatchAnnouncement, MatchGoal, MatchObligation, EquivalenceClass};
@@ -106,9 +105,7 @@ impl fmt::Display for SetAutomaton {
 
 impl SetAutomaton {
     /// Create a .dot file and convert it to a .svg using the dot command
-    pub fn to_dot_graph(&self, filename: &Path) -> io::Result<()>{
-        let mut f = File::create(filename)?;
-
+    pub fn to_dot_graph(&self, mut f: impl Write) -> io::Result<()>{
         writeln!(&mut f, "digraph{{")?;
         writeln!(&mut f, "  final[label=\"💩\"];")?;
         for (i, s) in self.states.iter().enumerate() {
@@ -148,21 +145,21 @@ impl SetAutomaton {
             if tr.destinations.is_empty() {
                 writeln!(
                     &mut f,
-                    "  s{}-> final [label=\"{}{}\"]",
+                    "  s{} -> final [label=\"{}{}\"]",
                     i, tr.symbol, announcements
                 )?;
             } else {
-                writeln!(&mut f, "  s{}{}[shape=point]", i, tr.symbol).unwrap();
+                writeln!(&mut f, "  \"s{}{}\" [shape=point]", i, tr.symbol,).unwrap();
                 writeln!(
                     &mut f,
-                    "  s{}->s{}{}[label=\"{}{}\"]",
+                    "  s{} -> \"s{}{}\" [label=\"{}{}\"]",
                     i, i, tr.symbol, tr.symbol, announcements
                 )?;
 
                 for (pos, des) in &tr.destinations {
                     writeln!(
                         &mut f,
-                        "  s{}{}->s{} [label =\"{}\"]",
+                        "  \"s{}{}\" -> s{} [label =\"{}\"]",
                         i,
                         tr.symbol,
                         des,
