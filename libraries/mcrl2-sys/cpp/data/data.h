@@ -37,8 +37,7 @@ std::unique_ptr<atermpp::aterm> parse_data_expression(const rust::Str text, cons
 
 std::unique_ptr<detail::RewriterJitty> create_jitty_rewriter(const data_specification& spec)
 {
-  used_data_equation_selector selector;
-  return std::make_unique<detail::RewriterJitty>(detail::RewriterJitty(spec, selector));
+  return std::make_unique<detail::RewriterJitty>(detail::RewriterJitty(spec, data::used_data_equation_selector(spec)));
 }
 
 #ifdef MCRL2_ENABLE_JITTYC
@@ -77,8 +76,18 @@ std::unique_ptr<data_specification> data_specification_clone(const data_specific
 
 std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_equations(const data_specification& data_spec)
 {
-  auto equations = data_spec.equations();
-  return std::make_unique<std::vector<atermpp::aterm>>(equations.begin(), equations.end());
+  data::used_data_equation_selector selector(data_spec);
+
+  std::vector<data_equation> result;
+  for (auto& equation : data_spec.equations()) 
+  {
+    if (selector(equation))
+    {
+      result.emplace_back(equation);
+    }
+  }
+
+  return std::make_unique<std::vector<atermpp::aterm>>(result.begin(), result.end());
 }
 
 std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_constructors(const data_specification& data_spec, const atermpp::detail::_aterm* term)
