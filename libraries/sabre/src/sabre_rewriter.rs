@@ -86,6 +86,8 @@ impl SabreRewriter {
                 // Check if there is any configuration leaf left to explore, if not we have found a normal form
                 if let Some(leaf_index) = cs.get_unexplored_leaf() {
                     let leaf = &mut cs.stack[leaf_index];
+                    let read_terms = cs.terms.read();
+                    let leaf_term = &read_terms[leaf_index];
 
                     // A "side stack" is used besides the configuration stack to
                     // remember a couple of things. There are 4 options.
@@ -133,7 +135,7 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos: DataExpressionRef = get_position(leaf.subterm.deref(), &automaton.states[leaf.state].label).into();
+                            let pos: DataExpressionRef = get_position(leaf_term.deref(), &automaton.states[leaf.state].label).into();
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
 
@@ -142,6 +144,8 @@ impl SabreRewriter {
                                 .transitions
                                 .get(&(leaf.state, function_symbol.operation_id()))
                             {
+                                drop(read_terms);
+
                                 // Loop over the match announcements of the transition
                                 for ema in &tr.announcements {
                                     if ema.conditions.is_empty()
@@ -189,19 +193,24 @@ impl SabreRewriter {
                                     let tr_slice = tr.destinations.as_slice();
                                     cs.grow(leaf_index, tr_slice);
                                 }
-                            } else {
+                            } else {                       
+                                drop(read_terms);
+
                                 // There is no outgoing edges for the head symbol of this term and the stack is empty.
                                 // TODO: Not sure if this is necessary or returning leaf.subterm is sufficient.
                                 return cs.compute_final_term(tp);
                             }
                         }
-                        Some(sit) => {
+                        Some(sit) => {     
+
                             match sit {
                                 SideInfoType::SideBranch(sb) => {
-                                    // If there is a SideBranch pick the next child configuration
+                                    // If there is a SideBranch pick the next child configuration                       
+                                    drop(read_terms);
                                     cs.grow(leaf_index, sb);
                                 }
-                                SideInfoType::DelayedRewriteRule(ema) => {
+                                SideInfoType::DelayedRewriteRule(ema) => {                                                           
+                                    drop(read_terms);
                                     // apply the delayed rewrite rule
                                     SabreRewriter::apply_rewrite_rule(
                                         tp,
@@ -215,11 +224,12 @@ impl SabreRewriter {
                                 SideInfoType::EquivalenceAndConditionCheck(ema) => {
                                     // Apply the delayed rewrite rule if the conditions hold
                                     if check_equivalence_classes(
-                                        &leaf.subterm,
+                                        leaf_term.deref(),
                                         &ema.equivalence_classes,
                                     ) && SabreRewriter::conditions_hold(
-                                        tp, automaton, ema, leaf, stats,
-                                    ) {
+                                        tp, automaton, ema, leaf, &leaf_term, stats,
+                                    ) {                                                               
+                                        drop(read_terms);
                                         SabreRewriter::apply_rewrite_rule(
                                             tp,
                                             automaton,
@@ -253,7 +263,9 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) {
         stats.rewrite_steps += 1;
-        let leaf_subterm = &cs.stack[leaf_index].subterm;
+
+        let read_terms = cs.terms.read();
+        let leaf_subterm: &DataExpressionRef<'_> = &read_terms[leaf_index];
 
         // Computes the new subterm of the configuration
         let new_subterm = ema
@@ -264,6 +276,7 @@ impl SabreRewriter {
             "rewrote {} to {} using rule {}",
             &leaf_subterm, &new_subterm, ema.announcement.rule
         );
+        drop(read_terms);
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - ema.announcement.symbols_seen;
@@ -276,10 +289,11 @@ impl SabreRewriter {
         automaton: &SetAutomaton,
         ema: &EnhancedMatchAnnouncement,
         leaf: &Configuration,
+        subterm: &DataExpressionRef<'_>,
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &ema.conditions {
-            let subterm = get_position(leaf.subterm.deref(), &ema.announcement.position);
+            let subterm = get_position(subterm.deref(), &ema.announcement.position);
 
             let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&subterm, tp).into();
             let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&subterm, tp).into();

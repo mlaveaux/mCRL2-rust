@@ -6,7 +6,7 @@ use crate::{
 };
 use ahash::{HashMap, HashMapExt};
 use log::trace;
-use mcrl2::{aterm::{ATerm, Protected}, data::{is_data_variable, is_data_expression, DataExpressionRef, DataVariable, DataVariableRef}};
+use mcrl2::{aterm::{Protected, ATermRef}, data::{is_data_variable, is_data_expression, DataExpressionRef, DataVariable, DataVariableRef}};
 use smallvec::SmallVec;
 
 use super::MatchObligation;
@@ -28,7 +28,7 @@ pub struct EquivalenceClass {
 }
 
 /// Checks if the equivalence classes hold for the given term.
-pub fn check_equivalence_classes(term: &ATerm, eqs: &[EquivalenceClass]) -> bool {
+pub fn check_equivalence_classes(term: &ATermRef<'_>, eqs: &[EquivalenceClass]) -> bool {
     eqs.iter().all(|ec| {
         debug_assert!(ec.positions.len() >= 2, "An equivalence class must contain at least two positions");
 

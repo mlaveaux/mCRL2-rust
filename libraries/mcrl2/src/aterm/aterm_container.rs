@@ -1,4 +1,4 @@
-use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug};
+use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug, cell::RefCell};
 
 use mcrl2_sys::atermpp::ffi;
 
@@ -192,7 +192,7 @@ pub struct Protector<'a, C: Markable> {
     reference: BfTermPoolThreadWrite<'a, C>,
     
     #[cfg(debug_assertions)]
-    protected: Vec<ATermRef<'static>>
+    protected: RefCell<Vec<ATermRef<'static>>>
 }
 
 impl<'a, C: Markable> Protector<'a, C> {
@@ -200,7 +200,7 @@ impl<'a, C: Markable> Protector<'a, C> {
         #[cfg(debug_assertions)]
         return Protector {
             reference,
-            protected: vec![]
+            protected: RefCell::new(vec![]),
         };
         
         #[cfg(not(debug_assertions))]
@@ -209,13 +209,13 @@ impl<'a, C: Markable> Protector<'a, C> {
         }
     }
     
-    pub fn protect(&mut self, term: &ATermRef<'_>) -> ATermRef<'static>{
+    pub fn protect(&self, term: &ATermRef<'_>) -> ATermRef<'static>{
 
         unsafe {
             // Store terms that are marked as protected to check if they are
             // actually in the container when the protection is dropped.
             #[cfg(debug_assertions)]
-            self.protected.push(transmute(term.copy()));
+            self.protected.borrow_mut().push(transmute(term.copy()));
 
             transmute(term.copy())
         }
@@ -242,7 +242,7 @@ impl<'a, C: Markable> Drop for Protector<'a, C> {
         // TODO: Implement this.
         #[cfg(debug_assertions)]
         {
-            for term in &self.protected {
+            for term in self.protected.borrow().iter() {
                 debug_assert!(self.reference.contains_term(term), "Term was protected but not actually inserted");
             }
         }
