@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, fmt::Debug, time::Instant, io, fs::File};
+use std::{collections::VecDeque, fmt::Debug, time::Instant};
 
 use ahash::HashMap;
 use log::{debug, info, log_enabled, trace, warn};
@@ -560,17 +560,16 @@ fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut HashMap<DataFunctionSym
 
 #[cfg(test)]
 mod tests {
-    use mcrl2::data::DataSpecification;
+    // use mcrl2::data::DataSpecification;
 
-    use super::SetAutomaton;
+    // use super::SetAutomaton;
 
-    // Creating this automaton takes too much time.
-    #[test]
-    fn test_automaton_from_data_spec() {
-        let data_spec_text = include_str!("../../../../examples/REC/mcrl2/add16.dataspec");
-        let data_spec = DataSpecification::new(data_spec_text).unwrap();
+    // TODO: Enable this test again when the construction is feasible.
+    // #[test]
+    // fn test_automaton_from_data_spec() {
+        // let data_spec_text = include_str!("../../../../examples/REC/mcrl2/add16.dataspec");
+        // let data_spec = DataSpecification::new(data_spec_text).unwrap();
 
-        //TODO: Enable this test again when the construction is feasible.
-        //let _ = SetAutomaton::new(&data_spec.into(), false);
-    }
+        // let _ = SetAutomaton::new(&data_spec.into(), false);
+    // }
 }

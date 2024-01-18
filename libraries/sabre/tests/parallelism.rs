@@ -1,6 +1,6 @@
 use std::{thread, cell::RefCell, rc::Rc};
 
-use mcrl2::{aterm::{TermPool, ATerm}, data::{DataSpecification, DataExpression}};
+use mcrl2::{aterm::TermPool, data::{DataSpecification, DataExpression}};
 use sabre::{InnermostRewriter, RewriteEngine};
 
 

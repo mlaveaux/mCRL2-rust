@@ -4,7 +4,7 @@ use test_case::test_case;
 
 use ahash::AHashSet;
 
-use mcrl2::aterm::{ATerm, TermPool};
+use mcrl2::aterm::TermPool;
 use rec_tests::load_REC_from_strings;
 use sabre::utilities::to_untyped_data_expression;
 use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewriter};

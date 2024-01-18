@@ -74,6 +74,8 @@ impl SabreRewriter {
         t: DataExpression,
         stats: &mut RewritingStatistics,
     ) -> DataExpression {
+        stats.recursions += 1;
+
         // We explore the configuration tree depth first using a ConfigurationStack
         let mut cs = ConfigurationStack::new(0, t);
 
