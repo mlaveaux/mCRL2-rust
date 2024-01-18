@@ -82,6 +82,12 @@ void collect_garbage()
   detail::g_thread_term_pool().collect();
 }
 
+
+void test_garbage_collection()
+{
+  detail::g_thread_term_pool().test_garbage_collection();
+}
+
 inline
 void lock_shared() 
 {

@@ -155,7 +155,7 @@ impl TermPool {
         }
     }
 
-    /// Trigger a garbage collection if necessary, we disable global garbage collection so ffi will never garbage collect itself.
+    /// Trigger a garbage collection explicitly.
     pub fn collect(&mut self) {
         ffi::collect_garbage();
     }
@@ -197,7 +197,7 @@ impl TermPool {
             }
         });
 
-        self.collect();
+        ffi::test_garbage_collection();
         result
     }   
     
@@ -237,7 +237,7 @@ impl TermPool {
                 protect_with(protection_set, tp.index, term)
             };
 
-            self.collect();
+            ffi::test_garbage_collection();
             result
         })
     }
@@ -278,7 +278,7 @@ impl TermPool {
                 protect_with(protection_set, tp.index, term)
             };
 
-            self.collect();
+            ffi::test_garbage_collection();
             result
         })
     }
@@ -300,7 +300,7 @@ impl TermPool {
             }
         });
 
-        self.collect();
+        ffi::test_garbage_collection();
         result
     }
 }

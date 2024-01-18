@@ -41,6 +41,9 @@ pub mod ffi {
         /// Trigger garbage collection.
         fn collect_garbage();
 
+        /// Triggers a garbage collection when internal heuristics have determined it to be necessasry.
+        fn test_garbage_collection();
+
         /// Provides shared access to the aterm library.
         fn lock_shared();
         fn unlock_shared();
