@@ -1,6 +1,8 @@
-use std::fmt;
+use std::{fmt, error::Error};
 
 use mcrl2_sys::{cxx::UniquePtr, lps::ffi};
+
+use crate::data::DataSpecification;
 
 /// Rust representation of a lps::linear_process_specification.
 pub struct LinearProcessSpecification {
@@ -8,9 +10,18 @@ pub struct LinearProcessSpecification {
 }
 
 impl LinearProcessSpecification {
-    pub fn read(filename: &str) -> LinearProcessSpecification {
-        LinearProcessSpecification {
-            lps: ffi::read_linear_process_specification(filename).expect("cannot read given lps."),
+
+    /// Reads the linear process specification from the given path.
+    pub fn read(filename: &str) -> Result<LinearProcessSpecification, Box<dyn Error>> {
+        Ok(LinearProcessSpecification {
+            lps: ffi::read_linear_process_specification(filename)?,
+        })
+    }
+
+    /// Returns the underlying data specification.
+    pub fn data_specification(&self) -> DataSpecification {
+        DataSpecification {
+            data_spec: ffi::get_data_specification(&self.lps)
         }
     }
 }

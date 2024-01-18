@@ -15,6 +15,12 @@ std::unique_ptr<specification> read_linear_process_specification(rust::Str filen
   return std::make_unique<specification>(detail::load_lps(std::string(filename)));
 }
 
+std::unique_ptr<mcrl2::data::data_specification> get_data_specification(const specification& spec)
+{
+  return std::make_unique<mcrl2::data::data_specification>(spec.data());
+}
+
+
 rust::String print_linear_process_specification(const specification& spec)
 {
   std::stringstream str;

@@ -8,5 +8,8 @@ edition.workspace = true
 
 [dependencies]
 ldd = { git = "https://github.com/mlaveaux/ldd-library.git" }
+mcrl2 = { path = "../../libraries/mcrl2" }
+sabre.workspace = true
 clap.workspace = true
 env_logger.workspace = true
+log.workspace = true

@@ -6,7 +6,7 @@ use super::{DataVariable, DataExpression, DataFunctionSymbol, SortExpressionRef}
 
 /// A safe abstraction for the mCRL2 data specification.
 pub struct DataSpecification {
-    pub data_spec: UniquePtr<ffi::data_specification>,
+    pub(crate) data_spec: UniquePtr<ffi::data_specification>,
 }
 
 impl DataSpecification {
