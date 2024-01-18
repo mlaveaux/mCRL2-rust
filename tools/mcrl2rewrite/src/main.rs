@@ -9,7 +9,7 @@ use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 
 mod counting_allocator;
 
-#[cfg(feature = "measure_allocs")]
+#[cfg(feature = "measure-allocs")]
 #[global_allocator]
 static A: counting_allocator::AllocCounter = counting_allocator::AllocCounter;
 
@@ -59,7 +59,7 @@ fn main() -> AnyResult<()>
     }
 
     info!("ATerm pool: {}", tp.borrow());
-    #[cfg(feature = "measure_allocs")]
+    #[cfg(feature = "measure-allocs")]
     info!("Allocations: {}",  A.number_of_allocations());
     
     Ok(())
