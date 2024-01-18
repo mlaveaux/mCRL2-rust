@@ -1,5 +1,7 @@
 use ahash::AHashSet;
-use mcrl2::{aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool}, data::{DataExpression, DataVariable, DataFunctionSymbol}};
+use mcrl2::{aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool, Protected, ATermRef}, data::{DataExpression, DataVariable, DataFunctionSymbol}};
+
+pub type SubstitutionBuilder = Protected<Vec<ATermRef<'static>>>;
 
 /// Creates a new term where a subterm is replaced with another term.
 ///
@@ -16,7 +18,12 @@ use mcrl2::{aterm::{ATerm, ATermTrait, TermBuilder, Yield, SymbolTrait, TermPool
 /// until we have arrived at a and replace it with 0. We then construct s(0)
 /// and then construct s(s(0)).
 pub fn substitute(tp: &mut TermPool, t: &impl ATermTrait, new_subterm: ATerm, p: &[usize]) -> ATerm {
-    substitute_rec(tp, t, new_subterm, p, 0)
+    let mut args = Protected::new(vec![]);
+    substitute_rec(tp, t, new_subterm, p, &mut args, 0)
+}
+
+pub fn substitute_with(builder: &mut SubstitutionBuilder, tp: &mut TermPool, t: &impl ATermTrait, new_subterm: ATerm, p: &[usize]) -> ATerm {
+    substitute_rec(tp, t, new_subterm, p, builder, 0)
 }
 
 /// The recursive implementation for subsitute
@@ -28,6 +35,7 @@ fn substitute_rec(
     t: &impl ATermTrait,
     new_subterm: ATerm,
     p: &[usize],
+    args: &mut Protected<Vec<ATermRef<'static>>>,
     depth: usize,
 ) -> ATerm {
     if p.len() == depth {
@@ -36,12 +44,25 @@ fn substitute_rec(
     } else {
         // else recurse deeper into 't'
         let new_child_index = p[depth] - 1;
-        let new_child = substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, depth + 1);
+        let new_child = substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, args, depth + 1);
 
-        let mut args: Vec<ATerm> = t.arguments().map(|u| u.protect()).collect();
-        args[new_child_index] = new_child;
+        let mut write_args = args.write();
+        for (index, arg) in t.arguments().enumerate() {
+            if index == new_child_index {
+                let t = write_args.protect(&new_child);
+                write_args.push(t);
+            } else {
+                let t = write_args.protect(&arg);
+                write_args.push(t);
+            }
+        }
 
-        tp.create(&t.get_head_symbol(), &args)
+        let result = tp.create(&t.get_head_symbol(), &write_args);
+        drop(write_args);
+
+        // TODO: When write is dropped we check whether all terms where inserted, but this clear violates that assumption.
+        args.write().clear();
+        result
     }
 }
 

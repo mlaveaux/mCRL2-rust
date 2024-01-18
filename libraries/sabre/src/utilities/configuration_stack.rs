@@ -6,7 +6,7 @@ use crate::utilities::ExplicitPosition;
 use mcrl2::aterm::{Protected, TermPool};
 use mcrl2::data::{DataExpression, DataExpressionRef};
 
-use super::{get_position, substitute};
+use super::{get_position, SubstitutionBuilder, substitute_with};
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
@@ -53,6 +53,7 @@ pub(crate) struct ConfigurationStack<'a> {
     /// That would be very expensive. Instead we ensure that the subterm in the current_node is always up to date.
     /// oldest_reliable_subterm is an index to the highest configuration in the tree that is up to date.
     pub oldest_reliable_subterm: usize,
+    pub substitution_builder: SubstitutionBuilder,
 }
 
 impl<'a> ConfigurationStack<'a> {
@@ -64,6 +65,7 @@ impl<'a> ConfigurationStack<'a> {
             terms: Protected::new(vec![]),
             current_node: Some(0),
             oldest_reliable_subterm: 0,
+            substitution_builder: SubstitutionBuilder::default(),
         };
         conf_list.stack.push(Configuration {
             state,
@@ -141,7 +143,8 @@ impl<'a> ConfigurationStack<'a> {
         // Note that the subterm stored earlier may not have been up to date. We replace it with a term that is up to date
         let mut write_terms = self.terms.write();
         let subterm = write_terms.protect(
-            substitute(
+            substitute_with(
+                &mut self.substitution_builder,
                 tp,
                 write_terms[depth].deref(),
                 new_subterm.into(),
@@ -211,7 +214,8 @@ impl<'a> ConfigurationStack<'a> {
             subterm = match self.stack[up_to_date].position {
                 None => subterm,
                 Some(p) => {
-                    let t = substitute(
+                    let t = substitute_with(
+                        &mut self.substitution_builder,
                         tp,
                         write_terms[up_to_date - 1].deref(),
                         subterm.protect(),
