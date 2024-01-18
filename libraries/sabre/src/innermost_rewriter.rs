@@ -6,7 +6,7 @@ use itertools::Itertools;
 use log::{trace, info};
 use mcrl2::{
     aterm::{ATerm, TermPool, ATermTrait, Protected, ATermRef, Markable, Todo, Protector},
-    data::{BoolSort, DataExpressionRef, DataFunctionSymbolRef, DataExpression, DataApplication},
+    data::{DataExpressionRef, DataFunctionSymbolRef, DataExpression, DataApplication},
 };
 
 use crate::{
@@ -65,9 +65,10 @@ impl InnermostRewriter {
         drop(write_terms);
         drop(write_configs);
         
-        trace!("{}", stack);
 
         loop {
+            trace!("{}", stack);
+
             let mut write_configs = stack.configs.write();
             if let Some(config) = write_configs.pop() {
                 match config {
@@ -175,8 +176,6 @@ impl InnermostRewriter {
                     }
                 }
 
-                //trace!("{}", stack);
-
                 for (index, term) in stack.terms.write().iter().enumerate() {
                     if term.is_default() {
                         debug_assert!(
@@ -266,7 +265,7 @@ impl InnermostRewriter {
             let lhs: DataExpression = c.semi_compressed_lhs.evaluate(t, tp).into();
 
             let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
-            let lhs_normal = if lhs == BoolSort::true_term().into() {
+            let lhs_normal = if &lhs == tp.true_term() {
                 // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
                 lhs
             } else {
@@ -284,8 +283,6 @@ impl InnermostRewriter {
 
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum Config {
-    ///
-    // Result(usize),
     /// Rewrite the top of the stack and put result at the given index.
     Rewrite(usize), 
     /// Constructs function symbol with given arity at the given index.

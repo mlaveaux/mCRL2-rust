@@ -1,10 +1,13 @@
-use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug, cell::RefCell};
+use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug};
 
 use mcrl2_sys::atermpp::ffi;
 
 use crate::aterm::{ATermRef, BfTermPool, BfTermPoolThreadWrite, THREAD_TERM_POOL};
 
 use super::{BfTermPoolRead, ATermTrait};
+
+#[cfg(debug_assertions)]
+use std::cell::RefCell;
 
 /// A container of objects, typically either terms or objects containing terms,
 /// that are of trait Markable. These store ATermRef<'static> that are protected

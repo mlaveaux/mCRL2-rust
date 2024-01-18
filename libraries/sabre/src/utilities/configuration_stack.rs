@@ -1,9 +1,9 @@
-use std::fmt::{self, write};
+use std::fmt;
 use std::ops::Deref;
 
 use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
-use mcrl2::aterm::{ATermRef, ATermTrait, Protected, TermPool};
+use mcrl2::aterm::{Protected, TermPool};
 use mcrl2::data::{DataExpression, DataExpressionRef};
 
 use super::{get_position, substitute};

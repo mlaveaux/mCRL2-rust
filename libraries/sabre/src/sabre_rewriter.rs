@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, ops::Deref};
 
 use log::{debug, trace, info};
-use mcrl2::{aterm::TermPool, data::{DataExpressionRef, BoolSort, DataExpression}};
+use mcrl2::{aterm::TermPool, data::{DataExpressionRef, DataExpression}};
 
 use crate::{
     RewriteSpecification,
@@ -9,7 +9,7 @@ use crate::{
         check_equivalence_classes, EnhancedMatchAnnouncement,
         SetAutomaton,
     },
-    utilities::{get_position, Configuration, ConfigurationStack, SideInfo, SideInfoType},
+    utilities::{get_position, ConfigurationStack, SideInfo, SideInfoType},
 };
 
 /// A shared trait for all the rewriters
@@ -229,7 +229,7 @@ impl SabreRewriter {
                                         leaf_term.deref(),
                                         &ema.equivalence_classes,
                                     ) && SabreRewriter::conditions_hold(
-                                        tp, automaton, ema, leaf, &leaf_term, stats,
+                                        tp, automaton, ema, &leaf_term, stats,
                                     ) {                                                               
                                         drop(read_terms);
                                         SabreRewriter::apply_rewrite_rule(
@@ -290,7 +290,6 @@ impl SabreRewriter {
         tp: &mut TermPool,
         automaton: &SetAutomaton,
         ema: &EnhancedMatchAnnouncement,
-        leaf: &Configuration,
         subterm: &DataExpressionRef<'_>,
         stats: &mut RewritingStatistics,
     ) -> bool {
@@ -304,7 +303,7 @@ impl SabreRewriter {
             if !c.equality || lhs != rhs {
                 let rhs_normal =
                     SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs, stats);
-                let lhs_normal = if lhs == BoolSort::true_term().into() {
+                let lhs_normal = if &lhs == tp.true_term() {
                     // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
                     lhs
                 } else {

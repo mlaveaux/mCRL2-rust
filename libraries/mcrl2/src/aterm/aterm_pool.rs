@@ -9,7 +9,7 @@ use mcrl2_sys::{
 };
 use utilities::protection_set::ProtectionSet;
 
-use crate::{aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait}, data::DataExpressionRef};
+use crate::{aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait}, data::{DataExpressionRef, DataExpression, BoolSort}};
 
 use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable};
 
@@ -146,13 +146,20 @@ impl Drop for ThreadTermPool {
 /// This is the thread local term pool.
 pub struct TermPool {
     arguments: Vec<*const ffi::_aterm>,
+    true_term: DataExpression,
 }
 
 impl TermPool {
     pub fn new() -> TermPool {
         TermPool {
             arguments: vec![],
+            true_term: BoolSort::true_term().into(),
         }
+    }
+
+    /// This does not necessarily belong here, but we need a central storage of default terms.
+    pub fn true_term(&self) -> &DataExpression {
+        &self.true_term
     }
 
     /// Trigger a garbage collection explicitly.
