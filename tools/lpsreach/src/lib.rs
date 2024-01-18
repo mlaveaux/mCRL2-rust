@@ -35,18 +35,18 @@ pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
         let mut todo1 = storage.empty_set().clone();
         for transition in transitions.iter()
         {
-            let result = ldd::relational_product(&mut storage, todo.borrow(), transition.relation.borrow(), transition.meta.borrow());
-            todo1 = ldd::union(&mut storage, todo1.borrow(), result.borrow());
+            let result = ldd::relational_product(&mut storage, &todo, &transition.relation, &transition.meta);
+            todo1 = ldd::union(&mut storage, &todo1, &result);
         }
 
-        todo = ldd::minus(&mut storage, todo1.borrow(), states.borrow());
-        states = ldd::union(&mut storage, states.borrow(), todo.borrow());
+        todo = ldd::minus(&mut storage, &todo1, &states);
+        states = ldd::union(&mut storage, &states, &todo);
 
         eprintln!("iteration {}", iteration);
         iteration += 1;
     }
 
-    let num_of_states = ldd::len(&mut storage, states.borrow());
+    let num_of_states = ldd::len(&mut storage, &states);
     println!("The model has {} states", num_of_states);
 
     Ok(num_of_states)

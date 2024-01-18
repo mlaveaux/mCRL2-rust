@@ -95,7 +95,7 @@ impl SylvanReader
           let down = self.node_from_index(storage, down);
           let right = self.node_from_index(storage, right);
 
-          let ldd = storage.insert(value as Value, down.borrow(), right.borrow());
+          let ldd = storage.insert(value as Value, &down, &right);
           self.indexed_set.insert(self.last_index, ldd);
           
           self.last_index += 1;
