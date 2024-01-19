@@ -153,7 +153,7 @@ impl TermPool {
     pub fn new() -> TermPool {
         TermPool {
             arguments: vec![],
-            true_term: BoolSort::true_term().into(),
+            true_term: BoolSort::true_term(),
         }
     }
 

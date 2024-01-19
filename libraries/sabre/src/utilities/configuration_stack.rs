@@ -113,7 +113,7 @@ impl<'a> ConfigurationStack<'a> {
 
         // Push the term belonging to the leaf.
         let mut write_terms = self.terms.write();
-        let t = write_terms.protect(&get_position(write_terms[c].deref(), pos).into());
+        let t = write_terms.protect(&get_position(write_terms[c].deref(), pos));
         write_terms.push(t.into());
 
         self.current_node = Some(c + 1);
@@ -214,10 +214,10 @@ impl<'a> ConfigurationStack<'a> {
                     let t = substitute(
                         tp,
                         write_terms[up_to_date - 1].deref(),
-                        subterm.protect().into(),
+                        subterm.protect(),
                         &p.indices,
                     );
-                    write_terms.protect(&t).into()
+                    write_terms.protect(&t)
                 }
             };
             up_to_date -= 1;

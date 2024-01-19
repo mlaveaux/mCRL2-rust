@@ -5,6 +5,7 @@ use std::{fs::File, error::Error, io::Write};
 
 pub fn compile() -> Result<(), Box<dyn Error>> {
 
+    // Write the output source file.
 
     let mut file = File::create("output.rs")?;
 
@@ -13,6 +14,8 @@ pub fn compile() -> Result<(), Box<dyn Error>> {
             println!(\"Hello world!\");
         }}
     ")?;
+
+
 
     
 

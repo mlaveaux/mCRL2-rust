@@ -148,6 +148,10 @@ mod inner {
             }
         }
 
+        pub fn sort(&self) -> SortExpressionRef<'_> {
+            self.arg(1).into()
+        }
+
         pub fn name(&self) -> String {
             String::from(self.term.arg(0).get_head_symbol().name())
         }
@@ -309,6 +313,11 @@ mod inner {
     impl<'a> DataFunctionSymbolRef<'a> {
         pub fn name(&self) -> String {
             String::from(self.term.arg(0).get_head_symbol().name())
+        }
+
+        /// Returns the sort of the function symbol.
+        pub fn sort(&self) -> SortExpressionRef<'_> {
+            self.arg(1).into()
         }
     
         /// Returns the internal id known for every [aterm] that is a data::function_symbol.

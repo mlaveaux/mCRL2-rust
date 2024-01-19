@@ -76,7 +76,6 @@ impl InnermostRewriter {
                         let mut write_terms = stack.terms.write();
                         let term = write_terms.pop().unwrap();
 
-                        let term = DataExpressionRef::from(term.copy());
                         let symbol = term.data_function_symbol();
                         let arguments = term.data_arguments();
 
@@ -121,7 +120,7 @@ impl InnermostRewriter {
                                 }
 
                                 let mut first = true;
-                                for config in (&ema.innermost_stack.read()).iter() {
+                                for config in (ema.innermost_stack.read()).iter() {
                                     match config {
                                         Config::Construct(symbol, arity, offset) => {
                                             if first {
@@ -291,36 +290,25 @@ pub enum Config {
 
 impl Markable for Config {
     fn mark(&self, todo: Todo<'_>) {
-        match self {
-            Config::Construct(t, _, _) => {
-                let t: ATermRef<'_> = t.copy().into();
-                t.mark(todo);
-            },
-            _ => {
-
-            }
+        if let Config::Construct(t, _, _) = self {
+            let t: ATermRef<'_> = t.copy().into();
+            t.mark(todo);
         }
     }
 
     fn contains_term(&self, term: &ATermRef<'_>) -> bool {
-        match self {
-            Config::Construct(t, _, _) => {
-                term == &<DataFunctionSymbolRef as Into<ATermRef>>::into(t.copy())
-            },
-            _ => {
-                false
-            }
+        if let Config::Construct(t, _, _) = self {
+            term == &<DataFunctionSymbolRef as Into<ATermRef>>::into(t.copy())
+        } else {
+            false
         }
     }
 
     fn len(&self) -> usize {
-        match self {
-            Config::Construct(_, _, _) => {
-                1
-            },
-            _ => {
-                0
-            }
+        if let Config::Construct(_, _, _) = self {
+            1
+        } else {
+            0
         }
     }
 }
@@ -364,12 +352,12 @@ impl fmt::Display for Config {
 impl InnerStack {
 
     /// Indicate that the given 
-    fn add_result<'a>(write_configs: &mut Protector<Vec<Config>>, symbol: DataFunctionSymbolRef<'a>, arity: usize, index: usize) {
+    fn add_result(write_configs: &mut Protector<Vec<Config>>, symbol: DataFunctionSymbolRef<'_>, arity: usize, index: usize) {
         let symbol = write_configs.protect(&symbol.into());
         write_configs.push(Config::Construct(symbol.into(), arity, index));
     }
 
-    fn add_rewrite<'a>(write_configs: &mut Protector<Vec<Config>>, write_terms: &mut Protector<Vec<DataExpressionRef<'static>>>, term: DataExpressionRef<'a>, index: usize) {
+    fn add_rewrite(write_configs: &mut Protector<Vec<Config>>, write_terms: &mut Protector<Vec<DataExpressionRef<'static>>>, term: DataExpressionRef<'_>, index: usize) {
         let term = write_terms.protect(&term);
         write_configs.push(Config::Rewrite(index));
         write_terms.push(term.into());

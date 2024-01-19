@@ -127,7 +127,7 @@ impl Drop for Symbol {
     }
 }
 
-impl<'a> Symbol {
+impl Symbol {
     pub fn copy(&self) -> SymbolRef<'_> {
         self.symbol.copy()
     }

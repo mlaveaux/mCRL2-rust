@@ -64,9 +64,9 @@ pub fn run(config: &Config) -> Result<usize, Box<dyn Error>>
         info!("Exploring mCRL2 model...");
 
         let lps = LinearProcessSpecification::read(&file.to_string_lossy())?;
-        let mut tp = Rc::new(RefCell::new(TermPool::new()));
+        let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        let rewriter = InnermostRewriter::new(tp, &lps.data_specification().into());
+        let _rewriter = InnermostRewriter::new(tp, &lps.data_specification().into());
         
         Ok(0)
     }

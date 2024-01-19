@@ -81,7 +81,7 @@ impl SemiCompressedTermTree {
             Variable(
                 var_map
                     .get(&t.protect().into())
-                    .expect(&format!("{t} not contained in variable mapping var_map"))
+                    .unwrap_or_else(|| panic!("{t} not contained in variable mapping var_map"))
                     .clone(),
             )
         } else if t.arguments().is_empty() {

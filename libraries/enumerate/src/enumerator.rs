@@ -1,7 +1,9 @@
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell};
 
-use mcrl2::{aterm::ATerm, data::{DataSpecification, DataExpression}};
+use mcrl2::{aterm::TermPool, data::{DataSpecification, DataExpression, DataApplication}};
 use sabre::{RewriteEngine, utilities::create_var_map};
+
+use crate::variable_generator::VariableGenerator;
 
 
 /// This object implements the enumeration of open terms. This is also called
@@ -19,6 +21,7 @@ use sabre::{RewriteEngine, utilities::create_var_map};
 /// 
 
 struct Enumerator<R : RewriteEngine> {
+    tp: Rc<RefCell<TermPool>>,
 
     rewriter: Rc<R>,
 
@@ -30,8 +33,9 @@ impl<R: RewriteEngine> Enumerator<R> {
 
     /// Creates an enumerator for the given data specification, with a preconstructed rewriter.
     /// Assumes that R is a rewriter for RewriteSpecification::from(specification).
-    pub fn new(specification: DataSpecification, rewriter: Rc<R>) -> Enumerator<R> {
+    pub fn new(tp: Rc<RefCell<TermPool>>, specification: DataSpecification, rewriter: Rc<R>) -> Enumerator<R> {
         Enumerator {
+            tp,
             specification,
             rewriter
         }
@@ -42,10 +46,28 @@ impl<R: RewriteEngine> Enumerator<R> {
         // Typically we have some static expression c that we want to enumerate and subsitute certain variable for.
         let variables = create_var_map(&expression);
 
+        // A variable generator with fresh names
+        let mut variable_generator = VariableGenerator::new(self.tp.clone(), "x");
+
+        let mut arguments = vec![];
+
+       // let mut queue = vec![];
+
         for (var, position) in &variables {
 
             for cons in self.specification.constructors(&var.sort()) {
-                
+
+                println!("{}", cons.sort());
+
+                for _ in 0..1 {
+                    arguments.push(variable_generator.next());
+                }
+
+                //let t = DataApplication::from_refs(&mut self.tp.borrow_mut(), cons, arguments);
+
+
+
+
             }
         }
     }
@@ -76,8 +98,8 @@ mod tests {
         let data_spec = DataSpecification::new(text).unwrap();
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        let rewriter = Rc::new(InnermostRewriter::new(tp, &data_spec.clone().into()));
-        let enumerator = Enumerator::new(data_spec.clone(), rewriter);
+        let rewriter = Rc::new(InnermostRewriter::new(tp.clone(), &data_spec.clone().into()));
+        let enumerator = Enumerator::new(tp.clone(), data_spec.clone(), rewriter);
 
         let expression = data_spec.parse("x");
 

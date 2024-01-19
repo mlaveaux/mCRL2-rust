@@ -226,10 +226,10 @@ impl SabreRewriter {
                                 SideInfoType::EquivalenceAndConditionCheck(ema) => {
                                     // Apply the delayed rewrite rule if the conditions hold
                                     if check_equivalence_classes(
-                                        leaf_term.deref(),
+                                        leaf_term,
                                         &ema.equivalence_classes,
                                     ) && SabreRewriter::conditions_hold(
-                                        tp, automaton, ema, &leaf_term, stats,
+                                        tp, automaton, ema, leaf_term, stats,
                                     ) {                                                               
                                         drop(read_terms);
                                         SabreRewriter::apply_rewrite_rule(

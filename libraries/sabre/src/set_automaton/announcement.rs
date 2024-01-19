@@ -138,9 +138,9 @@ impl Clone for EnhancedMatchAnnouncement {
             equivalence_classes: self.equivalence_classes.clone(),
             conditions: self.conditions.clone(),
             semi_compressed_rhs: self.semi_compressed_rhs.clone(),
-            is_duplicating: self.is_duplicating.clone(),
+            is_duplicating: self.is_duplicating,
             variables: self.variables.clone(),
-            stack_size: self.stack_size.clone(),
+            stack_size: self.stack_size,
             innermost_stack
         }
     }
@@ -350,9 +350,7 @@ impl MatchGoal {
             }
 
             // Sort the positions. They are now in depth first order.
-            let mut all_positions: Vec<ExplicitPosition> = position_to_goals.iter().map(|(pos, _)| {
-                pos.clone()
-            }).collect();
+            let mut all_positions: Vec<ExplicitPosition> = position_to_goals.keys().cloned().collect();
             all_positions.sort_unstable();
 
             // Compute the partitions, finished when all positions are processed

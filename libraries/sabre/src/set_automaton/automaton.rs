@@ -317,7 +317,7 @@ impl State {
                         if let GoalsOrInitial::Goals(goals) = &mut destinations[key].1 {
                             goals.push(MatchGoal {
                                 obligations: vec![MatchObligation {
-                                    pattern: rr.lhs.clone().into(),
+                                    pattern: rr.lhs.clone(),
                                     position: pos.clone(),
                                 }],
                                 announcement: MatchAnnouncement {
@@ -539,7 +539,7 @@ fn is_supported_rule(rule: &Rule) -> bool {
 /// Finds all data symbols in the term and adds them to the symbol index.
 fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut HashMap<DataFunctionSymbol, usize>) {
     if is_data_function_symbol(t) {
-        let t: &ATermRef<'_> = &t;
+        let t: &ATermRef<'_> = t;
         add_symbol(t.protect().into(), 0, symbols);
     } else if is_data_application(t) {
         // REC specifications should never contain this so it can be a debug error.

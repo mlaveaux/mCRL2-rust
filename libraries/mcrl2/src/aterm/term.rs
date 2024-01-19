@@ -588,7 +588,7 @@ impl fmt::Debug for ATermGlobal {
 }
 
 // This is just boiler plate unfortunately
-impl<'a> ATermTrait for ATerm {
+impl ATermTrait for ATerm {
     fn arg(&self, index: usize) -> ATermRef {
         self.term.arg(index)
     }
@@ -630,7 +630,7 @@ impl<'a> ATermTrait for ATerm {
     }
 }
 
-impl<'a> ATermTrait for ATermGlobal {
+impl ATermTrait for ATermGlobal {
     fn arg(&self, index: usize) -> ATermRef {
         self.term.arg(index)
     }

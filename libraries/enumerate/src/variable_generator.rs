@@ -1,4 +1,6 @@
-use mcrl2::data::DataVariable;
+use std::{cell::RefCell, rc::Rc};
+
+use mcrl2::{data::DataVariable, aterm::TermPool};
 
 
 
@@ -20,8 +22,8 @@ impl VariableGenerator {
 
 
     pub fn next(&mut self) -> DataVariable {
-
-        DataVariable::new(&mut self.tp.borrow_mut(), &format!("{}_{}", prefix, self.unique_number))
+        self.unique_number += 1;
+        DataVariable::new(&mut self.tp.borrow_mut(), &format!("{}_{}", self.prefix, self.unique_number))
     }
 
 }
