@@ -1,5 +1,5 @@
 [package]
-name = "sabre-compiling"
+name = "sabre-compiled"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
@@ -7,4 +7,3 @@ crate-type = ["cdylib",'rlib']
 
 [dependencies]
 abi_stable = "0.11"
-indoc = "2.0"
