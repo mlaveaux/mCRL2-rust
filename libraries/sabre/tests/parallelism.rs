@@ -5,7 +5,7 @@ use sabre::{InnermostRewriter, RewriteEngine};
 
 
 #[test]
-fn test_parallism() {
+fn test_parallelism() {
     let mut threads = vec![];
 
     let test_case = (
