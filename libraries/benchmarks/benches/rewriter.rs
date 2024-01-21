@@ -33,7 +33,6 @@ pub fn load_case(
 pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 
     for (name, data_spec, expressions) in [
-        ("hanoi8", include_str!("../../../examples/REC/mcrl2/hanoi8.dataspec"), include_str!("../../../examples/REC/mcrl2/hanoi8.expressions")),
         ("add8", include_str!("../../../examples/REC/mcrl2/add8.dataspec"), include_str!("../../../examples/REC/mcrl2/add8.expressions")),
     ] {
         let tp = Rc::new(RefCell::new(TermPool::new()));
