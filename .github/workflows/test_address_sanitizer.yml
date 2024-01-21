@@ -1,4 +1,4 @@
-name: Test LLVM Sanitizers
+name: Test Address Sanitizer
 
 on:
   push:
@@ -49,12 +49,6 @@ jobs:
 
     - name: Run address-sanitizer tests
       run: cargo +nightly xtask address-sanitizer
-      env:
-        RUST_BACKTRACE: full
-        RUSTC_WRAPPER: sccache
-
-    - name: Run thread-sanitizer tests
-      run: cargo +nightly xtask thread-sanitizer
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
