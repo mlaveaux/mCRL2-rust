@@ -18,7 +18,16 @@ By default this will build in `dev` or debug mode, and a release build can be ob
 
 ## Tests
 
-Tests can be performed using `cargo test`, only tests of the Sabre crate can be executed with `cargo test -p sabre --lib` and `cargo test -- --no-capture` can be used to show the output of tests. Alternatively, an improved test runner called `nextest` can be used with `cargo nextest run`. This can be installed using `cargo install cargo-nextest`. This test runner offers many improvements such as always showing output of failing tests, running more tests in parallel, and offer better error messages for segfaults.
+Tests can be performed using `cargo test`, only tests of the Sabre crate can be executed with `cargo test -p sabre --lib` and `cargo test -- --no-capture` can be used to show the output of tests. Alternatively, an improved test runner called [nextest](https://nexte.st/) can be used with `cargo nextest run`. This can be installed using `cargo install cargo-nextest`. This test runner offers many improvements such as always showing output of failing tests, running more tests in parallel, and offer better error messages for segfaults.
+
+## LLVM Sanitizer
+
+For Linux targets it is  possible to run the [LLVM address sanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) to detect memory issues in unsafe and C++ code. This requires the nightly version of the rust compiler, which can acquired using `rustup toolchain install nightly`. To show the symbols for the resulting stacktrace it is also convenient to install `llvm-symbolizer`, for example using `sudo apt install llvm` on Ubuntu. Afterwards, the tests can be executed with the address sanitizer enabled using `cargo +nightly xtask address-sanitizer`. Similarly, we also provide a task for the thread sanitizer to detect data races, which can be executed by `cargo +nightly xtask thread-sanitizer`.
+All `xtask` targets use `cargo nextest run`, so that must be installed prior. 
+
+# Additional checks
+
+To check for additional undefined behaviour at runtime we can also employ the `cargo careful` [project](https://github.com/RalfJung/cargo-careful). It compiles the standard library in nightly with many additional checks for undefined behaviour, because we cannot use [Miri](https://github.com/rust-lang/miri) due to the FFI calls. It can also be installed with `cargo install cargo-careful` and requires the nightly toolchain. Then it can be executed with `cargo +nightly careful nextest run --target=x86_64-unknown-linux-gnu` (or `test` when `nextest` has not been installed).
 
 ## Benchmarks
 
@@ -27,11 +36,6 @@ Micro-benchmarks can be executed using `cargo bench`. Additionally, we can also 
 ## Code Generation
 
 There are a few procedural macros used to replace the code generation performed in the mCRL2 toolset. Working on procedural macros is typically difficult, but there are unit and integration tests to showcase common patterns. Alternatively, install `cargo install cargo-expand` and run the command `cargo expand` in for example `libraries/mcrl2-macros` to print the Rust code with the macros expanded.
-
-## LLVM Sanitizer
-
-For Linux targets it is also possible to run the LLVM address sanitizer to detect memory issues in unsafe and C++ code. This requires the nightly version of the rust compiler, which can acquired using `rustup toolchain install nightly`. To show the symbols for the resulting stacktrace it is also convenient to install `llvm-symbolizer`, for example using `sudo apt install llvm` on Ubuntu. Afterwards, the tests can be executed with the address sanitizer enabled using `cargo +nightly xtask address-sanitizer`. Similarly, we also provide a task for the thread sanitizer to detect data races, which can be executed by `cargo +nightly xtask thread-sanitizer`.
-All `xtask` targets use `cargo nextest run` so that must be installed prior. 
 
 ## Code Coverage
 
