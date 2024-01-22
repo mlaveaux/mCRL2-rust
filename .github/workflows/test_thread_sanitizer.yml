@@ -1,4 +1,4 @@
-name: Test Address Sanitizer
+name: Test Thread Sanitizer
 
 on:
   push:
