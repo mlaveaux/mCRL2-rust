@@ -1,6 +1,6 @@
 //! Module for storing positions of terms
 use core::fmt;
-use mcrl2::{aterm::{ATermTrait, ATermRef}, data::DataExpressionRef};
+use mcrl2::{aterm::{ATermTrait, ATermRef}};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 

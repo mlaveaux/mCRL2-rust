@@ -1,4 +1,4 @@
-use std::{fmt, ops::Deref};
+use std::fmt;
 
 use itertools::Itertools;
 use mcrl2::{aterm::{ATermRef, ATermTrait, Markable, Protected, Protector, TermPool, Todo}, data::{is_data_expression, is_data_variable, DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef}};
