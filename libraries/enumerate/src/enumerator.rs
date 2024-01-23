@@ -101,9 +101,9 @@ mod tests {
         let rewriter = Rc::new(InnermostRewriter::new(tp.clone(), &data_spec.clone().into()));
         let enumerator = Enumerator::new(tp.clone(), data_spec.clone(), rewriter);
 
-        let expression = data_spec.parse("x");
+        let expression = data_spec.parse_variable("v: Peano").unwrap();
 
-        enumerator.enumerate(expression);
+        enumerator.enumerate(expression.into());
 
     }
 }

@@ -24,7 +24,7 @@ pub fn load_case(
     let expressions: Vec<DataExpression> = expressions_text
         .lines()
         .take(max_number_expressions)
-        .map(|x| data_spec.parse(x))
+        .map(|x| data_spec.parse(x).unwrap())
         .collect();
 
     (data_spec, expressions)

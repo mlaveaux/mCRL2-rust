@@ -9,6 +9,7 @@ measure-allocs = []
 
 [dependencies]
 anyhow = "1.0"
+jemallocator = "0.5"
 mcrl2 = { path = "../../libraries/mcrl2" }
 rec-tests = { path = "../../libraries/rec-tests" }
 sabre = { path = "../../libraries/sabre" }
