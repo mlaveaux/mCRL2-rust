@@ -92,5 +92,5 @@ fn rewriter_test_release(data_spec: &str, expressions: &str, expected_result: &s
 // #[test_case(include_str!("../../../examples/REC/mcrl2/tak18.dataspec"), include_str!("../../../examples/REC/mcrl2/tak18.expressions"), include_str!("snapshot/result_tak18.txt") ; "tak18")]
 // #[test_case(include_str!("../../../examples/REC/mcrl2/tricky.dataspec"), include_str!("../../../examples/REC/mcrl2/tricky.expressions"), include_str!("snapshot/result_tricky.txt") ; "tricky")]
 fn rewriter_test_release_unix(data_spec: &str, expressions: &str, expected_result: &str) {
-
+    rewriter_test(data_spec, expressions, expected_result);
 }

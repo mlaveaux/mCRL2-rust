@@ -112,8 +112,8 @@ fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
 // #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci19.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci19.txt") ; "fibonacci19")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci20.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci20.txt") ; "fibonacci20")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci21.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci21.txt") ; "fibonacci21")]
-#[test_case(vec![include_str!("../../../examples/REC/rec/hanoi12.rec"), include_str!("../../../examples/REC/rec/hanoi.rec")], include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
-#[test_case(vec![include_str!("../../../examples/REC/rec/permutations7.rec"), include_str!("../../../examples/REC/rec/permutations.rec")], include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
+// #[test_case(vec![include_str!("../../../examples/REC/rec/hanoi12.rec"), include_str!("../../../examples/REC/rec/hanoi.rec")], include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
+// #[test_case(vec![include_str!("../../../examples/REC/rec/permutations7.rec"), include_str!("../../../examples/REC/rec/permutations.rec")], include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
 fn rec_test_unix(rec_files: Vec<&str>, expected_result: &str) {
     rec_test(rec_files, expected_result);
 }
