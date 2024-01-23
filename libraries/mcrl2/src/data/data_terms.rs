@@ -113,6 +113,11 @@ mod inner {
         }
     }
 
+    impl From<DataVariable> for DataExpression {
+        fn from(value: DataVariable) -> DataExpression {
+            value.term.into()
+        }
+    }
 
     impl fmt::Display for DataExpression {        
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

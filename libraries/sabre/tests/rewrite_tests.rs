@@ -26,14 +26,14 @@ use sabre::{InnermostRewriter, RewriteEngine};
 fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
     let spec = DataSpecification::new(data_spec).unwrap();
-    let terms: Vec<DataExpression> = expressions.lines().map(|text| spec.parse(text)).collect();
+    let terms: Vec<DataExpression> = expressions.lines().map(|text| spec.parse(text).unwrap()).collect();
 
     // let mut sa = SabreRewriter::new(tp.clone(), &spec.clone().into());
     let mut inner = InnermostRewriter::new(tp.clone(), &spec.clone().into());
     let mut expected = expected_result.split('\n');
 
     for term in &terms {
-        let expected_result = spec.parse(expected.next().unwrap());
+        let expected_result = spec.parse(expected.next().unwrap()).unwrap();
 
         let result = inner.rewrite(term.clone());
         assert_eq!(

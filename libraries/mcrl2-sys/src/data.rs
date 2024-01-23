@@ -26,7 +26,13 @@ pub mod ffi {
         fn parse_data_expression(
             text: &str,
             data_spec: &data_specification,
-        ) -> UniquePtr<aterm>;
+        ) -> Result<UniquePtr<aterm>>;
+
+        /// Parses the given text v: Sort as a variable and typechecks it using the given data specification
+        fn parse_variable(
+            text: &str,
+            data_spec: &data_specification,
+        ) -> Result<UniquePtr<aterm>>;
 
         /// Returns the data equations for the given specification.
         fn get_data_specification_equations(data_spec: &data_specification) -> UniquePtr<CxxVector<aterm>>;

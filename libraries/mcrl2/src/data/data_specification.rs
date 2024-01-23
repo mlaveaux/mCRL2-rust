@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
 
 use crate::aterm::{ATerm, ATermList, ATermTrait, ATermRef};
@@ -19,10 +21,16 @@ impl DataSpecification {
         })
     }
 
-    /// Parses the given data expression as text into a term
-    pub fn parse(&self, text: &str) -> DataExpression {
-        let term: ATerm = ffi::parse_data_expression(text, &self.data_spec).into();
-        term.into()
+    /// Parses the given text as a data expression for the spec.
+    pub fn parse(&self, text: &str) -> Result<DataExpression, Box<dyn Error>> {
+        let term: ATerm = ffi::parse_data_expression(text, &self.data_spec)?.into();
+        Ok(term.into())
+    }
+
+    /// Parses the given text as a data variable for the spec.
+    pub fn parse_variable(&self, text: &str) -> Result<DataVariable, Box<dyn Error>> {
+        let term: ATerm = ffi::parse_variable(text, &self.data_spec)?.into();
+        Ok(term.into())
     }
 
     /// Returns the equations of the data specification.

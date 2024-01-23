@@ -33,7 +33,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
 
     // Read and convert the terms
     let terms: Vec::<DataExpression> = BufReader::new(file).lines().map(|x| {
-        data_spec.parse(&x.unwrap())
+        data_spec.parse(&x.unwrap()).unwrap()
     }).collect();
 
     match rewriter {

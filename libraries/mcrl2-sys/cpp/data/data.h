@@ -35,6 +35,12 @@ std::unique_ptr<atermpp::aterm> parse_data_expression(const rust::Str text, cons
       static_cast<const atermpp::aterm&>(parse_data_expression(std::string(text), spec)));
 }
 
+std::unique_ptr<atermpp::aterm> parse_variable(const rust::Str text, const data_specification& spec)
+{
+  return std::make_unique<atermpp::aterm>(
+      static_cast<const atermpp::aterm&>(mcrl2::data::parse_variable(std::string(text), spec)));
+}
+
 std::unique_ptr<detail::RewriterJitty> create_jitty_rewriter(const data_specification& spec)
 {
   return std::make_unique<detail::RewriterJitty>(detail::RewriterJitty(spec, data::used_data_equation_selector(spec)));
