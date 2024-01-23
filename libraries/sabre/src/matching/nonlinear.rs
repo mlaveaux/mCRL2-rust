@@ -3,7 +3,7 @@ use std::fmt;
 use itertools::Itertools;
 use mcrl2::{data::{DataVariable, DataVariableRef, is_data_variable}, aterm::ATermRef};
 
-use crate::{utilities::{ExplicitPosition, get_position, PositionIterator}, Rule};
+use crate::{utilities::{ExplicitPosition, PositionIndexed, PositionIterator}, Rule};
 
 /// An equivalence class is a variable with (multiple) positions. This is
 /// necessary for non-linear patterns.
@@ -45,7 +45,7 @@ pub fn check_equivalence_classes(term: &ATermRef<'_>, eqs: &[EquivalenceClass]) 
         // The term at the first position must be equivalent to all other positions.
         let mut iter_pos = ec.positions.iter();
         let first = iter_pos.next().unwrap();
-        iter_pos.all(|other_pos| get_position(term, first) == get_position(term, other_pos))
+        iter_pos.all(|other_pos| term.get_position(first) == term.get_position(other_pos))
     })
 }
 

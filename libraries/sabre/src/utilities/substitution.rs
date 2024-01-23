@@ -96,7 +96,7 @@ pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHas
 
 #[cfg(test)]
 mod tests {
-    use crate::utilities::{get_position, ExplicitPosition};
+    use crate::utilities::{ExplicitPosition, PositionIndexed};
 
     use super::*;
 
@@ -113,7 +113,7 @@ mod tests {
         // Check that indeed the new term as a 0 at position 1.1.
         assert_eq!(
             t0,
-            get_position(&result, &ExplicitPosition::new(&vec![1, 1])).protect()
+            result.get_position(&ExplicitPosition::new(&vec![1, 1])).protect()
         );
     }
 

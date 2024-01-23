@@ -40,7 +40,7 @@ pub struct ExplicitNode {
 
 use SemiCompressedTermTree::*;
 
-use super::{get_position, PositionIterator};
+use super::{PositionIndexed, PositionIterator};
 
 impl SemiCompressedTermTree {
     /// Given an [ATerm] and a term pool this function instantiates the SCTT and computes a [ATerm].
@@ -65,7 +65,7 @@ impl SemiCompressedTermTree {
                         Ok(Yield::Construct(&node.head))
                     }
                     Compressed(ct) => Ok(Yield::Term(ct.clone())),
-                    Variable(p) => Ok(Yield::Term(get_position(t, p).protect())),
+                    Variable(p) => Ok(Yield::Term(t.get_position(p).protect())),
                 }
             }, 
             |tp, symbol, args| { Ok(tp.create(symbol, args)) } ).unwrap()

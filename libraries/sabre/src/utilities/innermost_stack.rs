@@ -1,9 +1,9 @@
 use std::{fmt, ops::Deref};
 
 use itertools::Itertools;
-use mcrl2::{aterm::{ATerm, ATermRef, ATermTrait, Markable, Protected, Protector, TermPool, Todo}, data::{is_data_expression, is_data_variable, DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef}};
+use mcrl2::{aterm::{ATermRef, ATermTrait, Markable, Protected, Protector, TermPool, Todo}, data::{is_data_expression, is_data_variable, DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef}};
 
-use crate::{utilities::get_position, Rule};
+use crate::{utilities::PositionIndexed, Rule};
 
 use super::{ExplicitPosition, PositionIterator, create_var_map};
 
@@ -65,12 +65,12 @@ impl InnermostStack {
         if rhs_stack.stack_size == 1 && rhs_stack.variables.len() == 1{
             // This is a special case where we place the result on the correct position immediately.
             // The right hand side is only a variable
-            let t: ATermRef<'_> = write_terms.protect(&get_position(term.deref(), &rhs_stack.variables[0].0));
+            let t: ATermRef<'_> = write_terms.protect(&term.get_position(&rhs_stack.variables[0].0));
             write_terms[result_index] = t.into();
         } else {
             for (position, index) in &rhs_stack.variables {
                 // Add the positions to the stack.
-                let t = write_terms.protect(&get_position(term.deref(), position));
+                let t = write_terms.protect(&term.get_position(position));
                 write_terms[top_of_stack + index - 1] = t.into();
             }
         }

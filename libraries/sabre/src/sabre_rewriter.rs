@@ -9,7 +9,7 @@ use mcrl2::{
 use crate::{
     matching::nonlinear::check_equivalence_classes,
     set_automaton::{MatchAnnouncement, SetAutomaton},
-    utilities::{get_position, AnnouncementSabre, ConfigurationStack, SideInfo, SideInfoType},
+    utilities::{AnnouncementSabre, ConfigurationStack, PositionIndexed, SideInfo, SideInfoType},
     RewriteSpecification,
 };
 
@@ -141,11 +141,7 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos: DataExpressionRef = get_position(
-                                leaf_term.deref(),
-                                &automaton.states[leaf.state].label,
-                            )
-                            .into();
+                            let pos: DataExpressionRef = leaf_term.get_position(&automaton.states[leaf.state].label).into();
 
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
@@ -304,7 +300,7 @@ impl SabreRewriter {
         let new_subterm = annotation
             .semi_compressed_rhs
             .evaluate(
-                &get_position(leaf_subterm.deref(), &announcement.position),
+                &leaf_subterm.get_position(&announcement.position),
                 tp,
             )
             .into();
@@ -330,7 +326,7 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &annotation.conditions {
-            let subterm = get_position(subterm.deref(), &announcement.position);
+            let subterm = subterm.get_position(&announcement.position);
 
             let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&subterm, tp).into();
             let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&subterm, tp).into();

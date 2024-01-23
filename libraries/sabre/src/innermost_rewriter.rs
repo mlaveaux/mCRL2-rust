@@ -1,30 +1,39 @@
-use std::{cell::RefCell, rc::Rc, ops::Deref};
+use std::{cell::RefCell, ops::Deref, rc::Rc};
 
-use log::{trace, info, debug};
+use log::{debug, info, trace};
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait},
-    data::{DataExpressionRef, DataExpression, DataApplication},
+    aterm::{ATerm, ATermTrait, TermPool},
+    data::{DataApplication, DataExpression, DataExpressionRef},
 };
 
 use crate::{
-    matching::{nonlinear::{check_equivalence_classes, derive_equivalence_classes, EquivalenceClass}, conditions::{extend_conditions, EMACondition}}, set_automaton::{MatchAnnouncement, SetAutomaton}, utilities::{get_position, Config, InnermostStack, RHSStack}, RewriteEngine, RewriteSpecification, RewritingStatistics, Rule
+    matching::{
+        conditions::{extend_conditions, EMACondition},
+        nonlinear::{check_equivalence_classes, derive_equivalence_classes, EquivalenceClass},
+    },
+    set_automaton::{MatchAnnouncement, SetAutomaton},
+    utilities::{Config, InnermostStack, PositionIndexed, RHSStack},
+    RewriteEngine, RewriteSpecification, RewritingStatistics, Rule,
 };
 
 impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
 
-        let result = InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &self.apma, t, &mut stats);
-        info!("{} rewrites, {} single steps and {} symbol comparisons", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        let result =
+            InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &self.apma, t, &mut stats);
+        info!(
+            "{} rewrites, {} single steps and {} symbol comparisons",
+            stats.recursions, stats.rewrite_steps, stats.symbol_comparisons
+        );
         result
     }
 }
 
 impl InnermostRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> InnermostRewriter {
+        let apma = SetAutomaton::new(spec, AnnouncementInnermost::new, true);
 
-        let apma =  SetAutomaton::new(spec, AnnouncementInnermost::new, true);
-        
         info!("ATerm pool: {}", tp.borrow());
         InnermostRewriter {
             tp: tp.clone(),
@@ -44,13 +53,13 @@ impl InnermostRewriter {
 
         stats.recursions += 1;
 
-        let mut stack = InnermostStack::default();        
-        let mut write_terms =  stack.terms.write();
-        let mut write_configs =  stack.configs.write();
+        let mut stack = InnermostStack::default();
+        let mut write_terms = stack.terms.write();
+        let mut write_configs = stack.configs.write();
         write_terms.push(DataExpressionRef::default());
         InnermostStack::add_rewrite(&mut write_configs, &mut write_terms, term.copy(), 0);
         drop(write_terms);
-        drop(write_configs);        
+        drop(write_configs);
 
         loop {
             trace!("{}", stack);
@@ -72,9 +81,19 @@ impl InnermostRewriter {
                         }
 
                         let symbol = write_configs.protect(&symbol.into());
-                        InnermostStack::add_result(&mut write_configs, symbol.into(), arguments.len(), result);
+                        InnermostStack::add_result(
+                            &mut write_configs,
+                            symbol.into(),
+                            arguments.len(),
+                            result,
+                        );
                         for (offset, arg) in arguments.into_iter().enumerate() {
-                            InnermostStack::add_rewrite(&mut write_configs, &mut write_terms, arg.into(), top_of_stack + offset);
+                            InnermostStack::add_rewrite(
+                                &mut write_configs,
+                                &mut write_terms,
+                                arg.into(),
+                                top_of_stack + offset,
+                            );
                         }
                     }
                     Config::Construct(symbol, arity, index) => {
@@ -95,9 +114,20 @@ impl InnermostRewriter {
 
                         match InnermostRewriter::find_match(tp, automaton, &term, stats) {
                             Some((announcement, annotation)) => {
-                                debug!("rewrite {} => {} using rule {}", term, annotation.rhs_stack.evaluate(tp, &term), announcement.rule);
+                                debug!(
+                                    "rewrite {} => {} using rule {}",
+                                    term,
+                                    annotation.rhs_stack.evaluate(tp, &term),
+                                    announcement.rule
+                                );
 
-                                InnermostStack::integrate(&mut write_configs, &mut write_terms, &annotation.rhs_stack, &term, index);
+                                InnermostStack::integrate(
+                                    &mut write_configs,
+                                    &mut write_terms,
+                                    &annotation.rhs_stack,
+                                    &term,
+                                    index,
+                                );
                                 stats.rewrite_steps += 1;
                             }
                             None => {
@@ -132,9 +162,7 @@ impl InnermostRewriter {
             "Expect exactly one term on the result stack"
         );
 
-        let mut write_terms = stack
-            .terms
-            .write();
+        let mut write_terms = stack.terms.write();
 
         write_terms
             .pop()
@@ -156,11 +184,14 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let pos: DataExpressionRef = get_position(t.deref(), &state.label).into();
+            let pos: DataExpressionRef = t.get_position(&state.label).into();
             let symbol = pos.data_function_symbol();
 
             // Get the transition for the label and check if there is a pattern match
-            if let Some(transition) = automaton.transitions.get(&(state_index, symbol.operation_id())) {
+            if let Some(transition) = automaton
+                .transitions
+                .get(&(state_index, symbol.operation_id()))
+            {
                 for (announcement, annotation) in &transition.announcements {
                     if check_equivalence_classes(t, &annotation.equivalence_classes)
                         && InnermostRewriter::check_conditions(tp, automaton, t, annotation, stats)
@@ -235,7 +266,7 @@ impl AnnouncementInnermost {
         AnnouncementInnermost {
             conditions: extend_conditions(rule),
             equivalence_classes: derive_equivalence_classes(rule),
-            rhs_stack: RHSStack::new(rule)
+            rhs_stack: RHSStack::new(rule),
         }
     }
 }
@@ -245,12 +276,13 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use ahash::AHashSet;
-    use mcrl2::aterm::{TermPool, random_term};
+    use mcrl2::aterm::{random_term, TermPool};
 
     use test_log::test;
 
     use crate::{
-        utilities::to_untyped_data_expression, InnermostRewriter, RewriteEngine, RewriteSpecification,
+        utilities::to_untyped_data_expression, InnermostRewriter, RewriteEngine,
+        RewriteSpecification,
     };
 
     #[test]

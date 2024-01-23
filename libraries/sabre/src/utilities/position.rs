@@ -1,6 +1,6 @@
 //! Module for storing positions of terms
 use core::fmt;
-use mcrl2::aterm::{ATermTrait, ATermRef};
+use mcrl2::{aterm::{ATermTrait, ATermRef}, data::DataExpressionRef};
 use smallvec::{smallvec, SmallVec};
 use std::collections::VecDeque;
 
@@ -37,15 +37,26 @@ impl ExplicitPosition {
     }
 }
 
-/// Returns the subterm at the specific position
-pub fn get_position<'a>(term: &'a impl ATermTrait, position: &ExplicitPosition) -> ATermRef<'a> {
-    let mut result = term.copy();
+impl PositionIndexed for ATermRef<'_> {
+    type Target<'a> = ATermRef<'a> where Self: 'a;
 
-    for index in &position.indices {
-        result = result.arg(index - 1).upgrade(&result); // Note that positions are 1 indexed.
+    fn get_position<'a>(&'a self, position: &ExplicitPosition) -> Self::Target<'a> {
+        let mut result = self.copy();
+
+        for index in &position.indices {
+            result = result.arg(index - 1).upgrade(&self); // Note that positions are 1 indexed.
+        }
+        
+        result
     }
-    
-    result
+}
+
+pub trait PositionIndexed {
+    type Target<'a>
+        where Self: 'a;
+
+    /// Returns the Target at the given position.
+    fn get_position<'a>(&'a self, position: &ExplicitPosition) -> Self::Target<'a>;
 }
 
 impl fmt::Display for ExplicitPosition {
@@ -121,7 +132,7 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
-        assert_eq!(get_position(&t, &ExplicitPosition::new(&[1, 1])), expected.copy());
+        assert_eq!(t.get_position(&ExplicitPosition::new(&[1, 1])), expected.copy());
     }
 
     #[test]
@@ -130,7 +141,7 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         for (term, pos) in PositionIterator::new(t.copy()) {
-            assert_eq!(get_position(&t, &pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
+            assert_eq!(t.get_position(&pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
         }
 
         assert_eq!(

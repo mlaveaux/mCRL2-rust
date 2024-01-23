@@ -10,7 +10,7 @@ use crate::Rule;
 use mcrl2::aterm::{Protected, TermPool};
 use mcrl2::data::{DataExpression, DataExpressionRef};
 
-use super::{create_var_map, get_position, substitute_with, SemiCompressedTermTree, SubstitutionBuilder};
+use super::{create_var_map, substitute_with, PositionIndexed, SemiCompressedTermTree, SubstitutionBuilder};
 
 /// This is the announcement for Sabre, which stores additional information about the rewrite rules.
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -155,7 +155,7 @@ impl<'a> ConfigurationStack<'a> {
 
         // Push the term belonging to the leaf.
         let mut write_terms = self.terms.write();
-        let t = write_terms.protect(&get_position(write_terms[c].deref(), pos));
+        let t = write_terms.protect(&write_terms[c].get_position(pos));
         write_terms.push(t.into());
 
         self.current_node = Some(c + 1);
@@ -293,7 +293,7 @@ impl<'a> ConfigurationStack<'a> {
             None => false,
             Some(si) => si.corresponding_configuration == leaf_index,
         };
-        
+
         if should_pop {
             Some(stack.pop().unwrap().info)
         } else {
