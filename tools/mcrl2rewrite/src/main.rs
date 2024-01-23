@@ -13,6 +13,10 @@ mod counting_allocator;
 #[global_allocator]
 static A: counting_allocator::AllocCounter = counting_allocator::AllocCounter;
 
+#[cfg(not(feature = "measure-allocs"))]
+#[global_allocator] 
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "Maurice Laveaux",
