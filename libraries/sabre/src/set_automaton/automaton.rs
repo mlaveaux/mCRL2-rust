@@ -17,7 +17,7 @@ use crate::{
     utilities::ExplicitPosition,
 };
 
-use super::{EnhancedMatchAnnouncement, MatchAnnouncement, MatchGoal};
+use super::MatchGoal;
 
 // The Set Automaton used to find all matching patterns in a term. Based on the
 // following article. Implemented by Mark Bouwman, and adapted by Maurice
@@ -27,15 +27,22 @@ use super::{EnhancedMatchAnnouncement, MatchAnnouncement, MatchGoal};
 // Matches in a Term. In: Cerone, A., Ölveczky, P.C. (eds) Theoretical Aspects
 // of Computing – ICTAC 2021. ICTAC 2021. Lecture Notes in Computer Science(),
 // vol 12819. Springer, Cham. https://doi.org/10.1007/978-3-030-85315-0_5
-pub struct SetAutomaton {
+pub struct SetAutomaton<T> {
     pub(crate) states: Vec<State>,
-    pub(crate) transitions: HashMap<(usize, usize), Transition>,
+    pub(crate) transitions: HashMap<(usize, usize), Transition<T>>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Transition {
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) struct MatchAnnouncement {
+    pub rule: Rule,
+    pub position: ExplicitPosition,
+    pub symbols_seen: usize,
+}
+
+#[derive(Clone)]
+pub struct Transition<T> {
     pub(crate) symbol: DataFunctionSymbol,
-    pub(crate) announcements: SmallVec<[EnhancedMatchAnnouncement; 1]>,
+    pub(crate) announcements: SmallVec<[(MatchAnnouncement, T); 1]>,
     pub(crate) destinations: SmallVec<[(ExplicitPosition, usize); 1]>,
 }
 
@@ -51,8 +58,8 @@ enum GoalsOrInitial {
     Goals(Vec<MatchGoal>),
 }
 
-impl SetAutomaton {
-    pub fn new(spec: &RewriteSpecification, apma: bool) -> SetAutomaton {
+impl<M> SetAutomaton<M> {
+    pub fn new(spec: &RewriteSpecification, annotate: impl Fn(&Rule) -> M, apma: bool) -> SetAutomaton<M> {
         let start = Instant::now();
 
         info!("Specification: \n{}", spec);
@@ -132,23 +139,15 @@ impl SetAutomaton {
         while let Some(s_index) = queue.pop_front() {
 
             for (symbol, arity) in &symbols {
-                let (outputs, pos_to_goals) = states.get(s_index).unwrap().derive_transition(
-                        symbol,
-                        *arity,
-                        &supported_rules,
-                        apma,
-                    );                    
-
-                // Associate an EnhancedMatchAnnouncement to every transition
-                let mut announcements: SmallVec<[EnhancedMatchAnnouncement; 1]> = outputs
-                    .into_iter()
-                    .map(|x| {
-                        EnhancedMatchAnnouncement::new(x)
-                    })
-                    .collect();
-
-                announcements.sort_by(|ema1, ema2| {
-                    ema1.announcement.position.cmp(&ema2.announcement.position)
+                let (mut announcements, pos_to_goals) = states.get(s_index).unwrap().derive_transition(
+                    symbol,
+                    *arity,
+                    &supported_rules,
+                    apma,
+                );
+                    
+                announcements.sort_by(|ma1, ma2| {
+                    ma1.position.cmp(&ma2.position)
                 });
 
                 // For the destinations we convert the match goal destinations to states
@@ -176,6 +175,12 @@ impl SetAutomaton {
                         destinations.push((pos, 0));
                     }
                 }
+
+                // Add the annotation for every match announcement.
+                let announcements = announcements.into_iter().map(|ma| {
+                    let annotation = annotate(&ma.rule);
+                    (ma, annotation)
+                }).collect();
 
                 // Add the resulting outgoing transition to the state.
                 debug_assert!(!&transitions.contains_key(&(s_index, symbol.operation_id())), "Set automaton should not contain duplicated transitions");

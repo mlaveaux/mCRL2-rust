@@ -249,7 +249,7 @@ mod tests {
         let t = write.protect(&DataFunctionSymbol::new(&mut tp, "s").copy().into());
         write.push(Config::Construct(t.into(), 1, 1));
 
-        let t = write.protect(&DataFunctionSymbol::new(&mut tp, "face").copy().into());
+        let t = write.protect(&DataFunctionSymbol::new(&mut tp, "fact").copy().into());
         write.push(Config::Construct(t.into(), 1, 2));
         drop(write);
 

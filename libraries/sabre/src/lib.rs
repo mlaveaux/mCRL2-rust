@@ -7,6 +7,7 @@ pub mod set_automaton;
 pub mod sabre_rewriter;
 pub mod utilities;
 pub mod rewrite_specification;
+pub mod matching;
 
 #[cfg(test)]
 pub mod test_utility;

@@ -67,13 +67,13 @@ pub fn criterion_benchmark_set_automaton(c: &mut Criterion) {
 
         c.bench_function(&format!("set automaton {}", name), |bencher| {
             bencher.iter(|| {
-                let _ = black_box(SetAutomaton::new(&result, false));
+                let _ = black_box(SetAutomaton::new(&result, |x| { () }, false));
             });
         });
 
         c.bench_function(&format!("apma automaton {}", name), |bencher| {
             bencher.iter(|| {
-                let _ = black_box(SetAutomaton::new(&result, true));
+                let _ = black_box(SetAutomaton::new(&result, |x| { () }, true));
             });
         });
     }

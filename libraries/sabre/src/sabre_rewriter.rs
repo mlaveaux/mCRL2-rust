@@ -1,15 +1,18 @@
-use std::{cell::RefCell, rc::Rc, ops::Deref};
+use std::{cell::RefCell, ops::Deref, rc::Rc};
 
-use log::{debug, trace, info};
-use mcrl2::{aterm::TermPool, data::{DataExpressionRef, DataExpression}};
+use log::{debug, info, trace};
+use mcrl2::{
+    aterm::TermPool,
+    data::{DataExpression, DataExpressionRef},
+};
 
 use crate::{
-    RewriteSpecification,
-    set_automaton::{
-        check_equivalence_classes, EnhancedMatchAnnouncement,
-        SetAutomaton,
+    matching::nonlinear::check_equivalence_classes,
+    set_automaton::{MatchAnnouncement, SetAutomaton},
+    utilities::{
+        get_position, AnnouncementSabre, ConfigurationStack, SideInfo, SideInfoType
     },
-    utilities::{get_position, ConfigurationStack, SideInfo, SideInfoType},
+    RewriteSpecification,
 };
 
 /// A shared trait for all the rewriters
@@ -21,18 +24,18 @@ pub trait RewriteEngine {
 #[derive(Default)]
 pub struct RewritingStatistics {
     /// Count the number of rewrite rules applied
-    pub rewrite_steps: usize, 
+    pub rewrite_steps: usize,
     /// Counts the number of times symbols are compared.
-    pub symbol_comparisons: usize, 
+    pub symbol_comparisons: usize,
     /// The number of times rewrite is called recursively (to rewrite conditions etc)
-    pub recursions: usize, 
+    pub recursions: usize,
 }
 
 // A set automaton based rewrite engine described in  Mark Bouwman, Rick Erkens:
 // Term Rewriting Based On Set Automaton Matching. CoRR abs/2202.08687 (2022)
 pub struct SabreRewriter {
     term_pool: Rc<RefCell<TermPool>>,
-    automaton: SetAutomaton,
+    automaton: SetAutomaton<AnnouncementSabre>,
 }
 
 impl RewriteEngine for SabreRewriter {
@@ -43,8 +46,8 @@ impl RewriteEngine for SabreRewriter {
 
 impl SabreRewriter {
     pub fn new(tp: Rc<RefCell<TermPool>>, spec: &RewriteSpecification) -> Self {
+        let automaton = SetAutomaton::new(spec, AnnouncementSabre::new, false);
 
-        let automaton =  SetAutomaton::new(spec, false);
         info!("ATerm pool: {}", tp.borrow());
         SabreRewriter {
             term_pool: tp.clone(),
@@ -55,14 +58,17 @@ impl SabreRewriter {
     /// Function to rewrite a term. See the module documentation.
     pub fn stack_based_normalise(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
-        
+
         let result = SabreRewriter::stack_based_normalise_aux(
             &mut self.term_pool.borrow_mut(),
             &self.automaton,
             t,
             &mut stats,
         );
-        info!("{} rewrites, {} single steps and {} symbol comparisons", stats.recursions, stats.rewrite_steps, stats.symbol_comparisons);
+        info!(
+            "{} rewrites, {} single steps and {} symbol comparisons",
+            stats.recursions, stats.rewrite_steps, stats.symbol_comparisons
+        );
         result
     }
 
@@ -70,7 +76,7 @@ impl SabreRewriter {
     /// We can now mutate the term pool and read the state and transition information at the same time
     fn stack_based_normalise_aux(
         tp: &mut TermPool,
-        automaton: &SetAutomaton,
+        automaton: &SetAutomaton<AnnouncementSabre>,
         t: DataExpression,
         stats: &mut RewritingStatistics,
     ) -> DataExpression {
@@ -137,7 +143,11 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos: DataExpressionRef = get_position(leaf_term.deref(), &automaton.states[leaf.state].label).into();
+                            let pos: DataExpressionRef = get_position(
+                                leaf_term.deref(),
+                                &automaton.states[leaf.state].label,
+                            )
+                            .into();
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
 
@@ -149,25 +159,20 @@ impl SabreRewriter {
                                 drop(read_terms);
 
                                 // Loop over the match announcements of the transition
-                                for ema in &tr.announcements {
-                                    if ema.conditions.is_empty()
-                                        && ema.equivalence_classes.is_empty()
+                                for (announcement, annotation) in &tr.announcements {
+                                    if annotation.conditions.is_empty()
+                                        && annotation.equivalence_classes.is_empty()
                                     {
-                                        if ema.is_duplicating {
+                                        if annotation.is_duplicating {
                                             // We do not want to apply duplicating rules straight away
                                             cs.side_branch_stack.push(SideInfo {
                                                 corresponding_configuration: leaf_index,
-                                                info: SideInfoType::DelayedRewriteRule(ema),
+                                                info: SideInfoType::DelayedRewriteRule(announcement, annotation),
                                             });
                                         } else {
                                             // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
                                             SabreRewriter::apply_rewrite_rule(
-                                                tp,
-                                                automaton,
-                                                ema,
-                                                leaf_index,
-                                                &mut cs,
-                                                stats,
+                                                tp, automaton, announcement, annotation, leaf_index, &mut cs, stats,
                                             );
                                             break 'skip_point;
                                         }
@@ -175,7 +180,7 @@ impl SabreRewriter {
                                         // We delay the condition checks
                                         cs.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
-                                            info: SideInfoType::EquivalenceAndConditionCheck(ema),
+                                            info: SideInfoType::EquivalenceAndConditionCheck(announcement, annotation),
                                         });
                                     }
                                 }
@@ -195,7 +200,7 @@ impl SabreRewriter {
                                     let tr_slice = tr.destinations.as_slice();
                                     cs.grow(leaf_index, tr_slice);
                                 }
-                            } else {                       
+                            } else {
                                 drop(read_terms);
 
                                 // There is no outgoing edges for the head symbol of this term and the stack is empty.
@@ -203,42 +208,31 @@ impl SabreRewriter {
                                 return cs.compute_final_term(tp);
                             }
                         }
-                        Some(sit) => {     
-
+                        Some(sit) => {
                             match sit {
                                 SideInfoType::SideBranch(sb) => {
-                                    // If there is a SideBranch pick the next child configuration                       
+                                    // If there is a SideBranch pick the next child configuration
                                     drop(read_terms);
                                     cs.grow(leaf_index, sb);
                                 }
-                                SideInfoType::DelayedRewriteRule(ema) => {                                                           
+                                SideInfoType::DelayedRewriteRule(announcement, annotation) => {
                                     drop(read_terms);
                                     // apply the delayed rewrite rule
                                     SabreRewriter::apply_rewrite_rule(
-                                        tp,
-                                        automaton,
-                                        ema,
-                                        leaf_index,
-                                        &mut cs,
-                                        stats,
+                                        tp, automaton, announcement, annotation, leaf_index, &mut cs, stats,
                                     );
                                 }
-                                SideInfoType::EquivalenceAndConditionCheck(ema) => {
+                                SideInfoType::EquivalenceAndConditionCheck(announcement, annotation) => {
                                     // Apply the delayed rewrite rule if the conditions hold
                                     if check_equivalence_classes(
                                         leaf_term,
-                                        &ema.equivalence_classes,
+                                        &annotation.equivalence_classes,
                                     ) && SabreRewriter::conditions_hold(
-                                        tp, automaton, ema, leaf_term, stats,
-                                    ) {                                                               
+                                        tp, automaton, announcement, annotation, leaf_term, stats,
+                                    ) {
                                         drop(read_terms);
                                         SabreRewriter::apply_rewrite_rule(
-                                            tp,
-                                            automaton,
-                                            ema,
-                                            leaf_index,
-                                            &mut cs,
-                                            stats,
+                                            tp, automaton, announcement, annotation, leaf_index, &mut cs, stats,
                                         );
                                     }
                                 }
@@ -258,8 +252,9 @@ impl SabreRewriter {
     /// Apply a rewrite rule and prune back
     fn apply_rewrite_rule(
         tp: &mut TermPool,
-        automaton: &SetAutomaton,
-        ema: &EnhancedMatchAnnouncement,
+        automaton: &SetAutomaton<AnnouncementSabre>,
+        announcement: &MatchAnnouncement,
+        annotation: &AnnouncementSabre,
         leaf_index: usize,
         cs: &mut ConfigurationStack<'_>,
         stats: &mut RewritingStatistics,
@@ -270,31 +265,36 @@ impl SabreRewriter {
         let leaf_subterm: &DataExpressionRef<'_> = &read_terms[leaf_index];
 
         // Computes the new subterm of the configuration
-        let new_subterm = ema
+        let new_subterm = annotation
             .semi_compressed_rhs
-            .evaluate(&get_position(leaf_subterm.deref(), &ema.announcement.position), tp).into();
+            .evaluate(
+                &get_position(leaf_subterm.deref(), &announcement.position),
+                tp,
+            )
+            .into();
 
         debug!(
             "rewrote {} to {} using rule {}",
-            &leaf_subterm, &new_subterm, ema.announcement.rule
+            &leaf_subterm, &new_subterm, announcement.rule
         );
         drop(read_terms);
 
         // The match announcement tells us how far we need to prune back.
-        let prune_point = leaf_index - ema.announcement.symbols_seen;
+        let prune_point = leaf_index - announcement.symbols_seen;
         cs.prune(tp, automaton, prune_point, new_subterm);
     }
 
     /// Checks conditions and subterm equality of non-linear patterns.
     fn conditions_hold(
         tp: &mut TermPool,
-        automaton: &SetAutomaton,
-        ema: &EnhancedMatchAnnouncement,
+        automaton: &SetAutomaton<AnnouncementSabre>,
+        announcement: &MatchAnnouncement,
+        annotation: &AnnouncementSabre,
         subterm: &DataExpressionRef<'_>,
         stats: &mut RewritingStatistics,
     ) -> bool {
-        for c in &ema.conditions {
-            let subterm = get_position(subterm.deref(), &ema.announcement.position);
+        for c in &annotation.conditions {
+            let subterm = get_position(subterm.deref(), &announcement.position);
 
             let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&subterm, tp).into();
             let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&subterm, tp).into();

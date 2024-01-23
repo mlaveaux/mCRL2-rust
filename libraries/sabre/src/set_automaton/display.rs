@@ -2,26 +2,26 @@ use std::io;
 
 use itertools::Itertools;
 
-use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton, State};
+use crate::set_automaton::{SetAutomaton, State};
 use core::fmt;
 use std::io::Write;
 
-use super::{EquivalenceClass, MatchAnnouncement, MatchGoal, MatchObligation, Transition};
+use super::{MatchAnnouncement, MatchObligation, Transition};
 
-impl fmt::Debug for SetAutomaton {
+impl<M> fmt::Debug for SetAutomaton<M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 /// Implement display for a transition with a term pool
-impl fmt::Display for Transition {
+impl<M> fmt::Display for Transition<M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Transition {{ {}, announce: [{}], dest: [{}] }}",
             self.symbol,
-            self.announcements.iter().format(", "),
+            self.announcements.iter().map(|(x, _)| { x }).format(", "),
             self.destinations.iter().format_with(", ", |element, f| {
                 f(&format_args!("{} -> {}", element.0, element.1))
             })
@@ -42,29 +42,6 @@ impl fmt::Display for MatchObligation {
     }
 }
 
-impl fmt::Display for EquivalenceClass {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}{{ {} }}",
-            self.variable,
-            self.positions.iter().format(", ")
-        )
-    }
-}
-
-impl fmt::Display for EnhancedMatchAnnouncement {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", &self.announcement)?;
-        write!(
-            f,
-            "{{ conditions: [{}], equivalences: [{}] }}",
-            self.announcement.rule.conditions.iter().format(", "),
-            self.equivalence_classes.iter().format(", ")
-        )
-    }
-}
-
 /// Implement display for a state with a term pool
 impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -77,7 +54,7 @@ impl fmt::Display for State {
     }
 }
 
-impl fmt::Display for SetAutomaton {
+impl<M> fmt::Display for SetAutomaton<M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "States: {{")?;
 
@@ -97,7 +74,7 @@ impl fmt::Display for SetAutomaton {
     }
 }
 
-impl SetAutomaton {
+impl<M> SetAutomaton<M> {
     /// Create a .dot file and convert it to a .svg using the dot command
     pub fn to_dot_graph(
         &self,
@@ -129,10 +106,10 @@ impl SetAutomaton {
             let announcements = tr
                 .announcements
                 .iter()
-                .format_with(", ", |announcement, f| {
+                .format_with(", ", |(announcement, _), f| {
                     f(&format_args!(
                         "{}@{}",
-                        announcement.announcement.rule.rhs, announcement.announcement.position
+                        announcement.rule.rhs, announcement.position
                     ))
                 });
 
@@ -165,20 +142,5 @@ impl SetAutomaton {
             }
         }
         writeln!(&mut f, "}}")
-    }
-}
-
-impl fmt::Display for MatchGoal {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut first = true;
-        for obligation in &self.obligations {
-            if !first {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", obligation)?;
-            first = false;
-        }
-
-        write!(f, " ↪ {}", self.announcement)
     }
 }

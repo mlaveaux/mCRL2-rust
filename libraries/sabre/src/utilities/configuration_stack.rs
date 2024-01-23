@@ -1,16 +1,55 @@
 use std::fmt;
 use std::ops::Deref;
 
-use crate::set_automaton::{EnhancedMatchAnnouncement, SetAutomaton};
+use crate::matching::conditions::{extend_conditions, EMACondition};
+use crate::matching::nonlinear::{derive_equivalence_classes, EquivalenceClass};
+use crate::set_automaton::{MatchAnnouncement, SetAutomaton};
 use crate::utilities::ExplicitPosition;
+use crate::Rule;
+
 use mcrl2::aterm::{Protected, TermPool};
 use mcrl2::data::{DataExpression, DataExpressionRef};
 
-use super::{get_position, SubstitutionBuilder, substitute_with};
+use super::{create_var_map, get_position, substitute_with, SemiCompressedTermTree, SubstitutionBuilder};
+
+/// This is the announcement for Sabre, which stores additional information about the rewrite rules.
+#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct AnnouncementSabre {
+    /// Positions in the pattern with the same variable, for non-linear patterns
+    pub equivalence_classes: Vec<EquivalenceClass>,
+    
+    /// Conditions for applying the rule.
+    pub conditions: Vec<EMACondition>,
+
+    /// Right hand side is stored in the term pool as much as possible with a SemiCompressedTermTree
+    pub semi_compressed_rhs: SemiCompressedTermTree,
+    /// Whether the rewrite rule duplicates subterms, e.g. times(s(x), y) = plus(y, times(x, y))
+    pub is_duplicating: bool,
+}
+
+impl AnnouncementSabre {
+    pub fn new(rule: &Rule) -> AnnouncementSabre {
+        // Compute the extra information for the InnermostRewriter.
+        // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
+        // rhs of the rewrite rule and for lhs and rhs of each condition.
+        // Also see the documentation of SemiCompressedTermTree
+        let var_map = create_var_map(&rule.lhs.clone().into());
+        let sctt_rhs = SemiCompressedTermTree::from_term(&rule.rhs.copy().into(), &var_map);
+
+        let is_duplicating = sctt_rhs.contains_duplicate_var_references();
+
+        AnnouncementSabre {
+            conditions: extend_conditions(rule),
+            equivalence_classes: derive_equivalence_classes(rule),
+            semi_compressed_rhs: sctt_rhs,
+            is_duplicating,
+        }
+    }
+}
 
 /// A Configuration is part of the configuration stack/tree
 /// It contains:
-///     1. the index of a state
+///     1. the index of a state of the set automaton
 ///     2. The subterm at the position of the configuration.
 ///     3. The difference of position compared to the parent configuration (None for the root).
 ///         Note that it stores a reference to a position. It references the position listed on
@@ -21,20 +60,21 @@ pub(crate) struct Configuration<'a> {
     pub position: Option<&'a ExplicitPosition>,
 }
 
-/// SideInfo stores additional information of a configuration.
-/// It stores an index of the corresponding configuration on the configuration stack.
+/// SideInfo stores additional information of a configuration. It stores an
+/// index of the corresponding configuration on the configuration stack.
 #[derive(Debug)]
 pub(crate) struct SideInfo<'a> {
     pub corresponding_configuration: usize,
     pub info: SideInfoType<'a>,
 }
 
-/// Three types of side information. See the stack rewriter on how they are used.
+/// Three types of side information. See the stack rewriter on how they are
+/// used.
 #[derive(Debug)]
 pub(crate) enum SideInfoType<'a> {
     SideBranch(&'a [(ExplicitPosition, usize)]),
-    DelayedRewriteRule(&'a EnhancedMatchAnnouncement),
-    EquivalenceAndConditionCheck(&'a EnhancedMatchAnnouncement),
+    DelayedRewriteRule(&'a MatchAnnouncement, &'a AnnouncementSabre),
+    EquivalenceAndConditionCheck(&'a MatchAnnouncement, &'a AnnouncementSabre),
 }
 
 /// A configuration stack. The first element is the root of the configuration tree.
@@ -126,7 +166,7 @@ impl<'a> ConfigurationStack<'a> {
     pub fn prune(
         &mut self,
         tp: &mut TermPool,
-        automaton: &SetAutomaton,
+        automaton: &SetAutomaton<AnnouncementSabre>,
         depth: usize,
         new_subterm: DataExpression,
     ) {
@@ -301,11 +341,11 @@ impl<'a> fmt::Display for SideInfoType<'a> {
                     first = false;
                 }
             }
-            SideInfoType::DelayedRewriteRule(ema) => {
-                write!(f, "delayed rule: {}", ema)?;
+            SideInfoType::DelayedRewriteRule(announcement, _) => {
+                write!(f, "delayed rule: {}", announcement)?;
             }
-            SideInfoType::EquivalenceAndConditionCheck(ema) => {
-                write!(f, "equivalence {}", ema)?;
+            SideInfoType::EquivalenceAndConditionCheck(announcement, _) => {
+                write!(f, "equivalence {}", announcement)?;
             }
         }
 

@@ -4,11 +4,11 @@
 //! See https://arxiv.org/abs/2202.08687 for a paper on the construction of set automata.
 
 mod automaton;
-mod announcement;
+mod match_goal;
 mod display;
 
 pub use automaton::*;
-pub use announcement::*;
+pub use match_goal::*;
 
 #[allow(unused)]
 pub use display::*;
