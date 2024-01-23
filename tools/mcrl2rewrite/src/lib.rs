@@ -21,7 +21,7 @@ pub enum Rewriter {
     Sabre
 }
 
-/// Performs state space exploration of the given model and returns the number of states.
+/// Rewrites the given expressions with the given data specification and optionally prints the result.
 pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename_dataspec: &str, filename_terms: &str, output: bool) -> AnyResult<()> {
     
     // Read the data specification
@@ -83,6 +83,7 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
     Ok(())
 }
 
+/// Rewrites the given REC specification.
 pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: bool) -> AnyResult<()> {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 

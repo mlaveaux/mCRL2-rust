@@ -9,9 +9,7 @@ use mcrl2::{
 use crate::{
     matching::nonlinear::check_equivalence_classes,
     set_automaton::{MatchAnnouncement, SetAutomaton},
-    utilities::{
-        get_position, AnnouncementSabre, ConfigurationStack, SideInfo, SideInfoType
-    },
+    utilities::{get_position, AnnouncementSabre, ConfigurationStack, SideInfo, SideInfoType},
     RewriteSpecification,
 };
 
@@ -148,11 +146,12 @@ impl SabreRewriter {
                                 &automaton.states[leaf.state].label,
                             )
                             .into();
+
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
-                            if let Some(tr) = &automaton
+                            if let Some(tr) = automaton
                                 .transitions
                                 .get(&(leaf.state, function_symbol.operation_id()))
                             {
@@ -164,23 +163,38 @@ impl SabreRewriter {
                                         && annotation.equivalence_classes.is_empty()
                                     {
                                         if annotation.is_duplicating {
+                                            trace!("Delaying duplicating rule {}", announcement.rule);
+
                                             // We do not want to apply duplicating rules straight away
                                             cs.side_branch_stack.push(SideInfo {
                                                 corresponding_configuration: leaf_index,
-                                                info: SideInfoType::DelayedRewriteRule(announcement, annotation),
+                                                info: SideInfoType::DelayedRewriteRule(
+                                                    announcement,
+                                                    annotation,
+                                                ),
                                             });
                                         } else {
                                             // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
                                             SabreRewriter::apply_rewrite_rule(
-                                                tp, automaton, announcement, annotation, leaf_index, &mut cs, stats,
+                                                tp,
+                                                automaton,
+                                                announcement,
+                                                annotation,
+                                                leaf_index,
+                                                &mut cs,
+                                                stats,
                                             );
                                             break 'skip_point;
                                         }
                                     } else {
                                         // We delay the condition checks
+                                        trace!("Delaying condition check for rule {}", announcement.rule);
                                         cs.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
-                                            info: SideInfoType::EquivalenceAndConditionCheck(announcement, annotation),
+                                            info: SideInfoType::EquivalenceAndConditionCheck(
+                                                announcement,
+                                                annotation,
+                                            ),
                                         });
                                     }
                                 }
@@ -203,9 +217,11 @@ impl SabreRewriter {
                             } else {
                                 drop(read_terms);
 
-                                // There is no outgoing edges for the head symbol of this term and the stack is empty.
-                                // TODO: Not sure if this is necessary or returning leaf.subterm is sufficient.
-                                return cs.compute_final_term(tp);
+                                let prev = cs.get_prev_with_side_info();
+                                cs.current_node = prev;
+                                if let Some(n) = prev {
+                                    cs.jump_back(n, tp);
+                                }
                             }
                         }
                         Some(sit) => {
@@ -219,20 +235,40 @@ impl SabreRewriter {
                                     drop(read_terms);
                                     // apply the delayed rewrite rule
                                     SabreRewriter::apply_rewrite_rule(
-                                        tp, automaton, announcement, annotation, leaf_index, &mut cs, stats,
+                                        tp,
+                                        automaton,
+                                        announcement,
+                                        annotation,
+                                        leaf_index,
+                                        &mut cs,
+                                        stats,
                                     );
                                 }
-                                SideInfoType::EquivalenceAndConditionCheck(announcement, annotation) => {
+                                SideInfoType::EquivalenceAndConditionCheck(
+                                    announcement,
+                                    annotation,
+                                ) => {
                                     // Apply the delayed rewrite rule if the conditions hold
                                     if check_equivalence_classes(
                                         leaf_term,
                                         &annotation.equivalence_classes,
                                     ) && SabreRewriter::conditions_hold(
-                                        tp, automaton, announcement, annotation, leaf_term, stats,
+                                        tp,
+                                        automaton,
+                                        announcement,
+                                        annotation,
+                                        leaf_term,
+                                        stats,
                                     ) {
                                         drop(read_terms);
                                         SabreRewriter::apply_rewrite_rule(
-                                            tp, automaton, announcement, annotation, leaf_index, &mut cs, stats,
+                                            tp,
+                                            automaton,
+                                            announcement,
+                                            annotation,
+                                            leaf_index,
+                                            &mut cs,
+                                            stats,
                                         );
                                     }
                                 }

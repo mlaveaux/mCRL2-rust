@@ -293,6 +293,7 @@ impl<'a> ConfigurationStack<'a> {
             None => false,
             Some(si) => si.corresponding_configuration == leaf_index,
         };
+        
         if should_pop {
             Some(stack.pop().unwrap().info)
         } else {
@@ -333,6 +334,7 @@ impl<'a> fmt::Display for SideInfoType<'a> {
         match self {
             SideInfoType::SideBranch(tr_slice) => {
                 let mut first = true;
+                write!(f, "matching: ")?;
                 for (position, index) in tr_slice.iter() {
                     if !first {
                         write!(f, ", ")?;

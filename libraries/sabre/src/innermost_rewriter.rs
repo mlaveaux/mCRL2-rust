@@ -95,7 +95,8 @@ impl InnermostRewriter {
 
                         match InnermostRewriter::find_match(tp, automaton, &term, stats) {
                             Some((announcement, annotation)) => {
-                                debug!("term {} applying rule {}", term, announcement.rule);
+                                debug!("rewrite {} => {} using rule {}", term, annotation.rhs_stack.evaluate(tp, &term), announcement.rule);
+
                                 InnermostStack::integrate(&mut write_configs, &mut write_terms, &annotation.rhs_stack, &term, index);
                                 stats.rewrite_steps += 1;
                             }
