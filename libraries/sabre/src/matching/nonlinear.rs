@@ -1,7 +1,7 @@
 use std::fmt;
 
 use itertools::Itertools;
-use mcrl2::{data::{DataVariable, DataVariableRef, is_data_variable}, aterm::ATermRef};
+use mcrl2::data::{DataVariable, DataVariableRef, is_data_variable};
 
 use crate::{utilities::{ExplicitPosition, PositionIndexed, PositionIterator}, Rule};
 
@@ -38,7 +38,10 @@ pub fn derive_equivalence_classes(rule: &Rule) -> Vec<EquivalenceClass> {
 
 
 /// Checks if the equivalence classes hold for the given term.
-pub fn check_equivalence_classes(term: &ATermRef<'_>, eqs: &[EquivalenceClass]) -> bool {
+pub fn check_equivalence_classes<'a, T, P>(term: &'a P, eqs: &[EquivalenceClass]) -> bool
+    where P: PositionIndexed<Target<'a> = T> + 'a,
+          T: PartialEq 
+{
     eqs.iter().all(|ec| {
         debug_assert!(ec.positions.len() >= 2, "An equivalence class must contain at least two positions");
 
@@ -83,7 +86,7 @@ impl fmt::Display for EquivalenceClass {
 #[cfg(test)]
 mod tests {
     use ahash::AHashSet;
-    use mcrl2::{aterm::TermPool, data::DataVariable};
+    use mcrl2::{aterm::{ATermRef, TermPool}, data::DataVariable};
 
     use crate::{utilities::to_untyped_data_expression, test_utility::create_rewrite_rule};
 
@@ -107,6 +110,7 @@ mod tests {
         let term = tp.from_string("f(a(b), h(a(b)))").unwrap();
         let expression = to_untyped_data_expression(&mut tp, &term, &AHashSet::new());
 
-        assert!(check_equivalence_classes(&expression, &eq), "The equivalence classes are not checked correctly, equivalences: {:?} and term {}", &eq, &expression);
+        let t: &ATermRef<'_> = &expression;
+        assert!(check_equivalence_classes(t, &eq), "The equivalence classes are not checked correctly, equivalences: {:?} and term {}", &eq, &expression);
     }
 }

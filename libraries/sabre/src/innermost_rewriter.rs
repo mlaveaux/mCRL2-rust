@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, info, trace};
 use mcrl2::{
-    aterm::{ATerm, ATermTrait, TermPool},
+    aterm::{ATerm, ATermRef, ATermTrait, TermPool},
     data::{DataApplication, DataExpression, DataExpressionRef},
 };
 
@@ -193,7 +193,8 @@ impl InnermostRewriter {
                 .get(&(state_index, symbol.operation_id()))
             {
                 for (announcement, annotation) in &transition.announcements {
-                    if check_equivalence_classes(t, &annotation.equivalence_classes)
+                    let t2: &ATermRef<'_> = &t;
+                    if check_equivalence_classes(t2, &annotation.equivalence_classes)
                         && InnermostRewriter::check_conditions(tp, automaton, t, annotation, stats)
                     {
                         // We found a matching pattern

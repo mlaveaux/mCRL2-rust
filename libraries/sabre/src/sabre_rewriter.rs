@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, info, trace};
 use mcrl2::{
-    aterm::TermPool,
+    aterm::{ATermRef, TermPool},
     data::{DataExpression, DataExpressionRef},
 };
 
@@ -245,8 +245,9 @@ impl SabreRewriter {
                                     annotation,
                                 ) => {
                                     // Apply the delayed rewrite rule if the conditions hold
+                                    let t: &ATermRef<'_> = &leaf_term;
                                     if check_equivalence_classes(
-                                        leaf_term,
+                                        t,
                                         &annotation.equivalence_classes,
                                     ) && SabreRewriter::conditions_hold(
                                         tp,
