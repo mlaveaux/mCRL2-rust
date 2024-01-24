@@ -3,8 +3,12 @@ name = "sabre-compiling"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
-crate-type = ["cdylib",'rlib']
 
 [dependencies]
+duct = "0.13"
 abi_stable = "0.11"
 indoc = "2.0"
+env_logger.workspace = true
+log.workspace = true
+mcrl2.workspace = true
+sabre.workspace = true

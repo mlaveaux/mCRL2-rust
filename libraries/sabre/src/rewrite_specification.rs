@@ -7,7 +7,7 @@ use mcrl2::{
 };
 
 /// A rewrite specification contains the bare info we need for rewriting (can be untyped).
-#[derive(Debug,Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct RewriteSpecification 
 {
     pub rewrite_rules: Vec<Rule>,
