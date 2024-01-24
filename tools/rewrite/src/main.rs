@@ -13,6 +13,7 @@ mod counting_allocator;
 #[global_allocator]
 static A: counting_allocator::AllocCounter = counting_allocator::AllocCounter;
 
+#[cfg(not(target_env = "msvc"))]
 #[cfg(not(feature = "measure-allocs"))]
 #[global_allocator] 
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
