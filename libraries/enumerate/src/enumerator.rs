@@ -1,5 +1,6 @@
 use std::{rc::Rc, cell::RefCell};
 
+use log::{debug, trace};
 use mcrl2::{aterm::TermPool, data::{DataSpecification, DataExpression, DataApplication}};
 use sabre::{RewriteEngine, utilities::create_var_map};
 
@@ -20,7 +21,7 @@ use crate::variable_generator::VariableGenerator;
 /// 
 /// 
 
-struct Enumerator<R : RewriteEngine> {
+pub struct Enumerator<R : RewriteEngine> {
     tp: Rc<RefCell<TermPool>>,
 
     rewriter: Rc<R>,
@@ -42,6 +43,8 @@ impl<R: RewriteEngine> Enumerator<R> {
     }
 
     pub fn enumerate(&self, expression: DataExpression) {
+
+        debug!{"Enumerating {:?}", expression};
 
         // Typically we have some static expression c that we want to enumerate and subsitute certain variable for.
         let variables = create_var_map(&expression);

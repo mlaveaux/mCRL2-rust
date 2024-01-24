@@ -5,3 +5,5 @@
 
 mod enumerator;
 mod variable_generator;
+
+pub use enumerator::*;

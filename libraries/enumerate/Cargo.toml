@@ -5,5 +5,7 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-sabre.workspace = true
+env_logger.workspace = true
+log.workspace = true
 mcrl2.workspace = true
+sabre.workspace = true
