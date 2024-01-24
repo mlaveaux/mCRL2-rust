@@ -8,6 +8,7 @@ debug = "line-tables-only"
 resolver = "2"
 members = [
     "libraries/*",
+    "libraries/sabre-compiling/sabre-compiled",
     "tools/*"
 ]
 
@@ -22,7 +23,7 @@ version = "0.1.0"
 [workspace.dependencies]
 ahash = "0.8"
 clap = { version = "4.4", features = ["derive"] }
-env_logger = "0.10"
+env_logger = "0.11"
 log = "0.4"
 rand = "0.8"
 regex = "1.10"
