@@ -1,5 +1,5 @@
 [package]
-name = "mcrl2rewrite"
+name = "rewrite"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
@@ -16,6 +16,7 @@ ahash.workspace = true
 clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
+itertools.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.5"
