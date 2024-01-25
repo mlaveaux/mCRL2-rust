@@ -20,6 +20,8 @@ impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
 
+        debug!("input: {}", t);
+
         let result =
             InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &self.apma, t, &mut stats);
         info!(
@@ -292,7 +294,6 @@ mod tests {
 
         let spec = RewriteSpecification {
             rewrite_rules: vec![],
-            constructors: vec![],
         };
         let mut inner = InnermostRewriter::new(tp.clone(), &spec);
 

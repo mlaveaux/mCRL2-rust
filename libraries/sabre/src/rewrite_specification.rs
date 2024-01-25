@@ -3,7 +3,7 @@ use std::fmt;
 use itertools::Itertools;
 use mcrl2::{
     aterm::ATerm,
-    data::{DataFunctionSymbol, DataSpecification, BoolSort, DataExpression}
+    data::{DataSpecification, BoolSort, DataExpression}
 };
 
 /// A rewrite specification contains the bare info we need for rewriting (can be untyped).
@@ -11,7 +11,6 @@ use mcrl2::{
 pub struct RewriteSpecification 
 {
     pub rewrite_rules: Vec<Rule>,
-    pub constructors: Vec<(DataFunctionSymbol, usize)>,
 }
 
 /// Either lhs == rhs or lhs != rhs depending on equality being true.
@@ -64,7 +63,7 @@ impl From<DataSpecification> for RewriteSpecification {
             }
         }
         
-        RewriteSpecification { rewrite_rules, constructors: vec![] }
+        RewriteSpecification { rewrite_rules }
     }
 }
 

@@ -1,7 +1,7 @@
 use core::fmt;
 
 use ahash::AHashSet;
-use mcrl2::{aterm::{ATerm, TermPool}, data::DataFunctionSymbol};
+use mcrl2::aterm::{ATerm, TermPool};
 use sabre::{
     rewrite_specification::{Condition, RewriteSpecification, Rule},
     utilities::to_untyped_data_expression,
@@ -21,12 +21,6 @@ impl RewriteSpecificationSyntax {
     pub fn to_rewrite_spec(&self, tp: &mut TermPool) -> RewriteSpecification {
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
-
-        // Store the constructors
-        let mut constructors = Vec::new();
-        for (name, arity) in &self.constructors {
-            constructors.push((DataFunctionSymbol::new(tp, name), *arity));
-        }
 
         // Store the rewrite rules in the maximally shared term storage
         let mut rewrite_rules = Vec::new();
@@ -53,7 +47,6 @@ impl RewriteSpecificationSyntax {
 
         RewriteSpecification {
             rewrite_rules,
-            constructors,
         }
     }
 
