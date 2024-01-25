@@ -5,13 +5,13 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-itertools = "0.12"
 rustc-hash = "1.1"
 smallvec = "1.11"
 html-escape = "0.2"
 ahash.workspace = true
 env_logger.workspace = true
 log.workspace = true
+itertools.workspace = true
 mcrl2.workspace = true
 rand.workspace = true
 

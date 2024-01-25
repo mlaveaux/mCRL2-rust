@@ -17,7 +17,7 @@ use crate::{
     utilities::ExplicitPosition,
 };
 
-use super::MatchGoal;
+use super::{DotFormatter, MatchGoal};
 
 // The Set Automaton used to find all matching patterns in a term. Based on the
 // following article. Implemented by Mark Bouwman, and adapted by Maurice
@@ -218,6 +218,13 @@ impl<M> SetAutomaton<M> {
         self.transitions.len()
     }
 
+    /// Provides a formatter for the .dot file format
+    pub fn to_dot_graph(
+        &self,
+        show_backtransitions: bool,
+        show_final: bool) -> DotFormatter<M> {
+        DotFormatter { automaton: self, show_backtransitions, show_final }
+    }
 }
 
 #[derive(Debug)]

@@ -1,10 +1,7 @@
-use std::io;
-
 use itertools::Itertools;
 
 use crate::set_automaton::{SetAutomaton, State};
 use core::fmt;
-use std::io::Write;
 
 use super::{MatchAnnouncement, MatchObligation, Transition};
 
@@ -74,35 +71,35 @@ impl<M> fmt::Display for SetAutomaton<M> {
     }
 }
 
-impl<M> SetAutomaton<M> {
-    /// Create a .dot file and convert it to a .svg using the dot command
-    pub fn to_dot_graph(
-        &self,
-        mut f: impl Write,
-        show_backtransitions: bool,
-        show_final: bool,
-    ) -> io::Result<()> {
-        // Write the header anf final states.
-        writeln!(&mut f, "digraph{{")?;
+pub struct DotFormatter<'a, M> {
+    pub(crate) automaton: &'a SetAutomaton<M>,
+    pub(crate) show_backtransitions: bool,
+    pub(crate) show_final: bool,
+}
 
-        if show_final {
-            writeln!(&mut f, "  final[label=\"💩\"];")?;
+impl<'a, M> fmt::Display for DotFormatter<'a, M> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Write the header anf final states.
+        writeln!(f, "digraph{{")?;
+
+        if self.show_final {
+            writeln!(f, "  final[label=\"💩\"];")?;
         }
 
-        for (i, s) in self.states.iter().enumerate() {
+        for (i, s) in self.automaton.states.iter().enumerate() {
             let match_goals = s
                 .match_goals
                 .iter()
                 .format_with("\\n", |goal, f| f(&format_args!("{}", html_escape::encode_safe(&format!("{}", goal)))));
 
             writeln!(
-                &mut f,
+                f,
                 "  s{}[shape=record label=\"{{{{s{} | {}}} | {}}}\"]",
                 i, i, s.label, match_goals
             )?;
         }
 
-        for ((i, _), tr) in &self.transitions {
+        for ((i, _), tr) in &self.automaton.transitions {
             let announcements = tr
                 .announcements
                 .iter()
@@ -114,26 +111,26 @@ impl<M> SetAutomaton<M> {
                 });
 
             if tr.destinations.is_empty() {
-                if show_final {
+                if self.show_final {
                     writeln!(
-                        &mut f,
+                        f,
                         "  s{} -> final [label=\"{} \\[{}\\]\"]",
                         i, tr.symbol, announcements
                     )?;
                 }
             } else {
-                writeln!(&mut f, "  \"s{}{}\" [shape=point]", i, tr.symbol,).unwrap();
+                writeln!(f, "  \"s{}{}\" [shape=point]", i, tr.symbol,).unwrap();
                 writeln!(
-                    &mut f,
+                    f,
                     "  s{} -> \"s{}{}\" [label=\"{} \\[{}\\]\"]",
                     i, i, tr.symbol, tr.symbol, announcements
                 )?;
 
                 for (pos, des) in &tr.destinations {
-                    if show_backtransitions || *des != 0 {
+                    if self.show_backtransitions || *des != 0 {
                         // Hide backpointers to the initial state.
                         writeln!(
-                            &mut f,
+                            f,
                             "  \"s{}{}\" -> s{} [label = \"{}\"]",
                             i, tr.symbol, des, pos
                         )?;
@@ -141,6 +138,6 @@ impl<M> SetAutomaton<M> {
                 }
             }
         }
-        writeln!(&mut f, "}}")
+        writeln!(f, "}}")
     }
 }
