@@ -62,8 +62,6 @@ impl<M> SetAutomaton<M> {
     pub fn new(spec: &RewriteSpecification, annotate: impl Fn(&Rule) -> M, apma: bool) -> SetAutomaton<M> {
         let start = Instant::now();
 
-        info!("Specification: \n{}", spec);
-
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
         let mut state_counter: usize = 1;
 

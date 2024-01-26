@@ -1,4 +1,5 @@
-use std::{cell::RefCell, fs, rc::Rc};
+use std::{cell::RefCell, fs::{self, File}, rc::Rc};
+use std::io::Write;
 
 use anyhow::Result as AnyResult;
 use clap::Parser;
@@ -22,24 +23,39 @@ static A: counting_allocator::AllocCounter = counting_allocator::AllocCounter;
 #[global_allocator] 
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-#[derive(Parser, Debug)]
+#[derive(clap::Parser, Debug)]
 #[command(
     name = "Maurice Laveaux",
     about = "A command line rewriting tool",
-    long_about = "Can be used to parse and rewrite arbitrary mCRL2 data specifications and REC files"
 )]
-pub struct Cli {
-    #[arg(long="rewriter")]
-    rewriter: Option<Rewriter>,
+pub(crate) enum Cli {
+    Rewrite(RewriteArgs),
+    Convert(ConvertArgs)
+}
 
-    #[arg(value_name = "FILE")]
+#[derive(clap::Args, Debug)]
+#[command(about = "Rewrite mCRL2 data specifications and REC files")]
+struct RewriteArgs {
+    rewriter: Rewriter,
+
+    #[arg(value_name = "SPEC")]
     specification: String,
 
     #[arg(help="File containing the terms to be rewritten.")]
     terms: Option<String>,
 
-    #[arg(long="output", default_value_t=false, help="Print the resulting term(s)")]
+    #[arg(long="output", default_value_t=false, help="Print the rewritten term(s)")]
     output: bool,
+}
+
+
+#[derive(clap::Args, Debug)]
+#[command(about = "Convert input rewrite system to the TRS format")]
+struct ConvertArgs {
+    #[arg(value_name = "SPEC")]
+    specification: String,
+
+    output: String,
 }
 
 fn main() -> AnyResult<()>
@@ -49,15 +65,15 @@ fn main() -> AnyResult<()>
     let cli = Cli::parse();
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    match cli.rewriter {
-        Some(rewriter) => { 
-            if cli.specification.ends_with(".rec") {
-                assert!(cli.terms.is_none());
-                rewrite_rec(rewriter, &cli.specification, cli.output)?;
+    match cli {
+        Cli::Rewrite(args) => {
+            if args.specification.ends_with(".rec") {
+                assert!(args.terms.is_none());
+                rewrite_rec(args.rewriter, &args.specification, args.output)?;
             } else {        
-                match &cli.terms {
+                match &args.terms {
                     Some(terms) => {
-                        rewrite_data_spec(tp.clone(), rewriter, &cli.specification, terms, cli.output)?;
+                        rewrite_data_spec(tp.clone(), args.rewriter, &args.specification, terms, args.output)?;
                     }
                     None => {
                         warn!("No expressions given to rewrite!");
@@ -65,22 +81,20 @@ fn main() -> AnyResult<()>
                 }           
             }
         },
-        None => {            
+        Cli::Convert(args) => {
             // Read the data specification
-            let data_spec_text = fs::read_to_string(cli.specification)?;
+            let data_spec_text = fs::read_to_string(args.specification)?;
             let data_spec = DataSpecification::new(&data_spec_text)?;
 
             let spec: RewriteSpecification = data_spec.into();
             
-            println!("Specification: \n{}", spec);
-
-            println!("{}", TrsFormatter::new(&spec))
-
-
+            let mut output = File::create(args.output)?;
+            write!(output, "{}", TrsFormatter::new(&spec))?;
         }
     }
    
     info!("ATerm pool: {}", tp.borrow());
+
     #[cfg(feature = "measure-allocs")]
     info!("Allocations: {}",  A.number_of_allocations());
     

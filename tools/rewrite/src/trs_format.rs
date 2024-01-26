@@ -1,7 +1,6 @@
 use std::fmt;
 
 use ahash::HashSet;
-use itertools::Itertools;
 use mcrl2::{aterm::{ATermRef, ATermTrait}, data::{is_data_application, is_data_function_symbol, is_data_variable, DataExpressionRef, DataFunctionSymbolRef, DataVariableRef}};
 use sabre::RewriteSpecification;
 
@@ -92,6 +91,7 @@ impl<'a> fmt::Display for TrsFormatter<'a> {
             variables
         };
 
+        // Print the list of variables.
         writeln!(f, "(VAR ")?;
         for var in variables {
             writeln!(f, "\t {} ", var)?;
@@ -99,24 +99,20 @@ impl<'a> fmt::Display for TrsFormatter<'a> {
         }
         writeln!(f, ") ")?;
 
+        // Print the list of rules.
         writeln!(f, "(RULES ")?;
         for rule in &self.spec.rewrite_rules {
-            if rule.conditions.is_empty() {
-                writeln!(f, "{}", format!("\t {} -> {}", SimpleTermFormatter::new(&rule.lhs), SimpleTermFormatter::new(&rule.rhs)).replace("|", "bar").replace("=", "eq"))?;
-            } else {
-                write!(f, "{}", format!("\t {} -> {} ", SimpleTermFormatter::new(&rule.lhs), SimpleTermFormatter::new(&rule.rhs)).replace("|", "bar").replace("=", "eq"))?;
-                for cond in &rule.conditions {
-                    let string = if cond.equality {
-                        format!("==({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs)).replace("|", "bar").replace("=", "eq")
-                    } else {                        
-                        format!("==({},{}) -> false", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs)).replace("|", "bar").replace("=", "eq")
-                    };
-                    
-                    write!(f, "| {}", string)?;
-                }
+            
+            let mut output = format!("\t {} -> {}", SimpleTermFormatter::new(&rule.lhs), SimpleTermFormatter::new(&rule.rhs));
+            for cond in &rule.conditions {
+                if cond.equality {
+                    output += &format!(" COND ==({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs))
+                } else {                        
+                    output += &format!(" COND !=({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs))
+                };
+            }
 
-                writeln!(f)?;
-            };
+            writeln!(f, "{}", output.replace("|", "bar").replace("=", "eq").replace("COND", "|"))?;
         }
         writeln!(f, ")")?;
 
