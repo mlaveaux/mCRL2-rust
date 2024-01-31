@@ -22,7 +22,7 @@ Tests can be performed using `cargo test`, only tests of the Sabre crate can be 
 
 ## LLVM Sanitizer
 
-For Linux targets it is  possible to run the [LLVM address sanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) to detect memory issues in unsafe and C++ code. This requires the nightly version of the rust compiler, which can acquired using `rustup toolchain install nightly`. To show the symbols for the resulting stacktrace it is also convenient to install `llvm-symbolizer`, for example using `sudo apt install llvm` on Ubuntu. Afterwards, the tests can be executed with the address sanitizer enabled using `cargo +nightly xtask address-sanitizer`. Similarly, we also provide a task for the thread sanitizer to detect data races, which can be executed by `cargo +nightly xtask thread-sanitizer`.
+For Linux targets it is  possible to run the [LLVM address sanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) to detect memory issues in unsafe and C++ code. This requires the nightly version of the rust compiler, which can acquired using `rustup toolchain install nightly` and the rust-src for the standard library, to be installed with `rustup component add rust-src --toolchain nightly`. To show the symbols for the resulting stacktrace it is also convenient to install `llvm-symbolizer`, for example using `sudo apt install llvm` on Ubuntu. Afterwards, the tests can be executed with the address sanitizer enabled using `cargo +nightly xtask address-sanitizer`. Similarly, we also provide a task for the thread sanitizer to detect data races, which can be executed by `cargo +nightly xtask thread-sanitizer`.
 All `xtask` targets use `cargo nextest run`, so that must be installed prior. 
 
 # Additional checks
