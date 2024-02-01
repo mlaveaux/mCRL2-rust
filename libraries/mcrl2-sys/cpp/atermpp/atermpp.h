@@ -57,6 +57,9 @@ void initialise()
 {
   // Enable debugging messages.
   mcrl2::log::logger::set_reporting_level(mcrl2::log::debug);
+
+  // Create one application to initialise the DataAppl array.
+  mcrl2::data::application test;
 }
 
 inline
