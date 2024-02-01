@@ -47,6 +47,8 @@ The `lpsreach` tool can be build using the `bench` compilation profile using `ca
 
 Another useful technique for profiling is to generate a so-called `flamegraph`, which essentially takes the output of `perf` and produces a callgraph of time spent over time. These can be generated using the [flamegraph-rs](https://github.com/flamegraph-rs/flamegraph) tool, which can be acquired using `cargo install flamegraph`. Note that it relies on either `perf` or `dtrace` and as such is only supported on Linux and MacOS.
 
+Finally, in performance critical situations it can be useful to view the generated assembly, which can be achieved with the `cargo asm --rust --simplify -p <package> [--lib] <path-to-function>` that can be obtained by `cargo install cargo-show-asm`.
+
 ## Formatting
 
 All source code should be formatted using `rustfmt`, which can installed using `rustup component add rustfmt`. Individual source files can then be formatted using `rustfmt <filename>`.
