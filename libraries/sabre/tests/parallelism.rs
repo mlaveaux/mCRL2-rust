@@ -34,4 +34,8 @@ fn test_parallelism() {
             }
         }));
     }
+
+    for thread in threads {
+        thread.join().unwrap();
+    }
 }
