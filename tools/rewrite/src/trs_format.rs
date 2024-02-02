@@ -2,7 +2,7 @@ use std::fmt;
 
 use ahash::HashSet;
 use mcrl2::{aterm::{ATermRef, ATermTrait}, data::{is_data_application, is_data_function_symbol, is_data_variable, DataExpressionRef, DataFunctionSymbolRef, DataVariableRef}};
-use sabre::RewriteSpecification;
+use sabre::{set_automaton::is_supported_rule, RewriteSpecification};
 
 
 /// Finds all data symbols in the term and adds them to the symbol index.
@@ -29,7 +29,8 @@ impl SimpleTermFormatter<'_> {
 impl<'a> fmt::Display for SimpleTermFormatter<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if is_data_function_symbol(&self.term) {
-            write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()).name())
+            let symbol = DataFunctionSymbolRef::from(self.term.copy());
+            write!(f, "{}_{}", symbol.name(), symbol.operation_id())
         } else if is_data_application(&self.term) {
             let mut args = self.term.arguments();
     
@@ -102,17 +103,19 @@ impl<'a> fmt::Display for TrsFormatter<'a> {
         // Print the list of rules.
         writeln!(f, "(RULES ")?;
         for rule in &self.spec.rewrite_rules {
-            
-            let mut output = format!("\t {} -> {}", SimpleTermFormatter::new(&rule.lhs), SimpleTermFormatter::new(&rule.rhs));
-            for cond in &rule.conditions {
-                if cond.equality {
-                    output += &format!(" COND ==({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs))
-                } else {                        
-                    output += &format!(" COND !=({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs))
-                };
-            }
 
-            writeln!(f, "{}", output.replace("|", "bar").replace("=", "eq").replace("COND", "|"))?;
+            if is_supported_rule(rule) {            
+                let mut output = format!("\t {} -> {}", SimpleTermFormatter::new(&rule.lhs), SimpleTermFormatter::new(&rule.rhs));
+                for cond in &rule.conditions {
+                    if cond.equality {
+                        output += &format!(" COND ==({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs))
+                    } else {                        
+                        output += &format!(" COND !=({},{}) -> true", SimpleTermFormatter::new(&cond.lhs), SimpleTermFormatter::new(&cond.rhs))
+                    };
+                }
+
+                writeln!(f, "{}", output.replace("|", "bar").replace("=", "eq").replace("COND", "|"))?;
+            }
         }
         writeln!(f, ")")?;
 

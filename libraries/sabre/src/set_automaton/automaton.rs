@@ -531,7 +531,7 @@ fn is_supported_term(t: &DataExpression) -> bool {
 }
 
 /// Checks whether the set automaton can use this rule, no higher order rules or binders.
-fn is_supported_rule(rule: &Rule) -> bool {
+pub fn is_supported_rule(rule: &Rule) -> bool {
     // There should be no terms of the shape t(t0,...,t_n)
     if !is_supported_term(&rule.rhs) || !is_supported_term(&rule.lhs) {
         return false;
