@@ -204,7 +204,6 @@ impl TermPool {
             }
         });
 
-        ffi::test_garbage_collection();
         result
     }   
     
@@ -244,7 +243,6 @@ impl TermPool {
                 protect_with(protection_set, tp.index, term)
             };
 
-            ffi::test_garbage_collection();
             result
         })
     }
@@ -285,7 +283,6 @@ impl TermPool {
                 protect_with(protection_set, tp.index, term)
             };
 
-            ffi::test_garbage_collection();
             result
         })
     }
@@ -307,7 +304,6 @@ impl TermPool {
             }
         });
 
-        ffi::test_garbage_collection();
         result
     }
 }
