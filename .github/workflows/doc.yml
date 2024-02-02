@@ -33,7 +33,7 @@ jobs:
     
     steps:
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.3
+        uses: mozilla-actions/sccache-action@v0.0.4
 
       - name: Install LLVM Tools for Rust
         run: rustup component add llvm-tools-preview
