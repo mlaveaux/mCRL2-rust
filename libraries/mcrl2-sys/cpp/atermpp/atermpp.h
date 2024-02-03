@@ -97,9 +97,10 @@ void lock_shared()
   detail::g_thread_term_pool().mutex().lock_shared_impl();
 }
 
-void unlock_shared() 
+bool unlock_shared() 
 {
   detail::g_thread_term_pool().mutex().unlock_shared();
+  return !detail::g_thread_term_pool().mutex().is_shared_locked();
 }
 
 inline

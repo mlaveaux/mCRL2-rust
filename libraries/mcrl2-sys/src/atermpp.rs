@@ -46,7 +46,9 @@ pub mod ffi {
 
         /// Provides shared access to the aterm library.
         fn lock_shared();
-        fn unlock_shared();
+
+        /// Returns true iff the shared section was actually left. 
+        fn unlock_shared() -> bool;
 
         /// Provides exclusive access to the aterm library.
         fn lock_exclusive();
