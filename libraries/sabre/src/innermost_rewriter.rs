@@ -113,6 +113,7 @@ impl InnermostRewriter {
 
                         // Remove the arguments from the stack.
                         write_terms.drain(length - arity..);
+                        drop(write_terms);
 
                         match InnermostRewriter::find_match(tp, automaton, &term, stats) {
                             Some((announcement, annotation)) => {
@@ -123,6 +124,7 @@ impl InnermostRewriter {
                                     announcement.rule
                                 );
 
+                                let mut write_terms = stack.terms.write();
                                 InnermostStack::integrate(
                                     &mut write_configs,
                                     &mut write_terms,
@@ -134,6 +136,7 @@ impl InnermostRewriter {
                             }
                             None => {
                                 // Add the term on the stack.
+                                let mut write_terms = stack.terms.write();
                                 let t = write_terms.protect(&term);
                                 write_terms[index] = t.into();
                             }
