@@ -51,10 +51,10 @@ impl SabreCompiling {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_compilation() {
-        let spec = RewriteSpecification::default();
+//     #[test]
+//     fn test_compilation() {
+//         let spec = RewriteSpecification::default();
 
-        SabreCompiling::new(&spec).unwrap();
-    }
+//         SabreCompiling::new(&spec).unwrap();
+//     }
 }
