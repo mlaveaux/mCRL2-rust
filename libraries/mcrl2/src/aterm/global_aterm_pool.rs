@@ -1,10 +1,10 @@
-use std::{fmt::Debug, mem::ManuallyDrop, pin::Pin, sync::Arc};
+use std::{fmt::Debug, pin::Pin, sync::Arc};
 
 use log::{info, trace};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
-use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
+use mcrl2_sys::atermpp::ffi;
 use utilities::protection_set::ProtectionSet;
 
 use crate::aterm::{BfTermPool, ATermRef};

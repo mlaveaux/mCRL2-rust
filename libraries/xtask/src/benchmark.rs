@@ -5,11 +5,11 @@ use regex::Regex;
 
 pub fn benchmark() -> Result<(), Box<dyn Error>> {
     // Build the tool with the correct settings
-    cmd!("cargo", "build", "--profile", "bench", "--bin", "rewrite").run()?;
+    cmd!("cargo", "build", "--profile", "bench", "--bin", "mcrl2rewrite").run()?;
 
     // Using which is a bit unnecessary, but it deals nicely with .exe on Windows and can also be used to do other searching.
     let cwd = env::current_dir()?;
-    let mcrl2_rewrite = which::which_in("rewrite", Some("target/release/"), cwd)?;
+    let mcrl2_rewrite = which::which_in("mcrl2rewrite", Some("target/release/"), cwd)?;
 
     let mcrl2_rewrite_timing = Regex::new(r#"Innermost took ([0-9]*) ms"#).unwrap();
 

@@ -5,8 +5,8 @@ use anyhow::Result as AnyResult;
 use clap::Parser;
 
 use log::{info, warn};
-use mcrl2::{aterm::TermPool, data::DataSpecification};
-use rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
+use mcrl2::{aterm::{ATermTrait, TermPool}, data::{DataExpressionRef, DataSpecification}};
+use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 use sabre::RewriteSpecification;
 
 use crate::trs_format::TrsFormatter;
@@ -87,6 +87,14 @@ fn main() -> AnyResult<()>
             let data_spec = DataSpecification::new(&data_spec_text)?;
 
             let spec: RewriteSpecification = data_spec.into();
+
+            // Check if the lhs only contain constructor sorts.
+            for rule in &spec.rewrite_rules {
+                for t in rule.lhs.iter() {
+                    //let cons = data_spec.constructors(DataExpressionRef::from(t).sort());
+
+                }
+            }
             
             let mut output = File::create(args.output)?;
             write!(output, "{}", TrsFormatter::new(&spec))?;
