@@ -878,6 +878,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "mcrl2rewrite"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "anyhow",
+ "clap",
+ "env_logger 0.11.1",
+ "jemallocator",
+ "log",
+ "mcrl2",
+ "rec-tests",
+ "sabre",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1148,21 +1163,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb1070755bd29dffc19d0971cab794e607839ba2ef4b69a9e6fbc8733c1b72ea"
 dependencies = [
  "tstr",
-]
-
-[[package]]
-name = "rewrite"
-version = "0.1.0"
-dependencies = [
- "ahash",
- "anyhow",
- "clap",
- "env_logger 0.11.1",
- "jemallocator",
- "log",
- "mcrl2",
- "rec-tests",
- "sabre",
 ]
 
 [[package]]
