@@ -11,7 +11,7 @@ pub fn benchmark() -> Result<(), Box<dyn Error>> {
     let cwd = env::current_dir()?;
     let mcrl2_rewrite = which::which_in("mcrl2rewrite", Some("target/release/"), cwd)?;
 
-    let mcrl2_rewrite_timing = Regex::new(r#"Innermost took ([0-9]*) ms"#).unwrap();
+    let mcrl2_rewrite_timing = Regex::new(r#"Innermost rewrite took ([0-9]*) ms"#).unwrap();
 
     // Keep track of the resulting timing for every benchmark.
     let mut results = vec![];
@@ -40,11 +40,11 @@ pub fn benchmark() -> Result<(), Box<dyn Error>> {
                 format!("{}", data_spec.to_string_lossy()), 
                 format!("{}", expressions.to_string_lossy())
             )
-            .stderr_capture()
+            .stdout_capture()
             .run() {
                 Ok(result) => {
                     // Parse the standard output to read the rewriting time and insert it into results.
-                    for line in result.stderr.lines() {     
+                    for line in result.stdout.lines() {     
                         if let Some(result ) = mcrl2_rewrite_timing.captures(&line.unwrap()) {
                             let (_, [grp1]) = result.extract();                            
                             let timing: usize = grp1.parse()?;
