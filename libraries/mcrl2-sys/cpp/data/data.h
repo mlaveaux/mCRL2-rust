@@ -155,6 +155,18 @@ bool is_data_sort_expression(const atermpp::detail::_aterm* term)
   return mcrl2::data::is_sort_expression(static_cast<const atermpp::aterm_appl&>(t));
 }
 
+bool is_data_basic_sort(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return mcrl2::data::is_basic_sort(static_cast<const atermpp::aterm_appl&>(t));
+}
+
+bool is_data_function_sort(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm t(term);
+  return mcrl2::data::is_function_sort(static_cast<const atermpp::aterm_appl&>(t));
+}
+
 std::unique_ptr<atermpp::aterm> true_term() 
 {
   return std::make_unique<atermpp::aterm>(data::sort_bool::true_());

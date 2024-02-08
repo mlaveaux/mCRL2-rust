@@ -75,6 +75,8 @@ pub mod ffi {
 
         // For data::sort_expression
         unsafe fn is_data_sort_expression(term: *const _aterm) -> bool;
+        unsafe fn is_data_basic_sort(term: *const _aterm) -> bool;
+        unsafe fn is_data_function_sort(term: *const _aterm) -> bool;
         
         // For data::data_expression        
         unsafe fn is_data_where_clause(term: *const _aterm) -> bool;

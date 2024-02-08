@@ -310,6 +310,12 @@ mod inner {
             unsafe { ffi::is_data_function_sort(self.term.get()) }
         }
     }
+    
+    impl fmt::Display for SortExpression {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.name())
+        }
+    }
 }
 
 pub use inner::*;
