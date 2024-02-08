@@ -72,7 +72,7 @@ mod inner {
     ///     - a term applied to a number of arguments, i.e., t_0(t1, ..., tn).
     ///     - an abstraction lambda x: Sort . e, or forall and exists.
     /// 
-    ///     Not supported:
+    /// Not supported:
     ///     - a where clause "e where [x := f, ...]"
     ///     - set enumeration
     ///     - bag enumeration
