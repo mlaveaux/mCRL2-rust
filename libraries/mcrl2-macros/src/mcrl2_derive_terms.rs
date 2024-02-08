@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 
 use quote::{quote, ToTokens, format_ident};
-use syn::{ItemMod, Item, parse_quote};
+use syn::{parse_quote, Item, ItemMod};
 
 pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStream) -> TokenStream {
 
@@ -49,7 +49,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                         
                         // Add a <name>Ref struct that contains the ATermRef<'a> and
                         // the implementation and both protect and borrow. Also add
-                        // the conversion from and to a ATerm.
+                        // the conversion from and to an ATerm.
                         let name_ref = format_ident!("{}Ref", object.ident);
                         let generated: TokenStream = quote!(
                             impl #name {
@@ -151,19 +151,19 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                         added.push(Item::Verbatim(generated));
                     }
                 }
-                Item::Impl(_implementation) => {
+                Item::Impl(implementation) => {
                     // Duplicate the implementation for the ATermRef struct that is generated above.
-                    // let mut ref_implementation = implementation.clone();
-                    // println!("{:?}", ref_implementation);
+                    let mut ref_implementation = implementation.clone();
 
-                    // if let syn::Type::Path(path) = ref_implementation.self_ty.as_ref() {
-                    //     let name_ref = format_ident!("{}Ref", path.path.get_ident().unwrap());
-                    //     let path = Path::from(PathSegment::from(name_ref));
-
-                    //     ref_implementation.self_ty = Box::new(syn::Type::Path(syn::TypePath { qself: None, path }));
+                    if let syn::Type::Path(path) = ref_implementation.self_ty.as_ref() {
+                        // Build an identifier TestRef<'_>
+                        let name_ref = format_ident!("{}Ref", path.path.get_ident().unwrap());
+                        let path = parse_quote!(#name_ref <'_>);
+                        
+                        ref_implementation.self_ty = Box::new(syn::Type::Path(syn::TypePath { qself: None, path }));
     
-                    //     added.push(Item::Verbatim(ref_implementation.into_token_stream()));
-                    // }
+                        added.push(Item::Verbatim(ref_implementation.into_token_stream()));
+                    }
                 }
                 _ => {
                     // Ignore the rest.
@@ -195,7 +195,7 @@ mod tests {
                     term: ATerm,
                 }
 
-                impl Test<'a> {
+                impl Test {
                     fn a_function() {
 
                     }
