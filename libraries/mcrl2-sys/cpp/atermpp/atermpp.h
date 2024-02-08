@@ -52,6 +52,19 @@ struct callback_container: detail::_aterm_container
   term_mark_stack todo;
 };
 
+// What the fuck is this. Leaks the inner type because unions are not destructed automatically.
+template<typename T>
+class Leaker
+{
+public:
+  union { T m_val; char dummy; };
+  template<typename... Args>
+  Leaker(Args... inputArgs) : m_val(inputArgs...) {}
+  ~Leaker() {  }
+};
+
+using tls_callback_container = Leaker<callback_container>;
+
 inline 
 void initialise()
 {
@@ -121,9 +134,16 @@ void print_metrics()
 }
 
 inline
-std::unique_ptr<callback_container> register_mark_callback(void_callback callback_mark, size_callback callback_size)
+std::unique_ptr<tls_callback_container> register_mark_callback(void_callback callback_mark, size_callback callback_size)
 {
-  return std::make_unique<callback_container>(callback_mark, callback_size);
+  // Do not destroy the callback_container since it is used in a TLS and destruction order w.r.t. the g_thread_aterm_pool is not guaranteed.
+  return std::make_unique<tls_callback_container>(callback_mark, callback_size);
+}
+
+inline
+void unregister_mark_callback(tls_callback_container& container)
+{
+  container.m_val.todo.~term_mark_stack();
 }
 
 const detail::_aterm* aterm_address(const aterm& term)
@@ -212,17 +232,6 @@ const detail::_function_symbol* function_symbol_address(const function_symbol& s
 {
   return symbol.address();
 }
-
-// What the fuck is this. Leaks the inner type because unions are not destructed automatically.
-template<typename T>
-class Leaker
-{
-public:
-  union { T m_val; char dummy; };
-  template<typename... Args>
-  Leaker(Args... inputArgs) : m_val(inputArgs...) {}
-  ~Leaker() {  }
-};
 
 const detail::_function_symbol*  create_function_symbol(rust::String name, std::size_t arity)
 {
