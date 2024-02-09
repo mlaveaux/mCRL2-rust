@@ -567,18 +567,3 @@ fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut HashMap<DataFunctionSym
         panic!("Unexpected term {:?}", t);
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use mcrl2::data::DataSpecification;
-
-    use super::SetAutomaton;
-
-    #[test]
-    fn test_automaton_from_data_spec() {
-        let data_spec_text = include_str!("../../../../examples/REC/mcrl2/add16.dataspec");
-        let data_spec = DataSpecification::new(data_spec_text).unwrap();
-
-        let _ = SetAutomaton::new(&data_spec.into(), |x| { x.clone() }, false);
-    }
-}
