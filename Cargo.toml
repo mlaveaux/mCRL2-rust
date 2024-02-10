@@ -31,6 +31,9 @@ regex = "1.10"
 test-log = "0.2"
 
 # The workspace libraries.
-sabre = { path = "libraries/sabre" }
+io = { path = "libraries/io" }
 mcrl2 = { path = "libraries/mcrl2" }
 mcrl2-macros = { path = "libraries/mcrl2-macros" }
+mcrl2-sys = { path = "libraries/mcrl2-sys" }
+sabre = { path = "libraries/sabre" }
+utilities = { path = "libraries/utilities" }
