@@ -3,11 +3,20 @@ name = "ltsgraph"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 anyhow = "1.0"
-leptos = { version = "0.6.5", features = ["csr"] }
+glam = "0.25"
+slint = "1.4"
+rfd = "0.13"
+tiny-skia = "0.11"
 clap.workspace = true
 env_logger.workspace = true
+log.workspace = true
 io.workspace = true
-console_error_panic_hook = "0.1.7"
+mcrl2.workspace = true
+rand.workspace = true
+
+[build-dependencies]
+slint-build = "1.4"

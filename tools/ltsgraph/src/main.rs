@@ -1,12 +1,16 @@
+slint::include_modules!();
 
-use std::fs::File;
+use std::{fs::File, ops::{Deref, DerefMut}, rc::Rc, sync::Mutex};
 
 use anyhow::Result;
-
 use clap::Parser;
 
-use io::aut::{read_aut, LTS};
-use leptos::{component, create_signal, view, IntoView, SignalGet, SignalSet};
+use io::aut::read_aut;
+use log::debug;
+use slint::{Image, Rgba8Pixel, SharedPixelBuffer, Timer, TimerMode};
+
+mod simulation;
+mod render;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -15,32 +19,91 @@ use leptos::{component, create_signal, view, IntoView, SignalGet, SignalSet};
 )]
 pub struct Cli {
     #[arg(value_name = "FILE")]
-    labelled_transition_system: String,
+    labelled_transition_system: Option<String>,
 
 }
 
-#[component]
-fn App() -> impl IntoView {
-    view! {
-        <svg viewBox="-400,400,-400,400" width="928" height="400" style="max-width: 100% height: auto">
-            <line x1="-13.694089066909036" y1="5.175125614131555" x2="15.510306910179446" y2="-2.1195359421896867"></line>
-            <circle>Test</circle>
-        </svg>
-    }
-}
-
-fn main() -> Result<()>
-{
+fn main() -> Result<()> {
+    // Parse the command line arguments.
     env_logger::init();
-    console_error_panic_hook::set_once();
 
     let cli = Cli::parse();
 
-    let file = File::open(cli.labelled_transition_system)?;
-    let lts = read_aut(file).unwrap();
+    // Load the given LTS.
+    let simulation = if let Some(path) = cli.labelled_transition_system {
+        debug!("Loading LTS {} ...", path);
+        let file = File::open(path)?;
+        let lts = read_aut(file).unwrap();
+        Some(simulation::Simulation::new(lts))
+    } else {
+        None
+    };
 
-    // Show the main application.
-    leptos::mount_to_body(|| view! { <App /> });
+    let simulation = Rc::new(Mutex::new(simulation));
+    
+    // Show the UI
+    let app = Application::new()?;
+
+    {        
+        let simulation = simulation.clone();
+        app.on_render_simulation(move |width, height, _| {
+            // Render a new frame...
+            let mut pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(width as u32, height as u32);
+            
+            // Clear the current pixel buffer.
+            let width = pixel_buffer.width();
+            let height = pixel_buffer.height();
+            let mut pixmap = tiny_skia::PixmapMut::from_bytes(
+                pixel_buffer.make_mut_bytes(), width, height
+            ).unwrap();
+            pixmap.fill(tiny_skia::Color::TRANSPARENT);
+
+            if let Some(simulation) = simulation.lock().unwrap().deref() {
+                render::render(&mut pixmap, simulation);
+            }
+
+            
+            Image::from_rgba8_premultiplied(pixel_buffer.clone())
+        });
+
+        app.on_open_filedialog(move || {
+            // Open a file dialog to open a new LTS.
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("", &[".aut"])
+                .pick_file() {
+
+                debug!("Loading LTS {} ...", path.to_string_lossy());
+                let file = File::open(path).expect("This error should be handled");
+                let lts = read_aut(file).unwrap();
+                
+                // TODO: How to update the mutex/rc.
+                //simulation.lock().unwrap() = Some(simulation::Simulation::new(lts));
+            }
+        });
+    }
+    
+    // Run the simulation on a timer.
+    let timer = Timer::default();
+    {
+        let simulation = simulation.clone();
+        let app = app.as_weak();
+        
+        timer.start(TimerMode::Repeated, std::time::Duration::from_millis(200), move || {
+            debug!("Updating simulation...");
+
+            if let Some(simulation) = simulation.lock().unwrap().deref_mut() {
+                simulation.update();
+                
+                // Request a redraw when the simulation has progressed.
+                if let Some(app) = app.upgrade() {
+                    debug!("Refreshing screen...");
+                    app.window().request_redraw();
+                }
+            }
+        });
+    }
+
+    app.run()?;
 
     Ok(())
 }
