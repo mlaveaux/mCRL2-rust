@@ -1,24 +1,31 @@
-use std::{io::Read, error::Error, collections::HashMap};
+use std::{collections::HashMap, error::Error, io::Read};
 
-use log::trace;
+use log::{debug, trace};
+use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
-use regex::Regex;
 
 use crate::line_iterator::LineIterator;
 
 /// The index type for a label.
-type Label = usize;
+type LabelIndex = usize;
+
+/// The index for a state.
+type StateIndex = usize;
 
 #[derive(Default, Debug, Clone)]
 pub struct State {
-    pub outgoing: Vec<(Label, usize)>,
+    pub outgoing: Vec<(LabelIndex, StateIndex)>,
 }
 
-pub struct LTS {    
-    pub initial_state: usize,
+pub struct LTS {
+    pub initial_state: StateIndex,
 
     pub states: Vec<State>,
+
+    pub labels: Vec<String>,
+
+    pub num_of_transitions: usize,
 }
 
 #[derive(Error, Debug)]
@@ -31,38 +38,55 @@ pub enum IOError {
 }
 
 pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
-
     let mut lines = LineIterator::new(reader);
     lines.advance();
     let header = lines.get().unwrap(); //.ok_or(IOError::InvalidHeader("The first line should be the header"))??;
 
     // Regex for des (<initial>: Nat, <num_of_states>: Nat, <num_of_transitions>: Nat)
-    let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
-    
-    // Regex for (<from>: Nat, <label>: str, <to>: Nat)
-    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"([,\ \(\)a-zA-Z0-9]*)"\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
+    let header_regex =
+        Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
 
-    let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex.captures(header).ok_or(IOError::InvalidHeader("does not match des (<init>, <num_states>, <num_transitions>)"))?
+    // Regex for (<from>: Nat, "<label>: str, <to>: Nat)
+    let transition_regex =
+        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"([,\ \(\)a-zA-Z0-9]*)"\s*,\s*([0-9]*)\s*\)\s*"#)
+            .unwrap();
+
+    // Regex for (<from>: Nat, i: str, <to>: Nat), used in the VLTS benchmarks
+    let internal_transition_regex =
+        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(i)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
+
+    let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
+        .captures(header)
+        .ok_or(IOError::InvalidHeader(
+            "does not match des (<init>, <num_states>, <num_transitions>)",
+        ))?
         .extract();
 
     let initial_state: usize = initial_txt.parse()?;
-    let _num_of_transitions: usize = num_of_transitions_txt.parse()?;
+    let num_of_transitions: usize = num_of_transitions_txt.parse()?;
     let num_of_states: usize = num_of_states_txt.parse()?;
 
-    let labels: HashMap<String, usize> = HashMap::new();
-    let mut states : Vec<State> = Vec::with_capacity(num_of_states);
+    let labels_index: HashMap<String, LabelIndex> = HashMap::new();
+    let mut labels: Vec<String> = Vec::new();
+
+    let mut states: Vec<State> = Vec::with_capacity(num_of_states);
 
     while let Some(line) = lines.next() {
         trace!("{}", line);
 
-        let (_, [from_txt, label_txt, to_txt]) = transition_regex.captures(line).ok_or(
-            IOError::InvalidTransition()
-        )?.extract();
+        // Try either of the transition regexes and otherwise return an error.
+        let (_, [from_txt, label_txt, to_txt]) = transition_regex
+            .captures(line)
+            .ok_or(IOError::InvalidTransition())
+            .or(internal_transition_regex
+                .captures(line)
+                .ok_or(IOError::InvalidTransition()))?
+            .extract();
 
         // Parse the from and to states, with the given label.
         let from: usize = from_txt.parse()?;
         let to: usize = to_txt.parse()?;
-        let label = **labels.get(label_txt).get_or_insert(&labels.len());
+        let label_index = **labels_index.get(label_txt).get_or_insert(&labels_index.len());
 
         // Insert state when it does not exist, and then add the transition.
         if from >= states.len() {
@@ -73,16 +97,31 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
             states.resize_with(to + 1, Default::default);
         }
 
+        if label_index >= labels.len() {
+            labels.resize_with(label_index + 1, Default::default);
+        }
+
         trace!("Read transition {} --[{}]-> {}", from, label_txt, to);
 
-        states[from].outgoing.push((label, to));
+        states[from].outgoing.push((label_index, to));
+
+        if labels[label_index].is_empty() {
+            labels[label_index] = label_txt.to_string();
+        }
     }
 
     // Compute back references.
 
+    // Print some information about the LTS.
+    debug!("Number of states: {}", states.len());
+    debug!("Number of action labels: {}", labels.len());
+    debug!("Number of transitions: {}", num_of_transitions);
+
     Ok(LTS {
         initial_state,
         states,
+        labels,
+        num_of_transitions
     })
 }
 
@@ -93,10 +132,9 @@ mod tests {
     #[test]
     fn test_reading_aut() {
         env_logger::init();
-        
+
         let file = include_str!("../../../examples/lts/abp.aut");
 
         let _lts = read_aut(file.as_bytes()).unwrap();
     }
-
 }

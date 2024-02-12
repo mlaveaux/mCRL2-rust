@@ -21,10 +21,18 @@ fn main() -> Result<()>
     env_logger::init();
 
     let cli = Cli::parse();
-
     let file = File::open(cli.labelled_transition_system)?;
+    let lts = read_aut(file).unwrap();
 
-    let _lts = read_aut(file).unwrap();
+    // Check if the LTS is deterministic.
+    // let mut deterministic = false;
+    // for state in &lts.states {
+    //     for (label, outgoing) in &state.outgoing {
+    //         if state.outgoing.iter().m
+
+    //     }
+
+    // }
 
     Ok(())
 }
