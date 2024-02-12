@@ -56,11 +56,3 @@ All source code should be formatted using `rustfmt`, which can installed using `
 # Related Work
 
 This library is fully inspired by the work on [mCRL2](https://github.com/mCRL2org/mCRL2).
-
-
-TODO
-
- Enumeration
- Sabre compiling not working
- Returning temporaries in terms
- Check lhs for
