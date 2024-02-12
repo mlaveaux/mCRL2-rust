@@ -1,7 +1,8 @@
-import { HorizontalBox, Button } from "std-widgets.slint";
+import { HorizontalBox, Button, VerticalBox, Slider } from "std-widgets.slint";
 
 export global Settings {
     in property <int> frame;
+    in property <float> state_radius: 5.0;
 }
 
 export component Application inherits Window {
@@ -16,13 +17,31 @@ export component Application inherits Window {
     callback open_filedialog;
 
     HorizontalBox {
-        render := Image {
+        Image {
             source: render_simulation(parent.width, parent.height, Settings.frame);
         }
 
-        open_lts := Button {
-            text: "Load LTS";
-            clicked => { open_filedialog(); }
+        VerticalBox { 
+            width: 100px;
+
+            Button {
+                text: "Load LTS";
+                clicked => { open_filedialog(); }
+            }
+            
+            Text {
+                text: "State radius:";
+            }
+
+            Slider {
+                width: parent.width;
+                value: 5.0;
+                minimum: 5.0;
+                maximum: 25.0;
+                changed => { 
+                    Settings.state_radius = self.value; 
+                }
+            }
         }
     }
 

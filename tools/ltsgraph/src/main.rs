@@ -1,16 +1,19 @@
 slint::include_modules!();
 
-use std::{fs::File, ops::{Deref, DerefMut}, rc::Rc, sync::Mutex};
+use std::{fs::File, ops::{Deref, DerefMut}, rc::Rc, sync::Mutex, time::Instant};
 
 use anyhow::Result;
 use clap::Parser;
 
 use io::aut::read_aut;
 use log::debug;
+use render::Viewer;
+use render_text::TextCache;
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer, Timer, TimerMode};
 
 mod simulation;
 mod render;
+mod render_text;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -20,7 +23,6 @@ mod render;
 pub struct Cli {
     #[arg(value_name = "FILE")]
     labelled_transition_system: Option<String>,
-
 }
 
 fn main() -> Result<()> {
@@ -28,18 +30,26 @@ fn main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::parse();
+    
+    let label_cache = TextCache::new();
 
     // Load the given LTS.
     let simulation = if let Some(path) = cli.labelled_transition_system {
         debug!("Loading LTS {} ...", path);
         let file = File::open(path)?;
         let lts = read_aut(file).unwrap();
+        debug!("Loading finished");
+
         Some(simulation::Simulation::new(lts))
     } else {
         None
     };
 
+    // Simulation state.
     let simulation = Rc::new(Mutex::new(simulation));
+
+    // Viewer state.
+    let mut viewer = Viewer::new();
     
     // Show the UI
     let app = Application::new()?;
@@ -62,23 +72,22 @@ fn main() -> Result<()> {
 
     {
         let simulation = simulation.clone();
+        let app_weak = app.as_weak();
         app.on_render_simulation(move |width, height, _| {            
             // Render a new frame...
-            let mut pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(width as u32, height as u32);
-            
-            // Clear the current pixel buffer.
-            let width = pixel_buffer.width();
-            let height = pixel_buffer.height();
-            let mut pixmap = tiny_skia::PixmapMut::from_bytes(
-                pixel_buffer.make_mut_bytes(), width, height
-            ).unwrap();
-            pixmap.fill(tiny_skia::Color::TRANSPARENT);
-
             if let Some(simulation) = simulation.lock().unwrap().deref() {
-                render::render(&mut pixmap, simulation);
+                if let Some(app) = app_weak.upgrade() {
+                    let start = Instant::now();
+                    viewer.resize(width as u32, height as u32);
+                    let image = viewer.render(simulation, app.global::<Settings>().get_state_radius());
+                    debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
+                    image
+                } else {
+                    Image::default()
+                }
+            } else {
+                Image::default()
             }
-            
-            Image::from_rgba8_premultiplied(pixel_buffer.clone())
         });
 
         app.on_open_filedialog(move || {
@@ -105,7 +114,9 @@ fn main() -> Result<()> {
         
         timer.start(TimerMode::Repeated, std::time::Duration::from_millis(16), move || {
             if let Some(simulation) = simulation.lock().unwrap().deref_mut() {
+                let start = Instant::now();
                 simulation.update();
+                debug!("Simulation step took {} ms", (Instant::now() - start).as_millis());
                 
                 // Request a redraw when the simulation has progressed.
                 if let Some(app) = app.upgrade() {
