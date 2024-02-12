@@ -45,8 +45,24 @@ fn main() -> Result<()> {
     let app = Application::new()?;
 
     {        
+        let app_weak = app.as_weak();
+        app.window().set_rendering_notifier(move |state, _| {
+            match state {
+                slint::RenderingState::BeforeRendering => {
+                    if let Some(app) = app_weak.upgrade() {
+                        app.global::<Settings>().set_frame(app.global::<Settings>().get_frame() + 1);
+                    }
+                },
+                _ => {
+
+                }
+            }
+        }).expect("Cannot set a rendering modifier");
+    }
+
+    {
         let simulation = simulation.clone();
-        app.on_render_simulation(move |width, height, _| {
+        app.on_render_simulation(move |width, height, _| {            
             // Render a new frame...
             let mut pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(width as u32, height as u32);
             
@@ -61,7 +77,6 @@ fn main() -> Result<()> {
             if let Some(simulation) = simulation.lock().unwrap().deref() {
                 render::render(&mut pixmap, simulation);
             }
-
             
             Image::from_rgba8_premultiplied(pixel_buffer.clone())
         });
@@ -88,15 +103,12 @@ fn main() -> Result<()> {
         let simulation = simulation.clone();
         let app = app.as_weak();
         
-        timer.start(TimerMode::Repeated, std::time::Duration::from_millis(200), move || {
-            debug!("Updating simulation...");
-
+        timer.start(TimerMode::Repeated, std::time::Duration::from_millis(16), move || {
             if let Some(simulation) = simulation.lock().unwrap().deref_mut() {
                 simulation.update();
                 
                 // Request a redraw when the simulation has progressed.
                 if let Some(app) = app.upgrade() {
-                    debug!("Refreshing screen...");
                     app.window().request_redraw();
                 }
             }

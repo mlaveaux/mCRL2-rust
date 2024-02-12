@@ -1,4 +1,4 @@
-use std::{io::{BufReader, Read}, error::Error, collections::HashMap};
+use std::{io::Read, error::Error, collections::HashMap};
 
 use log::trace;
 use streaming_iterator::StreamingIterator;

@@ -57,6 +57,8 @@ impl Simulation {
                 force += compute_force(&from_pos.position, &to_pos.position, handle_length);
             }
 
+            // Accumulate forces between vertices.
+
             let from_pos = &mut self.states_simulation[from_index];
             from_pos.position += force * 0.01;
 

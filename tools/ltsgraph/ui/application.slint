@@ -1,5 +1,9 @@
 import { HorizontalBox, Button } from "std-widgets.slint";
 
+export global Settings {
+    in property <int> frame;
+}
+
 export component Application inherits Window {
     title: @tr("LTSGraph");
     icon: @image-url("../data/mcrl2-blue.svg");
@@ -8,12 +12,12 @@ export component Application inherits Window {
     preferred-height: 600px;
 
     pure callback render_simulation(length, length, int) -> image;
-    in property <int> frame;
+
     callback open_filedialog;
 
     HorizontalBox {
-        Image {
-            source: render_simulation(parent.width, parent.height, frame);
+        render := Image {
+            source: render_simulation(parent.width, parent.height, Settings.frame);
         }
 
         open_lts := Button {
