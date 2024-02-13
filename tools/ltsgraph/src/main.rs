@@ -6,13 +6,12 @@ use anyhow::Result;
 use clap::Parser;
 
 use io::aut::read_aut;
-use log::debug;
-use render::Viewer;
-use render_text::TextCache;
-use slint::{Image, Rgba8Pixel, SharedPixelBuffer, Timer, TimerMode};
+use log::{debug, info};
+use render_skia::Viewer;
+use slint::{Image, Timer, TimerMode};
 
-mod simulation;
-mod render;
+mod graph_layout;
+mod render_skia;
 mod render_text;
 
 #[derive(Parser, Debug)]
@@ -31,16 +30,16 @@ fn main() -> Result<()> {
 
     let cli = Cli::parse();
     
-    let label_cache = TextCache::new();
-
     // Load the given LTS.
     let simulation = if let Some(path) = cli.labelled_transition_system {
         debug!("Loading LTS {} ...", path);
         let file = File::open(path)?;
-        let lts = read_aut(file).unwrap();
-        debug!("Loading finished");
 
-        Some(simulation::Simulation::new(lts))
+        // TODO: Fix this unwrap and replace it by a ?
+        let lts = read_aut(file).unwrap();
+        info!("{}", lts);
+
+        Some(graph_layout::GraphLayout::new(lts))
     } else {
         None
     };
@@ -53,23 +52,6 @@ fn main() -> Result<()> {
     
     // Show the UI
     let app = Application::new()?;
-
-    {        
-        let app_weak = app.as_weak();
-        app.window().set_rendering_notifier(move |state, _| {
-            match state {
-                slint::RenderingState::BeforeRendering => {
-                    if let Some(app) = app_weak.upgrade() {
-                        app.global::<Settings>().set_frame(app.global::<Settings>().get_frame() + 1);
-                    }
-                },
-                _ => {
-
-                }
-            }
-        }).expect("Cannot set a rendering modifier");
-    }
-
     {
         let simulation = simulation.clone();
         let app_weak = app.as_weak();
@@ -78,8 +60,10 @@ fn main() -> Result<()> {
             if let Some(simulation) = simulation.lock().unwrap().deref() {
                 if let Some(app) = app_weak.upgrade() {
                     let start = Instant::now();
+
                     viewer.resize(width as u32, height as u32);
                     let image = viewer.render(simulation, app.global::<Settings>().get_state_radius());
+
                     debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
                     image
                 } else {
@@ -110,17 +94,17 @@ fn main() -> Result<()> {
     let timer = Timer::default();
     {
         let simulation = simulation.clone();
-        let app = app.as_weak();
+        let app_weak = app.as_weak();
         
         timer.start(TimerMode::Repeated, std::time::Duration::from_millis(16), move || {
             if let Some(simulation) = simulation.lock().unwrap().deref_mut() {
-                let start = Instant::now();
-                simulation.update();
-                debug!("Simulation step took {} ms", (Instant::now() - start).as_millis());
-                
-                // Request a redraw when the simulation has progressed.
-                if let Some(app) = app.upgrade() {
-                    app.window().request_redraw();
+                if let Some(app) = app_weak.upgrade() {
+                    let start = Instant::now();
+                    simulation.update(app.global::<Settings>().get_handle_length(), app.global::<Settings>().get_repulsion_strength(), app.global::<Settings>().get_timestep());
+                    debug!("Simulation step took {} ms", (Instant::now() - start).as_millis());
+                    
+                    // Request a redraw when the simulation has progressed.
+                    app.global::<Settings>().set_refresh(!app.global::<Settings>().get_refresh());
                 }
             }
         });

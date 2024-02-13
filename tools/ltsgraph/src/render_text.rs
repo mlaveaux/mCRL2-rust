@@ -1,4 +1,4 @@
-use cosmic_text::{Attrs, Color, FontSystem, SwashCache, Buffer, Metrics, Shaping};
+use cosmic_text::{Attrs, FontSystem, SwashCache, Buffer, Metrics};
 
 pub struct TextCache {
     /// A FontSystem provides access to detected system fonts, create one per application
@@ -10,41 +10,33 @@ pub struct TextCache {
 
 impl TextCache {
     pub fn new() -> TextCache {  
-
         let mut font_system = FontSystem::new();
         let mut swash_cache = SwashCache::new();
-        
-        // Text metrics indicate the font size and line height of a buffer
-        let metrics = Metrics::new(14.0, 20.0);
-        
-        // A Buffer provides shaping and layout for a UTF-8 string, create one per text widget
-        let mut buffer = Buffer::new(&mut font_system, metrics);
-        
-        // Borrow buffer together with the font system for more convenient method calls
-        let mut buffer = buffer.borrow_with(&mut font_system);
-        
-        // Set a size for the text buffer, in pixels
-        buffer.set_size(80.0, 25.0);
-        
-        // Attributes indicate what font to choose
-        let attrs = Attrs::new();
-        
-        // Add some text!
-        buffer.set_text("Hello, Rust! 🦀\n", attrs, Shaping::Advanced);
-        
-        // Perform shaping as desired
-        buffer.shape_until_scroll(true);
                    
-        // Draw the buffer (for performance, instead use SwashCache directly)
         TextCache {
             font_system,
             swash_cache
         }
     }
 
+    /// Front metrics indicate the font size and line height of a buffer
+    pub fn create_buffer(&mut self, font_metrics: Metrics) -> Buffer {      
+                
+        // A Buffer provides shaping and layout for a UTF-8 string, create one per text widget
+        let mut buffer = Buffer::new(&mut self.font_system, font_metrics);
+                
+        // Set a size for the text buffer, in pixels
+        //buffer.set_size(80.0, 25.0);
+        
+        // Attributes indicate what font to choose
+        let attrs = Attrs::new();
+
+        buffer
+    }
+
     /// Draw the given cached text at the given location.
     pub fn draw(&mut self, path_builder: &mut tiny_skia::PathBuilder, key: cosmic_text::CacheKey, color: tiny_skia::Color) {
-
+        // Draw the buffer (for performance, instead use SwashCache directly)
 
         // Try to get the font outline, which we can draw directly with tiny-skia.
         if let Some(outline) = self.swash_cache.get_outline_commands(&mut self.font_system, key) {
@@ -57,16 +49,17 @@ impl TextCache {
                         path_builder.line_to(p0.x, p0.y);
                     },
                     cosmic_text::Command::CurveTo(p0, p1, p2) => {
-                        //path_builder.move
-
+                        path_builder.cubic_to(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
                     },
-                    _ => {
-
+                    cosmic_text::Command::Close => {
+                        path_builder.close();
+                    },
+                    cosmic_text::Command::QuadTo(p0, p1) => {
+                        path_builder.quad_to(p0.x, p0.y, p1.x, p1.y);
                     }
                 }
             }
-        } else {            
-
+        } else {
             // Otherwise render the image using skia.
             if let Some(image) = self.swash_cache.get_image(&mut self.font_system, key) {
                                 

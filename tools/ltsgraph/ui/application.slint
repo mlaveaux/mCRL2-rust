@@ -1,7 +1,13 @@
 import { HorizontalBox, Button, VerticalBox, Slider } from "std-widgets.slint";
 
 export global Settings {
-    in property <int> frame;
+    
+    // This property is only used internally to force refreshing the view.
+    in property <bool> refresh;
+
+    in property <float> handle_length: 50.0;
+    in property <float> repulsion_strength: 5.0;
+    in property <float> timestep: 25.0;
     in property <float> state_radius: 5.0;
 }
 
@@ -12,13 +18,18 @@ export component Application inherits Window {
     preferred-width: 900px;
     preferred-height: 600px;
 
-    pure callback render_simulation(length, length, int) -> image;
+    // Render the simulation to an image.
+    pure callback render_simulation(length, length, bool) -> image;
 
     callback open_filedialog;
 
     HorizontalBox {
         Image {
-            source: render_simulation(parent.width, parent.height, Settings.frame);
+            source: render_simulation(parent.width, parent.height, Settings.refresh);
+
+            TouchArea { 
+
+            }
         }
 
         VerticalBox { 
@@ -27,6 +38,51 @@ export component Application inherits Window {
             Button {
                 text: "Load LTS";
                 clicked => { open_filedialog(); }
+            }
+            
+            Text {
+                text: {
+                    "Handle Length: {Settings.handle_length}"
+                };
+            }
+
+            Slider {
+                
+                width: parent.width;
+                value: 50.0;
+                minimum: 5.0;
+                maximum: 250.0;
+                changed => { 
+                    Settings.handle_length = self.value; 
+                }
+            }
+
+            Text {
+                text: "Repulsion strength:";
+            }
+            
+            Slider {
+                width: parent.width;
+                value: 1.0;
+                minimum: 0.1;
+                maximum: 5.0;
+                changed => { 
+                    Settings.repulsion_strength = self.value; 
+                }
+            }
+            
+            Text {
+                text: "Timestep:";
+            }
+
+            Slider {
+                width: parent.width;
+                value: 25.0;
+                minimum: 5.0;
+                maximum: 100.0;
+                changed => { 
+                    Settings.timestep = self.value; 
+                }
             }
             
             Text {
