@@ -245,7 +245,7 @@ impl SabreRewriter {
                                     annotation,
                                 ) => {
                                     // Apply the delayed rewrite rule if the conditions hold
-                                    let t: &ATermRef<'_> = &leaf_term;
+                                    let t: &ATermRef<'_> = leaf_term;
                                     if check_equivalence_classes(
                                         t,
                                         &annotation.equivalence_classes,

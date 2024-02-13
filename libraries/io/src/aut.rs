@@ -1,6 +1,7 @@
+use core::fmt;
 use std::{collections::HashMap, error::Error, io::Read};
 
-use log::{debug, trace};
+use log::trace;
 use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
@@ -51,9 +52,9 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
         Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"([,\ \(\)a-zA-Z0-9]*)"\s*,\s*([0-9]*)\s*\)\s*"#)
             .unwrap();
 
-    // Regex for (<from>: Nat, i: str, <to>: Nat), used in the VLTS benchmarks
-    let internal_transition_regex =
-        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(i)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
+    // Regex for (<from>: Nat, label: str, <to>: Nat), used in the VLTS benchmarks
+    let unquoted_transition_regex =
+        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*([,\ \(\)a-zA-Z0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
 
     let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
         .captures(header)
@@ -77,10 +78,8 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
         // Try either of the transition regexes and otherwise return an error.
         let (_, [from_txt, label_txt, to_txt]) = transition_regex
             .captures(line)
-            .ok_or(IOError::InvalidTransition())
-            .or(internal_transition_regex
-                .captures(line)
-                .ok_or(IOError::InvalidTransition()))?
+            .or(unquoted_transition_regex.captures(line))
+            .ok_or(IOError::InvalidTransition())?
             .extract();
 
         // Parse the from and to states, with the given label.
@@ -112,10 +111,6 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
 
     // Compute back references.
 
-    // Print some information about the LTS.
-    debug!("Number of states: {}", states.len());
-    debug!("Number of action labels: {}", labels.len());
-    debug!("Number of transitions: {}", num_of_transitions);
 
     Ok(LTS {
         initial_state,
@@ -123,6 +118,15 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
         labels,
         num_of_transitions
     })
+}
+
+impl fmt::Display for LTS {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {        
+        // Print some information about the LTS.
+        writeln!(f, "Number of states: {}", self.states.len())?;
+        writeln!(f, "Number of action labels: {}", self.labels.len())?;
+        writeln!(f, "Number of transitions: {}", self.num_of_transitions)
+    }
 }
 
 #[cfg(test)]

@@ -44,7 +44,7 @@ impl PositionIndexed for ATermRef<'_> {
         let mut result = self.copy();
 
         for index in &position.indices {
-            result = result.arg(index - 1).upgrade(&self); // Note that positions are 1 indexed.
+            result = result.arg(index - 1).upgrade(self); // Note that positions are 1 indexed.
         }
         
         result

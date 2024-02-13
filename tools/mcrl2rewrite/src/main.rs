@@ -5,7 +5,7 @@ use anyhow::Result as AnyResult;
 use clap::Parser;
 
 use log::{info, warn};
-use mcrl2::{aterm::{ATermTrait, TermPool}, data::{DataExpressionRef, DataSpecification}};
+use mcrl2::{aterm::{ATermTrait, TermPool}, data::DataSpecification};
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 use sabre::RewriteSpecification;
 
@@ -90,7 +90,7 @@ fn main() -> AnyResult<()>
 
             // Check if the lhs only contain constructor sorts.
             for rule in &spec.rewrite_rules {
-                for t in rule.lhs.iter() {
+                for _t in rule.lhs.iter() {
                     //let cons = data_spec.constructors(DataExpressionRef::from(t).sort());
 
                 }

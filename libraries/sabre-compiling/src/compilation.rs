@@ -42,7 +42,7 @@ impl SabreCompiling {
 
         // Load it back in and call the rewriter.
         Ok(SabreCompiling {
-            library: SabreCompiledRef::load_from_directory(&Path::new("../../target/debug"))?
+            library: SabreCompiledRef::load_from_directory(Path::new("../../target/debug"))?
         })
     }
 }

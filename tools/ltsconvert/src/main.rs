@@ -22,7 +22,7 @@ fn main() -> Result<()>
 
     let cli = Cli::parse();
     let file = File::open(cli.labelled_transition_system)?;
-    let lts = read_aut(file).unwrap();
+    let _lts = read_aut(file).unwrap();
 
     // Check if the LTS is deterministic.
     // let mut deterministic = false;

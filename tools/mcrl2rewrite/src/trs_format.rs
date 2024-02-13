@@ -114,7 +114,7 @@ impl<'a> fmt::Display for TrsFormatter<'a> {
                     };
                 }
 
-                writeln!(f, "{}", output.replace("|", "bar").replace("=", "eq").replace("COND", "|"))?;
+                writeln!(f, "{}", output.replace('|', "bar").replace('=', "eq").replace("COND", "|"))?;
             }
         }
         writeln!(f, ")")?;

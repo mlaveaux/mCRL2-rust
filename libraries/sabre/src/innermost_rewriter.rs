@@ -198,7 +198,7 @@ impl InnermostRewriter {
                 .get(&(state_index, symbol.operation_id()))
             {
                 for (announcement, annotation) in &transition.announcements {
-                    let t2: &ATermRef<'_> = &t;
+                    let t2: &ATermRef<'_> = t;
                     if check_equivalence_classes(t2, &annotation.equivalence_classes)
                         && InnermostRewriter::check_conditions(tp, automaton, t, annotation, stats)
                     {

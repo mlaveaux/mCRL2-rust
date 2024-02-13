@@ -1,7 +1,7 @@
 use std::{rc::Rc, cell::RefCell};
 
-use log::{debug, trace};
-use mcrl2::{aterm::TermPool, data::{DataSpecification, DataExpression, DataApplication}};
+use log::debug;
+use mcrl2::{aterm::TermPool, data::{DataSpecification, DataExpression}};
 use sabre::{RewriteEngine, utilities::create_var_map};
 
 use crate::variable_generator::VariableGenerator;
@@ -56,7 +56,7 @@ impl<R: RewriteEngine> Enumerator<R> {
 
        // let mut queue = vec![];
 
-        for (var, position) in &variables {
+        for (var, _position) in &variables {
 
             for cons in self.specification.constructors(&var.sort()) {
 
