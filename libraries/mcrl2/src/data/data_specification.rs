@@ -1,6 +1,7 @@
 use std::error::Error;
 
 use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
+use utilities::{lock_global, GlobalLockGuard};
 
 use crate::aterm::{ATerm, ATermList, ATermTrait, ATermRef};
 
@@ -14,6 +15,7 @@ pub struct DataSpecification {
 impl DataSpecification {
     /// Parses the given text into a data specification
     pub fn new(text: &str) -> Result<Self, cxx::Exception> {
+        let _guard = lock_global();
         let data_spec = ffi::parse_data_specification(text)?;
 
         Ok(DataSpecification {
