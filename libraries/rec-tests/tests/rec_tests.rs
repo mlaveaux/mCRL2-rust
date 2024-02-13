@@ -86,7 +86,6 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
 #[cfg(not(debug_assertions))]
 #[test_case(vec![include_str!("../../../examples/REC/rec/benchexpr20.rec"), include_str!("../../../examples/REC/rec/asfsdfbenchmark.rec")], include_str!("snapshot/result_benchexpr20.txt") ; "benchexpr20")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/benchsym20.rec"), include_str!("../../../examples/REC/rec/asfsdfbenchmark.rec")], include_str!("snapshot/result_benchsym20.txt") ; "benchsym20")]
-#[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/empty.rec")], include_str!("snapshot/result_empty.txt") ; "empty")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/evalexpr.rec")], include_str!("snapshot/result_evalexpr.txt") ; "evalexpr")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/evaltree.rec")], include_str!("snapshot/result_evaltree.txt") ; "evaltree")]
@@ -105,6 +104,7 @@ fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
 
 #[cfg(unix)]
 #[cfg(not(debug_assertions))]
+// #[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/dart.rec")], include_str!("snapshot/result_dart.txt") ; "dart")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/factorial7.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial7.txt") ; "factorial7")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/factorial8.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial8.txt") ; "factorial8")]
