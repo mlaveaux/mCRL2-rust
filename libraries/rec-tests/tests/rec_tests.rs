@@ -95,7 +95,6 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
 #[test_case(vec![include_str!("../../../examples/REC/rec/order.rec")], include_str!("snapshot/result_order.txt") ; "order")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/permutations6.rec"), include_str!("../../../examples/REC/rec/permutations.rec")], include_str!("snapshot/result_permutations6.txt") ; "permutations6")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/revnat1000.rec"), include_str!("../../../examples/REC/rec/revnat.rec")], include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
-#[test_case(vec![include_str!("../../../examples/REC/rec/sieve1000.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
 fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
     rec_test(rec_files, expected_result);
 }
@@ -104,7 +103,8 @@ fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
 
 #[cfg(unix)]
 #[cfg(not(debug_assertions))]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/sieve1000.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/dart.rec")], include_str!("snapshot/result_dart.txt") ; "dart")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/factorial7.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial7.txt") ; "factorial7")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/factorial8.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial8.txt") ; "factorial8")]
