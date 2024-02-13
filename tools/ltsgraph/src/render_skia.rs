@@ -1,3 +1,4 @@
+use cosmic_text::Metrics;
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
 use tiny_skia::{Shader, Stroke, Transform};
 
@@ -35,8 +36,8 @@ impl Viewer {
     /// Render the current state of the simulation into the pixmap.
     pub fn render(&mut self, simulation: &GraphLayout, state_radius: f32) -> Image {
         // Create text elements for all labels that we are going to render.
-        //let buffer = self.label_cache.create_buffer(Metrics::new(12.0, 12.0));
-         
+        let buffer = self.label_cache.create_buffer(Metrics::new(12.0, 12.0));
+        
         // Clear the current pixel buffer.
         let width = self.pixel_buffer.width();
         let height = self.pixel_buffer.height();
@@ -59,18 +60,29 @@ impl Viewer {
 
         // Draw the edges.
         let mut edge_builder = tiny_skia::PathBuilder::new();
+        let mut text_builder = tiny_skia::PathBuilder::new();
+
         for (index, state) in simulation.lts.states.iter().enumerate() {
             let position = simulation.states_simulation[index].position;
 
-            for (_, to) in &state.outgoing {
+            for (label, to) in &state.outgoing {
                 let to_position = simulation.states_simulation[*to].position;
 
-                 edge_builder.move_to(position.x, position.y);
-                 edge_builder.line_to(to_position.x, to_position.y);
+                edge_builder.move_to(position.x, position.y);
+                edge_builder.line_to(to_position.x, to_position.y);
+
+                 // Draw the label of the edge                 
+                self.label_cache.draw(&buffer, &mut text_builder);
              }
         }
 
+        // Draw the path for edges.
         if let Some(path) = edge_builder.finish() {
+            pixmap.stroke_path(&path, &edge_paint, &Stroke::default(), Transform::default(), None);
+        }
+
+        // Draw the path for text.
+        if let Some(path) = text_builder.finish() {
             pixmap.stroke_path(&path, &edge_paint, &Stroke::default(), Transform::default(), None);
         }
 
