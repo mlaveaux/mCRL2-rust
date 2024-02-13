@@ -24,7 +24,9 @@ pub struct Cli {
     labelled_transition_system: Option<String>,
 }
 
-fn main() -> Result<()> {
+// Initialize a tokio runtime for async calls
+#[tokio::main]
+async fn main() -> Result<()> {
     // Parse the command line arguments.
     env_logger::init();
 
