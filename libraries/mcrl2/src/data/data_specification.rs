@@ -25,12 +25,15 @@ impl DataSpecification {
 
     /// Parses the given text as a data expression for the spec.
     pub fn parse(&self, text: &str) -> Result<DataExpression, Box<dyn Error>> {
+        let _guard = lock_global();
         let term: ATerm = ffi::parse_data_expression(text, &self.data_spec)?.into();
+
         Ok(term.into())
     }
 
     /// Parses the given text as a data variable for the spec.
     pub fn parse_variable(&self, text: &str) -> Result<DataVariable, Box<dyn Error>> {
+        let _guard = lock_global();
         let term: ATerm = ffi::parse_variable(text, &self.data_spec)?.into();
         Ok(term.into())
     }
