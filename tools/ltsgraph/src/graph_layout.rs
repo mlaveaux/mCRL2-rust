@@ -106,8 +106,8 @@ impl GraphLayout {
 
                 // Index an edge in the graph.
                 match index_twice(&mut self.states_simulation, state_index, *to_index) {
-                    Pair::One(x) => {
-                        // Handle self loop
+                    Pair::One(_) => {
+                        // Handle self loop, but we apply no forces in this case.
                     },
                     Pair::Both(from_info, to_info) => {
                         let force = compute_spring_force(&from_info.position, &to_info.position, handle_length);

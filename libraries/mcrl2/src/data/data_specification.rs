@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
-use utilities::{lock_global, GlobalLockGuard};
+use utilities::lock_global;
 
 use crate::aterm::{ATerm, ATermList, ATermTrait, ATermRef};
 
