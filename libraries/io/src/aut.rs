@@ -49,12 +49,12 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
 
     // Regex for (<from>: Nat, "<label>: str, <to>: Nat)
     let transition_regex =
-        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"([,\ \(\)a-zA-Z0-9]*)"\s*,\s*([0-9]*)\s*\)\s*"#)
+        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"(.*)"\s*,\s*([0-9]*)\s*\)\s*"#)
             .unwrap();
 
     // Regex for (<from>: Nat, label: str, <to>: Nat), used in the VLTS benchmarks
     let unquoted_transition_regex =
-        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*([,\ \(\)a-zA-Z0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
+        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(.*)\s*,\s*([0-9]*)\s*\)\s*"#).unwrap();
 
     let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
         .captures(header)
