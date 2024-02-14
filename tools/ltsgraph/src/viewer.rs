@@ -104,6 +104,10 @@ impl Viewer {
 
                 edge_builder.move_to(position.x, position.y);
                 edge_builder.line_to(to_position.x, to_position.y);
+
+                // Draw the text label              
+                let middle = (to_position + position) / 2.0;  
+                pixmap.fill_path(&self.labels_cache[*label].1, &state_outer, tiny_skia::FillRule::Winding, Transform::from_translate(middle.x, middle.y), None);
              }
         }
 

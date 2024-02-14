@@ -1,6 +1,6 @@
 slint::include_modules!();
 
-use std::{fs::File, ops::Deref, path::Path, sync::{atomic::AtomicBool, Arc, Mutex, RwLock}, thread, time::Instant};
+use std::{fs::File, ops::Deref, path::Path, sync::{atomic::AtomicBool, Arc, Mutex, RwLock}, thread, time::{Duration, Instant}};
 
 use anyhow::Result;
 use clap::Parser;
@@ -9,7 +9,7 @@ use graph_layout::GraphLayout;
 use io::aut::read_aut;
 use log::{debug, info};
 use viewer::Viewer;
-use slint::{invoke_from_event_loop, Image, SharedPixelBuffer};
+use slint::{invoke_from_event_loop, platform::PointerEventButton, Image, SharedPixelBuffer};
 
 mod graph_layout;
 mod viewer;
@@ -45,6 +45,17 @@ pub struct GuiSettings {
     pub redraw: bool,
 }
 
+impl GuiSettings {
+    pub fn new() -> GuiSettings {
+        GuiSettings {
+            width: 800,
+            height: 600,
+            redraw: false,
+            ..Default::default()
+        }
+    }
+}
+
 // Initialize a tokio runtime for async calls
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -55,7 +66,7 @@ async fn main() -> Result<()> {
 
     // Stores the shared state of the GUI components.
     let state = Arc::new(RwLock::new(None));
-    let settings = Arc::new(Mutex::new(GuiSettings::default()));
+    let settings = Arc::new(Mutex::new(GuiSettings::new()));
     let canvas = Arc::new(Mutex::new(SharedPixelBuffer::new(1, 1)));
     
     // Load an LTS from the given path and updates the state.
@@ -90,22 +101,23 @@ async fn main() -> Result<()> {
     // Show the UI
     let app = Application::new()?;
 
-    // A callback used to request the settings from the window.
-    let on_settings_changed = {
+    {
         let app_weak = app.as_weak();
-        let layout_settings = settings.clone();
+        let settings = settings.clone();
 
-        move || {        
+        app.on_settings_changed(move || {        
             // Request the settings for the next simulation tick.
             if let Some(app) = app_weak.upgrade() {
-                let mut layout_settings = layout_settings.lock().unwrap();
-                layout_settings.handle_length = app.global::<Settings>().get_handle_length();
-                layout_settings.repulsion_strength = app.global::<Settings>().get_repulsion_strength();
-                layout_settings.delta = app.global::<Settings>().get_timestep();
+                let mut settings = settings.lock().unwrap();
+                settings.handle_length = app.global::<Settings>().get_handle_length();
+                settings.repulsion_strength = app.global::<Settings>().get_repulsion_strength();
+                settings.delta = app.global::<Settings>().get_timestep();
             }
-        }
+        });
     };
-    on_settings_changed();
+
+    // Trigger it once to set the default values.
+    app.invoke_settings_changed();
     
     {
         let canvas = canvas.clone();
@@ -113,15 +125,15 @@ async fn main() -> Result<()> {
 
         // Simply return the current canvas, can be updated in the meantime.
         app.on_update_canvas(move |width, height, _| {   
-            let mut view_settings = settings.lock().unwrap();
-            view_settings.width = width as u32;
-            view_settings.height = height as u32;
+            let mut settings = settings.lock().unwrap();
+            settings.width = width as u32;
+            settings.height = height as u32;
 
             let buffer = canvas.lock().unwrap().clone();
 
-            if buffer.width() != view_settings.width || buffer.height() != view_settings.height {
+            if buffer.width() != settings.width || buffer.height() != settings.height {
                 // Request another redraw when the size has changed.
-                view_settings.redraw = true;
+                settings.redraw = true;
             }
 
             debug!("Redraw canvas");
@@ -139,6 +151,17 @@ async fn main() -> Result<()> {
 
                 load_lts(&path);
             }
+        });
+    }
+
+    {
+        // Select a state if possible and drag it around.
+        app.on_canvas_pressed(move |event| {
+            // match event.kind {
+            //     PointerEventButton down => {
+            //         debug!("Pressed mouse!");
+            //     }
+            // }
         });
     }
 
@@ -188,49 +211,48 @@ async fn main() -> Result<()> {
         })?
     };
     
-    // // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
-    // let run_layout = Arc::new(AtomicBool::new(true));
+    // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
+    let run_layout = Arc::new(AtomicBool::new(true));
 
-    // let layout_handle = {
-    //     let state = state.clone();
-    //     let layout_settings = layout_settings.clone();
-    //     let app_weak: slint::Weak<Application> = app.as_weak();
-    //     let run_layout = run_layout.clone();
-    //     let on_settings_changed = on_settings_changed.clone();
+    let layout_handle = {
+        let state = state.clone();
+        let settings = settings.clone();
+        let run_layout = run_layout.clone();
 
-    //      thread::Builder::new().name("ltsgraph layout worker".to_string()).spawn(move || {
-    //         while run_layout.load(std::sync::atomic::Ordering::Relaxed) {
-    //             let start = Instant::now();
+         thread::Builder::new().name("ltsgraph layout worker".to_string()).spawn(move || {
+            while run_layout.load(std::sync::atomic::Ordering::Relaxed) {
+                let start = Instant::now();
 
-    //             if let Some(state) = state.read().unwrap().deref() {
-    //                 {
-    //                     // Read the settings and get access to the layout algorithm.
-    //                     let layout_settings = layout_settings.lock().unwrap();
-    //                     let mut layout = state.graph_layout.lock().unwrap();
+                if let Some(state) = state.read().unwrap().deref() {
+                    // Read the settings and free the lock since otherwise the callback above blocks.
+                    let settings = settings.lock().unwrap().clone();
+                    let mut layout = state.graph_layout.lock().unwrap();
 
-    //                     layout.update(layout_settings.handle_length, layout_settings.repulsion_strength, layout_settings.delta);
-                                            
-    //                     // Copy layout into the view.
-    //                     let mut viewer = state.viewer.lock().unwrap();
-    //                     viewer.update(&layout);
-    //                 }
-    //             }
+                    layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
+                                        
+                    // Copy layout into the view.
+                    let mut viewer = state.viewer.lock().unwrap();
+                    viewer.update(&layout);
+                }
+                
+                // Request a redraw (if not already in progress).
+                settings.lock().unwrap().redraw = true;
 
-    //             // Keep at least 16 milliseconds between two layout runs.
-    //             let duration = Instant::now() - start;
-    //             debug!("Layout step took {} ms", duration.as_millis());
-    //             thread::sleep(Duration::from_millis(100).saturating_sub(duration));
-    //         }
-    //     })
-    // };
+                // Keep at least 16 milliseconds between two layout runs.
+                let duration = Instant::now() - start;
+                debug!("Layout step took {} ms", duration.as_millis());
+                thread::sleep(Duration::from_millis(100).saturating_sub(duration));
+            }
+        })?
+    };
 
     app.run()?;
 
-    // // Stop the layout and quit.
-    // run_layout.store(false, std::sync::atomic::Ordering::Relaxed);
+    // Stop the layout and quit.
+    run_layout.store(false, std::sync::atomic::Ordering::Relaxed);
     run_canvas.store(false, std::sync::atomic::Ordering::Relaxed);
 
-    // layout_handle.join().unwrap();
+    layout_handle.join().unwrap();
     canvas_handle.join().unwrap();
 
     Ok(())

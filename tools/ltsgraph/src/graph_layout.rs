@@ -3,6 +3,7 @@ use std::sync::Arc;
 use io::aut::LTS;
 
 use glam::Vec3;
+use log::debug;
 use rand::Rng;
 
 pub struct GraphLayout {
@@ -58,6 +59,9 @@ impl GraphLayout {
 
     /// Update the layout one step using spring forces for transitions and repulsion between states.
     pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) {
+
+        debug!("delta = {}", delta);
+
         for (state_index, state) in self.lts.states.iter().enumerate() {
             // Ignore the last state since it cannot repulse with any other state.
             if state_index < self.layout_states.len() {
@@ -131,7 +135,7 @@ fn compute_spring_force(p1: &Vec3, p2: &Vec3, rest_length: f32) -> Vec3 {
 
     if dist < 1.0 {
         // Give it some offset force.
-        Vec3::new(1.0, 0.0, 0.0)
+        Vec3::new(0.0, 0.0, 0.0)
     } else {
         // This is already multiplied by -1.0, i.e. (p2 - p1) == (p1 - p2) * -1.0
         (*p2 - *p1) / dist * f32::log2(dist / rest_length)
@@ -144,7 +148,7 @@ fn compute_repulsion_force(p1: &Vec3, p2: &Vec3, repulsion_strength: f32) -> Vec
 
     if dist < 1.0 {
         // Give it some offset force.
-        Vec3::new(1.0, 0.0, 0.0)
+        Vec3::new(0.0, 0.0, 0.0)
     } else {
         (*p1 - *p2) * repulsion_strength / dist
     }

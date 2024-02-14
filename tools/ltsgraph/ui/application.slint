@@ -1,4 +1,4 @@
-import { HorizontalBox, Button, VerticalBox, Slider } from "std-widgets.slint";
+import { HorizontalBox, Button, VerticalBox, Slider, ScrollView } from "std-widgets.slint";
 
 export global Settings {
     
@@ -20,6 +20,8 @@ export component Application inherits Window {
 
     // Render the simulation to an image.
     pure callback update_canvas(length, length, bool) -> image;
+    pure callback canvas_pressed(PointerEvent);
+    pure callback settings_changed();
 
     callback open_filedialog;
 
@@ -27,8 +29,8 @@ export component Application inherits Window {
         Image {
             source: update_canvas(parent.width, parent.height, Settings.refresh);
 
-            TouchArea { 
-
+            TouchArea {
+                pointer-event(event) => { canvas_pressed(event); }
             }
         }
 
@@ -42,7 +44,7 @@ export component Application inherits Window {
             
             Text {
                 text: {
-                    "Handle Length: {Settings.handle_length}"
+                    "Handle Length: " + Settings.handle_length
                 };
             }
 
@@ -53,12 +55,13 @@ export component Application inherits Window {
                 minimum: 5.0;
                 maximum: 250.0;
                 changed => { 
-                    Settings.handle_length = self.value; 
+                    Settings.handle_length = self.value;
+                    settings_changed();
                 }
             }
 
             Text {
-                text: "Repulsion strength:";
+                text: "Repulsion strength:" + Settings.repulsion_strength;
             }
             
             Slider {
@@ -68,25 +71,27 @@ export component Application inherits Window {
                 maximum: 5.0;
                 changed => { 
                     Settings.repulsion_strength = self.value; 
+                    settings_changed();
                 }
             }
             
             Text {
-                text: "Timestep:";
+                text: "Timestep: " + Settings.timestep;
             }
 
             Slider {
                 width: parent.width;
                 value: 25.0;
-                minimum: 5.0;
+                minimum: 0.0;
                 maximum: 100.0;
                 changed => { 
                     Settings.timestep = self.value; 
+                    settings_changed();
                 }
             }
             
             Text {
-                text: "State radius:";
+                text: "State radius:" + Settings.state_radius;
             }
 
             Slider {
@@ -96,6 +101,7 @@ export component Application inherits Window {
                 maximum: 25.0;
                 changed => { 
                     Settings.state_radius = self.value; 
+                    settings_changed();
                 }
             }
         }
