@@ -1,17 +1,18 @@
 slint::include_modules!();
 
-use std::{fs::File, ops::{Deref, DerefMut}, rc::Rc, sync::Mutex, time::Instant};
+use std::{fs::File, ops::Deref, sync::{atomic::AtomicBool, Arc, Mutex, RwLock}, thread, time::{Duration, Instant}};
 
 use anyhow::Result;
 use clap::Parser;
 
+use graph_layout::GraphLayout;
 use io::aut::read_aut;
 use log::{debug, info};
-use render_skia::Viewer;
-use slint::{Image, Timer, TimerMode};
+use viewer::Viewer;
+use slint::{invoke_from_event_loop, RenderingState};
 
 mod graph_layout;
-mod render_skia;
+mod viewer;
 mod render_text;
 
 #[derive(Parser, Debug)]
@@ -24,6 +25,19 @@ pub struct Cli {
     labelled_transition_system: Option<String>,
 }
 
+/// Contains all the GUI related state information.
+struct GuiState {
+    graph_layout: Mutex<GraphLayout>,
+    viewer: Mutex<Viewer>,
+}
+
+#[derive(Clone, Default)]
+pub struct GraphLayoutSettings {
+    pub handle_length: f32,
+    pub repulsion_strength: f32,
+    pub delta: f32,
+}
+
 // Initialize a tokio runtime for async calls
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -31,27 +45,24 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::parse();
+    let state = Arc::new(RwLock::new(None));
+    let layout_settings = Arc::new(Mutex::new(GraphLayoutSettings::default()));
     
     // Load the given LTS.
-    let simulation = if let Some(path) = cli.labelled_transition_system {
+    if let Some(path) = cli.labelled_transition_system {
         debug!("Loading LTS {} ...", path);
         let file = File::open(path)?;
 
         // TODO: Fix this unwrap and replace it by a ?
-        let lts = read_aut(file).unwrap();
+        let lts = Arc::new(read_aut(file).unwrap());
         info!("{}", lts);
 
-        Some(graph_layout::GraphLayout::new(lts))
-    } else {
-        None
+        *state.write().unwrap() = Some(GuiState {
+            graph_layout: Mutex::new(GraphLayout::new(&lts)),
+            viewer: Mutex::new(Viewer::new(&lts)),
+        });
     };
-
-    // Simulation state.
-    let simulation = Rc::new(Mutex::new(simulation));
-
-    // Viewer state.
-    let mut viewer = Viewer::new();
-    
+   
     // Show the UI
     let app = Application::new()?;
     {
