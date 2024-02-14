@@ -1,6 +1,10 @@
+use std::sync::Arc;
+
 use cosmic_text::Metrics;
+use glam::Vec3;
+use io::aut::LTS;
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
-use tiny_skia::{Shader, Stroke, Transform};
+use tiny_skia::{Path, PathBuilder, Shader, Stroke, Transform};
 
 use crate::{graph_layout::GraphLayout, render_text::TextCache};
 
@@ -9,34 +13,64 @@ pub struct Viewer {
     pixel_buffer: SharedPixelBuffer::<Rgba8Pixel>,
     
     /// A cache used to cache strings and font information.
-    label_cache: TextCache,
+    text_cache: TextCache,
 
-    /// A buffer for every single label in the set.
-    labels_cache: Vec<cosmic_text::CacheKey>,
+    /// A buffer for transition labels.
+    labels_cache: Vec<(cosmic_text::Buffer, Path)>,
+
+    /// The underlying LTS being displayed.
+    lts: Arc<LTS>,
+
+    /// Stores a local copy of the state positions.
+    layout_states: Vec<Vec3>,
 }
 
 impl Viewer {
-    pub fn new() -> Viewer {
-        Viewer {
-            label_cache: TextCache::new(),
-        
-            pixel_buffer: SharedPixelBuffer::<Rgba8Pixel>::new(1, 1),
+    pub fn new(lts: &Arc<LTS>) -> Viewer {
 
-            labels_cache: vec![],
+        let mut text_cache = TextCache::new();
+        let mut labels_cache = vec![];
+
+        for label in &lts.labels {
+            // Create text elements for all labels that we are going to render.
+            let buffer = text_cache.create_buffer(Metrics::new(12.0, 12.0));
+            
+            // Draw the label of the edge          
+            let mut text_builder = PathBuilder::new();       
+            text_cache.draw(&buffer, &mut text_builder);
+
+            labels_cache.push((buffer, text_builder.finish().unwrap()));
+        }
+
+        // Initialize the layout information for the states.
+        let mut layout_states = Vec::with_capacity(lts.states.len());
+        layout_states.resize(lts.states.len(), Default::default());
+
+        Viewer {
+            text_cache,
+            labels_cache,        
+            pixel_buffer: SharedPixelBuffer::<Rgba8Pixel>::new(1, 1),
+            lts: lts.clone(),
+            layout_states
         }
     }
 
-    /// Resize the view when necessary.
-    pub fn resize(&mut self, width: u32, height: u32) {
+    /// Resize the output image dimensions when necessary.
+    pub fn on_resize(&mut self, width: u32, height: u32) {
         if self.pixel_buffer.width() != width || self.pixel_buffer.height() != height {
             self.pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(width, height);
         }
     }
 
+    /// Update the state of the viewer with the given graph layout.
+    pub fn update(&mut self, layout: &GraphLayout) {
+        self.layout_states = layout.layout_states.iter().map(|state| {
+            state.position
+        }).collect();
+    }
+
     /// Render the current state of the simulation into the pixmap.
-    pub fn render(&mut self, simulation: &GraphLayout, state_radius: f32) -> Image {
-        // Create text elements for all labels that we are going to render.
-        let buffer = self.label_cache.create_buffer(Metrics::new(12.0, 12.0));
+    pub fn render(&mut self, state_radius: f32) -> Image {
         
         // Clear the current pixel buffer.
         let width = self.pixel_buffer.width();
@@ -62,17 +96,15 @@ impl Viewer {
         let mut edge_builder = tiny_skia::PathBuilder::new();
         let mut text_builder = tiny_skia::PathBuilder::new();
 
-        for (index, state) in simulation.lts.states.iter().enumerate() {
-            let position = simulation.states_simulation[index].position;
+        for (index, state) in self.lts.states.iter().enumerate() {
+            let position = self.layout_states[index];
 
             for (label, to) in &state.outgoing {
-                let to_position = simulation.states_simulation[*to].position;
+                let to_position = self.layout_states[*to];
 
                 edge_builder.move_to(position.x, position.y);
                 edge_builder.line_to(to_position.x, to_position.y);
 
-                 // Draw the label of the edge                 
-                self.label_cache.draw(&buffer, &mut text_builder);
              }
         }
 
@@ -87,10 +119,10 @@ impl Viewer {
         }
 
         // Draw the states on top.
-        for state in &simulation.states_simulation {
+        for position in &self.layout_states {
             // Draw the state.
-            pixmap.fill_path(&state_circle, &state_inner, tiny_skia::FillRule::Winding, Transform::from_translate(state.position.x, state.position.y), None);
-            pixmap.stroke_path(&state_circle, &state_outer, &Stroke::default(), Transform::from_translate(state.position.x, state.position.y), None);
+            pixmap.fill_path(&state_circle, &state_inner, tiny_skia::FillRule::Winding, Transform::from_translate(position.x, position.y), None);
+            pixmap.stroke_path(&state_circle, &state_outer, &Stroke::default(), Transform::from_translate(position.x, position.y), None);
         }
 
         Image::from_rgba8_premultiplied(self.pixel_buffer.clone())
