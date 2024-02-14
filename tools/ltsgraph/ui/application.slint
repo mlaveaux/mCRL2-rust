@@ -19,13 +19,13 @@ export component Application inherits Window {
     preferred-height: 600px;
 
     // Render the simulation to an image.
-    pure callback render_simulation(length, length, bool) -> image;
+    pure callback update_canvas(length, length, bool) -> image;
 
     callback open_filedialog;
 
     HorizontalBox {
         Image {
-            source: render_simulation(parent.width, parent.height, Settings.refresh);
+            source: update_canvas(parent.width, parent.height, Settings.refresh);
 
             TouchArea { 
 

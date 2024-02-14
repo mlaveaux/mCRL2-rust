@@ -1,6 +1,6 @@
 slint::include_modules!();
 
-use std::{fs::File, ops::Deref, sync::{atomic::AtomicBool, Arc, Mutex, RwLock}, thread, time::{Duration, Instant}};
+use std::{fs::File, ops::Deref, path::Path, sync::{atomic::AtomicBool, Arc, Mutex, RwLock}, thread, time::Instant};
 
 use anyhow::Result;
 use clap::Parser;
@@ -9,11 +9,11 @@ use graph_layout::GraphLayout;
 use io::aut::read_aut;
 use log::{debug, info};
 use viewer::Viewer;
-use slint::{invoke_from_event_loop, RenderingState};
+use slint::{invoke_from_event_loop, Image, SharedPixelBuffer};
 
 mod graph_layout;
 mod viewer;
-mod render_text;
+mod text_cache;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -32,98 +32,206 @@ struct GuiState {
 }
 
 #[derive(Clone, Default)]
-pub struct GraphLayoutSettings {
+pub struct GuiSettings {
+
+    // Layout related settings
     pub handle_length: f32,
     pub repulsion_strength: f32,
     pub delta: f32,
+
+    // View related settings
+    pub width: u32,
+    pub height: u32,
+    pub redraw: bool,
 }
 
 // Initialize a tokio runtime for async calls
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     // Parse the command line arguments.
     env_logger::init();
 
     let cli = Cli::parse();
+
+    // Stores the shared state of the GUI components.
     let state = Arc::new(RwLock::new(None));
-    let layout_settings = Arc::new(Mutex::new(GraphLayoutSettings::default()));
+    let settings = Arc::new(Mutex::new(GuiSettings::default()));
+    let canvas = Arc::new(Mutex::new(SharedPixelBuffer::new(1, 1)));
     
-    // Load the given LTS.
-    if let Some(path) = cli.labelled_transition_system {
-        debug!("Loading LTS {} ...", path);
-        let file = File::open(path)?;
+    // Load an LTS from the given path and updates the state.
+    let load_lts = {
+        let state = state.clone();
 
-        // TODO: Fix this unwrap and replace it by a ?
-        let lts = Arc::new(read_aut(file).unwrap());
-        info!("{}", lts);
+        move |path: &Path| {
+            debug!("Loading LTS {} ...", path.to_string_lossy());
+            let file = File::open(path).unwrap();
 
-        *state.write().unwrap() = Some(GuiState {
-            graph_layout: Mutex::new(GraphLayout::new(&lts)),
-            viewer: Mutex::new(Viewer::new(&lts)),
-        });
+            // TODO: Fix this unwrap and replace it by a ?
+            let lts = Arc::new(read_aut(file).unwrap());
+            info!("{}", lts);
+
+            // Create the layout and viewer separately to make the initial state sensible.
+            let layout = GraphLayout::new(&lts);
+            let mut viewer = Viewer::new(&lts);
+            viewer.update(&layout);
+
+            *state.write().unwrap() = Some(GuiState {
+                graph_layout: Mutex::new(layout),
+                viewer: Mutex::new(viewer),
+            });
+        }
+    };
+
+    // Loads the given LTS.
+    if let Some(path) = &cli.labelled_transition_system {
+        load_lts(&Path::new(path));
     };
    
     // Show the UI
     let app = Application::new()?;
-    {
-        let simulation = simulation.clone();
+
+    // A callback used to request the settings from the window.
+    let on_settings_changed = {
         let app_weak = app.as_weak();
-        app.on_render_simulation(move |width, height, _| {            
-            // Render a new frame...
-            if let Some(simulation) = simulation.lock().unwrap().deref() {
-                if let Some(app) = app_weak.upgrade() {
-                    let start = Instant::now();
+        let layout_settings = settings.clone();
 
-                    viewer.resize(width as u32, height as u32);
-                    let image = viewer.render(simulation, app.global::<Settings>().get_state_radius());
-
-                    debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
-                    image
-                } else {
-                    Image::default()
-                }
-            } else {
-                Image::default()
+        move || {        
+            // Request the settings for the next simulation tick.
+            if let Some(app) = app_weak.upgrade() {
+                let mut layout_settings = layout_settings.lock().unwrap();
+                layout_settings.handle_length = app.global::<Settings>().get_handle_length();
+                layout_settings.repulsion_strength = app.global::<Settings>().get_repulsion_strength();
+                layout_settings.delta = app.global::<Settings>().get_timestep();
             }
-        });
+        }
+    };
+    on_settings_changed();
+    
+    {
+        let canvas = canvas.clone();
+        let settings = settings.clone();
 
+        // Simply return the current canvas, can be updated in the meantime.
+        app.on_update_canvas(move |width, height, _| {   
+            let mut view_settings = settings.lock().unwrap();
+            view_settings.width = width as u32;
+            view_settings.height = height as u32;
+
+            let buffer = canvas.lock().unwrap().clone();
+
+            if buffer.width() != view_settings.width || buffer.height() != view_settings.height {
+                // Request another redraw when the size has changed.
+                view_settings.redraw = true;
+            }
+
+            debug!("Redraw canvas");
+            Image::from_rgba8_premultiplied(buffer)
+        });
+    }
+
+    {        
+        // Open the file dialog and load another LTS if necessary.
         app.on_open_filedialog(move || {
             // Open a file dialog to open a new LTS.
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("", &[".aut"])
                 .pick_file() {
 
-                debug!("Loading LTS {} ...", path.to_string_lossy());
-                let file = File::open(path).expect("This error should be handled");
-                let lts = read_aut(file).unwrap();
-                
-                // TODO: How to update the mutex/rc.
-                //simulation.lock().unwrap() = Some(simulation::Simulation::new(lts));
-            }
-        });
-    }
-    
-    // Run the simulation on a timer.
-    let timer = Timer::default();
-    {
-        let simulation = simulation.clone();
-        let app_weak = app.as_weak();
-        
-        timer.start(TimerMode::Repeated, std::time::Duration::from_millis(16), move || {
-            if let Some(simulation) = simulation.lock().unwrap().deref_mut() {
-                if let Some(app) = app_weak.upgrade() {
-                    let start = Instant::now();
-                    simulation.update(app.global::<Settings>().get_handle_length(), app.global::<Settings>().get_repulsion_strength(), app.global::<Settings>().get_timestep());
-                    debug!("Simulation step took {} ms", (Instant::now() - start).as_millis());
-                    
-                    // Request a redraw when the simulation has progressed.
-                    app.global::<Settings>().set_refresh(!app.global::<Settings>().get_refresh());
-                }
+                load_lts(&path);
             }
         });
     }
 
+    // Render the view continuously, but only update the canvas when necessary
+    let run_canvas = Arc::new(AtomicBool::new(true));
+
+    let canvas_handle = {
+        let run_canvas = run_canvas.clone();
+        let state = state.clone();
+        let app_weak: slint::Weak<Application> = app.as_weak();
+        let settings = settings.clone();
+
+        thread::Builder::new().name("ltsgraph canvas worker".to_string()).spawn(move || {
+            while run_canvas.load(std::sync::atomic::Ordering::Relaxed) {
+
+                let mut settings = settings.lock().unwrap();
+                if settings.redraw {
+                    // Get the shared values and free the lock again.
+                    settings.redraw = false;
+                    let width = settings.width;
+                    let height = settings.height;
+                    drop(settings);
+
+                    if let Some(state) = state.read().unwrap().deref() {                                
+                        // Render a new frame...
+                        {
+                            let start = Instant::now();
+                            let mut viewer = state.viewer.lock().unwrap();
+                            viewer.on_resize(width, height);
+                            let image = viewer.render(5.0);
+
+                            debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
+                            *canvas.lock().unwrap() = image;
+                        }
+                    }
+
+                    // Request a redraw when the canvas has been updated.
+                    let app_weak = app_weak.clone();
+                    invoke_from_event_loop( move || {
+                        if let Some(app) = app_weak.upgrade() {
+                            // Update the canvas
+                            app.global::<Settings>().set_refresh(!app.global::<Settings>().get_refresh());
+                        };
+                    }).unwrap();
+                }
+            }
+        })?
+    };
+    
+    // // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
+    // let run_layout = Arc::new(AtomicBool::new(true));
+
+    // let layout_handle = {
+    //     let state = state.clone();
+    //     let layout_settings = layout_settings.clone();
+    //     let app_weak: slint::Weak<Application> = app.as_weak();
+    //     let run_layout = run_layout.clone();
+    //     let on_settings_changed = on_settings_changed.clone();
+
+    //      thread::Builder::new().name("ltsgraph layout worker".to_string()).spawn(move || {
+    //         while run_layout.load(std::sync::atomic::Ordering::Relaxed) {
+    //             let start = Instant::now();
+
+    //             if let Some(state) = state.read().unwrap().deref() {
+    //                 {
+    //                     // Read the settings and get access to the layout algorithm.
+    //                     let layout_settings = layout_settings.lock().unwrap();
+    //                     let mut layout = state.graph_layout.lock().unwrap();
+
+    //                     layout.update(layout_settings.handle_length, layout_settings.repulsion_strength, layout_settings.delta);
+                                            
+    //                     // Copy layout into the view.
+    //                     let mut viewer = state.viewer.lock().unwrap();
+    //                     viewer.update(&layout);
+    //                 }
+    //             }
+
+    //             // Keep at least 16 milliseconds between two layout runs.
+    //             let duration = Instant::now() - start;
+    //             debug!("Layout step took {} ms", duration.as_millis());
+    //             thread::sleep(Duration::from_millis(100).saturating_sub(duration));
+    //         }
+    //     })
+    // };
+
     app.run()?;
+
+    // // Stop the layout and quit.
+    // run_layout.store(false, std::sync::atomic::Ordering::Relaxed);
+    run_canvas.store(false, std::sync::atomic::Ordering::Relaxed);
+
+    // layout_handle.join().unwrap();
+    canvas_handle.join().unwrap();
 
     Ok(())
 }

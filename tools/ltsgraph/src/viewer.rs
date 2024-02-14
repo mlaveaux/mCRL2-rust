@@ -3,10 +3,10 @@ use std::sync::Arc;
 use cosmic_text::Metrics;
 use glam::Vec3;
 use io::aut::LTS;
-use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
+use slint::{Rgba8Pixel, SharedPixelBuffer};
 use tiny_skia::{Path, PathBuilder, Shader, Stroke, Transform};
 
-use crate::{graph_layout::GraphLayout, render_text::TextCache};
+use crate::{graph_layout::GraphLayout, text_cache::TextCache};
 
 pub struct Viewer {
     /// The slint pixel buffer used for rendering.
@@ -33,12 +33,13 @@ impl Viewer {
 
         for label in &lts.labels {
             // Create text elements for all labels that we are going to render.
-            let buffer = text_cache.create_buffer(Metrics::new(12.0, 12.0));
+            let buffer = text_cache.create_buffer(label, Metrics::new(12.0, 12.0));
             
             // Draw the label of the edge          
             let mut text_builder = PathBuilder::new();       
             text_cache.draw(&buffer, &mut text_builder);
 
+            // Put it in the label cache.
             labels_cache.push((buffer, text_builder.finish().unwrap()));
         }
 
@@ -70,7 +71,7 @@ impl Viewer {
     }
 
     /// Render the current state of the simulation into the pixmap.
-    pub fn render(&mut self, state_radius: f32) -> Image {
+    pub fn render(&mut self, state_radius: f32) -> SharedPixelBuffer::<Rgba8Pixel> {
         
         // Clear the current pixel buffer.
         let width = self.pixel_buffer.width();
@@ -94,7 +95,6 @@ impl Viewer {
 
         // Draw the edges.
         let mut edge_builder = tiny_skia::PathBuilder::new();
-        let mut text_builder = tiny_skia::PathBuilder::new();
 
         for (index, state) in self.lts.states.iter().enumerate() {
             let position = self.layout_states[index];
@@ -104,17 +104,11 @@ impl Viewer {
 
                 edge_builder.move_to(position.x, position.y);
                 edge_builder.line_to(to_position.x, to_position.y);
-
              }
         }
 
         // Draw the path for edges.
         if let Some(path) = edge_builder.finish() {
-            pixmap.stroke_path(&path, &edge_paint, &Stroke::default(), Transform::default(), None);
-        }
-
-        // Draw the path for text.
-        if let Some(path) = text_builder.finish() {
             pixmap.stroke_path(&path, &edge_paint, &Stroke::default(), Transform::default(), None);
         }
 
@@ -125,6 +119,6 @@ impl Viewer {
             pixmap.stroke_path(&state_circle, &state_outer, &Stroke::default(), Transform::from_translate(position.x, position.y), None);
         }
 
-        Image::from_rgba8_premultiplied(self.pixel_buffer.clone())
+        self.pixel_buffer.clone()
     }
 }

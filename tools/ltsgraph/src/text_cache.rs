@@ -20,7 +20,7 @@ impl TextCache {
     }
 
     /// Front metrics indicate the font size and line height of a buffer
-    pub fn create_buffer(&mut self, font_metrics: Metrics) -> Buffer {      
+    pub fn create_buffer(&mut self, text: &String, font_metrics: Metrics) -> Buffer {      
                 
         // A Buffer provides shaping and layout for a UTF-8 string, create one per text widget
         let mut buffer = Buffer::new(&mut self.font_system, font_metrics);
@@ -28,11 +28,11 @@ impl TextCache {
         // Set a size for the text buffer, in pixels
         buffer.set_size(&mut self.font_system, 80.0, 25.0);
         
-        // Attributes indicate what font to choose
+        // Attributes indicate what font to choose.
         let attrs = Attrs::new();
 
         // Add some text!
-        buffer.set_text(&mut self.font_system, "Hello, Rust! 🦀\n", attrs, Shaping::Advanced);
+        buffer.set_text(&mut self.font_system, text, attrs, Shaping::Advanced);
 
         // Perform shaping as desired
         buffer.shape_until_scroll(&mut self.font_system, true);
