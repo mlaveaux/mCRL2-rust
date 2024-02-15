@@ -60,8 +60,6 @@ impl GraphLayout {
     /// Update the layout one step using spring forces for transitions and repulsion between states.
     pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) {
 
-        debug!("delta = {}", delta);
-
         for (state_index, state) in self.lts.states.iter().enumerate() {
             // Ignore the last state since it cannot repulse with any other state.
             if state_index < self.layout_states.len() {

@@ -16,7 +16,7 @@ pub struct Viewer {
     text_cache: TextCache,
 
     /// A buffer for transition labels.
-    labels_cache: Vec<(cosmic_text::Buffer, Path)>,
+    labels_cache: Vec<cosmic_text::Buffer>,
 
     /// The underlying LTS being displayed.
     lts: Arc<LTS>,
@@ -36,11 +36,11 @@ impl Viewer {
             let buffer = text_cache.create_buffer(label, Metrics::new(12.0, 12.0));
             
             // Draw the label of the edge          
-            let mut text_builder = PathBuilder::new();       
-            text_cache.draw(&buffer, &mut text_builder);
+            // let mut text_builder = PathBuilder::new();       
+            // text_cache.draw(&buffer, &mut text_builder);
 
-            // Put it in the label cache.
-            labels_cache.push((buffer, text_builder.finish().unwrap()));
+            // // Put it in the label cache.
+            labels_cache.push(buffer);
         }
 
         // Initialize the layout information for the states.
@@ -71,7 +71,7 @@ impl Viewer {
     }
 
     /// Render the current state of the simulation into the pixmap.
-    pub fn render(&mut self, state_radius: f32) -> SharedPixelBuffer::<Rgba8Pixel> {
+    pub fn render(&mut self, state_radius: f32, zoom_level: f32) -> SharedPixelBuffer::<Rgba8Pixel> {
         
         // Clear the current pixel buffer.
         let width = self.pixel_buffer.width();
@@ -96,6 +96,9 @@ impl Viewer {
         // Draw the edges.
         let mut edge_builder = tiny_skia::PathBuilder::new();
 
+        // Test drawing
+        self.text_cache.draw(&self.labels_cache[0], &mut pixmap);
+
         for (index, state) in self.lts.states.iter().enumerate() {
             let position = self.layout_states[index];
 
@@ -106,8 +109,8 @@ impl Viewer {
                 edge_builder.line_to(to_position.x, to_position.y);
 
                 // Draw the text label              
-                let middle = (to_position + position) / 2.0;  
-                pixmap.fill_path(&self.labels_cache[*label].1, &state_outer, tiny_skia::FillRule::Winding, Transform::from_translate(middle.x, middle.y), None);
+                // let middle = (to_position + position) / 2.0;  
+                // pixmap.fill_path(&self.labels_cache[*label].1, &state_outer, tiny_skia::FillRule::Winding, Transform::from_scale(zoom_level, zoom_level) * Transform::from_translate(middle.x, middle.y), None);
              }
         }
 

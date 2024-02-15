@@ -1,4 +1,5 @@
 use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping, SwashCache};
+use tiny_skia::{PathBuilder, PixmapMut, PixmapPaint, Stroke, Transform};
 
 pub struct TextCache {
     /// A FontSystem provides access to detected system fonts, create one per application
@@ -41,8 +42,10 @@ impl TextCache {
     }
 
     /// Draw the given cached text at the given location.
-    pub fn draw(&mut self, buffer: &Buffer, path_builder: &mut tiny_skia::PathBuilder) {
-        // Draw the buffer (for performance use SwashCache directly)        
+    pub fn draw(&mut self, buffer: &Buffer, pixmap: &mut PixmapMut) {
+        let paint = tiny_skia::Paint::default();
+
+        // Draw the buffer        
         for run in buffer.layout_runs() {
             for glyph in run.glyphs.iter() {
                 let physical_glyph = glyph.physical((0., 0.), 1.0);
@@ -54,6 +57,8 @@ impl TextCache {
 
                 // Try to get the font outline, which we can draw directly with tiny-skia.
                 if let Some(outline) = self.swash_cache.get_outline_commands(&mut self.font_system, physical_glyph.cache_key) {
+                    let mut path_builder = PathBuilder::new();
+
                     for command in outline {
                         match *command {
                             cosmic_text::Command::MoveTo(p0) => {
@@ -73,10 +78,15 @@ impl TextCache {
                             }
                         }
                     }
+
+                    pixmap.stroke_path(&path_builder.finish().unwrap(), &paint, &Stroke::default(), Transform::from_translate(physical_glyph.x as f32, physical_glyph.y as f32), None);
                 } else {
                     // Otherwise render the image using skia.
                     if let Some(image) = self.swash_cache.get_image(&mut self.font_system, physical_glyph.cache_key) {
-                                        
+                        let mut data = image.data.clone();
+                        let pixmap_image = PixmapMut::from_bytes(&mut data, image.placement.width, image.placement.height);
+
+                        pixmap.draw_pixmap(0, 0, pixmap_image.unwrap().as_ref(), &PixmapPaint::default(), Transform::default(), None);  
                     };
                 }
             }

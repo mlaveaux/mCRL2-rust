@@ -42,7 +42,11 @@ pub struct GuiSettings {
     // View related settings
     pub width: u32,
     pub height: u32,
+    pub state_radius: f32,
+
     pub redraw: bool,
+
+    pub zoom_level: f32,
 }
 
 impl GuiSettings {
@@ -51,6 +55,7 @@ impl GuiSettings {
             width: 800,
             height: 600,
             redraw: false,
+            zoom_level: 1.0,
             ..Default::default()
         }
     }
@@ -112,6 +117,7 @@ async fn main() -> Result<()> {
                 settings.handle_length = app.global::<Settings>().get_handle_length();
                 settings.repulsion_strength = app.global::<Settings>().get_repulsion_strength();
                 settings.delta = app.global::<Settings>().get_timestep();
+                settings.state_radius = app.global::<Settings>().get_state_radius();
             }
         });
     };
@@ -183,6 +189,8 @@ async fn main() -> Result<()> {
                     settings.redraw = false;
                     let width = settings.width;
                     let height = settings.height;
+                    let state_radius = settings.state_radius;
+                    let zoom_level = settings.zoom_level;
                     drop(settings);
 
                     if let Some(state) = state.read().unwrap().deref() {                                
@@ -191,7 +199,7 @@ async fn main() -> Result<()> {
                             let start = Instant::now();
                             let mut viewer = state.viewer.lock().unwrap();
                             viewer.on_resize(width, height);
-                            let image = viewer.render(5.0);
+                            let image = viewer.render(state_radius, zoom_level);
 
                             debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
                             *canvas.lock().unwrap() = image;
