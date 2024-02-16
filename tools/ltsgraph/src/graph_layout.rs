@@ -1,14 +1,18 @@
 use std::sync::Arc;
 
-use io::aut::LTS;
-
 use glam::Vec3;
-use log::debug;
+use io::{index_twice, LabelledTransitionSystem, Pair};
 use rand::Rng;
 
 pub struct GraphLayout {
-    pub lts: Arc<LTS>,
+    // Store the underlying LTS to get the edges.
+    pub lts: Arc<LabelledTransitionSystem>,
+
+    // For every state store layout information.
     pub layout_states: Vec<StateLayout>,
+    
+    /// Keep track of the total energy in the system, based on amount of displacement
+    energy: f32
 }
 
 #[derive(Default)]
@@ -17,29 +21,10 @@ pub struct StateLayout {
     pub force: Vec3,
 }
 
-enum Pair<T> {
-    Both(T, T),
-    One(T),
-}
-
-fn index_twice<T>(slc: &mut [T], a: usize, b: usize) -> Pair<&mut T> {
-    if a == b {
-        Pair::One(slc.get_mut(a).unwrap())
-    } else {
-        assert!(a <= slc.len() && b < slc.len());
-
-        // safe because a, b are in bounds and distinct
-        unsafe {
-            let ar = &mut *(slc.get_unchecked_mut(a) as *mut _);
-            let br = &mut *(slc.get_unchecked_mut(b) as *mut _);
-            Pair::Both(ar, br)
-        }
-    }
-}
 
 impl GraphLayout {
     /// Construct a new layout for the given LTS.
-    pub fn new(lts: &Arc<LTS>) -> GraphLayout {
+    pub fn new(lts: &Arc<LabelledTransitionSystem>) -> GraphLayout {
         // Keep track of state layout information.
         let mut states_simulation = Vec::with_capacity(lts.states.len());
         states_simulation.resize_with(lts.states.len(), || StateLayout::default());
@@ -47,18 +32,20 @@ impl GraphLayout {
         // Place the states at a render position
         let mut rng = rand::thread_rng();
         for state in &mut states_simulation {
-            state.position.x = rng.gen_range(0.0..1000.0);
-            state.position.y = rng.gen_range(0.0..1000.0);
+            state.position.x = rng.gen_range(-1000.0..1000.0);
+            state.position.y = rng.gen_range(-1000.0..1000.0);
         }
 
         GraphLayout {
             lts: lts.clone(),
             layout_states: states_simulation,
+            energy: 1.0,
         }
     }
 
     /// Update the layout one step using spring forces for transitions and repulsion between states.
     pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) {
+
 
         for (state_index, state) in self.lts.states.iter().enumerate() {
             // Ignore the last state since it cannot repulse with any other state.

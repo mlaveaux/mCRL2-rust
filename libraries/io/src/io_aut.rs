@@ -6,28 +6,7 @@ use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
-use crate::line_iterator::LineIterator;
-
-/// The index type for a label.
-type LabelIndex = usize;
-
-/// The index for a state.
-type StateIndex = usize;
-
-#[derive(Default, Debug, Clone)]
-pub struct State {
-    pub outgoing: Vec<(LabelIndex, StateIndex)>,
-}
-
-pub struct LTS {
-    pub initial_state: StateIndex,
-
-    pub states: Vec<State>,
-
-    pub labels: Vec<String>,
-
-    pub num_of_transitions: usize,
-}
+use crate::{labelled_transition_system::{LabelIndex, State, LabelledTransitionSystem}, line_iterator::LineIterator};
 
 #[derive(Error, Debug)]
 pub enum IOError {
@@ -38,7 +17,7 @@ pub enum IOError {
     InvalidTransition(),
 }
 
-pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
+pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn Error>> {
     let mut lines = LineIterator::new(reader);
     lines.advance();
     let header = lines.get().unwrap(); //.ok_or(IOError::InvalidHeader("The first line should be the header"))??;
@@ -109,24 +88,12 @@ pub fn read_aut(reader: impl Read) -> Result<LTS, Box<dyn Error>> {
         }
     }
 
-    // Compute back references.
-
-
-    Ok(LTS {
+    Ok(LabelledTransitionSystem {
         initial_state,
         states,
         labels,
         num_of_transitions
     })
-}
-
-impl fmt::Display for LTS {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {        
-        // Print some information about the LTS.
-        writeln!(f, "Number of states: {}", self.states.len())?;
-        writeln!(f, "Number of action labels: {}", self.labels.len())?;
-        writeln!(f, "Number of transitions: {}", self.num_of_transitions)
-    }
 }
 
 #[cfg(test)]

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use cosmic_text::Metrics;
 use glam::Vec3;
-use io::aut::LTS;
+use io::LabelledTransitionSystem;
 use slint::{Rgba8Pixel, SharedPixelBuffer};
-use tiny_skia::{Path, PathBuilder, Shader, Stroke, Transform};
+use tiny_skia::{Shader, Stroke, Transform};
 
 use crate::{graph_layout::GraphLayout, text_cache::TextCache};
 
@@ -19,14 +19,14 @@ pub struct Viewer {
     labels_cache: Vec<cosmic_text::Buffer>,
 
     /// The underlying LTS being displayed.
-    lts: Arc<LTS>,
+    lts: Arc<LabelledTransitionSystem>,
 
     /// Stores a local copy of the state positions.
     layout_states: Vec<Vec3>,
 }
 
 impl Viewer {
-    pub fn new(lts: &Arc<LTS>) -> Viewer {
+    pub fn new(lts: &Arc<LabelledTransitionSystem>) -> Viewer {
 
         let mut text_cache = TextCache::new();
         let mut labels_cache = vec![];

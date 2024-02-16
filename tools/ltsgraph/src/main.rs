@@ -6,10 +6,10 @@ use anyhow::Result;
 use clap::Parser;
 
 use graph_layout::GraphLayout;
-use io::aut::read_aut;
+use io::io_aut::read_aut;
 use log::{debug, info};
 use viewer::Viewer;
-use slint::{invoke_from_event_loop, platform::PointerEventButton, Image, SharedPixelBuffer};
+use slint::{invoke_from_event_loop, Image, SharedPixelBuffer};
 
 mod graph_layout;
 mod viewer;

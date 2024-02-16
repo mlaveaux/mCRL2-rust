@@ -3,5 +3,9 @@
 //! 
 
 mod line_iterator;
-pub mod aut;
+mod labelled_transition_system;
+
+pub mod io_aut;
 pub mod variablewidth;
+
+pub use labelled_transition_system::*;
