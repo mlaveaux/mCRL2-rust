@@ -228,26 +228,37 @@ mod inner {
             }
         }
         
+        /// Returns the head symbol a data application
+        pub fn data_function_symbol(&self) -> DataFunctionSymbolRef<'_> {
+            self.term.arg(0).upgrade(&self.term).into()
+        }
+
+        /// Returns the arguments of a data application
+        pub fn data_arguments(&self) -> ATermArgs<'_> {
+            let mut result = self.term.arguments();
+            result.next();
+            result
+        }
+
+        /// Create a new data application from the given head symbol and arguments.
         pub fn from_refs(tp: &mut TermPool, head: &ATermRef<'_>, arguments: &[DataExpressionRef<'_>]) -> DataApplication{
             DataApplication {
                 term: tp.create_data_application2(head, arguments)
             }
         }
         
+        /// Returns the sort of a data application.
         pub fn sort(&self) -> SortExpression {
             DataFunctionSymbolRef::from(self.arg(0)).sort().protect()
         }
     }
         
     impl fmt::Display for DataApplication {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let mut args = self.term.arguments();
-    
-            let head = args.next().unwrap();
-            write!(f, "{}", DataExpressionRef::from(head))?;
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {    
+            write!(f, "{}", self.data_function_symbol())?;
     
             let mut first = true;
-            for arg in args {
+            for arg in self.data_arguments() {
                 if !first {
                     write!(f, ", ")?;
                 } else {

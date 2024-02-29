@@ -85,7 +85,7 @@ impl fmt::Debug for ExplicitPosition {
     }
 }
 
-/// An iterator over all (term, position) pairs of the given [ATerm].
+/// An iterator over all (term, position) pairs of the given ATerm.
 pub struct PositionIterator<'a> {
     queue: VecDeque<(ATermRef<'a>, ExplicitPosition)>,
 }

@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use ahash::AHashSet;
 use mcrl2::aterm::TermPool;
 
@@ -9,17 +11,17 @@ pub(crate) fn create_rewrite_rule(
     lhs: &str,
     rhs: &str,
     variables: &[&str],
-) -> Rule {
-    let lhs = tp.from_string(lhs).unwrap();
-    let rhs = tp.from_string(rhs).unwrap();
+) -> Result<Rule, Box<dyn Error>> {
+    let lhs = tp.from_string(lhs)?;
+    let rhs = tp.from_string(rhs)?;
     let mut vars = AHashSet::new();
     for var in variables {
         vars.insert(var.to_string());
     }
 
-    Rule {
+    Ok(Rule {
         conditions: vec![],
         lhs: to_untyped_data_expression(tp, &lhs, &vars).into(),
         rhs: to_untyped_data_expression(tp, &rhs, &vars).into(),
-    }
+    })
 }

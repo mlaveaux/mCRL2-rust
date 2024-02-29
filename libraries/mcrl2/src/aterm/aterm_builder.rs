@@ -67,8 +67,8 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
     /// # Example
     ///
     /// A simple example could be to transform a term into another term using a
-    /// function f : ATerm -> Option<ATerm>. Then I will be ATerm since that is
-    /// the input, and C will be the Symbol from which we can construct the
+    /// function `f : ATerm -> Option<ATerm>`. Then `I` will be ATerm since that is
+    /// the input, and `C` will be the Symbol from which we can construct the
     /// recursive term.
     ///
     /// `transformer` takes the input and applies f(input). Then either we

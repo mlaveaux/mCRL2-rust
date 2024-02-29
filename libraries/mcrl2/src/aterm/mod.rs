@@ -1,4 +1,4 @@
-//! Rust interface of mcrl2::atermpp
+//! Rust interface of Atermpp
 //! 
 //! This modules provides a safe abstraction for the C++ implementation of the
 //! atermpp library. For performance we have replicated the protection set

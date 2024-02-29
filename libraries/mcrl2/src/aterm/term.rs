@@ -480,20 +480,20 @@ impl<'a> Iterator for TermIterator<'a> {
     type Item = ATermRef<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.queue.is_empty() {
-            None
-        } else {
-            // Get a subterm to inspect
-            let term = self.queue.pop_back().unwrap();
-
-            // Put subterms in the queue
-            for argument in term.arguments().rev() {
-                unsafe {
-                    self.queue.push_back(argument.upgrade_unchecked(&term));
+        match self.queue.pop_back() {
+            Some(term) => {
+                // Put subterms in the queue
+                for argument in term.arguments().rev() {
+                    unsafe {
+                        self.queue.push_back(argument.upgrade_unchecked(&term));
+                    }
                 }
+    
+                Some(term)
+            },
+            None => {
+                None
             }
-
-            Some(term)
         }
     }
 }

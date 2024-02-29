@@ -34,10 +34,10 @@ impl<C: Markable + Send +'static> Protected<C> {
         }
     }
 
-    /// Provides mutable access to the underlying container. Use [protect] of
+    /// Provides mutable access to the underlying container. Use [Protector::protect] of
     /// the resulting guard to be able to insert terms into the container.
     /// Otherwise the borrow checker will note that the [ATermRef] do not
-    /// outlive the guard, see [TermProtection].
+    /// outlive the guard, see [Protector].
     pub fn write(&mut self) -> Protector<'_, C> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {

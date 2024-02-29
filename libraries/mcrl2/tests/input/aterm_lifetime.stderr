@@ -1,0 +1,19 @@
+warning: unused variable: `term`
+ --> tests/input/aterm_lifetime.rs:5:9
+  |
+5 |     let term = {
+  |         ^^^^ help: if this is intentional, prefix it with an underscore: `_term`
+  |
+  = note: `#[warn(unused_variables)]` on by default
+
+error[E0597]: `t` does not live long enough
+ --> tests/input/aterm_lifetime.rs:7:9
+  |
+5 |     let term = {
+  |         ---- borrow later stored here
+6 |         let t = ATerm::default();
+  |             - binding `t` declared here
+7 |         t.arg(0)
+  |         ^ borrowed value does not live long enough
+8 |     };
+  |     - `t` dropped here while still borrowed

@@ -32,27 +32,33 @@ impl LabelledTransitionSystem {
     }
 }
 
+/// A single state in the LTS, containing a vector of outgoing edges.
 #[derive(Default, Debug, Clone)]
 pub struct State {
     pub outgoing: Vec<(LabelIndex, StateIndex)>,
 }
 
-pub enum Pair<T> {
-    Both(T, T),
-    One(T),
+/// An enum used to indicate an edge or a self loop.
+pub enum Edge<T> {
+    Regular(T, T),
+
+    /// For a self loop we only provide a mutable reference to the single state.
+    Selfloop(T),
 }
 
-pub fn index_twice<T>(slc: &mut [T], a: usize, b: usize) -> Pair<&mut T> {
+/// Index two locations (from, to) of an edge, returns mutable references to it.
+pub fn index_edge<T>(slice: &mut [T], a: usize, b: usize) -> Edge<&mut T> {
     if a == b {
-        Pair::One(slc.get_mut(a).unwrap())
+        assert!(a <= slice.len());
+        Edge::Selfloop(slice.get_mut(a).unwrap())
     } else {
-        assert!(a <= slc.len() && b < slc.len());
+        assert!(a <= slice.len() && b < slice.len());
 
         // safe because a, b are in bounds and distinct
         unsafe {
-            let ar = &mut *(slc.get_unchecked_mut(a) as *mut _);
-            let br = &mut *(slc.get_unchecked_mut(b) as *mut _);
-            Pair::Both(ar, br)
+            let ar = &mut *(slice.get_unchecked_mut(a) as *mut _);
+            let br = &mut *(slice.get_unchecked_mut(b) as *mut _);
+            Edge::Regular(ar, br)
         }
     }
 }

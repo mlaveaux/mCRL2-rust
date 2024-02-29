@@ -307,7 +307,7 @@ mod tests {
         
         let mut tp = TermPool::new();
 
-        let rhs_stack = RHSStack::new(&create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]));
+        let rhs_stack = RHSStack::new(&create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]).unwrap());
         let mut expected = Protected::new(vec![]);
 
         let mut write = expected.write();
@@ -342,7 +342,7 @@ mod tests {
     fn test_rhs_stack_variable() {
         let mut tp = TermPool::new();
 
-        let rhs = RHSStack::new(&create_rewrite_rule(&mut tp, "f(x)", "x", &["x"]));
+        let rhs = RHSStack::new(&create_rewrite_rule(&mut tp, "f(x)", "x", &["x"]).unwrap());
 
         // Check if the resulting construction succeeded.
         assert!(rhs.innermost_stack.read().is_empty(), "The resulting config stack is not as expected");

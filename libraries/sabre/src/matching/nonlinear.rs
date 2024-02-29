@@ -96,7 +96,7 @@ mod tests {
     fn test_derive_equivalence_classes()
     {                
         let mut tp = TermPool::new();
-        let eq: Vec<EquivalenceClass> = derive_equivalence_classes(&create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]));
+        let eq: Vec<EquivalenceClass> = derive_equivalence_classes(&create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]).unwrap());
 
         assert_eq!(eq,
             vec![

@@ -1,3 +1,7 @@
+//!
+//! Safe abstraction for the LPS library,
+//!
+
 use std::{fmt, error::Error};
 
 use mcrl2_sys::{cxx::UniquePtr, lps::ffi};

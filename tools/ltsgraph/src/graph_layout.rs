@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use glam::Vec3;
-use io::{index_twice, LabelledTransitionSystem, Pair};
+use io::{index_edge, LabelledTransitionSystem, Edge};
 use rand::Rng;
 
 pub struct GraphLayout {
@@ -10,9 +10,6 @@ pub struct GraphLayout {
 
     // For every state store layout information.
     pub layout_states: Vec<StateLayout>,
-    
-    /// Keep track of the total energy in the system, based on amount of displacement
-    energy: f32
 }
 
 #[derive(Default)]
@@ -39,7 +36,6 @@ impl GraphLayout {
         GraphLayout {
             lts: lts.clone(),
             layout_states: states_simulation,
-            energy: 1.0,
         }
     }
 
@@ -71,11 +67,11 @@ impl GraphLayout {
             // Accumulate forces over all connected edges.
             for (_, to_index) in &state.outgoing {
                 // Index an edge in the graph.
-                match index_twice(&mut self.layout_states, state_index, *to_index) {
-                    Pair::One(_) => {
+                match index_edge(&mut self.layout_states, state_index, *to_index) {
+                    Edge::Selfloop(_) => {
                         // Handle self loop, but we apply no forces in this case.
                     }
-                    Pair::Both(from_info, to_info) => {
+                    Edge::Regular(from_info, to_info) => {
                         let force = compute_spring_force(
                             &from_info.position,
                             &to_info.position,

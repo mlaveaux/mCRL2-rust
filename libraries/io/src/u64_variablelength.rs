@@ -4,7 +4,7 @@ use bitstream_io::{BitReader, BitRead, BitWrite, LittleEndian, BitWriter};
 
 /// The number of bits needed to represent a value of type T in most significant bit encoding.
 #[allow(unused)]
-fn encoding_size<T>() -> usize
+pub fn encoding_size<T>() -> usize
 {
     ((std::mem::size_of::<T>() + 1) * 8) / 7
 }
@@ -14,9 +14,9 @@ fn encoding_size<T>() -> usize
 /// \param value The input value. Any standard integer type is allowed.
 /// \param output A pointer to a piece of reserved memory. Must have a minimum size dependent on the input size (32 bit = 5 bytes, 64 bit = 10 bytes).
 /// \returns The number of bytes used in the output.
-/// \details Implementation taken from https://techoverflow.net/2013/01/25/efficiently-encoding-variable-length-integers-in-cc/
+/// \details Implementation taken from <https://techoverflow.net/2013/01/25/efficiently-encoding-variable-length-integers-in-cc/>
 #[allow(unused)]
-fn write_u64_variablelength<W: Write>(stream: &mut BitWriter<W, LittleEndian>, mut value: u64) -> Result<(), Box<dyn Error>> {
+pub fn write_u64_variablelength<W: Write>(stream: &mut BitWriter<W, LittleEndian>, mut value: u64) -> Result<(), Box<dyn Error>> {
 
     // While more than 7 bits of data are left, occupy the last output byte
     // and set the next byte flag.
@@ -33,7 +33,7 @@ fn write_u64_variablelength<W: Write>(stream: &mut BitWriter<W, LittleEndian>, m
 
 ///  Decodes an unsigned variable-length integer using the MSB algorithm.
 #[allow(unused)]
-fn read_u64_variablelength<R: Read>(stream: &mut BitReader<R, LittleEndian>) -> Result<u64, Box<dyn Error>>
+pub fn read_u64_variablelength<R: Read>(stream: &mut BitReader<R, LittleEndian>) -> Result<u64, Box<dyn Error>>
 {
   let mut value: u64 = 0;
   for i in 0..encoding_size::<u64>()  {
