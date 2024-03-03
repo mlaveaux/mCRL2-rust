@@ -1,0 +1,265 @@
+//!
+//! This contains the grammar for .mcrl2 specifications.
+//!
+
+/// Identifiers
+Id = @{ ASCII_ALPHANUMERIC* }
+
+/// List of identifiers
+IdList = { Id ~ ( "," ~ Id )* }
+
+/// Numbers
+Number = { "0|([1-9][0-9]*)" }
+
+/// Rules for terms f(t0, ..., tn)
+Term = { Id ~ Args? }
+Args = { "(" ~ Term ~ ("," ~ Term)*  ~ ")"}
+
+/// Sort specification
+SortSpec = { "sort" ~ SortDecl+ } 
+
+SortDecl = {    
+        IdList ~ ";"                                                 // List of sort identifiers                                            
+    |   Id ~ "=" ~ SortExpr ~ ";"                                    // Sort alias                                              
+}
+
+/// A general sort expression with infix operators.
+SortExpr = {
+    SortExprAtom ~ (SortExprInfix ~ SortExprAtom)*
+}
+
+/// A single sort expression
+SortExprAtom = { 
+        "Bool"                                                       // Booleans
+    |   "Pos"                                                        // Positive numbers
+    |   "Nat"                                                        // Natural numbers
+    |   "Int"                                                        // Integers
+    |   "Real"                                                       // Reals
+    |   "List" ~ "(" ~ SortExpr ~ ")"                                // List sort
+    |   "Set" ~ "(" ~ SortExpr ~ ")"                                 // Set sort
+    |   "Bag" ~ "(" ~ SortExpr ~ ")"                                 // Bag sort
+    |   "FSet" ~ "(" ~ SortExpr ~ ")"                                // Finite set sort
+    |   "FBag" ~ "(" ~ SortExpr ~ ")"                                // Finite bag sort
+    |   "(" ~ SortExpr ~ ")"                                         // Sort expression with parentheses
+    |   "struct" ~ ConstrDeclList                                    // Structured sort
+    |   Id                                                           // Sort reference
+}
+
+SortExprInfix = _{
+    |   SortExprFunction
+    |   SortExprProduct
+}
+  
+SortExprFunction = { "->" }
+SortExprProduct = { "#" }
+
+/// Constructor declaration
+ConstrDecl = { Id ~ ( "(" ~ ProjDeclList ~ ")" )? ~ ( "?" ~ Id )? } 
+
+/// Constructor declaration list
+ConstrDeclList = { ConstrDecl ~ ( "|" ~ ConstrDecl )* }             
+
+/// A single sort A -> B -> ...
+SortProduct = {
+    SortExprAtom ~ (SortExprProduct ~ SortExprAtom)*
+}
+
+/// Data Expression
+DataExpr = { DataExprAtom ~ (DataExprInfix ~ DataExprAtom)? }
+
+// A single data expressions
+DataExprAtom = {
+        #DataExprTrue = "true"                                                       // True
+    |   "false"                                                      // False
+    |   "[" ~ "]"                                                    // Empty list
+    |   "{" ~ "}"                                                    // Empty set
+    |   "{" ~ ":" ~ "}"                                              // Empty bag
+    |   "[" ~ DataExprList ~ "]"                                     // List enumeration
+    |   "{" ~ BagEnumEltList ~ "}"                                   // Bag enumeration
+    |   "{" ~ VarDecl ~ "|" ~ DataExpr ~ "}"                         // Set/bag comprehension
+    |   "{" ~ DataExprList ~ "}"                                     // Set enumeration
+    |   "(" ~ DataExpr ~ ")"                                         // Brackets
+    |   DataExpr ~ "[" ~ DataExpr ~ "->" ~ DataExpr ~ "]"            // Function update
+    |   DataExpr ~ "(" ~ DataExprList ~ ")"                          // Function application
+    |   "!" ~ DataExpr                                               // Negation, set complement
+    |   "-" ~ DataExpr                                               // Unary minus
+    |   "#" ~ DataExpr                                               // Size of a list
+    |   "forall" ~ VarsDeclList ~ "." ~ DataExpr                     // Universal quantifier
+    |   "exists" ~ VarsDeclList ~ "." ~ DataExpr                     // Existential quantifier
+    |   "lambda" ~ VarsDeclList ~ "." ~ DataExpr                     // Lambda abstraction
+    |   Number                                                       // Number
+    |   Id                                                           // Identifier
+}
+
+DataExprInfix = _{
+        DataExprImpl
+    |   DataExprDisj
+    |   DataExprConj
+    |   DataExprEq
+    |   DataExprNeq
+    |   DataExprLess
+    |   DataExprLeq
+    |   DataExprGeq
+    |   DataExprGreater
+    |   DataExprIn
+    |   DataExprCons
+    |   DataExprSnoc
+    |   DataExprConcat
+    |   DataExprAdd
+    |   DataExprMinus
+    |   DataExprDiv
+    |   DataExprIntDiv
+    |   DataExprMod
+    |   DataExprMult
+    |   DataExprAt
+    |   DataExprWhr
+}
+    DataExprImpl = { "=>" }
+    DataExprDisj = { "||" }
+    DataExprConj = { "&&" }
+    DataExprEq   = { "==" }
+    DataExprNeq  = { "!=" }
+    DataExprLess = { "<" }
+    DataExprLeq  = { "<=" }
+    DataExprGeq  = { ">=" }
+    DataExprGreater = { ">" }
+    DataExprIn   = { "in" }
+    DataExprCons = { "|>" }
+    DataExprSnoc = { "<|" }
+    DataExprConcat = { "++" }
+    DataExprAdd  = { "+" }
+    DataExprMinus = { "-" }
+    DataExprDiv  = { "/" }
+    DataExprIntDiv = { "div" }
+    DataExprMod  = { "mod" }
+    DataExprMult = { "*" }
+    DataExprAt   = { "." }
+    DataExprWhr  = { "whr" }
+
+/// List of data expressions
+DataExprList = { DataExpr ~ ( "," ~ DataExpr )* }
+
+/// Assignment x = expression
+Assignment = { Id ~ "=" ~ DataExpr }
+
+/// List of assignments
+AssignmentList = { Assignment ~ ( "," ~ Assignment )* }
+
+// Variable declarations
+
+/// Typed variable
+VarDecl = { Id ~ ":" ~ SortExpr }
+
+/// Typed variables
+VarsDecl = { IdList ~ ":" ~ SortExpr }
+
+/// Individually typed variables
+VarsDeclList = { VarsDecl ~ ( "," ~ VarsDecl )* }
+
+/// Bag element with multiplicity
+BagEnumElt = { DataExpr ~ ":" ~ DataExpr }                              
+
+/// Elements in a finite bag
+BagEnumEltList = { BagEnumElt ~ ( "," ~ BagEnumElt )* }
+
+/// Declaration of actions
+ActDecl = { IdList ~ ( ":" ~  SortProduct )? ~ ";" }                   // Declarations of actions
+
+/// Action specification
+ActSpec = { "act" ~ ActDecl+ }                                         // Action specification
+
+/// Multiactions tau or a
+MultActTau = {
+        "tau"                                                          // Tau, hidden action, empty multi-action
+    |   MultiAct                                                       // Multi-action
+}
+
+/// Action, process instantiation
+Action = { Id ~ ( "(" ~ DataExprList ~ ")" )? }    
+
+/// Action set        
+ActIdSet = { "{" ~ IdList ~ "}" }                                               
+
+/// List of actions
+MultiAct = { Action ~ ( "|" ~ Action )* }                            
+
+/// Multi-action label
+MultActId = { Id ~ ( "|" ~ Id )* }                                      
+
+MultActIdList = { MultActId ~ ( "," ~ MultActId )* }
+
+/// Multi-action label set
+MultActIdSet = { "{" ~ MultActIdList? ~ "}" }
+
+/// Domain with optional projection
+ProjDecl = { ( Id ~ ":" )? ~ SortExpr }                             
+
+/// Declaration of projection functions
+ProjDeclList = { ProjDecl ~ ( "," ~ ProjDecl )* }                  
+
+/// Action synchronization
+CommExpr = { Id ~ "|" ~ MultActId ~ "->" ~ Id }
+
+/// Action synchronizations
+CommExprList = { CommExpr ~ ( "," ~ CommExpr )* }
+
+/// Action synchronization set
+CommExprSet = { "{" ~ CommExprList? ~ "}" }                             
+
+/// Action renaming
+RenExpr = { Id ~ "->" ~ Id }
+
+/// Multiple action renamings
+RenExprList = { RenExpr ~ ( "," ~ RenExpr )* }
+
+/// An action renaming set.
+RenExprSet = { "{" ~ RenExprList? ~ "}" }
+
+ProcExpr = { ProcExprUnit ~ (ProcExprInfix ~ ProcExprUnit)* }
+
+/// Single Process expressions
+ProcExprUnit = {
+        Id ~ "(" ~ AssignmentList? ~ ")"                         // Process assignment
+    |   "delta"                                                  // Delta, deadlock, inaction
+    |   "tau"                                                    // Tau, hidden action, empty multi-action
+    |   "block" ~ "(" ~ ActIdSet ~ "," ~ ProcExpr ~ ")"          // Block or encapsulation operator
+    |   "allow" ~ "(" ~ MultActIdSet ~ "," ~ ProcExpr ~ ")"      // Allow operator
+    |   "hide" ~ "(" ~ ActIdSet ~ "," ~ ProcExpr ~ ")"           // Hiding operator
+    |   "rename" ~ "(" ~ RenExprSet ~ "," ~ ProcExpr ~ ")"       // Action renaming operator
+    |   "comm" ~ "(" ~ CommExprSet ~ "," ~ ProcExpr ~ ")"        // Communication operator
+    |   "(" ~ ProcExpr ~ ")"                                     // Brackets
+    |   DataExprAtom ~ "->" ~ ProcExpr               // If-then operator
+    |   DataExprAtom ~ "->" ~ ProcExpr              // If-then-else operator
+                  ~ "<>" ~ ProcExpr
+    |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]" ~ 
+              "." ~ ProcExpr                    // Distribution operator
+    |    Action                                                   // Action or process instantiation
+}
+
+ProcExprInfix = {
+    |   "+"                 // Sum operator
+    |   "||"
+    |   "||_"
+    |   "<<"
+    |   "."
+    |   "@"
+    |   "|"
+}
+
+ProcDecl = { Id ~ ( "(" ~ VarsDeclList ~ ")" )? ~ "=" ~ ProcExpr ~ ";" }        // Process declaration
+
+ProcSpec = { "proc" ~ ProcDecl+ }                                     // Process specification
+
+Init = { "init" ~ ProcExpr ~ ";" }                                      // Initial process
+
+/// Parsing a single term
+TermSpec = { SOI ~ Term ~ EOI }
+
+/// Parsing an mCRL2 specification
+MCRL2Spec = { SOI ~ (SortSpec | ActSpec | ProcSpec | Init)* ~ EOI } 
+
+/// This is a silent rule eating all the comments.
+COMMENT = _{ "%" ~ (!NEWLINE ~ ANY)* }
+
+/// This is a silent rule eating all the white space in the input.
+WHITESPACE = _{ " " | "\t" | NEWLINE }
