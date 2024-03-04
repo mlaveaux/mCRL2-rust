@@ -18,7 +18,14 @@ pub fn mcrl2_derive_terms(_attributes: proc_macro::TokenStream, input: proc_macr
     mcrl2_derive_terms_impl(proc_macro2::TokenStream::from(_attributes), proc_macro2::TokenStream::from(input)).into()
 }
 
+/// Marks a struct as a term.
 #[proc_macro_attribute]
 pub fn mcrl2_term(_attributes: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    input
+}
+
+/// Marks a function to be ignored, meaning the Ref term will not have this function
+#[proc_macro_attribute]
+pub fn mcrl2_ignore(_attributes: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     input
 }

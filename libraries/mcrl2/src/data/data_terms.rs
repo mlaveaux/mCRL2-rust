@@ -63,7 +63,7 @@ mod inner {
     
     use std::ops::Deref;
     
-    use mcrl2_macros::mcrl2_term;
+    use mcrl2_macros::{mcrl2_term, mcrl2_ignore};
     use crate::aterm::{Markable, Todo, TermPool};
 
     /// A data expression can be any of:
@@ -146,6 +146,8 @@ mod inner {
     }
 
     impl DataFunctionSymbol {
+
+        #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataFunctionSymbol {
             DataFunctionSymbol {
                 term: tp.create_with(|| {
@@ -193,6 +195,8 @@ mod inner {
     }
 
     impl DataVariable {
+
+        #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataVariable {
             DataVariable {
                 term: tp.create_with(|| {
@@ -222,6 +226,8 @@ mod inner {
     }
 
     impl DataApplication {
+        
+        #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, head: &ATermRef<'_>, arguments: &[impl ATermTrait]) -> DataApplication{
             DataApplication {
                 term: tp.create_data_application(head, arguments)

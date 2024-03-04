@@ -155,6 +155,20 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                     // Duplicate the implementation for the ATermRef struct that is generated above.
                     let mut ref_implementation = implementation.clone();
 
+                    // Remove ignore functions
+                    ref_implementation.items.retain(|item| {
+                        match item {
+                            syn::ImplItem::Fn(func) => {
+                                func.attrs.iter().find(|attr| {
+                                    attr.meta.path().is_ident("mcrl2_ignore")
+                                }).is_none()
+                            },
+                            _ => {
+                                true
+                            }
+                        }
+                    });
+
                     if let syn::Type::Path(path) = ref_implementation.self_ty.as_ref() {
                         // Build an identifier TestRef<'_>
                         let name_ref = format_ident!("{}Ref", path.path.get_ident().unwrap());
