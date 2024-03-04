@@ -14,6 +14,7 @@ use slint::{invoke_from_event_loop, Image, SharedPixelBuffer};
 mod graph_layout;
 mod viewer;
 mod text_cache;
+mod error_dialog;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -82,19 +83,26 @@ async fn main() -> Result<()> {
             debug!("Loading LTS {} ...", path.to_string_lossy());
             let file = File::open(path).unwrap();
 
-            // TODO: Fix this unwrap and replace it by a ?
-            let lts = Arc::new(read_aut(file).unwrap());
-            info!("{}", lts);
+            match read_aut(file) {
+                Ok(lts) => {
+                    let lts = Arc::new(lts);
+                    info!("{}", lts);
 
-            // Create the layout and viewer separately to make the initial state sensible.
-            let layout = GraphLayout::new(&lts);
-            let mut viewer = Viewer::new(&lts);
-            viewer.update(&layout);
+                    // Create the layout and viewer separately to make the initial state sensible.
+                    let layout = GraphLayout::new(&lts);
+                    let mut viewer = Viewer::new(&lts);
+                    viewer.update(&layout);
 
-            *state.write().unwrap() = Some(GuiState {
-                graph_layout: Mutex::new(layout),
-                viewer: Mutex::new(viewer),
-            });
+                    *state.write().unwrap() = Some(GuiState {
+                        graph_layout: Mutex::new(layout),
+                        viewer: Mutex::new(viewer),
+                    });                    
+                },
+                Err(x) => {
+                    error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
+                }
+            }
+
         }
     };
 
@@ -152,22 +160,11 @@ async fn main() -> Result<()> {
         app.on_open_filedialog(move || {
             // Open a file dialog to open a new LTS.
             if let Some(path) = rfd::FileDialog::new()
-                .add_filter("", &[".aut"])
+                .add_filter("", &["aut"])
                 .pick_file() {
 
                 load_lts(&path);
             }
-        });
-    }
-
-    {
-        // Select a state if possible and drag it around.
-        app.on_canvas_pressed(move |event| {
-            // match event.kind {
-            //     PointerEventButton down => {
-            //         debug!("Pressed mouse!");
-            //     }
-            // }
         });
     }
 
