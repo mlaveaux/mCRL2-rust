@@ -82,11 +82,8 @@ impl Viewer {
         pixmap.fill(tiny_skia::Color::TRANSPARENT);
         
         // The information for states.
-        let mut state_inner = tiny_skia::Paint::default();
-        state_inner.shader = Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255));
-
-        let mut state_outer = tiny_skia::Paint::default();
-        state_outer.shader = Shader::SolidColor(tiny_skia::Color::from_rgba8(0, 0, 0, 255));
+        let state_inner = tiny_skia::Paint { shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)), ..Default::default() };
+        let state_outer = tiny_skia::Paint { shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(0, 0, 0, 255)), ..Default::default() };
 
         let state_circle = tiny_skia::PathBuilder::from_circle(0.0, 0.0, state_radius).unwrap();
 

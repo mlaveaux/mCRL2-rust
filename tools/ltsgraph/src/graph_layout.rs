@@ -24,7 +24,7 @@ impl GraphLayout {
     pub fn new(lts: &Arc<LabelledTransitionSystem>) -> GraphLayout {
         // Keep track of state layout information.
         let mut states_simulation = Vec::with_capacity(lts.states.len());
-        states_simulation.resize_with(lts.states.len(), || StateLayout::default());
+        states_simulation.resize_with(lts.states.len(), StateLayout::default);
 
         // Place the states at a render position
         let mut rng = rand::thread_rng();

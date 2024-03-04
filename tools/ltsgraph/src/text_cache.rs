@@ -11,8 +11,8 @@ pub struct TextCache {
 
 impl TextCache {
     pub fn new() -> TextCache {  
-        let mut font_system = FontSystem::new();
-        let mut swash_cache = SwashCache::new();
+        let font_system = FontSystem::new();
+        let swash_cache = SwashCache::new();
                    
         TextCache {
             font_system,
@@ -21,7 +21,7 @@ impl TextCache {
     }
 
     /// Front metrics indicate the font size and line height of a buffer
-    pub fn create_buffer(&mut self, text: &String, font_metrics: Metrics) -> Buffer {      
+    pub fn create_buffer(&mut self, text: &str, font_metrics: Metrics) -> Buffer {      
                 
         // A Buffer provides shaping and layout for a UTF-8 string, create one per text widget
         let mut buffer = Buffer::new(&mut self.font_system, font_metrics);
