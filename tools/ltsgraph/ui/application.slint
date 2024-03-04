@@ -1,5 +1,7 @@
 import { HorizontalBox, Button, VerticalBox, Slider, ScrollView } from "std-widgets.slint";
 
+import { ErrorDialog } from "dialog.slint";
+
 export global Settings {
     
     // This property is only used internally to force refreshing the view.
@@ -15,31 +17,62 @@ export component Application inherits Window {
     title: @tr("LTSGraph");
     icon: @image-url("../data/mcrl2-blue.png");
 
-    preferred-width: 900px;
-    preferred-height: 600px;
+    preferred-width: 1280px;
+    preferred-height: 720px;
 
     // Render the simulation to an image.
     pure callback update_canvas(length, length, bool) -> image;
-    pure callback canvas_pressed(PointerEvent);
+    pure callback canvas_clicked();
     pure callback settings_changed();
-
-    callback open_filedialog;
+    pure callback open_filedialog();
 
     HorizontalBox {
-        Image {
+        width: parent.width;
+        alignment: end;
+
+        canvas := Image {
+            out property <length> view_x: 0.0;
+            out property <length> view_y: 0.0;
+
             source: update_canvas(parent.width, parent.height, Settings.refresh);
+            Text {
+                text: @tr("{} {}", view_x / 1px, view_y / 1px);
+            }
 
             TouchArea {
-                pointer-event(event) => { canvas_pressed(event); }
+
+                pointer-event(e) => {
+                }
+
+                moved => {
+                    view_x = self.mouse-x;
+                    view_y = self.mouse-y;
+                }
             }
         }
 
-        VerticalBox { 
-            width: 100px;
+        Rectangle {
+            width: 2px;
+            background: gray;
+        }
 
+        VerticalBox { 
+            width: 20%;
+            alignment: start;
+            padding-right: 10px;
+            
             Button {
-                text: "Load LTS";
+                text: @tr("Load LTS");
                 clicked => { open_filedialog(); }
+            }
+
+            Rectangle {
+                height: 1%;
+            }
+
+            Text {
+                text: @tr("Layout controls");
+                font-size: 20px;
             }
             
             Text {
@@ -49,8 +82,6 @@ export component Application inherits Window {
             }
 
             Slider {
-                
-                width: parent.width;
                 value: 50.0;
                 minimum: 5.0;
                 maximum: 250.0;
@@ -61,11 +92,10 @@ export component Application inherits Window {
             }
 
             Text {
-                text: "Repulsion strength:" + Settings.repulsion_strength;
+                text: @tr("Repulsion strength: {}", Settings.repulsion_strength);
             }
             
             Slider {
-                width: parent.width;
                 value: 1.0;
                 minimum: 0.1;
                 maximum: 5.0;
@@ -80,7 +110,6 @@ export component Application inherits Window {
             }
 
             Slider {
-                width: parent.width;
                 value: 25.0;
                 minimum: 0.0;
                 maximum: 100.0;
@@ -89,13 +118,21 @@ export component Application inherits Window {
                     settings_changed();
                 }
             }
+
+            Rectangle {
+                height: 1%;
+            }
+
+            Text {
+                text: @tr("View controls");
+                font-size: 20px;
+            }
             
             Text {
                 text: "State radius:" + Settings.state_radius;
             }
 
             Slider {
-                width: parent.width;
                 value: 5.0;
                 minimum: 5.0;
                 maximum: 25.0;
