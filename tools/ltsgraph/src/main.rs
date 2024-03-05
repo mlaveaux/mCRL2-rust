@@ -48,15 +48,19 @@ pub struct GuiSettings {
     pub redraw: bool,
 
     pub zoom_level: f32,
+    pub view_x: f32,
+    pub view_y: f32,
 }
 
 impl GuiSettings {
     pub fn new() -> GuiSettings {
         GuiSettings {
-            width: 800,
-            height: 600,
+            width: 1,
+            height: 1,
             redraw: false,
             zoom_level: 1.0,
+            view_x: 500.0,
+            view_y: 500.0,
             ..Default::default()
         }
     }
@@ -126,6 +130,10 @@ async fn main() -> Result<()> {
                 settings.repulsion_strength = app.global::<Settings>().get_repulsion_strength();
                 settings.delta = app.global::<Settings>().get_timestep();
                 settings.state_radius = app.global::<Settings>().get_state_radius();
+                
+                settings.zoom_level = app.global::<Settings>().get_zoom_level();
+                settings.view_x = app.global::<Settings>().get_view_x();
+                settings.view_y = app.global::<Settings>().get_view_y();
             }
         });
     };
@@ -180,23 +188,15 @@ async fn main() -> Result<()> {
         thread::Builder::new().name("ltsgraph canvas worker".to_string()).spawn(move || {
             while run_canvas.load(std::sync::atomic::Ordering::Relaxed) {
 
-                let mut settings = settings.lock().unwrap();
+                let settings = settings.lock().unwrap().clone();
                 if settings.redraw {
-                    // Get the shared values and free the lock again.
-                    settings.redraw = false;
-                    let width = settings.width;
-                    let height = settings.height;
-                    let state_radius = settings.state_radius;
-                    let zoom_level = settings.zoom_level;
-                    drop(settings);
-
                     if let Some(state) = state.read().unwrap().deref() {                                
                         // Render a new frame...
                         {
                             let start = Instant::now();
                             let mut viewer = state.viewer.lock().unwrap();
-                            viewer.on_resize(width, height);
-                            let image = viewer.render(state_radius, zoom_level);
+                            viewer.on_resize(settings.width, settings.height);
+                            let image = viewer.render(settings.state_radius, settings.view_x, settings.view_y, settings.zoom_level);
 
                             debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
                             *canvas.lock().unwrap() = image;

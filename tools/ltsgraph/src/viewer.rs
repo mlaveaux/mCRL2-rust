@@ -10,8 +10,8 @@ use crate::{graph_layout::GraphLayout, text_cache::TextCache};
 
 pub struct Viewer {
     /// The slint pixel buffer used for rendering.
-    pixel_buffer: SharedPixelBuffer::<Rgba8Pixel>,
-    
+    pixel_buffer: SharedPixelBuffer<Rgba8Pixel>,
+
     /// A cache used to cache strings and font information.
     text_cache: TextCache,
 
@@ -27,19 +27,16 @@ pub struct Viewer {
 
 impl Viewer {
     pub fn new(lts: &Arc<LabelledTransitionSystem>) -> Viewer {
-
         let mut text_cache = TextCache::new();
         let mut labels_cache = vec![];
 
         for label in &lts.labels {
             // Create text elements for all labels that we are going to render.
             let buffer = text_cache.create_buffer(label, Metrics::new(12.0, 12.0));
-            
-            // Draw the label of the edge          
-            // let mut text_builder = PathBuilder::new();       
-            // text_cache.draw(&buffer, &mut text_builder);
 
-            // // Put it in the label cache.
+            println!("{}", label);
+
+            // Put it in the label cache.
             labels_cache.push(buffer);
         }
 
@@ -49,10 +46,10 @@ impl Viewer {
 
         Viewer {
             text_cache,
-            labels_cache,        
+            labels_cache,
             pixel_buffer: SharedPixelBuffer::<Rgba8Pixel>::new(1, 1),
             lts: lts.clone(),
-            layout_states
+            layout_states,
         }
     }
 
@@ -65,25 +62,32 @@ impl Viewer {
 
     /// Update the state of the viewer with the given graph layout.
     pub fn update(&mut self, layout: &GraphLayout) {
-        self.layout_states = layout.layout_states.iter().map(|state| {
-            state.position
-        }).collect();
+        self.layout_states = layout
+            .layout_states
+            .iter()
+            .map(|state| state.position)
+            .collect();
     }
 
     /// Render the current state of the simulation into the pixmap.
-    pub fn render(&mut self, state_radius: f32, zoom_level: f32) -> SharedPixelBuffer::<Rgba8Pixel> {
-        
+    pub fn render(&mut self, state_radius: f32, view_x: f32, view_y: f32, zoom_level: f32) -> SharedPixelBuffer<Rgba8Pixel> {
         // Clear the current pixel buffer.
         let width = self.pixel_buffer.width();
         let height = self.pixel_buffer.height();
-        let mut pixmap = tiny_skia::PixmapMut::from_bytes(
-            self.pixel_buffer.make_mut_bytes(), width, height
-        ).unwrap();
+        let mut pixmap =
+            tiny_skia::PixmapMut::from_bytes(self.pixel_buffer.make_mut_bytes(), width, height)
+                .unwrap();
         pixmap.fill(tiny_skia::Color::TRANSPARENT);
-        
+
         // The information for states.
-        let state_inner = tiny_skia::Paint { shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)), ..Default::default() };
-        let state_outer = tiny_skia::Paint { shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(0, 0, 0, 255)), ..Default::default() };
+        let state_inner = tiny_skia::Paint {
+            shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)),
+            ..Default::default()
+        };
+        let state_outer = tiny_skia::Paint {
+            shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(0, 0, 0, 255)),
+            ..Default::default()
+        };
 
         let state_circle = tiny_skia::PathBuilder::from_circle(0.0, 0.0, state_radius).unwrap();
 
@@ -92,9 +96,6 @@ impl Viewer {
 
         // Draw the edges.
         let mut edge_builder = tiny_skia::PathBuilder::new();
-
-        // Test drawing
-        self.text_cache.draw(&self.labels_cache[0], &mut pixmap);
 
         for (index, state) in self.lts.states.iter().enumerate() {
             let position = self.layout_states[index];
@@ -105,22 +106,40 @@ impl Viewer {
                 edge_builder.move_to(position.x, position.y);
                 edge_builder.line_to(to_position.x, to_position.y);
 
-                // Draw the text label              
-                // let middle = (to_position + position) / 2.0;  
-                // pixmap.fill_path(&self.labels_cache[*label].1, &state_outer, tiny_skia::FillRule::Winding, Transform::from_scale(zoom_level, zoom_level) * Transform::from_translate(middle.x, middle.y), None);
-             }
+                // Draw the text label
+                let middle = (to_position + position) / 2.0;
+                self.text_cache.draw(&self.labels_cache[*label], &mut pixmap, Transform::from_translate(middle.x, middle.y).pre_translate(view_x, view_y));
+            }
         }
 
         // Draw the path for edges.
         if let Some(path) = edge_builder.finish() {
-            pixmap.stroke_path(&path, &edge_paint, &Stroke::default(), Transform::default(), None);
+            pixmap.stroke_path(
+                &path,
+                &edge_paint,
+                &Stroke::default(),
+                Transform::from_translate(view_x, view_y),
+                None,
+            );
         }
 
         // Draw the states on top.
         for position in &self.layout_states {
             // Draw the state.
-            pixmap.fill_path(&state_circle, &state_inner, tiny_skia::FillRule::Winding, Transform::from_translate(position.x, position.y), None);
-            pixmap.stroke_path(&state_circle, &state_outer, &Stroke::default(), Transform::from_translate(position.x, position.y), None);
+            pixmap.fill_path(
+                &state_circle,
+                &state_inner,
+                tiny_skia::FillRule::Winding,
+                Transform::from_translate(position.x, position.y).pre_translate(view_x, view_y),
+                None,
+            );
+            pixmap.stroke_path(
+                &state_circle,
+                &state_outer,
+                &Stroke::default(),
+                Transform::from_translate(position.x, position.y).pre_translate(view_x, view_y),
+                None,
+            );
         }
 
         self.pixel_buffer.clone()

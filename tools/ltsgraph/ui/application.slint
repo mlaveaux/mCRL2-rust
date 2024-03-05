@@ -9,6 +9,10 @@ export global Settings {
     in property <float> repulsion_strength: 5.0;
     in property <float> timestep: 25.0;
     in property <float> state_radius: 5.0;
+    
+    in property <float> zoom_level: 1.0;
+    in property <length> view_x: 1000px;
+    in property <length> view_y: 1000px;
 }
 
 export component Application inherits Window {
@@ -28,13 +32,11 @@ export component Application inherits Window {
         width: parent.width;
         alignment: end;
 
-        canvas := Image {
-            out property <length> view_x: 0.0;
-            out property <length> view_y: 0.0;
+        Image {
 
             source: update_canvas(parent.width, parent.height, Settings.refresh);
             Text {
-                text: @tr("{} {}", view_x / 1px, view_y / 1px);
+                text: @tr("{} {}", Settings.view_x / 1px, Settings.view_y / 1px);
             }
 
             TouchArea {
@@ -43,8 +45,9 @@ export component Application inherits Window {
                 }
 
                 moved => {
-                    view_x = self.mouse-x;
-                    view_y = self.mouse-y;
+                    Settings.view_x = self.mouse-x;
+                    Settings.view_y = self.mouse-y;
+                    settings_changed();
                 }
             }
         }
@@ -54,6 +57,7 @@ export component Application inherits Window {
             background: gray;
         }
 
+        // The controls on the right menu
         VerticalBox { 
             width: 20%;
             alignment: start;
