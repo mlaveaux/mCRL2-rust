@@ -58,7 +58,8 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
     let num_of_transitions: usize = num_of_transitions_txt.parse()?;
     let num_of_states: usize = num_of_states_txt.parse()?;
 
-    let labels_index: HashMap<String, LabelIndex> = HashMap::new();
+    // This is used to keep track of the label to index mapping.
+    let mut labels_index: HashMap<String, LabelIndex> = HashMap::new();
     let mut labels: Vec<String> = Vec::new();
 
     let mut states: Vec<State> = Vec::with_capacity(num_of_states);
@@ -76,9 +77,11 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
         // Parse the from and to states, with the given label.
         let from: usize = from_txt.parse()?;
         let to: usize = to_txt.parse()?;
-        let label_index = **labels_index
-            .get(label_txt)
-            .get_or_insert(&labels_index.len());
+
+
+        let label_index = *labels_index
+            .entry(label_txt.to_string())
+            .or_insert(labels.len());
 
         // Insert state when it does not exist, and then add the transition.
         if from >= states.len() {
