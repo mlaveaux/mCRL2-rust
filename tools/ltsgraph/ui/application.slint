@@ -11,7 +11,7 @@ export global Settings {
     in property <float> timestep: 15.0;
     
     // Settings for the view itself.
-    in property <float> zoom_level: 1.0;
+    in property <float> zoom_level: 100.0;
     in property <float> state_radius: 5.0;
     in property <float> label_text_height: 14.0;
     in property <length> view_x: 500px;
@@ -32,7 +32,6 @@ export component Application inherits Window {
     pure callback open_filedialog();
 
     HorizontalBox {
-        width: parent.width;
         alignment: end;
 
         Image {
