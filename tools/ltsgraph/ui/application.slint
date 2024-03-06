@@ -5,14 +5,17 @@ export global Settings {
     // This property is only used internally to force refreshing the view.
     in property <bool> refresh;
 
+    // Settings for the simulation
     in property <float> handle_length: 50.0;
     in property <float> repulsion_strength: 5.0;
-    in property <float> timestep: 25.0;
-    in property <float> state_radius: 5.0;
+    in property <float> timestep: 15.0;
     
+    // Settings for the view itself.
     in property <float> zoom_level: 1.0;
-    in property <length> view_x: 1000px;
-    in property <length> view_y: 1000px;
+    in property <float> state_radius: 5.0;
+    in property <float> label_text_height: 14.0;
+    in property <length> view_x: 500px;
+    in property <length> view_y: 500px;
 }
 
 export component Application inherits Window {
@@ -33,21 +36,31 @@ export component Application inherits Window {
         alignment: end;
 
         Image {
-
             source: update_canvas(parent.width, parent.height, Settings.refresh);
-            Text {
-                text: @tr("{} {}", Settings.view_x / 1px, Settings.view_y / 1px);
-            }
 
             TouchArea {
+                // Keep track of the original (before it was moved)
+                out property <length> view_x_start: 0px;
+                out property <length> view_y_start: 0px;
 
                 pointer-event(e) => {
+                    if e.kind == PointerEventKind.down {
+                        view_x_start = Settings.view_x;
+                        view_y_start = Settings.view_y;
+                    }
                 }
 
                 moved => {
-                    Settings.view_x = self.mouse-x;
-                    Settings.view_y = self.mouse-y;
+                    Settings.view_x = view_x_start + self.mouse-x - self.pressed-x;
+                    Settings.view_y = view_y_start + self.mouse-y - self.pressed-y;
                     settings_changed();
+                }
+
+                scroll-event(e) => {
+                    Settings.zoom_level += e.delta-y / 1px;
+                    settings_changed();
+
+                    EventResult.accept
                 }
             }
         }
@@ -112,9 +125,9 @@ export component Application inherits Window {
             }
 
             Slider {
-                value: 25.0;
+                value: 15.0;
                 minimum: 0.0;
-                maximum: 100.0;
+                maximum: 15.0;
                 changed => { 
                     Settings.timestep = self.value; 
                     settings_changed();
@@ -140,6 +153,20 @@ export component Application inherits Window {
                 maximum: 25.0;
                 changed => { 
                     Settings.state_radius = self.value; 
+                    settings_changed();
+                }
+            }
+
+            Text {
+                text: "Label text size:" + Settings.state_radius;
+            }
+
+            Slider {
+                value: 14.0;
+                minimum: 14.0;
+                maximum: 100.0;
+                changed => { 
+                    Settings.label_text_height = self.value; 
                     settings_changed();
                 }
             }

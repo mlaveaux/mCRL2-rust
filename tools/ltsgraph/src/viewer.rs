@@ -34,8 +34,6 @@ impl Viewer {
             // Create text elements for all labels that we are going to render.
             let buffer = text_cache.create_buffer(label, Metrics::new(12.0, 12.0));
 
-            println!("{}", label);
-
             // Put it in the label cache.
             labels_cache.push(buffer);
         }
@@ -70,14 +68,21 @@ impl Viewer {
     }
 
     /// Render the current state of the simulation into the pixmap.
-    pub fn render(&mut self, state_radius: f32, view_x: f32, view_y: f32, zoom_level: f32) -> SharedPixelBuffer<Rgba8Pixel> {
+    pub fn render(
+        &mut self,
+        state_radius: f32,
+        view_x: f32,
+        view_y: f32,
+        zoom_level: f32,
+        label_text_size: f32,
+    ) -> SharedPixelBuffer<Rgba8Pixel> {
         // Clear the current pixel buffer.
         let width = self.pixel_buffer.width();
         let height = self.pixel_buffer.height();
         let mut pixmap =
             tiny_skia::PixmapMut::from_bytes(self.pixel_buffer.make_mut_bytes(), width, height)
                 .unwrap();
-        pixmap.fill(tiny_skia::Color::TRANSPARENT);
+        pixmap.fill(tiny_skia::Color::WHITE);
 
         // The information for states.
         let state_inner = tiny_skia::Paint {
@@ -94,6 +99,12 @@ impl Viewer {
         // The information for edges
         let edge_paint = tiny_skia::Paint::default();
 
+        // Resize the labels if necessary.
+        for buffer in &mut self.labels_cache {
+            self.text_cache
+                .resize(buffer, Metrics::new(label_text_size, label_text_size));
+        }
+
         // Draw the edges.
         let mut edge_builder = tiny_skia::PathBuilder::new();
 
@@ -108,7 +119,13 @@ impl Viewer {
 
                 // Draw the text label
                 let middle = (to_position + position) / 2.0;
-                self.text_cache.draw(&self.labels_cache[*label], &mut pixmap, Transform::from_translate(middle.x, middle.y).pre_translate(view_x, view_y));
+                self.text_cache.draw(
+                    &self.labels_cache[*label],
+                    &mut pixmap,
+                    Transform::from_translate(middle.x - self.labels_cache[*label].size().0 / 2.0, middle.y)
+                        .pre_translate(view_x, view_y)
+                        .post_scale(zoom_level, zoom_level),
+                );
             }
         }
 
@@ -118,7 +135,7 @@ impl Viewer {
                 &path,
                 &edge_paint,
                 &Stroke::default(),
-                Transform::from_translate(view_x, view_y),
+                Transform::from_translate(view_x, view_y).post_scale(zoom_level, zoom_level),
                 None,
             );
         }
@@ -130,14 +147,18 @@ impl Viewer {
                 &state_circle,
                 &state_inner,
                 tiny_skia::FillRule::Winding,
-                Transform::from_translate(position.x, position.y).pre_translate(view_x, view_y),
+                Transform::from_translate(position.x, position.y)
+                    .pre_translate(view_x, view_y)
+                    .post_scale(zoom_level, zoom_level),
                 None,
             );
             pixmap.stroke_path(
                 &state_circle,
                 &state_outer,
                 &Stroke::default(),
-                Transform::from_translate(position.x, position.y).pre_translate(view_x, view_y),
+                Transform::from_translate(position.x, position.y)
+                    .pre_translate(view_x, view_y)
+                    .post_scale(zoom_level, zoom_level),
                 None,
             );
         }

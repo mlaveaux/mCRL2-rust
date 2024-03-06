@@ -44,6 +44,7 @@ pub struct GuiSettings {
     pub width: u32,
     pub height: u32,
     pub state_radius: f32,
+    pub label_text_size: f32,
 
     pub redraw: bool,
 
@@ -134,6 +135,7 @@ async fn main() -> Result<()> {
                 settings.zoom_level = app.global::<Settings>().get_zoom_level();
                 settings.view_x = app.global::<Settings>().get_view_x();
                 settings.view_y = app.global::<Settings>().get_view_y();
+                settings.label_text_size = app.global::<Settings>().get_label_text_height();
             }
         });
     };
@@ -196,7 +198,7 @@ async fn main() -> Result<()> {
                             let start = Instant::now();
                             let mut viewer = state.viewer.lock().unwrap();
                             viewer.on_resize(settings.width, settings.height);
-                            let image = viewer.render(settings.state_radius, settings.view_x, settings.view_y, settings.zoom_level);
+                            let image = viewer.render(settings.state_radius, settings.view_x, settings.view_y, settings.zoom_level / 100.0, settings.label_text_size);
 
                             debug!("Rendering step took {} ms", (Instant::now() - start).as_millis());
                             *canvas.lock().unwrap() = image;

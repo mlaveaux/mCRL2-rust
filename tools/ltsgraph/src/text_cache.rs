@@ -1,5 +1,5 @@
 use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping, SwashCache};
-use tiny_skia::{PathBuilder, PixmapMut, PixmapPaint, Stroke, Transform};
+use tiny_skia::{PathBuilder, PixmapMut, PixmapPaint, Transform};
 
 pub struct TextCache {
     /// A FontSystem provides access to detected system fonts, create one per application
@@ -26,17 +26,23 @@ impl TextCache {
         let mut buffer = Buffer::new(&mut self.font_system, font_metrics);
 
         // Set a size for the text buffer, in pixels
-        buffer.set_size(&mut self.font_system, 80.0, 25.0);
+        buffer.set_size(&mut self.font_system, 400.0, 100.0);
 
         // Attributes indicate what font to choose.
         let attrs = Attrs::new();
-
+        
         // Add some text!
         buffer.set_text(&mut self.font_system, text, attrs, Shaping::Advanced);
 
         // Perform shaping as desired
         buffer.shape_until_scroll(&mut self.font_system, true);
         buffer
+    }
+
+    /// Resizes the font metrics of the buffer.
+    pub fn resize(&mut self, buffer: &mut Buffer, font_metrics: Metrics) {
+        buffer.set_metrics(&mut self.font_system, font_metrics);
+        buffer.shape_until_scroll(&mut self.font_system, true);
     }
 
     /// Draw the given cached text at the given location.
@@ -81,10 +87,10 @@ impl TextCache {
                     }
 
                     if let Some(path) = path_builder.finish() {
-                        pixmap.stroke_path(
+                        pixmap.fill_path(
                             &path,
                             &paint,
-                            &Stroke::default(),
+                            tiny_skia::FillRule::Winding,
                             transform.post_translate(physical_glyph.x as f32, physical_glyph.y as f32)
                                 .pre_scale(1.0, -1.0),
                             None,
