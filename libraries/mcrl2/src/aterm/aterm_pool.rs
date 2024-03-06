@@ -138,9 +138,6 @@ impl Default for ThreadTermPool {
 impl Drop for ThreadTermPool {
     fn drop(&mut self) {
         debug_assert!(self.protection_set.read().len() == 0, "The protection set should be empty");
-
-        ffi::unregister_mark_callback(self.callback.pin_mut());
-
         GLOBAL_TERM_POOL.lock().drop_thread_term_pool(self.index);
     }
 }

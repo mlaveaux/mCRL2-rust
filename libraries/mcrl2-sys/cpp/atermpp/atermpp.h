@@ -1,9 +1,4 @@
 #pragma once
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
-
 
 #include "rust/cxx.h"
 
@@ -19,6 +14,14 @@
 #include "mcrl2/data/function_symbol.h"
 #include "mcrl2/data/parse.h"
 
+#include "mcrl2/utilities/noncopyable.h"
+
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
 using namespace mcrl2::core;
 using namespace mcrl2::data;
 using namespace mcrl2::utilities;
@@ -29,27 +32,15 @@ namespace atermpp
 using void_callback = rust::Fn<void(term_mark_stack&)>;
 using size_callback = rust::Fn<std::size_t()>;
 
-struct callback_container: detail::_aterm_container
+struct tls_callback_container : private mcrl2::utilities::noncopyable
 {
-  /// \brief Ensure that all the terms in the containers.
-  inline void mark(term_mark_stack& todo) const override
-  {
-    callback_mark(todo);
-  }
-
-  virtual inline std::size_t size() const override
-  {
-    return callback_size();
-  }
-
-  callback_container(void_callback callback_mark, size_callback callback_size)
-    : callback_mark(callback_mark),
-      callback_size(callback_size)
+public:
+  tls_callback_container(void_callback callback_mark, size_callback callback_size)
+    : m_container(std::bind(callback_mark, std::placeholders::_1), std::bind(callback_size))
   {}
 
-  void_callback callback_mark;
-  size_callback callback_size;
-  term_mark_stack todo;
+private:
+  detail::aterm_container m_container;
 };
 
 // What the fuck is this. Leaks the inner type because unions are not destructed automatically.
@@ -62,8 +53,6 @@ public:
   Leaker(Args... inputArgs) : m_val(inputArgs...) {}
   ~Leaker() {  }
 };
-
-using tls_callback_container = Leaker<callback_container>;
 
 inline 
 void initialise()
@@ -138,12 +127,6 @@ std::unique_ptr<tls_callback_container> register_mark_callback(void_callback cal
 {
   // Do not destroy the callback_container since it is used in a TLS and destruction order w.r.t. the g_thread_aterm_pool is not guaranteed.
   return std::make_unique<tls_callback_container>(callback_mark, callback_size);
-}
-
-inline
-void unregister_mark_callback(tls_callback_container& container)
-{
-  container.m_val.todo.~term_mark_stack();
 }
 
 const detail::_aterm* aterm_address(const aterm& term)

@@ -56,7 +56,6 @@ pub mod ffi {
 
         /// Register a function to be called during marking of the garbage collection
         fn register_mark_callback(callback_mark: fn(Pin<&mut term_mark_stack>) -> (), callback_size: fn() -> usize) -> UniquePtr<tls_callback_container>;
-        fn unregister_mark_callback(callback_mark: Pin<&mut tls_callback_container>);
 
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();
