@@ -27,7 +27,7 @@ pub struct ThreadTermPool {
     /// Function symbols to represent 'DataAppl' with any number of arguments.
     data_appl: Vec<Symbol>,
 
-    callback: UniquePtr<ffi::tls_callback_container>,
+    _callback: UniquePtr<ffi::tls_callback_container>,
 }
 
 /// Protects the given aterm address and returns the term.
@@ -59,7 +59,7 @@ impl ThreadTermPool {
             protection_set,
             container_protection_set,
             index,
-            callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
+            _callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
             data_appl: vec![],
         }
     }
