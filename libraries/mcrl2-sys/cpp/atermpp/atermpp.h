@@ -32,10 +32,10 @@ namespace atermpp
 using void_callback = rust::Fn<void(term_mark_stack&)>;
 using size_callback = rust::Fn<std::size_t()>;
 
-struct tls_callback_container : private mcrl2::utilities::noncopyable
+struct callback_container : private mcrl2::utilities::noncopyable
 {
 public:
-  tls_callback_container(void_callback callback_mark, size_callback callback_size)
+  callback_container(void_callback callback_mark, size_callback callback_size)
     : m_container(std::bind(callback_mark, std::placeholders::_1), std::bind(callback_size))
   {}
 
@@ -53,6 +53,10 @@ public:
   Leaker(Args... inputArgs) : m_val(inputArgs...) {}
   ~Leaker() {  }
 };
+
+/// Leaks the container since AppleClang causes segfaults otherwise, this is probably an issue
+/// with TLS destruction order. Either caused by mCRL2 or the compiler.
+using tls_callback_container = Leaker<callback_container>;
 
 inline 
 void initialise()
