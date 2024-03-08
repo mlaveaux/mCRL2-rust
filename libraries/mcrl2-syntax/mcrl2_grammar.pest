@@ -3,7 +3,7 @@
 //!
 
 /// Identifiers
-Id = @{ ASCII_ALPHANUMERIC* }
+Id = @{ ASCII_ALPHANUMERIC+ }
 
 /// List of identifiers
 IdList = { Id ~ ( "," ~ Id )* }
@@ -79,14 +79,15 @@ DataExprAtom = {
     |   "{" ~ VarDecl ~ "|" ~ DataExpr ~ "}"                         // Set/bag comprehension
     |   "{" ~ DataExprList ~ "}"                                     // Set enumeration
     |   "(" ~ DataExpr ~ ")"                                         // Brackets
-    |   DataExpr ~ "[" ~ DataExpr ~ "->" ~ DataExpr ~ "]"            // Function update
-    |   DataExpr ~ "(" ~ DataExprList ~ ")"                          // Function application
     |   "!" ~ DataExpr                                               // Negation, set complement
     |   "-" ~ DataExpr                                               // Unary minus
     |   "#" ~ DataExpr                                               // Size of a list
     |   "forall" ~ VarsDeclList ~ "." ~ DataExpr                     // Universal quantifier
     |   "exists" ~ VarsDeclList ~ "." ~ DataExpr                     // Existential quantifier
     |   "lambda" ~ VarsDeclList ~ "." ~ DataExpr                     // Lambda abstraction
+    // TODO: Deal with left recursion
+    // |   DataExpr ~ "[" ~ DataExpr ~ "->" ~ DataExpr ~ "]"            // Function update
+    // |   DataExpr ~ "(" ~ DataExprList ~ ")"                          // Function application
     |   Number                                                       // Number
     |   Id                                                           // Identifier
 }
@@ -219,8 +220,7 @@ ProcExpr = { ProcExprUnit ~ (ProcExprInfix ~ ProcExprUnit)* }
 
 /// Single Process expressions
 ProcExprUnit = {
-        Id ~ "(" ~ AssignmentList? ~ ")"                         // Process assignment
-    |   "delta"                                                  // Delta, deadlock, inaction
+        "delta"                                                  // Delta, deadlock, inaction
     |   "tau"                                                    // Tau, hidden action, empty multi-action
     |   "block" ~ "(" ~ ActIdSet ~ "," ~ ProcExpr ~ ")"          // Block or encapsulation operator
     |   "allow" ~ "(" ~ MultActIdSet ~ "," ~ ProcExpr ~ ")"      // Allow operator
@@ -228,12 +228,14 @@ ProcExprUnit = {
     |   "rename" ~ "(" ~ RenExprSet ~ "," ~ ProcExpr ~ ")"       // Action renaming operator
     |   "comm" ~ "(" ~ CommExprSet ~ "," ~ ProcExpr ~ ")"        // Communication operator
     |   "(" ~ ProcExpr ~ ")"                                     // Brackets
-    |   DataExprAtom ~ "->" ~ ProcExpr               // If-then operator
-    |   DataExprAtom ~ "->" ~ ProcExpr              // If-then-else operator
-                  ~ "<>" ~ ProcExpr
-    |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]" ~ 
-              "." ~ ProcExpr                    // Distribution operator
-    |    Action                                                   // Action or process instantiation
+    |   "sum" ~ VarsDeclList ~ "." ~ ProcExpr                    // Sum operator
+    |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]"
+            ~ "." ~ ProcExpr                                     // Distribution operator
+    |   Id ~ "(" ~ AssignmentList? ~ ")"                         // Process assignment
+    |   DataExprAtom ~ "->" ~ ProcExpr                           // If-then-else operator
+            ~ "<>" ~ ProcExpr
+    |   DataExprAtom ~ "->" ~ ProcExpr                           // If-then operator
+    |   Action                                                   // Action or process instantiation
 }
 
 ProcExprInfix = {
@@ -246,11 +248,14 @@ ProcExprInfix = {
     |   "|"
 }
 
-ProcDecl = { Id ~ ( "(" ~ VarsDeclList ~ ")" )? ~ "=" ~ ProcExpr ~ ";" }        // Process declaration
+// Process declaration/
+ProcDecl = { Id ~ ( "(" ~ VarsDeclList ~ ")" )? ~ "=" ~ ProcExpr ~ ";" }
 
-ProcSpec = { "proc" ~ ProcDecl+ }                                     // Process specification
+/// Process specification
+ProcSpec = { "proc" ~ ProcDecl+ }                                     
 
-Init = { "init" ~ ProcExpr ~ ";" }                                      // Initial process
+/// Initial process
+Init = { "init" ~ ProcExpr ~ ";" }                                     
 
 /// Parsing a single term
 TermSpec = { SOI ~ Term ~ EOI }
