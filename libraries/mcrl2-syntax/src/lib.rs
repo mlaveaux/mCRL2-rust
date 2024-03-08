@@ -34,7 +34,7 @@ mod tests {
 
     #[test]
     fn test_parse_ifthen() {
-        let term = "init a -> b -> c <> delta";
+        let term = "init a -> b -> c <> delta;";
         
         let result = Mcrl2Parser::parse(Rule::MCRL2Spec, term).unwrap();
         print!("{}", result);
