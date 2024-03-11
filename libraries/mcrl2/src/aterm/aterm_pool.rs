@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{cell::RefCell, sync::Arc};
+use std::{cell::RefCell, mem::ManuallyDrop, sync::Arc};
 
 use log::trace;
 
@@ -27,7 +27,7 @@ pub struct ThreadTermPool {
     /// Function symbols to represent 'DataAppl' with any number of arguments.
     data_appl: Vec<Symbol>,
 
-    _callback: UniquePtr<ffi::tls_callback_container>,
+    _callback: ManuallyDrop<UniquePtr<ffi::tls_callback_container>>,
 }
 
 /// Protects the given aterm address and returns the term.
@@ -59,7 +59,7 @@ impl ThreadTermPool {
             protection_set,
             container_protection_set,
             index,
-            _callback: ffi::register_mark_callback(mark_protection_sets, protection_set_size),
+            _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
             data_appl: vec![],
         }
     }
@@ -138,7 +138,13 @@ impl Default for ThreadTermPool {
 impl Drop for ThreadTermPool {
     fn drop(&mut self) {
         debug_assert!(self.protection_set.read().len() == 0, "The protection set should be empty");
+
         GLOBAL_TERM_POOL.lock().drop_thread_term_pool(self.index);
+
+        #[cfg(not(target_os = "macos"))]
+        unsafe {
+            ManuallyDrop::drop(&mut self._callback);
+        }
     }
 }
 
