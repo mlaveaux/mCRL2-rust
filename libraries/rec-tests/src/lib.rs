@@ -3,6 +3,9 @@
 //! REC, short for Rewriting Engine Competition, is a format for specifying rewrite systems.
 //! The parse_rec module contains functions for loading a REC file.
 //!
+//! This crate does not use any unsafe code.
+ 
+#![forbid(unsafe_code)]
 
 mod parse_rec;
 mod syntax;

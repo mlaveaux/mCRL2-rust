@@ -1,3 +1,5 @@
+//! This crate defines several macros to make ATerm data types work.
+
 mod mcrl2_derive_terms;
 
 use mcrl2_derive_terms::mcrl2_derive_terms_impl;

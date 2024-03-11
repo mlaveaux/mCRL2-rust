@@ -3,6 +3,8 @@
 //!
 //!
 
+#![forbid(unsafe_code)]
+
 use std::{env, error::Error, process::ExitCode};
 
 mod benchmark;
