@@ -21,6 +21,7 @@ pub fn mcrl2_pratt_parser() -> PrattParser<Rule> {
 mod tests {
     use pest::Parser;
     use indoc::indoc;
+    use test_case::test_case;
 
     use crate::{Mcrl2Parser, Rule};
 
@@ -34,16 +35,23 @@ mod tests {
 
     #[test]
     fn test_parse_ifthen() {
-        let term = "init a -> b -> c <> delta;";
+        let expr = "init a -> b -> c <> delta;";
         
-        let result = Mcrl2Parser::parse(Rule::MCRL2Spec, term).unwrap();
+        let result = Mcrl2Parser::parse(Rule::MCRL2Spec, expr).unwrap();
         print!("{}", result);
     }
 
+    #[test]
+    fn test_parse_keywords() {
+        let expr = "map or : Boolean # Boolean -> Boolean ;";
+        
+        let result = Mcrl2Parser::parse(Rule::MCRL2Spec, expr).unwrap();
+        print!("{}", result);
+    }
     
     #[test]
     fn test_parse_sort_spec() {
-        let abp_spec = indoc!{"
+        let sort_spec = indoc!{"
             sort D = Bool -> Int -> Bool;
             
 
@@ -52,12 +60,12 @@ mod tests {
             Error = struct e;
         "};
 
-        let result = Mcrl2Parser::parse(Rule::MCRL2Spec, abp_spec).unwrap();
+        let result = Mcrl2Parser::parse(Rule::MCRL2Spec, sort_spec).unwrap();
         print!("{}", result);
     }
 
     #[test]
-    fn test_parse_mcrl2() {
+    fn test_parse_abp() {
         let abp_spec = indoc!{"
             % This file contains the alternating bit protocol, as described 
             % J.F. Groote and M.R. Mousavi. Modeling and analysis of communicating
@@ -99,16 +107,64 @@ mod tests {
             );
         "};
 
-        let result = Mcrl2Parser::parse(Rule::MCRL2Spec, abp_spec).unwrap();
-        print!("{}", result);
+       match Mcrl2Parser::parse(Rule::MCRL2Spec, abp_spec) {
+            Ok(x) => {
+                print!("{}", x);
+            }, Err(y) => {
+                panic!("{}", y);
+            }
+        }
     }
 
 
+    #[test_case(include_str!("../../../3rd-party/mCRL2/examples/academic/abp/abp.mcrl2"); "abp")]
+    // TODO: Fix issues with the ambiguities in this case.
+    // #[test_case(include_str!("../../../3rd-party/mCRL2/examples/industrial/1394/1394-fin.mcrl2"); "1394-fin")]
+    fn test_parse_mcrl2_spec(input: &str)
+    {       
+        if let Err(y) = Mcrl2Parser::parse(Rule::MCRL2Spec, input) {
+            panic!("{}", y);
+        }
+    }
 
-    // #[test_case(include_str("../../../3rd-party/mCRL2/examples"))]
-    // fn test_parse_mcrl2_spec(input: str)
-    // {        
-    //     let result = Mcrl2Parser::parse(Rule::MCRL2Spec, &input).unwrap();
-    //     print!("{}", result);
-    // }
+
+    #[test_case(include_str!("../../../examples/REC/mcrl2/add8.dataspec") ; "add8")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/benchexpr10.dataspec") ; "benchexpr10")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/benchsym10.dataspec") ; "benchsym10")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/benchtree10.dataspec") ; "benchtree10")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/binarysearch.dataspec") ; "binarysearch")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/bubblesort10.dataspec") ; "bubblesort10")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/calls.dataspec") ; "calls")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/check1.dataspec") ; "check1")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/check2.dataspec") ; "check2")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/closure.dataspec") ; "closure")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/confluence.dataspec") ; "confluence")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/dart.dataspec") ; "dart")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/empty.dataspec") ; "empty")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/evalexpr.dataspec") ; "evalexpr")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/evalsym.dataspec") ; "evalsym")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/evaltree.dataspec") ; "evaltree")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/factorial5.dataspec") ; "factorial5")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/fib32.dataspec") ; "fib32")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/fibfree.dataspec") ; "fibfree")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/fibonacci05.dataspec") ; "fibonacci05")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/garbagecollection.dataspec") ; "garbagecollection")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/hanoi4.dataspec") ; "hanoi4")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/intnat.dataspec") ; "intnat")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/langton6.dataspec") ; "langton6")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/logic3.dataspec") ; "logic3")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/maa.dataspec") ; "maa")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/merge.dataspec") ; "merge")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/mergesort10.dataspec") ; "mergesort10")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/missionaries2.dataspec") ; "missionaries2")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/mul8.dataspec") ; "mul8")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/natlist.dataspec") ; "natlist")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/oddeven.dataspec") ; "oddeven")]
+    #[test_case(include_str!("../../../examples/REC/mcrl2/omul8.dataspec") ; "omul8")]
+    fn test_parse_mcrl2_dataspec(input: &str)
+    {        
+        if let Err(y) = Mcrl2Parser::parse(Rule::MCRL2Spec, input) {
+            panic!("{}", y);
+        }
+    }
 }
