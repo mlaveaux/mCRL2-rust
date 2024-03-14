@@ -1,4 +1,11 @@
-use std::{collections::{HashMap, HashSet}, env, error::Error, fs::{self, File}, io::{BufRead, Write}, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    error::Error,
+    fs::{self, File},
+    io::{BufRead, Write},
+    path::Path,
+};
 
 use duct::cmd;
 use regex::Regex;
@@ -9,17 +16,17 @@ use strum::{Display, EnumString};
 struct MeasurementEntry {
     rewriter: String,
     benchmark_name: String,
-    timing: u32,
+    timing: f32,
 }
 
 #[derive(EnumString, Display, PartialEq)]
 pub enum Rewriter {
     #[strum(serialize = "innermost")]
     Innermost,
-    
+
     #[strum(serialize = "sabre")]
     Sabre,
-    
+
     #[strum(serialize = "jitty")]
     Jitty,
 
@@ -28,10 +35,9 @@ pub enum Rewriter {
 }
 
 /// Benchmarks all the REC specifications in the example folder.
-/// 
-/// - mcrl2 This enables benchmarking the upstream mcrl2rewrite tool 
+///
+/// - mcrl2 This enables benchmarking the upstream mcrl2rewrite tool
 pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<(), Box<dyn Error>> {
-
     // Find the mcrl2rewrite tool based on which rewriter we want to benchmark
     let cwd = env::current_dir()?;
 
@@ -53,9 +59,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
         which::which("mcrl2rewrite")?
     };
 
-    let mcrl2_rewrite_timing = Regex::new(r#"Time.*:\s*([0-9\.]*) ms ±.*$"#)?;
-
-    match rewriter {
+    let mcrl2_rewrite_timing = match rewriter {
         Rewriter::Innermost => Regex::new(r#"Innermost rewrite took ([0-9]*) ms"#)?,
         Rewriter::Sabre => Regex::new(r#"Sabre rewrite took ([0-9]*) ms"#)?,
         Rewriter::Jitty | Rewriter::JittyCompiling => {
@@ -69,7 +73,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
     }
 
     let mut result_file = File::create(output_path)?;
-    
+
     // Consider all the specifications in the example directory.
     for file in fs::read_dir("examples/REC/mcrl2")? {
         let path = file?.path();
@@ -81,33 +85,39 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
 
             let benchmark_name = path.file_stem().unwrap().to_string_lossy();
             println!("Benchmarking {}", benchmark_name);
-            
-            // Strip the beginning UNC path even through technically correct hyperfine does not deal with it properly.
-            match cmd!("timeout",
-                "600",
-                &mcrl2_rewrite_path,
-                "-rjitty",
-                "--timings",
-                format!("{}", data_spec.to_string_lossy()), 
-                format!("{}", expressions.to_string_lossy())
-            )
-            .stdout_capture()
-            .stderr_capture()
-            .run() {
+
+            let mut arguments = vec![
+                "600".to_string(),
+                mcrl2_rewrite_path.to_string_lossy().to_string(),
+            ];
+
             match rewriter {
                 Rewriter::Innermost => {
-                    write!(&mut command, "{}", " rewrite innermost")?;
+                    arguments.push("rewrite".to_string());
+                    arguments.push("innermost".to_string());
                 }
                 Rewriter::Sabre => {
-                    write!(&mut command, "{}", " rewrite sabre")?;
+                    arguments.push("rewrite".to_string());
+                    arguments.push("sabre".to_string());
                 }
                 Rewriter::Jitty => {
-                    write!(&mut command, "{}", " -rjitty --timings")?;
+                    arguments.push("-rjitty".to_string());
+                    arguments.push("--timings".to_string());
                 }
                 Rewriter::JittyCompiling => {
-                    write!(&mut command, "{}", " -rjittyc --timings")?;
+                    arguments.push("-rjittyc".to_string());
+                    arguments.push("--timings".to_string());
                 }
             }
+
+            arguments.push(data_spec.to_string_lossy().to_string());
+            arguments.push(expressions.to_string_lossy().to_string());
+
+            match cmd("timeout", arguments)
+                .stdout_capture()
+                .stderr_capture()
+                .run()
+            {
                 Ok(result) => {
                     // Parse the standard output to read the rewriting time and insert it into results.
                     for line in result.stdout.lines().chain(result.stderr.lines()) {
@@ -130,10 +140,13 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
                                     rewriter: rewriter.to_string(),
                                     benchmark_name: benchmark_name.to_string(),
                                     timing: timing / 1000.0,
+                                },
+                            )?;
+
                             writeln!(&result_file)?;
                         }
                     }
-                },
+                }
                 Err(err) => {
                     println!("Benchmark {} timed out or crashed", benchmark_name);
                     println!("Command failed {:?}", err);
@@ -182,7 +195,7 @@ pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
             print!("{: >30}", rewriter);
             first = false;
         } else {
-            print!("{: >10} |", rewriter);            
+            print!("{: >10} |", rewriter);
         }
     }
 
