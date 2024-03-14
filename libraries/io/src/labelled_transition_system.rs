@@ -71,3 +71,20 @@ impl fmt::Display for LabelledTransitionSystem {
         writeln!(f, "Number of transitions: {}", self.num_of_transitions)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::io_aut::read_aut;
+
+    #[test]
+    fn test_traversal_lts() {
+        env_logger::init();
+
+        let file = include_str!("../../../examples/lts/abp.aut");
+
+        let lts = read_aut(file.as_bytes()).unwrap();
+
+        // Check the number of outgoing transitions of the initial state
+        assert_eq!(lts.outgoing_transitions(lts.initial_state()).count(), 2);
+    }
+}

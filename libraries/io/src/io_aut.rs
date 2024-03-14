@@ -129,4 +129,24 @@ mod tests {
         assert_eq!(lts.num_of_transitions, 92);
         println!("{}", lts);
     }
+
+    #[test]
+    fn test_lts_failure() {
+
+        let wrong_header = "
+        des (0,2,                                     
+            (0,\"r1(d1)\",1)
+            (0,\"r1(d2)\",2)
+        ";
+
+        debug_assert!(read_aut(wrong_header.as_bytes()).is_err());
+
+        let wrong_transition = "
+        des (0,2,3)                           
+            (0,\"r1(d1),1)
+            (0,\"r1(d2)\",2)
+        ";
+
+        debug_assert!(read_aut(wrong_header.as_bytes()).is_err());
+    }
 }

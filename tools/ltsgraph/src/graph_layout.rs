@@ -134,3 +134,29 @@ fn compute_repulsion_force(p1: &Vec3, p2: &Vec3, repulsion_strength: f32) -> Vec
         (*p1 - *p2) * repulsion_strength / dist
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use io::io_aut::read_aut;
+
+    use super::GraphLayout;
+
+    #[test]
+    fn test_graph_layout() {
+        env_logger::init();
+
+        let file = include_str!("../../../examples/lts/abp.aut");
+        let lts = Arc::new(read_aut(file.as_bytes()).unwrap());
+
+        let mut layout = GraphLayout::new(&lts);
+
+        // Perform a number of updates
+        layout.update(5.0, 1.0, 0.01);
+        layout.update(5.0, 1.0, 0.01);
+        layout.update(5.0, 1.0, 0.01);
+        layout.update(5.0, 1.0, 0.01);
+        layout.update(5.0, 1.0, 0.01);
+    }
+}

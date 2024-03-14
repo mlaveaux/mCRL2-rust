@@ -37,7 +37,15 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
 
     let mcrl2_rewrite_path = if rewriter == Rewriter::Innermost || rewriter == Rewriter::Sabre {
         // Build the tool with the correct settings
-        cmd!("cargo", "build", "--profile", "bench", "--bin", "mcrl2rewrite").run()?;
+        cmd!(
+            "cargo",
+            "build",
+            "--profile",
+            "bench",
+            "--bin",
+            "mcrl2rewrite"
+        )
+        .run()?;
 
         // Using which is a bit unnecessary, but it deals nicely with .exe on Windows and can also be used to do other searching.
         which::which_in("mcrl2rewrite", Some("target/release/"), cwd)?
@@ -45,13 +53,11 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
         which::which("mcrl2rewrite")?
     };
 
-    let mcrl2_rewrite_timing = match rewriter {
-        Rewriter::Innermost => {
-            Regex::new(r#"Innermost rewrite took ([0-9]*) ms"#)?
-        },
-        Rewriter::Sabre => {            
-            Regex::new(r#"Sabre rewrite took ([0-9]*) ms"#)?
-        },
+    let mcrl2_rewrite_timing = Regex::new(r#"Time.*:\s*([0-9\.]*) ms ±.*$"#)?;
+
+    match rewriter {
+        Rewriter::Innermost => Regex::new(r#"Innermost rewrite took ([0-9]*) ms"#)?,
+        Rewriter::Sabre => Regex::new(r#"Sabre rewrite took ([0-9]*) ms"#)?,
         Rewriter::Jitty | Rewriter::JittyCompiling => {
             Regex::new(r#"rewriting: ([0-9]*) milliseconds."#)?
         }
@@ -69,7 +75,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
         let path = file?.path();
 
         // We take the dataspec file, and append the expressions ourselves.
-        if path.extension().is_some_and(|ext| { ext == "dataspec" }) {
+        if path.extension().is_some_and(|ext| ext == "dataspec") {
             let data_spec = path.clone();
             let expressions = path.with_extension("expressions");
 
@@ -88,21 +94,42 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
             .stdout_capture()
             .stderr_capture()
             .run() {
+            match rewriter {
+                Rewriter::Innermost => {
+                    write!(&mut command, "{}", " rewrite innermost")?;
+                }
+                Rewriter::Sabre => {
+                    write!(&mut command, "{}", " rewrite sabre")?;
+                }
+                Rewriter::Jitty => {
+                    write!(&mut command, "{}", " -rjitty --timings")?;
+                }
+                Rewriter::JittyCompiling => {
+                    write!(&mut command, "{}", " -rjittyc --timings")?;
+                }
+            }
                 Ok(result) => {
                     // Parse the standard output to read the rewriting time and insert it into results.
-                    for line in result.stdout.lines().chain(result.stderr.lines()) {     
-                        if let Some(result ) = mcrl2_rewrite_timing.captures(&line?) {
-                            let (_, [grp1]) = result.extract();                            
-                            let timing: u32 = grp1.parse()?;
+                    for line in result.stdout.lines().chain(result.stderr.lines()) {
+                        let line = line?;
+                        println!("{}", line);
 
-                            println!("Benchmark {} timing {} milliseconds", benchmark_name, timing);
+                        if let Some(result) = mcrl2_rewrite_timing.captures(&line) {
+                            let (_, [grp1]) = result.extract();
+                            let timing: f32 = grp1.parse()?;
+
+                            println!(
+                                "Benchmark {} timing {} milliseconds",
+                                benchmark_name, timing
+                            );
 
                             // Write the output to the file and include a newline.
-                            serde_json::to_writer(&mut result_file, &MeasurementEntry {
-                                rewriter: rewriter.to_string(),
-                                benchmark_name: benchmark_name.to_string(),
-                                timing,
-                            })?;
+                            serde_json::to_writer(
+                                &mut result_file,
+                                &MeasurementEntry {
+                                    rewriter: rewriter.to_string(),
+                                    benchmark_name: benchmark_name.to_string(),
+                                    timing: timing / 1000.0,
                             writeln!(&result_file)?;
                         }
                     }
@@ -118,13 +145,15 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
     Ok(())
 }
 
+fn print_float(value: f32) -> String {
+    format!("{:.1}", value)
+}
 
 pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
-
     let output = fs::read_to_string(json_path)?;
 
     // Keep track of all the read results.
-    let mut results: HashMap<String, HashMap<String, u32>> = HashMap::new();
+    let mut results: HashMap<String, HashMap<String, f32>> = HashMap::new();
 
     // Figure out the list of rewriters used to print '-' values.
     let mut rewriters: HashSet<String> = HashSet::new();
@@ -134,7 +163,8 @@ pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
 
         rewriters.insert(timing.rewriter.clone());
 
-        results.entry(timing.benchmark_name)
+        results
+            .entry(timing.benchmark_name)
             .and_modify(|e| {
                 e.insert(timing.rewriter.clone(), timing.timing);
             })
@@ -145,21 +175,30 @@ pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
             });
     }
 
-    // TODO: Print the header of the table.
-    
+    // Print the header of the table.
+    let mut first = true;
+    for rewriter in &rewriters {
+        if first {
+            print!("{: >30}", rewriter);
+            first = false;
+        } else {
+            print!("{: >10} |", rewriter);            
+        }
+    }
+
     // Print the entries in the table.
-    for (benchmark, result) in &results {    
+    for (benchmark, result) in &results {
         print!("{: >30}", benchmark);
 
         for rewriter in &rewriters {
             if let Some(timing) = result.get(rewriter) {
-                print!("| {: >10}", *timing);
-            } else {                
+                print!("| {: >10}", print_float(*timing));
+            } else {
                 print!("| {: >10}", "-");
             }
         }
         println!("");
-     }
+    }
 
     Ok(())
 }
