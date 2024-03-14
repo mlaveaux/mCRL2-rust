@@ -5722,6 +5722,9 @@ dependencies = [
  "glob",
  "human-sort",
  "regex",
+ "serde",
+ "serde_json",
+ "strum",
  "which 6.0.0",
 ]
 
