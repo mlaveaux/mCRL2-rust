@@ -16,7 +16,7 @@ use strum::{Display, EnumString};
 struct MeasurementEntry {
     rewriter: String,
     benchmark_name: String,
-    timing: f32,
+    timings: Vec<f32>,
 }
 
 #[derive(EnumString, Display, PartialEq)]
@@ -113,51 +113,64 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
             arguments.push(data_spec.to_string_lossy().to_string());
             arguments.push(expressions.to_string_lossy().to_string());
 
-            match cmd("timeout", arguments)
-                .stdout_capture()
-                .stderr_capture()
-                .run()
-            {
-                Ok(result) => {
-                    // Parse the standard output to read the rewriting time and insert it into results.
-                    for line in result.stdout.lines().chain(result.stderr.lines()) {
-                        let line = line?;
-                        println!("{}", line);
+            let mut measurements = MeasurementEntry {
+                rewriter: rewriter.to_string(),
+                benchmark_name: benchmark_name.to_string(),
+                timings: Vec::new(),
+            };
 
-                        if let Some(result) = mcrl2_rewrite_timing.captures(&line) {
-                            let (_, [grp1]) = result.extract();
-                            let timing: f32 = grp1.parse()?;
+            // Run the benchmarks several times until one of them fails
+            for _ in 0..5 {
 
-                            println!(
-                                "Benchmark {} timing {} milliseconds",
-                                benchmark_name, timing
-                            );
+                match cmd("timeout", &arguments)
+                    .stdout_capture()
+                    .stderr_capture()
+                    .run()
+                {
+                    Ok(result) => {
+                        // Parse the standard output to read the rewriting time and insert it into results.
+                        for line in result.stdout.lines().chain(result.stderr.lines()) {
+                            let line = line?;
 
-                            // Write the output to the file and include a newline.
-                            serde_json::to_writer(
-                                &mut result_file,
-                                &MeasurementEntry {
-                                    rewriter: rewriter.to_string(),
-                                    benchmark_name: benchmark_name.to_string(),
-                                    timing: timing / 1000.0,
-                                },
-                            )?;
+                            if let Some(result) = mcrl2_rewrite_timing.captures(&line) {
+                                let (_, [grp1]) = result.extract();
+                                let timing: f32 = grp1.parse()?;
 
-                            writeln!(&result_file)?;
+                                println!(
+                                    "Benchmark {} timing {} milliseconds",
+                                    benchmark_name, timing
+                                );
+
+                                // Write the output to the file and include a newline.
+                                measurements.timings.push(timing / 1000.0);
+                            }
                         }
                     }
-                }
-                Err(err) => {
-                    println!("Benchmark {} timed out or crashed", benchmark_name);
-                    println!("Command failed {:?}", err);
-                }
+                    Err(err) => {
+                        println!("Benchmark {} timed out or crashed", benchmark_name);
+                        println!("Command failed {:?}", err);
+                        break;
+                    }
+                };
             };
+            
+            serde_json::to_writer(
+                &mut result_file,
+                &measurements,
+            )?;
+
+            writeln!(&result_file)?;
         }
     }
 
     Ok(())
 }
 
+fn average(values: &[f32]) -> f32 {
+    values.iter().sum::<f32>() / values.len() as f32
+}
+
+/// Prints a float with two decimals, since format specifiers cannot be stacked.
 fn print_float(value: f32) -> String {
     format!("{:.1}", value)
 }
@@ -179,11 +192,11 @@ pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
         results
             .entry(timing.benchmark_name)
             .and_modify(|e| {
-                e.insert(timing.rewriter.clone(), timing.timing);
+                e.insert(timing.rewriter.clone(), average(&timing.timings));
             })
             .or_insert_with(|| {
                 let mut table = HashMap::new();
-                table.insert(timing.rewriter.clone(), timing.timing);
+                table.insert(timing.rewriter.clone(), average(&timing.timings));
                 table
             });
     }
