@@ -159,9 +159,9 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                     ref_implementation.items.retain(|item| {
                         match item {
                             syn::ImplItem::Fn(func) => {
-                                func.attrs.iter().find(|attr| {
+                                !func.attrs.iter().any(|attr| {
                                     attr.meta.path().is_ident("mcrl2_ignore")
-                                }).is_none()
+                                })
                             },
                             _ => {
                                 true

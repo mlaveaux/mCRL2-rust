@@ -115,7 +115,7 @@ async fn main() -> Result<()> {
 
     // Loads the given LTS.
     if let Some(path) = &cli.labelled_transition_system {
-        load_lts(&Path::new(path));
+        load_lts(Path::new(path));
     };
 
     // Show the UI

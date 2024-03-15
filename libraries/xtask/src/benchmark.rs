@@ -223,7 +223,8 @@ pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
                 print!("| {: >10}", "-");
             }
         }
-        println!("");
+        
+        println!();
     }
 
     Ok(())
