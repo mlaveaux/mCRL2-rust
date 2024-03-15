@@ -30,7 +30,7 @@ impl TextCache {
 
         // Attributes indicate what font to choose.
         let attrs = Attrs::new();
-        
+
         // Add some text!
         buffer.set_text(&mut self.font_system, text, attrs, Shaping::Advanced);
 
@@ -91,7 +91,8 @@ impl TextCache {
                             &path,
                             &paint,
                             tiny_skia::FillRule::Winding,
-                            transform.post_translate(physical_glyph.x as f32, physical_glyph.y as f32)
+                            transform
+                                .post_translate(physical_glyph.x as f32, physical_glyph.y as f32)
                                 .pre_scale(1.0, -1.0),
                             None,
                         );
@@ -121,5 +122,25 @@ impl TextCache {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use slint::{Rgba8Pixel, SharedPixelBuffer};
+
+    use super::*;
+
+    #[test]
+    fn test_textcache() {
+        let mut cache = TextCache::new();
+
+        // Create a simple text label and resize it.
+        let mut buffer = cache.create_buffer("A test label", Metrics::new(14.0, 14.0));
+        cache.resize(&mut buffer, Metrics::new(50.0, 50.0));
+
+        let mut pixel_buffer: SharedPixelBuffer<Rgba8Pixel> = SharedPixelBuffer::new(800, 600);
+
+        tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), 800, 600).unwrap();
     }
 }

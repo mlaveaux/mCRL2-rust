@@ -75,10 +75,10 @@ impl fmt::Display for LabelledTransitionSystem {
 #[cfg(test)]
 mod tests {
     use crate::io_aut::read_aut;
+    use test_log::test;
 
     #[test]
     fn test_traversal_lts() {
-        env_logger::init();
 
         let file = include_str!("../../../examples/lts/abp.aut");
 

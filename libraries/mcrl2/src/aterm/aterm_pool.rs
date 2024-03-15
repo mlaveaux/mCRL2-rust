@@ -333,6 +333,8 @@ impl fmt::Display for TermPool {
 mod tests {
     use std::thread;
 
+    use test_log::test;
+
     use crate::aterm::random_term;
 
     use super::*;

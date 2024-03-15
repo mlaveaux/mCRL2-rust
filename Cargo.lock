@@ -2533,6 +2533,7 @@ dependencies = [
  "log",
  "regex",
  "streaming-iterator",
+ "test-log",
  "thiserror",
 ]
 

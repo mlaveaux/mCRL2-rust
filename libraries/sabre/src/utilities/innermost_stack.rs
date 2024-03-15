@@ -299,12 +299,10 @@ mod tests {
 
     use crate::{test_utility::create_rewrite_rule, utilities::to_untyped_data_expression};
 
-    use test_log::env_logger;
+    use test_log::test;
 
     #[test]
-    fn test_rhs_stack() {
-        let _ = env_logger::builder().is_test(true).try_init();
-        
+    fn test_rhs_stack() {        
         let mut tp = TermPool::new();
 
         let rhs_stack = RHSStack::new(&create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]).unwrap());

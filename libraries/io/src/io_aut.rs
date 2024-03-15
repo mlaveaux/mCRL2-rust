@@ -117,10 +117,10 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
 mod tests {
     use super::*;
 
+    use test_log::test;
+
     #[test]
     fn test_reading_aut() {
-        env_logger::init();
-
         let file = include_str!("../../../examples/lts/abp.aut");
 
         let lts = read_aut(file.as_bytes()).unwrap();
@@ -147,6 +147,6 @@ mod tests {
             (0,\"r1(d2)\",2)
         ";
 
-        debug_assert!(read_aut(wrong_header.as_bytes()).is_err());
+        debug_assert!(read_aut(wrong_transition.as_bytes()).is_err());
     }
 }

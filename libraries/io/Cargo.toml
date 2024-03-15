@@ -12,3 +12,6 @@ fxhash = "0.2"
 regex.workspace = true
 log.workspace = true
 env_logger.workspace = true
+
+[dev-dependencies]
+test-log.workspace = true
