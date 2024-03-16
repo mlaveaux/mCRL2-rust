@@ -31,11 +31,11 @@ export component Application inherits Window {
     pure callback settings_changed();
     pure callback open_filedialog();
 
-    HorizontalBox {
+    HorizontalLayout {
         alignment: end;
-
+           
         Image {
-            source: update_canvas(parent.width, parent.height, Settings.refresh);
+            source: update_canvas(parent.width * 80%, parent.height, Settings.refresh);
 
             TouchArea {
                 // Keep track of the original (before it was moved)
@@ -170,6 +170,7 @@ export component Application inherits Window {
                 }
             }
         }
-    }
+
+}
 
 }
