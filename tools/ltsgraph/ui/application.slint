@@ -11,7 +11,7 @@ export global Settings {
     in property <float> timestep: 15.0;
     
     // Settings for the view itself.
-    in property <float> zoom_level: 100.0;
+    in property <float> zoom_level: 1.0;
     in property <float> state_radius: 5.0;
     in property <float> label_text_height: 14.0;
     in property <length> view_x: 500px;
@@ -38,7 +38,7 @@ export component Application inherits Window {
             source: update_canvas(parent.width * 80%, parent.height, Settings.refresh);
 
             TouchArea {
-                // Keep track of the original (before it was moved)
+                // Keep track of the original before it was moved to compute the delta.
                 out property <length> view_x_start: 0px;
                 out property <length> view_y_start: 0px;
 
@@ -50,13 +50,14 @@ export component Application inherits Window {
                 }
 
                 moved => {
-                    Settings.view_x = view_x_start + self.mouse-x - self.pressed-x;
-                    Settings.view_y = view_y_start + self.mouse-y - self.pressed-y;
+                    // Scale the amount of panning by the zoom level for more consistency.
+                    Settings.view_x = view_x_start + (self.mouse-x - self.pressed-x) / Settings.zoom_level;
+                    Settings.view_y = view_y_start + (self.mouse-y - self.pressed-y) / Settings.zoom_level;
                     settings_changed();
                 }
 
                 scroll-event(e) => {
-                    Settings.zoom_level += e.delta-y / 1px;
+                    Settings.zoom_level += e.delta-y / 100px;
                     settings_changed();
 
                     EventResult.accept
@@ -84,6 +85,7 @@ export component Application inherits Window {
                 height: 1%;
             }
 
+            // The controls for the layout algorithm
             Text {
                 text: @tr("Layout controls");
                 font-size: 20px;
@@ -137,6 +139,7 @@ export component Application inherits Window {
                 height: 1%;
             }
 
+            // Controls for the viewer
             Text {
                 text: @tr("View controls");
                 font-size: 20px;
