@@ -4,7 +4,7 @@ use std::{
     fs::File,
     ops::Deref,
     path::Path,
-    sync::{atomic::AtomicBool, Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, RwLock},
     thread,
     time::{Duration, Instant},
 };
@@ -17,10 +17,12 @@ use io::io_aut::read_aut;
 use log::{debug, info};
 use slint::{invoke_from_event_loop, Image, SharedPixelBuffer};
 use viewer::Viewer;
+use pauseable_thread::PauseableThread;
 
 mod error_dialog;
 mod graph_layout;
 mod text_cache;
+mod pauseable_thread;
 mod viewer;
 
 #[derive(Parser, Debug)]
@@ -178,104 +180,113 @@ async fn main() -> Result<()> {
         });
     }
 
-    // Render the view continuously, but only update the canvas when necessary
-    let run_canvas = Arc::new(AtomicBool::new(true));
+    {
+        let settings = settings.clone();
+        app.on_request_redraw(move || {
+            debug!("Request redraw");            
+            settings.lock().unwrap().redraw = true;
+        })
+    }
 
+    // Render the view continuously, but only update the canvas when necessary
     let canvas_handle = {
-        let run_canvas = run_canvas.clone();
         let state = state.clone();
         let app_weak: slint::Weak<Application> = app.as_weak();
         let settings = settings.clone();
 
-        thread::Builder::new()
-            .name("ltsgraph canvas worker".to_string())
-            .spawn(move || {
-                while run_canvas.load(std::sync::atomic::Ordering::Relaxed) {
-                    let settings_clone = settings.lock().unwrap().clone();
-                    if settings_clone.redraw {
-                        if let Some(state) = state.read().unwrap().deref() {
-                            // Render a new frame...
-                            {
-                                let start = Instant::now();
-                                let mut viewer = state.viewer.lock().unwrap();
-                                viewer.on_resize(settings_clone.width, settings_clone.height);
-                                let image = viewer.render(
-                                    settings_clone.state_radius,
-                                    settings_clone.view_x,
-                                    settings_clone.view_y,
-                                    settings_clone.zoom_level / 100.0,
-                                    settings_clone.label_text_size,
-                                );
+        PauseableThread::new(
+            "ltsgraph canvas worker",
+            move || {
+                let settings_clone = settings.lock().unwrap().clone();
+                if settings_clone.redraw {
+                    if let Some(state) = state.read().unwrap().deref() {
+                        // Render a new frame...
+                        {
+                            let start = Instant::now();
+                            let mut viewer = state.viewer.lock().unwrap();
+                            viewer.on_resize(settings_clone.width, settings_clone.height);
+                            let image = viewer.render(
+                                settings_clone.state_radius,
+                                settings_clone.view_x,
+                                settings_clone.view_y,
+                                settings_clone.zoom_level,
+                                settings_clone.label_text_size,
+                            );
 
-                                debug!(
-                                    "Rendering step took {} ms",
-                                    (Instant::now() - start).as_millis()
-                                );
-                                *canvas.lock().unwrap() = image;
+                            debug!(
+                                "Rendering {} by {} step took {} ms",
+                                settings_clone.width,
+                                settings_clone.height,
+                                (Instant::now() - start).as_millis()
+                            );
+                            *canvas.lock().unwrap() = image;
 
-                                // Redraw was performed, what if redraw should happen again during update?
-                                settings.lock().unwrap().redraw = false;
-                            }
+                            // Redraw was performed, what if redraw should happen again during update?
+                            settings.lock().unwrap().redraw = false;
                         }
-
-                        // Request a redraw when the canvas has been updated.
-                        let app_weak = app_weak.clone();
-                        invoke_from_event_loop(move || {
-                            if let Some(app) = app_weak.upgrade() {
-                                // Update the canvas
-                                app.global::<Settings>()
-                                    .set_refresh(!app.global::<Settings>().get_refresh());
-                            };
-                        })
-                        .unwrap();
                     }
+
+                    // Request a redraw when the canvas has been updated.
+                    let app_weak = app_weak.clone();
+                    invoke_from_event_loop(move || {
+                        if let Some(app) = app_weak.upgrade() {
+                            // Update the canvas
+                            app.global::<Settings>()
+                                .set_refresh(!app.global::<Settings>().get_refresh());
+                        };
+                    })
+                    .unwrap();
                 }
-            })?
+            }
+        )?
     };
 
     // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
-    let run_layout = Arc::new(AtomicBool::new(true));
-
     let layout_handle = {
         let state = state.clone();
         let settings = settings.clone();
-        let run_layout = run_layout.clone();
 
-         thread::Builder::new().name("ltsgraph layout worker".to_string()).spawn(move || {
-            while run_layout.load(std::sync::atomic::Ordering::Relaxed) {
-                let start = Instant::now();
+        Arc::new(PauseableThread::new("ltsgraph layout worker", move || {
+            let start = Instant::now();
 
-                if let Some(state) = state.read().unwrap().deref() {
-                    // Read the settings and free the lock since otherwise the callback above blocks.
-                    let settings = settings.lock().unwrap().clone();
-                    let mut layout = state.graph_layout.lock().unwrap();
+            if let Some(state) = state.read().unwrap().deref() {
+                // Read the settings and free the lock since otherwise the callback above blocks.
+                let settings = settings.lock().unwrap().clone();
+                let mut layout = state.graph_layout.lock().unwrap();
 
-                    layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
+                layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
 
-                    // Copy layout into the view.
-                    let mut viewer = state.viewer.lock().unwrap();
-                    viewer.update(&layout);
-                }
-
-                // Request a redraw (if not already in progress).
-                settings.lock().unwrap().redraw = true;
-
-                // Keep at least 16 milliseconds between two layout runs.
-                let duration = Instant::now() - start;
-                debug!("Layout step took {} ms", duration.as_millis());
-                thread::sleep(Duration::from_millis(100).saturating_sub(duration));
+                // Copy layout into the view.
+                let mut viewer = state.viewer.lock().unwrap();
+                viewer.update(&layout);
             }
-        })?
+
+            // Request a redraw (if not already in progress).
+            settings.lock().unwrap().redraw = true;
+
+            // Keep at least 16 milliseconds between two layout runs.
+            let duration = Instant::now() - start;
+            debug!("Layout step took {} ms", duration.as_millis());
+            thread::sleep(Duration::from_millis(100).saturating_sub(duration));
+        })?)
     };
+
+    {
+        let layout_handle = layout_handle.clone();
+        app.on_run_simulation(move |enabled| {
+            if enabled {
+                layout_handle.resume();
+            } else {
+                layout_handle.pause();
+            }
+        })
+    }
 
     app.run()?;
 
     // Stop the layout and quit.
-    run_layout.store(false, std::sync::atomic::Ordering::Relaxed);
-    run_canvas.store(false, std::sync::atomic::Ordering::Relaxed);
-
-    layout_handle.join().unwrap();
-    canvas_handle.join().unwrap();
+    layout_handle.stop();
+    canvas_handle.stop();
 
     Ok(())
 }

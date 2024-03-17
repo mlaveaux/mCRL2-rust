@@ -1,4 +1,4 @@
-import { HorizontalBox, Button, VerticalBox, Slider, ScrollView } from "std-widgets.slint";
+import { HorizontalBox, Button, VerticalBox, Slider, ScrollView, CheckBox } from "std-widgets.slint";
 
 export global Settings {
     
@@ -25,11 +25,20 @@ export component Application inherits Window {
     preferred-width: 1280px;
     preferred-height: 720px;
 
-    // Render the simulation to an image.
+    /// Render the simulation to an image.
     pure callback update_canvas(length, length, bool) -> image;
-    pure callback canvas_clicked();
+
+    /// Request the canvas to be redrawn.
+    pure callback request_redraw();
+
+    /// Called when some setting has been changed since we mirror it on the Rust side.
     pure callback settings_changed();
+
+    /// Trigger a file dialog to open to select another LTS.
     pure callback open_filedialog();
+
+    /// Used to pause the simulation.
+    pure callback run_simulation(bool);
 
     HorizontalLayout {
         alignment: end;
@@ -54,11 +63,13 @@ export component Application inherits Window {
                     Settings.view_x = view_x_start + (self.mouse-x - self.pressed-x) / Settings.zoom_level;
                     Settings.view_y = view_y_start + (self.mouse-y - self.pressed-y) / Settings.zoom_level;
                     settings_changed();
+                    request_redraw();
                 }
 
                 scroll-event(e) => {
                     Settings.zoom_level += e.delta-y / 100px;
                     settings_changed();
+                    request_redraw();
 
                     EventResult.accept
                 }
@@ -70,7 +81,6 @@ export component Application inherits Window {
             background: gray;
         }
 
-        // The controls on the right menu
         VerticalBox { 
             width: 20%;
             alignment: start;
@@ -91,6 +101,14 @@ export component Application inherits Window {
                 font-size: 20px;
             }
             
+            CheckBox {
+                text: "Enable simulation";
+                checked: true;
+                toggled => {
+                    run_simulation(self.checked)
+                }
+            }
+
             Text {
                 text: {
                     "Handle Length: " + Settings.handle_length
