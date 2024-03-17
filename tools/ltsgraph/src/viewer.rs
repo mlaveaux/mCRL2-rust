@@ -84,6 +84,9 @@ impl Viewer {
                 .unwrap();
         pixmap.fill(tiny_skia::Color::WHITE);
 
+        // Compute the view transform
+        let view_transform = Transform::from_translate(view_x, view_y).post_scale(zoom_level, zoom_level);
+
         // The information for states.
         let state_inner = tiny_skia::Paint {
             shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)),
@@ -123,8 +126,7 @@ impl Viewer {
                     &self.labels_cache[*label],
                     &mut pixmap,
                     Transform::from_translate(middle.x - self.labels_cache[*label].size().0 / 2.0, middle.y)
-                        .pre_translate(view_x, view_y)
-                        .post_scale(zoom_level, zoom_level),
+                        .post_concat(view_transform),
                 );
             }
         }
@@ -135,7 +137,7 @@ impl Viewer {
                 &path,
                 &edge_paint,
                 &Stroke::default(),
-                Transform::from_translate(view_x, view_y).post_scale(zoom_level, zoom_level),
+                view_transform,
                 None,
             );
         }
@@ -148,8 +150,7 @@ impl Viewer {
                 &state_inner,
                 tiny_skia::FillRule::Winding,
                 Transform::from_translate(position.x, position.y)
-                    .pre_translate(view_x, view_y)
-                    .post_scale(zoom_level, zoom_level),
+                    .post_concat(view_transform),
                 None,
             );
             pixmap.stroke_path(
@@ -157,8 +158,7 @@ impl Viewer {
                 &state_outer,
                 &Stroke::default(),
                 Transform::from_translate(position.x, position.y)
-                    .pre_translate(view_x, view_y)
-                    .post_scale(zoom_level, zoom_level),
+                    .post_concat(view_transform),
                 None,
             );
         }
