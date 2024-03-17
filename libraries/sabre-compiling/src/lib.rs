@@ -1,11 +1,12 @@
-use std::{error::Error, fs::{self, File}, io::Write, path::{Path, PathBuf}};
+use std::{error::Error, fs::{self, File}, io::Write, path::PathBuf};
 
 use duct::cmd;
 use indoc::indoc;
 use libloading::{Library, Symbol};
 use log::info;
 use mcrl2::data::DataExpression;
-use sabre::{RewriteEngine, RewriteSpecification};
+use sabre::{set_automaton::SetAutomaton, RewriteEngine, RewriteSpecification};
+use temp_dir::TempDir;
 
 pub struct SabreCompiling {
     library: Library,
@@ -21,13 +22,17 @@ impl RewriteEngine for SabreCompiling {
 impl SabreCompiling {
     
     pub fn new(spec: &RewriteSpecification) -> Result<SabreCompiling, Box<dyn Error>> {
+        let apma = SetAutomaton::new(spec, |_| (), true);
 
         // Create the directory structure for a Cargo project
-        let generated_dir = Path::new("temp");
-        let source_dir = PathBuf::from(generated_dir).join("src");
+        let temp_directory = TempDir::new().unwrap();
+        let temp_dir = temp_directory.path();
 
-        if !generated_dir.exists() {
-            fs::create_dir(&generated_dir)?;
+        info!("Compiling sabre into directory {}", temp_dir.to_string_lossy());
+        let source_dir = PathBuf::from(temp_dir).join("src");
+
+        if !temp_dir.exists() {
+            fs::create_dir(&temp_dir)?;
         }
 
         if !source_dir.exists() {
@@ -36,7 +41,7 @@ impl SabreCompiling {
 
         // Write the cargo configuration
         {
-            let mut file = File::create(PathBuf::from(generated_dir).join("Cargo.toml"))?;
+            let mut file = File::create(PathBuf::from(temp_dir).join("Cargo.toml"))?;
             writeln!(&mut file, indoc! {"
                 [package]
                 name = \"sabre-generated\"
@@ -70,7 +75,7 @@ impl SabreCompiling {
         // Compile the dynamic object.
         info!("Compiling...");
         cmd("cargo", &["build", "--lib"])
-            .dir(generated_dir)
+            .dir(temp_dir)
             .run()?;
         println!("ok.");
 
@@ -103,8 +108,12 @@ impl SabreCompiling {
 mod tests {
     use super::*;
 
+    use test_log::test;
+
     #[test]
     fn test_compilation() {
+        env_logger::init();
+
         let spec = RewriteSpecification::default();
 
         SabreCompiling::new(&spec).unwrap();
