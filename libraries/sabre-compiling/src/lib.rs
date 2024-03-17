@@ -1,4 +1,4 @@
-use std::{env::temp_dir, error::Error, ffi::c_void, fs::{self, File}, io::Write, path::{Path, PathBuf}};
+use std::{error::Error, fs::{self, File}, io::Write, path::{Path, PathBuf}};
 
 use duct::cmd;
 use indoc::indoc;
@@ -74,9 +74,18 @@ impl SabreCompiling {
             .run()?;
         println!("ok.");
 
+        // Figure out the path to the library (it is based on platform)
+        let mut path = PathBuf::from(generated_dir).join("./target/debug/libsabre_generated.so");
+        if !path.exists() {
+            path = PathBuf::from(generated_dir).join("./target/debug/sabre_generated.lib");
+            if !path.exists() {
+                return Err("Could not find the compiled library!".into());
+            }
+        }
+
         // Load it back in and call the rewriter.
         unsafe {
-            let library = Library::new(PathBuf::from(generated_dir).join("./target/debug/sabre_generated.dll"))?;
+            let library = Library::new(&path)?;
             let func: Symbol<extern fn()> = library.get(b"rewrite_term")?;
             
             func();
