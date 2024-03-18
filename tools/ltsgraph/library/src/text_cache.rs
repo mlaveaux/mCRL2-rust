@@ -91,9 +91,9 @@ impl TextCache {
                             &path,
                             &paint,
                             tiny_skia::FillRule::Winding,
-                            transform
-                                .post_translate(physical_glyph.x as f32, physical_glyph.y as f32)
-                                .pre_scale(1.0, -1.0),
+                                Transform::from_translate(physical_glyph.x as f32, physical_glyph.y as f32)
+                                .pre_scale(1.0, -1.0)
+                                .post_concat(transform),
                             None,
                         );
                     }
@@ -115,7 +115,7 @@ impl TextCache {
                             0,
                             pixmap_image.unwrap().as_ref(),
                             &PixmapPaint::default(),
-                            Transform::default(),
+                            transform,
                             None,
                         );
                     };
