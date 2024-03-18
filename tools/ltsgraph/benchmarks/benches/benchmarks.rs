@@ -16,7 +16,7 @@ pub fn criterion_benchmark_viewer(c: &mut Criterion) {
 
     c.bench_function("ltsgraph viewer", |bencher| {
         bencher.iter(|| {
-            viewer.render(&mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(), 5.0, 0.0, 0.0, 1.0, 14.0);
+            viewer.render(&mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(), 5.0, 0.0, 0.0, 800, 600, 1.0, 14.0);
         });
     });
 }

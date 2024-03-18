@@ -62,13 +62,16 @@ impl Viewer {
         state_radius: f32,
         view_x: f32,
         view_y: f32,
+        screen_x: u32,
+        screen_y: u32,
         zoom_level: f32,
         label_text_size: f32,
     ) {
         pixmap.fill(tiny_skia::Color::WHITE);
 
         // Compute the view transform
-        let view_transform = Transform::from_translate(view_x, view_y).post_scale(zoom_level, zoom_level);
+        let view_transform =
+            Transform::from_translate(view_x, view_y).post_scale(zoom_level, zoom_level).post_translate(screen_x as f32 / 2.0, screen_y as f32 / 2.0);
 
         // The information for states.
         let state_inner = tiny_skia::Paint {
@@ -105,11 +108,15 @@ impl Viewer {
 
                 // Draw the text label
                 let middle = (to_position + position) / 2.0;
+                let buffer = &self.labels_cache[*label];
                 self.text_cache.draw(
-                    &self.labels_cache[*label],
+                    buffer,
                     pixmap,
-                    Transform::from_translate(middle.x - self.labels_cache[*label].size().0 / 2.0, middle.y)
-                        .post_concat(view_transform),
+                    Transform::from_translate(
+                        middle.x,
+                        middle.y,
+                    )
+                    .post_concat(view_transform),
                 );
             }
         }
@@ -132,22 +139,19 @@ impl Viewer {
                 &state_circle,
                 &state_inner,
                 tiny_skia::FillRule::Winding,
-                Transform::from_translate(position.x, position.y)
-                    .post_concat(view_transform),
+                Transform::from_translate(position.x, position.y).post_concat(view_transform),
                 None,
             );
             pixmap.stroke_path(
                 &state_circle,
                 &state_outer,
                 &Stroke::default(),
-                Transform::from_translate(position.x, position.y)
-                    .post_concat(view_transform),
+                Transform::from_translate(position.x, position.y).post_concat(view_transform),
                 None,
             );
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -165,6 +169,15 @@ mod tests {
         let mut viewer = Viewer::new(&lts);
 
         let mut pixel_buffer = Pixmap::new(800, 600).unwrap();
-        viewer.render(&mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(), 5.0, 0.0, 0.0, 1.0, 14.0);
+        viewer.render(
+            &mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(),
+            5.0,
+            0.0,
+            0.0,
+            800,
+            600,
+            1.0,
+            14.0,
+        );
     }
 }
