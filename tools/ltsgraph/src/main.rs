@@ -12,18 +12,14 @@ use std::{
 use anyhow::Result;
 use clap::Parser;
 
-use graph_layout::GraphLayout;
 use io::io_aut::read_aut;
 use log::{debug, info};
-use slint::{invoke_from_event_loop, Image, SharedPixelBuffer};
-use viewer::Viewer;
+use slint::{invoke_from_event_loop, Image, Rgba8Pixel, SharedPixelBuffer};
 use pauseable_thread::PauseableThread;
+use ltsgraph_lib::{GraphLayout, Viewer};
 
 mod error_dialog;
-mod graph_layout;
-mod text_cache;
 mod pauseable_thread;
-mod viewer;
 
 #[derive(Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A lts viewing tool")]
@@ -35,7 +31,7 @@ pub struct Cli {
 /// Contains all the GUI related state information.
 struct GuiState {
     graph_layout: Mutex<GraphLayout>,
-    viewer: Mutex<Viewer>,
+    viewer: Mutex<(Viewer, SharedPixelBuffer<Rgba8Pixel>)>,
 }
 
 #[derive(Clone, Default)]
@@ -101,11 +97,12 @@ async fn main() -> Result<()> {
                     // Create the layout and viewer separately to make the initial state sensible.
                     let layout = GraphLayout::new(&lts);
                     let mut viewer = Viewer::new(&lts);
+
                     viewer.update(&layout);
 
                     *state.write().unwrap() = Some(GuiState {
                         graph_layout: Mutex::new(layout),
-                        viewer: Mutex::new(viewer),
+                        viewer: Mutex::new((viewer, SharedPixelBuffer::new(1, 1))),
                     });
                 }
                 Err(x) => {
@@ -203,9 +200,15 @@ async fn main() -> Result<()> {
                         // Render a new frame...
                         {
                             let start = Instant::now();
-                            let mut viewer = state.viewer.lock().unwrap();
-                            viewer.on_resize(settings_clone.width, settings_clone.height);
-                            let image = viewer.render(
+                            let (ref mut viewer, ref mut pixel_buffer) = *state.viewer.lock().unwrap();                           
+
+                            // Resize the canvas when necessary
+                            if pixel_buffer.width() != settings_clone.width || pixel_buffer.height() != settings_clone.height {
+                                *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(settings_clone.width, settings_clone.height);
+                            }
+
+                            viewer.render(
+                                &mut tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), settings_clone.width, settings_clone.height).unwrap(),
                                 settings_clone.state_radius,
                                 settings_clone.view_x,
                                 settings_clone.view_y,
@@ -219,7 +222,7 @@ async fn main() -> Result<()> {
                                 settings_clone.height,
                                 (Instant::now() - start).as_millis()
                             );
-                            *canvas.lock().unwrap() = image;
+                            *canvas.lock().unwrap() = pixel_buffer.clone();
 
                             // Redraw was performed, what if redraw should happen again during update?
                             settings.lock().unwrap().redraw = false;
@@ -257,7 +260,7 @@ async fn main() -> Result<()> {
                 layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
 
                 // Copy layout into the view.
-                let mut viewer = state.viewer.lock().unwrap();
+                let (ref mut viewer, _) = *state.viewer.lock().unwrap();
                 viewer.update(&layout);
             }
 

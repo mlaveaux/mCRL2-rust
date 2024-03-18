@@ -7,19 +7,16 @@ license.workspace = true
 
 [dependencies]
 anyhow = "1.0"
-cosmic-text = "0.11"
-glam = "0.25"
 slint = "1.5"
 rfd = { version = "0.14", default-features = false, features = ["xdg-portal", "tokio"] }
 tiny-skia = "0.11"
 tokio = { version = "1.36", features = ["rt", "macros"] }
+ltsgraph-lib = { path = "./library" }
 clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
 io.workspace = true
 itertools.workspace = true
-mcrl2.workspace = true
-rand.workspace = true
 
 [build-dependencies]
 slint-build = "1.5"

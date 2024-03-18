@@ -3,15 +3,11 @@ use std::sync::Arc;
 use cosmic_text::Metrics;
 use glam::Vec3;
 use io::LabelledTransitionSystem;
-use slint::{Rgba8Pixel, SharedPixelBuffer};
 use tiny_skia::{Shader, Stroke, Transform};
 
 use crate::{graph_layout::GraphLayout, text_cache::TextCache};
 
 pub struct Viewer {
-    /// The slint pixel buffer used for rendering.
-    pixel_buffer: SharedPixelBuffer<Rgba8Pixel>,
-
     /// A cache used to cache strings and font information.
     text_cache: TextCache,
 
@@ -45,16 +41,8 @@ impl Viewer {
         Viewer {
             text_cache,
             labels_cache,
-            pixel_buffer: SharedPixelBuffer::<Rgba8Pixel>::new(1, 1),
             lts: lts.clone(),
             layout_states,
-        }
-    }
-
-    /// Resize the output image dimensions when necessary.
-    pub fn on_resize(&mut self, width: u32, height: u32) {
-        if self.pixel_buffer.width() != width || self.pixel_buffer.height() != height {
-            self.pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(width, height);
         }
     }
 
@@ -70,18 +58,13 @@ impl Viewer {
     /// Render the current state of the simulation into the pixmap.
     pub fn render(
         &mut self,
+        pixmap: &mut tiny_skia::PixmapMut,
         state_radius: f32,
         view_x: f32,
         view_y: f32,
         zoom_level: f32,
         label_text_size: f32,
-    ) -> SharedPixelBuffer<Rgba8Pixel> {
-        // Clear the current pixel buffer.
-        let width = self.pixel_buffer.width();
-        let height = self.pixel_buffer.height();
-        let mut pixmap =
-            tiny_skia::PixmapMut::from_bytes(self.pixel_buffer.make_mut_bytes(), width, height)
-                .unwrap();
+    ) {
         pixmap.fill(tiny_skia::Color::WHITE);
 
         // Compute the view transform
@@ -124,7 +107,7 @@ impl Viewer {
                 let middle = (to_position + position) / 2.0;
                 self.text_cache.draw(
                     &self.labels_cache[*label],
-                    &mut pixmap,
+                    pixmap,
                     Transform::from_translate(middle.x - self.labels_cache[*label].size().0 / 2.0, middle.y)
                         .post_concat(view_transform),
                 );
@@ -162,7 +145,26 @@ impl Viewer {
                 None,
             );
         }
+    }
+}
 
-        self.pixel_buffer.clone()
+
+#[cfg(test)]
+mod tests {
+    use io::io_aut::read_aut;
+    use tiny_skia::{Pixmap, PixmapMut};
+
+    use super::*;
+
+    #[test]
+    fn test_viewer() {
+        // Render a single from the alternating bit protocol with some settings.
+        let file = include_str!("../../../../examples/lts/abp.aut");
+        let lts = Arc::new(read_aut(file.as_bytes()).unwrap());
+
+        let mut viewer = Viewer::new(&lts);
+
+        let mut pixel_buffer = Pixmap::new(800, 600).unwrap();
+        viewer.render(&mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(), 5.0, 0.0, 0.0, 1.0, 14.0);
     }
 }

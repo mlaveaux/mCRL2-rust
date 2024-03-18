@@ -1,0 +1,18 @@
+[package]
+name = "ltsgraph-benchmarks"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tiny-skia = "0.11"
+ltsgraph-lib = { path = "../library" }
+rand.workspace = true
+io.workspace = true
+
+[[bench]]
+name = "benchmarks"
+harness = false

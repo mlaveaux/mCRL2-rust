@@ -127,7 +127,7 @@ impl TextCache {
 
 #[cfg(test)]
 mod tests {
-    use slint::{Rgba8Pixel, SharedPixelBuffer};
+    use tiny_skia::Pixmap;
 
     use super::*;
 
@@ -139,8 +139,7 @@ mod tests {
         let mut buffer = cache.create_buffer("A test label", Metrics::new(14.0, 14.0));
         cache.resize(&mut buffer, Metrics::new(50.0, 50.0));
 
-        let mut pixel_buffer: SharedPixelBuffer<Rgba8Pixel> = SharedPixelBuffer::new(800, 600);
-
-        tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), 800, 600).unwrap();
+        let mut pixel_buffer = Pixmap::new(800, 600).unwrap();
+        cache.draw(&buffer, &mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(), Transform::default());
     }
 }
