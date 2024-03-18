@@ -8,7 +8,10 @@ debug = "line-tables-only"
 resolver = "2"
 members = [
     "libraries/*",
-    "tools/*"
+    "libraries/**/benchmarks",
+    "tools/*",
+    "tools/**/benchmarks",
+    "tools/**/library"
 ]
 
 [workspace.package]
@@ -34,5 +37,6 @@ io = { path = "libraries/io" }
 mcrl2 = { path = "libraries/mcrl2" }
 mcrl2-macros = { path = "libraries/mcrl2-macros" }
 mcrl2-sys = { path = "libraries/mcrl2-sys" }
+rec-tests = { path = "libraries/rec-tests" }
 sabre = { path = "libraries/sabre" }
 utilities = { path = "libraries/utilities" }

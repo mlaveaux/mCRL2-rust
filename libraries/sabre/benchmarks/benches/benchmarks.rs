@@ -1,7 +1,7 @@
 use std::hint::black_box;
 use std::{cell::RefCell, rc::Rc};
 
-use criterion::Criterion;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use mcrl2::aterm::TermPool;
 use mcrl2::data::{DataSpecification, JittyRewriter, DataExpression};
@@ -33,7 +33,7 @@ pub fn load_case(
 pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 
     for (name, data_spec, expressions) in [
-        ("add8", include_str!("../../../examples/REC/mcrl2/add8.dataspec"), include_str!("../../../examples/REC/mcrl2/add8.expressions")),
+        ("add8", include_str!("../../../../examples/REC/mcrl2/add8.dataspec"), include_str!("../../../../examples/REC/mcrl2/add8.expressions")),
     ] {
         let tp = Rc::new(RefCell::new(TermPool::new()));
         let (data_spec, expressions) = load_case(&mut tp.borrow_mut(), data_spec, expressions, 1);
@@ -58,7 +58,7 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 pub fn criterion_benchmark_set_automaton(c: &mut Criterion) {
 
     for (name, rec_files) in [
-        ("hanoi8", [include_str!("../../../examples/REC/rec/fibfree.rec")])
+        ("hanoi8", [include_str!("../../../../examples/REC/rec/fibfree.rec")])
     ] {
         let tp = Rc::new(RefCell::new(TermPool::new()));
         let (syntax_spec, _) =
@@ -67,14 +67,21 @@ pub fn criterion_benchmark_set_automaton(c: &mut Criterion) {
 
         c.bench_function(&format!("set automaton {}", name), |bencher| {
             bencher.iter(|| {
-                let _ = black_box(SetAutomaton::new(&result, |x| { () }, false));
+                let _ = black_box(SetAutomaton::new(&result, |_| { () }, false));
             });
         });
 
         c.bench_function(&format!("apma automaton {}", name), |bencher| {
             bencher.iter(|| {
-                let _ = black_box(SetAutomaton::new(&result, |x| { () }, true));
+                let _ = black_box(SetAutomaton::new(&result, |_| { () }, true));
             });
         });
     }
 }
+
+criterion_group!(
+    benches,
+    criterion_benchmark_jitty,
+    criterion_benchmark_set_automaton,
+);
+criterion_main!(benches);
