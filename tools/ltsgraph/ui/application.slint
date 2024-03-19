@@ -68,6 +68,10 @@ export component Application inherits Window {
 
                 scroll-event(e) => {
                     Settings.zoom_level += e.delta-y / 100px;
+
+                    // Put a limit on the zoom level.
+                    Settings.zoom_level = max(Settings.zoom_level, 1.0);
+
                     settings_changed();
                     request_redraw();
 
