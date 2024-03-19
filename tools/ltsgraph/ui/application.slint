@@ -10,7 +10,8 @@ export global Settings {
     in property <float> repulsion_strength: 5.0;
     in property <float> timestep: 15.0;
     
-    // Settings for the view itself.
+    // Settings for the viewer itself.
+    in property <bool> draw_action_labels: true;
     in property <float> zoom_level: 1.0;
     in property <float> state_radius: 5.0;
     in property <float> label_text_height: 14.0;
@@ -130,7 +131,7 @@ export component Application inherits Window {
             }
 
             Text {
-                text: @tr("Repulsion strength: {}", Settings.repulsion_strength);
+                text: "Repulsion strength: " + Settings.repulsion_strength;
             }
             
             Slider {
@@ -163,8 +164,17 @@ export component Application inherits Window {
 
             // Controls for the viewer
             Text {
-                text: @tr("View controls");
+                text: "View controls";
                 font-size: 20px;
+            }
+
+            CheckBox {
+                text: "Draw Action Labels";
+                checked: true;
+                toggled => {
+                    Settings.draw_action_labels = self.checked; 
+                    settings_changed();
+                }
             }
             
             Text {

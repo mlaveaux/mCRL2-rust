@@ -59,6 +59,7 @@ impl Viewer {
     pub fn render(
         &mut self,
         pixmap: &mut tiny_skia::PixmapMut,
+        draw_actions: bool,
         state_radius: f32,
         view_x: f32,
         view_y: f32,
@@ -70,8 +71,9 @@ impl Viewer {
         pixmap.fill(tiny_skia::Color::WHITE);
 
         // Compute the view transform
-        let view_transform =
-            Transform::from_translate(view_x, view_y).post_scale(zoom_level, zoom_level).post_translate(screen_x as f32 / 2.0, screen_y as f32 / 2.0);
+        let view_transform = Transform::from_translate(view_x, view_y)
+            .post_scale(zoom_level, zoom_level)
+            .post_translate(screen_x as f32 / 2.0, screen_y as f32 / 2.0);
 
         // The information for states.
         let state_inner = tiny_skia::Paint {
@@ -83,10 +85,17 @@ impl Viewer {
             ..Default::default()
         };
 
-        let state_circle = tiny_skia::PathBuilder::from_circle(0.0, 0.0, state_radius).unwrap();
-
         // The information for edges
         let edge_paint = tiny_skia::Paint::default();
+
+        // The arrow to indicate the direction of the edge
+        let arrow = {
+            let mut builder = tiny_skia::PathBuilder::new();
+            builder.line_to(2.0, -5.0);
+            builder.line_to(-2.0, -5.0);
+            builder.close();
+            builder.finish().unwrap()
+        };
 
         // Resize the labels if necessary.
         for buffer in &mut self.labels_cache {
@@ -96,6 +105,8 @@ impl Viewer {
 
         // Draw the edges.
         let mut edge_builder = tiny_skia::PathBuilder::new();
+
+        let mut arrow_builder = tiny_skia::PathBuilder::new();
 
         for (index, state) in self.lts.states.iter().enumerate() {
             let position = self.layout_states[index];
@@ -107,46 +118,71 @@ impl Viewer {
                 edge_builder.line_to(to_position.x, to_position.y);
 
                 // Draw the text label
-                let middle = (to_position + position) / 2.0;
-                let buffer = &self.labels_cache[*label];
-                self.text_cache.draw(
-                    buffer,
-                    pixmap,
-                    Transform::from_translate(
-                        middle.x,
-                        middle.y,
-                    )
-                    .post_concat(view_transform),
+                if draw_actions {
+                    let middle = (to_position + position) / 2.0;
+                    let buffer = &self.labels_cache[*label];
+                    self.text_cache.draw(
+                        buffer,
+                        pixmap,
+                        Transform::from_translate(middle.x, middle.y).post_concat(view_transform),
+                    );
+                }
+
+                // Draw the arrow of the edge
+                arrow_builder.push_path(
+                    &arrow
+                        .clone()
+                        .transform(
+                            Transform::from_translate(0.0, -state_radius - 0.5)
+                                .post_rotate(
+                                    -f32::sin((to_position - position).normalize_or_zero().y)
+                                        .to_degrees()
+                                        + 90.0,
+                                )
+                                .post_translate(to_position.x, to_position.y),
+                        )
+                        .unwrap(),
                 );
             }
         }
 
-        // Draw the path for edges.
-        if let Some(path) = edge_builder.finish() {
-            pixmap.stroke_path(
+        if let Some(path) = arrow_builder.finish() {
+            pixmap.fill_path(
                 &path,
                 &edge_paint,
-                &Stroke::default(),
+                tiny_skia::FillRule::Winding,
                 view_transform,
                 None,
             );
         }
 
+        // Draw the path for edges.
+        if let Some(path) = edge_builder.finish() {
+            pixmap.stroke_path(&path, &edge_paint, &Stroke::default(), view_transform, None);
+        }
+
         // Draw the states on top.
+        let mut state_builder = tiny_skia::PathBuilder::new();
         for position in &self.layout_states {
-            // Draw the state.
+            state_builder.push_circle(position.x, position.y, state_radius);
+        }
+
+        
+        // Draw the state.
+        if let Some(path) = state_builder.finish() {
             pixmap.fill_path(
-                &state_circle,
+                &path,
                 &state_inner,
                 tiny_skia::FillRule::Winding,
-                Transform::from_translate(position.x, position.y).post_concat(view_transform),
+                view_transform,
                 None,
             );
+
             pixmap.stroke_path(
-                &state_circle,
+                &path,
                 &state_outer,
                 &Stroke::default(),
-                Transform::from_translate(position.x, position.y).post_concat(view_transform),
+                view_transform,
                 None,
             );
         }
@@ -171,6 +207,7 @@ mod tests {
         let mut pixel_buffer = Pixmap::new(800, 600).unwrap();
         viewer.render(
             &mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(),
+            true,
             5.0,
             0.0,
             0.0,

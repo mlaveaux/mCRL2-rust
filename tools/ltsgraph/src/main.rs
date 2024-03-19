@@ -46,6 +46,7 @@ pub struct GuiSettings {
     pub height: u32,
     pub state_radius: f32,
     pub label_text_size: f32,
+    pub draw_action_labels: bool,
 
     pub redraw: bool,
 
@@ -133,6 +134,7 @@ async fn main() -> Result<()> {
                 settings.delta = app.global::<Settings>().get_timestep();
                 settings.state_radius = app.global::<Settings>().get_state_radius();
 
+                settings.draw_action_labels = app.global::<Settings>().get_draw_action_labels();
                 settings.zoom_level = app.global::<Settings>().get_zoom_level();
                 settings.view_x = app.global::<Settings>().get_view_x();
                 settings.view_y = app.global::<Settings>().get_view_y();
@@ -209,9 +211,12 @@ async fn main() -> Result<()> {
 
                             viewer.render(
                                 &mut tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), settings_clone.width, settings_clone.height).unwrap(),
+                                settings_clone.draw_action_labels,
                                 settings_clone.state_radius,
                                 settings_clone.view_x,
                                 settings_clone.view_y,
+                                settings_clone.width,
+                                settings_clone.height,
                                 settings_clone.zoom_level,
                                 settings_clone.label_text_size,
                             );
