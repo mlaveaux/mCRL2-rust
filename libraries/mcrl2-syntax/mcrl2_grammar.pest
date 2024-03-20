@@ -7,8 +7,7 @@
 //! AFTER parsing we can use a PrattParser to define the associativity and 
 //! precedence of operators for rules of the following shape:
 //!
-//! expr       =   { prefix? ~ primary ~ postfix? ~ (infix ~ prefix? ~ primary ~
-//postfix? )* }
+//! expr  =   { prefix? ~ primary ~ postfix? ~ (infix ~ prefix? ~ primary ~ postfix? )* }
 //!
 
 //! The | operator defines a choice operator and does not mean OR with
@@ -28,7 +27,7 @@ COMMENT = _{ "%" ~ (!NEWLINE ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | NEWLINE }
 
 /// Identifiers
-Id = @{ (ASCII_ALPHANUMERIC|"_")+ }
+Id = @{ (ASCII_ALPHANUMERIC|"_"|"'")+ }
 
 /// List of identifiers
 IdList = { Id ~ ( "," ~ Id )* }
@@ -51,6 +50,10 @@ ActSpec = { "act" ~ ActDecl+ }
 
 /// Declaration of actions
 ActDecl = { IdList ~ ( ":" ~  SortProduct )? ~ ";" }
+
+//
+// Rules related to data expressions and sorts.
+//
 
 /// Sort specification
 SortSpec = { "sort" ~ SortDecl+ } 
@@ -101,10 +104,10 @@ SortProduct = {
 }
 
 /// Data Expression
-DataExpr = { DataExprAtom ~ DataExprSuffix? ~ (DataExprInfix ~ DataExprAtom ~ DataExprSuffix?)* }
+DataExpr = { DataExprPrimary ~ DataExprSuffix? ~ (DataExprInfix ~ DataExprPrimary ~ DataExprSuffix?)* }
 
 // A single data expressions
-DataExprAtom = {
+DataExprPrimary = {
         "true" ~ !Id                                                 // True
     |   "false" ~ !Id                                                // False
     |   "[" ~ "]"                                                    // Empty list
@@ -140,13 +143,13 @@ DataExprInfix = _{
     |   DataExprConj
     |   DataExprEq
     |   DataExprNeq
-    |   DataExprLess
     |   DataExprLeq
+    |   DataExprSnoc
+    |   DataExprLess
     |   DataExprGeq
     |   DataExprGreater
     |   DataExprIn
     |   DataExprCons
-    |   DataExprSnoc
     |   DataExprConcat
     |   DataExprAdd
     |   DataExprMinus
@@ -157,27 +160,27 @@ DataExprInfix = _{
     |   DataExprAt
     |   DataExprWhr
 }
-    DataExprImpl = { "=>" }
-    DataExprDisj = { "||" }
-    DataExprConj = { "&&" }
-    DataExprEq   = { "==" }
-    DataExprNeq  = { "!=" }
-    DataExprLess = { "<" }
-    DataExprLeq  = { "<=" }
-    DataExprGeq  = { ">=" }
+    DataExprImpl    = { "=>" }
+    DataExprDisj    = { "||" }
+    DataExprConj    = { "&&" }
+    DataExprEq      = { "==" }
+    DataExprNeq     = { "!=" }
+    DataExprLeq     = { "<=" }
+    DataExprSnoc    = { "<|" }
+    DataExprLess    = { "<" }
+    DataExprGeq     = { ">=" }
     DataExprGreater = { ">" }
-    DataExprIn   = { "in" }
-    DataExprCons = { "|>" }
-    DataExprSnoc = { "<|" }
-    DataExprConcat = { "++" }
-    DataExprAdd  = { "+" }
-    DataExprMinus = { "-" }
-    DataExprDiv  = { "/" }
-    DataExprIntDiv = { "div" }
-    DataExprMod  = { "mod" }
-    DataExprMult = { "*" }
-    DataExprAt   = { "." }
-    DataExprWhr  = { "whr" }
+    DataExprIn      = { "in" }
+    DataExprCons    = { "|>" }
+    DataExprConcat  = { "++" }
+    DataExprAdd     = { "+" }
+    DataExprMinus   = { "-" }
+    DataExprDiv     = { "/" }
+    DataExprIntDiv  = { "div" }
+    DataExprMod     = { "mod" }
+    DataExprMult    = { "*" }
+    DataExprAt      = { "." }
+    DataExprWhr     = { "whr" }
 
 /// List of data expressions
 DataExprList = { DataExpr ~ ( "," ~ DataExpr )* }
@@ -188,7 +191,9 @@ Assignment = { Id ~ "=" ~ DataExpr }
 /// List of assignments
 AssignmentList = { Assignment ~ ( "," ~ Assignment )* }
 
-// Variable declarations
+//
+// Rules related to processes.
+//
 
 /// Typed variable
 VarDecl = { Id ~ ":" ~ SortExpr }
@@ -261,9 +266,9 @@ ProcExprUnit = {
     |   "sum" ~ VarsDeclList ~ "." ~ ProcExpr                    // Sum operator
     |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]"
             ~ "." ~ ProcExpr                                     // Distribution operator
-    |   DataExprAtom ~ "->" ~ ProcExpr                           // If-then-else operator
+    |   DataExpr ~ "->" ~ ProcExpr                               // If-then-else operator
             ~ "<>" ~ ProcExpr
-    |   DataExprAtom ~ "->" ~ ProcExpr                           // If-then operator
+    |   DataExpr ~ "->" ~ ProcExpr                               // If-then operator
     |   Id ~ "(" ~ AssignmentList? ~ ")"                         // Process instantiation with assignment shorthand
     |   Action                                                   // Action or process instantiation
 }
@@ -307,3 +312,137 @@ EqnSpec = { VarSpec? ~ "eqn" ~ EqnDecl+ }
 
 /// Conditional equation
 EqnDecl = { (DataExpr ~ "->")? ~ DataExpr ~ "=" ~ DataExpr ~ ";" }            
+
+
+//
+// Rules related to modal formulas
+//
+
+/// Single state formula or state formula specification
+StateFrmSpec = {
+    SOI ~ (StateFrm | StateFrmSpecElt* ~ FormSpec ~ StateFrmSpecElt*) ~ EOI
+}
+
+FormSpec = { "form" ~ StateFrm ~ ";" }
+
+StateFrmSpecElt = {
+        SortSpec                                                     // Sort specification
+    |   ConsSpec                                                     // Constructor specification
+    |   MapSpec                                                      // Map specification
+    |   EqnSpec                                                      // Equation specification
+    |   ActSpec                                                      // Action specification
+}
+
+StateFrm = { StateFrmPrimary ~ StateFrmSuffix? ~ (StateFrmInfix ~ StateFrmPrimary ~ StateFrmSuffix?)*}
+
+StateFrmPrimary = {
+        "(" ~ StateFrm ~ ")"                                     // Brackets
+    |   "true"                                                   // True, can also be infinity
+    |   "false"                                                  // False, can also be minus infinity
+    |   "delay" ~ ( "@" ~ DataExpr )?                            // Delay
+    |   "yaled" ~ ( "@" ~ DataExpr )?                            // Yaled
+    |   "mu" ~ StateVarDecl ~ "." ~ StateFrm                     // Minimal fixed point
+    |   "nu" ~ StateVarDecl ~ "." ~ StateFrm                     // Maximal fixed point
+    |   "forall" ~ VarsDeclList ~ "." ~ StateFrm                 // Universal quantification
+    |   "exists" ~ VarsDeclList ~ "." ~ StateFrm                 // Existential quantification
+    |   "inf" ~ VarsDeclList ~ "." ~ StateFrm                    // The infimum operator
+    |   "sup" ~ VarsDeclList ~ "." ~ StateFrm                    // The supremum operator
+    |   "[" ~ RegFrm ~ "]" ~ StateFrm                            // Box modality
+    |   "<" ~ RegFrm ~ ">" ~ StateFrm                            // Diamond modality
+    |   "-" ~ StateFrm                                           // Unary minus. 
+    |   "!" ~ StateFrm                                           // Negation
+    |   Id ~ ( "(" ~ DataExprList ~ ")" )?                       // Instantiated fixpoint variable
+    |   DataValExpr ~ "*" ~ StateFrm                             // Multiplication with a positive constant
+    |   DataValExpr                                              // Boolean or real data expression
+}
+
+StateFrmInfix = {
+    |   "+"                                                      // Addition
+    |   "*"                                                      // Left constant multiply
+    |   "=>"                                                     // Implication
+    |   "||"                                                     // Disjunction, and max
+    |   "&&"                                                     // Conjunction, and min
+}
+
+StateFrmSuffix = {
+        "*" ~ DataValExpr   
+}
+
+/// Regular formulas.
+/// To guard for the ambiguity of a + b and a+ we use a negative premise
+RegFrm = { ActFrm ~ (RegFrmSuffix ~ !ActFrm)? ~ (RegFrmInfix ~ ActFrm ~ (RegFrmSuffix ~ !ActFrm)?)* }
+
+RegFrmInfix = {
+        "+"                                                      // Alternative composition
+    |   "."                                                      // Sequential composition
+}
+
+RegFrmSuffix = {
+        "*"                                                      // Iteration
+    |   "+"                                                      // Nonempty iteration
+}
+
+
+ActFrm = { ActFrmPrefix? ~ ActFrmPrimary ~ ActFrmSuffix? ~ (ActFrmInfix ~ ActFrmPrefix? ~ ActFrmPrimary ~ ActFrmSuffix?)* }
+
+ActFrmPrimary = {
+        "(" ~ ActFrm ~ ")"                                       // Brackets
+    |   "true"                                                   // True
+    |   "false"                                                  // False
+    |   "forall" ~ VarsDeclList ~ "." ~ ActFrm                   // Universal quantifier
+    |   "exists" ~ VarsDeclList ~ "." ~ ActFrm                   // Existential quantifier
+    |   DataValExpr                                              // Boolean/real data expression
+    |   MultAct                                                  // Multi-action
+}
+
+ActFrmPrefix = {
+    "!"       // Negation
+}
+
+ActFrmInfix = {
+        "=>"                                     // Implication
+    |   "||"                                     // Union of actions
+    |   "&&"                                     // Intersection of actions
+}
+
+ActFrmSuffix = {
+    "@" ~ DataExpr                                       // At operator
+}
+
+MultAct = {
+        "tau"                                                    // Tau, hidden action, empty multi-action
+    |   ActionList                                               // Multi-action
+}
+
+ActionList = { Action ~ ( "|" ~ Action )* }                      // List of actions
+
+/// Marked data expression
+DataValExpr = { "val" ~ "(" ~ DataExpr ~ ")" }                  
+
+/// State variable declaration
+StateVarDecl = { Id ~ ( "(" ~ StateVarAssignmentList ~ ")" )? }           
+
+/// Typed variable with initial value
+StateVarAssignment = { Id ~ ":" ~ SortExpr ~ "=" ~ DataExpr }           
+
+/// Typed variable list
+StateVarAssignmentList = { StateVarAssignment ~ ( "," ~ StateVarAssignment )* }
+
+//
+// Rules for action rename specifications
+//
+  
+/// Action rename specification
+ActionRenameSpec = { (SortSpec | ConsSpec | MapSpec | EqnSpec | ActSpec | ActionRenameRuleSpec)+ }
+
+/// Action rename rule section
+ActionRenameRuleSpec = { VarSpec? ~ "rename" ~ ActionRenameRule+ }      
+
+/// Conditional action renaming
+ActionRenameRule = { (DataExpr ~ "->")? ~ Action ~ "=>" ~ ActionRenameRuleRHS ~ ";" }
+
+ActionRenameRuleRHS = {
+        "tau"                                                        // Tau, hidden action, empty multi-action
+    |   "delta"                                                      // Delta, deadlock, inaction
+    |    Action                                                      // Action
+}
