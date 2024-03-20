@@ -1,9 +1,13 @@
 use pest_derive::Parser;
 use pest::pratt_parser::{Assoc::*, Op, PrattParser};
 
+mod display;
+
+pub use display::*;
+
 #[derive(Parser)]
 #[grammar = "mcrl2_grammar.pest"]
-struct Mcrl2Parser;
+pub struct Mcrl2Parser;
 
 pub fn mcrl2_pratt_parser() -> PrattParser<Rule> {
     // Precedence is defined lowest to highest
