@@ -267,8 +267,7 @@ ProcExprUnit = {
     |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]"
             ~ "." ~ ProcExpr                                     // Distribution operator
     |   DataExpr ~ "->" ~ ProcExpr                               // If-then-else operator
-            ~ "<>" ~ ProcExpr
-    |   DataExpr ~ "->" ~ ProcExpr                               // If-then operator
+            ~ ("<>" ~ ProcExpr)?
     |   Id ~ "(" ~ AssignmentList? ~ ")"                         // Process instantiation with assignment shorthand
     |   Action                                                   // Action or process instantiation
 }
@@ -320,7 +319,7 @@ EqnDecl = { (DataExpr ~ "->")? ~ DataExpr ~ "=" ~ DataExpr ~ ";" }
 
 /// Single state formula or state formula specification
 StateFrmSpec = {
-    SOI ~ (StateFrm | StateFrmSpecElt* ~ FormSpec ~ StateFrmSpecElt*) ~ EOI
+    SOI ~ StateFrm | (StateFrmSpecElt* ~ FormSpec ~ StateFrmSpecElt*) ~ EOI
 }
 
 FormSpec = { "form" ~ StateFrm ~ ";" }
@@ -396,7 +395,7 @@ ActFrmPrimary = {
 }
 
 ActFrmPrefix = {
-    "!"       // Negation
+    "!"                                          // Negation
 }
 
 ActFrmInfix = {
