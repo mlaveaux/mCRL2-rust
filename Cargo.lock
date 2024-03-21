@@ -2528,7 +2528,6 @@ name = "io"
 version = "0.1.0"
 dependencies = [
  "bitstream-io",
- "env_logger",
  "fxhash",
  "log",
  "regex",

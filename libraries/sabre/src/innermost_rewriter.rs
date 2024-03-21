@@ -284,6 +284,7 @@ mod tests {
     use ahash::AHashSet;
     use mcrl2::aterm::{random_term, TermPool};
 
+    use rand::{rngs::StdRng, Rng, SeedableRng};
     use test_log::test;
 
     use crate::{
@@ -300,8 +301,13 @@ mod tests {
         };
         let mut inner = InnermostRewriter::new(tp.clone(), &spec);
 
+        let seed: u64 =  rand::thread_rng().gen();
+        println!("seed: {}", seed);
+        let mut rng = StdRng::seed_from_u64(seed);
+
         let term = random_term(
             &mut tp.borrow_mut(),
+            &mut rng,
             &[("f".to_string(), 2)],
             &["a".to_string(), "b".to_string()],
             5,

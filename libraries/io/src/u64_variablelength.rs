@@ -69,7 +69,5 @@ mod tests {
         let result = read_u64_variablelength(&mut reader).unwrap();
 
         assert_eq!(result, value);
-
     }
-
 }

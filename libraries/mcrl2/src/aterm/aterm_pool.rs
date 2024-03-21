@@ -331,8 +331,9 @@ impl fmt::Display for TermPool {
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
+    use std::thread::{self, Thread};
 
+    use rand::{rngs::{StdRng, ThreadRng}, Rng, SeedableRng};
     use test_log::test;
 
     use crate::aterm::random_term;
@@ -354,14 +355,19 @@ mod tests {
     fn test_thread_aterm_pool_parallel() {
         let mut threads = vec![];
 
-        for _ in 0..2 {
-            threads.push(thread::spawn(|| {
-                let mut tp = TermPool::new();
+        let seed: u64 =  rand::thread_rng().gen();
+        println!("seed: {}", seed);
 
+        for _ in 0..2 {
+            threads.push(thread::spawn(move || {
+                let mut tp = TermPool::new();                
+
+                let mut rng = StdRng::seed_from_u64(seed);
                 let terms: Vec<ATerm> = (0..100)
                     .map(|_| {
                         random_term(
                             &mut tp,
+                            &mut rng,
                             &[("f".to_string(), 2)],
                             &["a".to_string(), "b".to_string()],
                             10,

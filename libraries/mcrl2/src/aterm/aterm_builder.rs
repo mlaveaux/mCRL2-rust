@@ -3,6 +3,7 @@ use std::fmt;
 
 use ahash::AHashSet;
 use log::trace;
+use rand::rngs::ThreadRng;
 
 use crate::aterm::{ATerm, TermPool, ATermTrait, Symbol};
 
@@ -212,6 +213,7 @@ impl<I: fmt::Debug, C: fmt::Debug> fmt::Debug for Config<I, C> {
 /// amount of subterms that are duplicated.
 pub fn random_term(
     tp: &mut TermPool,
+    rng: &mut impl rand::Rng,
     symbols: &[(String, usize)],
     constants: &[String],
     iterations: usize,
@@ -229,14 +231,13 @@ pub fn random_term(
         tp.create(&symbol, a)
     }));
 
-    let mut rng = rand::thread_rng();
     let mut result = ATerm::default();
     for _ in 0..iterations {
-        let (symbol, arity) = symbols.iter().choose(&mut rng).unwrap();
+        let (symbol, arity) = symbols.iter().choose(rng).unwrap();
 
         let mut arguments = vec![];
         for _ in 0..*arity {
-            arguments.push(subterms.iter().choose(&mut rng).unwrap().clone());
+            arguments.push(subterms.iter().choose(rng).unwrap().clone());
         }
 
         let symbol = tp.create_symbol(symbol, *arity);

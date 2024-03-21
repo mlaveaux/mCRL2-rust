@@ -157,7 +157,7 @@ impl<'a, T> IntoIterator for &'a ProtectionSet<T> {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::{rngs::StdRng, Rng, SeedableRng};
 
     use super::*;
 
@@ -167,7 +167,10 @@ mod tests {
 
         // Protect a number of indices and record their roots.
         let mut indices: Vec<usize> = Vec::new();
-        let mut rng = rand::thread_rng();
+        
+        let seed: u64 =  rand::thread_rng().gen();
+        println!("seed: {}", seed);
+        let mut rng = StdRng::seed_from_u64(seed);
 
         for _ in 0..5000 {
             indices.push(protection_set.protect(rng.gen_range(0..1000)));
