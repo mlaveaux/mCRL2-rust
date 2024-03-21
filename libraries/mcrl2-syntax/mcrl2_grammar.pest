@@ -432,7 +432,7 @@ StateVarAssignmentList = { StateVarAssignment ~ ( "," ~ StateVarAssignment )* }
 //
   
 /// Action rename specification
-ActionRenameSpec = { (SortSpec | ConsSpec | MapSpec | EqnSpec | ActSpec | ActionRenameRuleSpec)+ }
+ActionRenameSpec = { SOI ~ (SortSpec | ConsSpec | MapSpec | EqnSpec | ActSpec | ActionRenameRuleSpec)+ ~ EOI }
 
 /// Action rename rule section
 ActionRenameRuleSpec = { VarSpec? ~ "rename" ~ ActionRenameRule+ }      
