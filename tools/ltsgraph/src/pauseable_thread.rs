@@ -16,7 +16,7 @@ impl PauseableThread {
 
     /// Spawns a new thread that can be paused and stopped.
     pub fn new<F>(name: &str, loop_function: F) -> Result<PauseableThread, std::io::Error> 
-        where F: Fn() -> () + Send + 'static,
+        where F: Fn() + Send + 'static,
         {
         
         let shared = Arc::new(PauseableThreadShared{
