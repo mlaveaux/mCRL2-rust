@@ -98,22 +98,20 @@ fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
     rec_test(rec_files, expected_result);
 }
 
-// These tests use more stack memory than is avaiable on Windows.
-
-#[cfg(unix)]
-#[cfg(not(debug_assertions))]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/sieve1000.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/revnat1000.rec"), include_str!("../../../examples/REC/rec/revnat.rec")], include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/dart.rec")], include_str!("snapshot/result_dart.txt") ; "dart")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/factorial7.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial7.txt") ; "factorial7")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/factorial8.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial8.txt") ; "factorial8")]
+// These tests use more stack memory than is available on Windows.
+#[cfg(all(unix, not(debug_assertions)))]
+#[test_case(vec![include_str!("../../../examples/REC/rec/sieve1000.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/revnat1000.rec"), include_str!("../../../examples/REC/rec/revnat.rec")], include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/dart.rec")], include_str!("snapshot/result_dart.txt") ; "dart")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/factorial7.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial7.txt") ; "factorial7")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/factorial8.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial8.txt") ; "factorial8")]
 // #[test_case(vec![include_str!("../../../examples/REC/rec/factorial9.rec"), include_str!("../../../examples/REC/rec/factorial.rec")], include_str!("snapshot/result_factorial9.txt") ; "factorial9")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci19.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci19.txt") ; "fibonacci19")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci20.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci20.txt") ; "fibonacci20")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci21.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci21.txt") ; "fibonacci21")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/hanoi12.rec"), include_str!("../../../examples/REC/rec/hanoi.rec")], include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
-// #[test_case(vec![include_str!("../../../examples/REC/rec/permutations7.rec"), include_str!("../../../examples/REC/rec/permutations.rec")], include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci19.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci19.txt") ; "fibonacci19")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci20.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci20.txt") ; "fibonacci20")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/fibonacci21.rec"), include_str!("../../../examples/REC/rec/fibonacci.rec")], include_str!("snapshot/result_fibonacci21.txt") ; "fibonacci21")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/hanoi12.rec"), include_str!("../../../examples/REC/rec/hanoi.rec")], include_str!("snapshot/result_hanoi12.txt") ; "hanoi12")]
+#[test_case(vec![include_str!("../../../examples/REC/rec/permutations7.rec"), include_str!("../../../examples/REC/rec/permutations.rec")], include_str!("snapshot/result_permutations7.txt") ; "permutations7")]
 fn rec_test_unix(rec_files: Vec<&str>, expected_result: &str) {
     rec_test(rec_files, expected_result);
 }
