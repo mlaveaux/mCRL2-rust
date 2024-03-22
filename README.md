@@ -2,7 +2,7 @@ This repository contains several tools and libraries that interface with the C++
 
 ## Tools
 
-The tools directory contains prototypes to show the viability of this approach. The `lpsreach` tool can for example be executed using `cargo run --release --bin lpsreach`. The libraries use the `RUST_LOG` environment variable to set the logging level, which can be set to `trace`, `info`, `debug`, `warn` and `error`. It can even be used to only show specific logging output, for example `RUST_LOG=mcrl2::aterm=trace`.
+The tools directory contains prototypes to show the viability of this approach. The `mcrl2rewrite` tool can for example be executed using `cargo run --release --bin mcrl2rewrite`. The libraries use the `RUST_LOG` environment variable to set the logging level, which can be set to `trace`, `info`, `debug`, `warn` and `error`. It can even be used to only show specific logging output, for example `RUST_LOG=mcrl2::aterm=trace`.
 
 # Contributing
 
