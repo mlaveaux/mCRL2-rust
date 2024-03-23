@@ -13,6 +13,9 @@ use crate::{aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrai
 
 use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable};
 
+/// The number of times before garbage collection is tested again.
+const TEST_GC_INTERVAL: usize = 100;
+
 thread_local! {
     /// This is the thread specific term pool that manages the protection sets.
     pub(crate) static THREAD_TERM_POOL: RefCell<ThreadTermPool> = RefCell::new(ThreadTermPool::new());
@@ -22,10 +25,16 @@ pub struct ThreadTermPool {
     protection_set: SharedProtectionSet,
     container_protection_set: SharedContainerProtectionSet,
     
+    /// The index of the thread term pool in the list of thread pools.
     index: usize,
 
     /// Function symbols to represent 'DataAppl' with any number of arguments.
     data_appl: Vec<Symbol>,
+    
+    /// A counter used to periodically trigger a garbage collection test.
+    /// This is a stupid hack, but we need to periodically test for garbage collection and this is only allowed outside of a shared
+    /// lock section. Therefore, we count (arbitrarily) to reduce the amount of this is checked.
+    gc_counter: usize,
 
     _callback: ManuallyDrop<UniquePtr<ffi::tls_callback_container>>,
 }
@@ -33,7 +42,7 @@ pub struct ThreadTermPool {
 /// Protects the given aterm address and returns the term.
 ///     - guard: An existing guard to the ThreadTermPool.protection_set.
 ///     - index: The index of the ThreadTermPool
-fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, index: usize, term: *const ffi::_aterm) -> ATerm {
+fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, gc_counter: &mut usize, index: usize, term: *const ffi::_aterm) -> ATerm {
     debug_assert!(!term.is_null(), "Can only protect valid terms");
     let aterm = ATermPtr::new(term);
     let root = guard.protect(aterm.clone());
@@ -43,10 +52,20 @@ fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, i
         "Protected term {:?}, index {}, protection set {}",
         term,
         root,
-        index
+        index,
     );
 
-    ATerm { term, root }
+    let result = ATerm { term, root };
+
+    // Test for garbage collection intermediately.
+    *gc_counter = gc_counter.saturating_sub(1);
+
+    if guard.unlock() && *gc_counter == 0 {
+        ffi::test_garbage_collection();
+        *gc_counter = TEST_GC_INTERVAL;
+    }
+
+    result
 }
 
 impl ThreadTermPool {
@@ -59,15 +78,16 @@ impl ThreadTermPool {
             protection_set,
             container_protection_set,
             index,
-            _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
+            gc_counter: TEST_GC_INTERVAL,
             data_appl: vec![],
+            _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
         }
     }
 
     /// Protects the given aterm address and returns the term.
     pub fn protect(&mut self, term: *const ffi::_aterm) -> ATerm {
         unsafe {
-            protect_with(self.protection_set.write_exclusive(true), self.index, term)
+            protect_with(self.protection_set.write_exclusive(true), &mut self.gc_counter, self.index, term)
         }
     }
 
@@ -205,7 +225,7 @@ impl TermPool {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
-                protect_with(protection_set, tp.index, term)
+                protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             }
         });
 
@@ -245,7 +265,7 @@ impl TermPool {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
-                protect_with(protection_set, tp.index, term)
+                protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             };
 
             result
@@ -285,7 +305,7 @@ impl TermPool {
             let result = unsafe {
                 let protection_set = tp.protection_set.write_exclusive(true);
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
-                protect_with(protection_set, tp.index, term)
+                protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             };
 
             result
@@ -305,7 +325,7 @@ impl TermPool {
             unsafe {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
-                protect_with(protection_set, tp.index, create())
+                protect_with(protection_set, &mut tp.gc_counter, tp.index, create())
             }
         });
 
@@ -331,9 +351,9 @@ impl fmt::Display for TermPool {
 
 #[cfg(test)]
 mod tests {
-    use std::thread::{self, Thread};
+    use std::thread;
 
-    use rand::{rngs::{StdRng, ThreadRng}, Rng, SeedableRng};
+    use rand::{rngs::StdRng, Rng, SeedableRng};
     use test_log::test;
 
     use crate::aterm::random_term;

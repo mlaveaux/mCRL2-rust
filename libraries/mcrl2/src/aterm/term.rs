@@ -502,7 +502,7 @@ impl<'a> Iterator for TermIterator<'a> {
 mod tests {
     use test_log::test;
 
-    use crate::aterm::{ATermList, TermPool};
+    use crate::aterm::TermPool;
 
     use super::*;
 

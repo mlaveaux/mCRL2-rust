@@ -242,7 +242,6 @@ impl<'a, C: Markable> DerefMut for Protector<'a, C> {
 
 impl<'a, C: Markable> Drop for Protector<'a, C> {
     fn drop(&mut self) {
-        // TODO: Implement this.
         #[cfg(debug_assertions)]
         {
             for term in self.protected.borrow().iter() {
@@ -257,7 +256,6 @@ mod tests {
     use super::*;
 
     use crate::aterm::TermPool;
-
 
     #[test]
     fn test_aterm_container() {

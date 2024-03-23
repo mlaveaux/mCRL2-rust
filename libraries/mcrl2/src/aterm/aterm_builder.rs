@@ -3,7 +3,6 @@ use std::fmt;
 
 use ahash::AHashSet;
 use log::trace;
-use rand::rngs::ThreadRng;
 
 use crate::aterm::{ATerm, TermPool, ATermTrait, Symbol};
 

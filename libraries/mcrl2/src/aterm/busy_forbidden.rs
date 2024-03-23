@@ -118,6 +118,19 @@ pub struct BfTermPoolThreadWrite<'a, T: ?Sized> {
     _marker: PhantomData<&'a ()>,
 }
 
+impl<'a, T: ?Sized> BfTermPoolThreadWrite<'a, T> {
+
+    /// Unlocks the guard prematurely, but returns whether the shared section was actually left.
+    pub fn unlock(&mut self) -> bool {
+        if self.locked {
+            self.locked = false;
+            ffi::unlock_shared()
+        } else {
+            false
+        }
+    }
+}
+
 impl<'a, T: ?Sized> Deref for BfTermPoolThreadWrite<'a, T> {
     type Target = T;
 
