@@ -1,0 +1,15 @@
+[package]
+name = "sabre-compiling"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+[dependencies]
+duct = "0.13"
+indoc = "2.0"
+libloading = "0.8"
+log.workspace = true
+mcrl2.workspace = true
+sabre.workspace = true
+
+[dev-dependencies]
