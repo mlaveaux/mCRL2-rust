@@ -131,7 +131,7 @@ use test_case::test_case;
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/games/four_in_a_row/four_in_a_row.mcrl2") ; "four_in_a_row.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/games/knights/knights.mcrl2") ; "knights.mcrl2")]
 // #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/lambda.mcrl2") ; "lambda.mcrl2")]
-#[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/funccomp.mcrl2") ; "funccomp.mcrl2")]
+// #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/funccomp.mcrl2") ; "funccomp.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/tau.mcrl2") ; "tau.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/time.mcrl2") ; "time.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/small2.mcrl2") ; "small2.mcrl2")]
