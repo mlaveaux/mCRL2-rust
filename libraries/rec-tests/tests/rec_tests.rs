@@ -100,6 +100,7 @@ fn rec_test_release(rec_files: Vec<&str>, expected_result: &str) {
 
 // These tests use more stack memory than is available on Windows.
 #[cfg(all(unix, not(debug_assertions)))]
+#[ignore]
 #[test_case(vec![include_str!("../../../examples/REC/rec/sieve1000.rec"), include_str!("../../../examples/REC/rec/sieve.rec")], include_str!("snapshot/result_sieve1000.txt") ; "sieve1000")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/revnat1000.rec"), include_str!("../../../examples/REC/rec/revnat.rec")], include_str!("snapshot/result_revnat1000.txt") ; "revnat1000")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/closure.rec")], include_str!("snapshot/result_closure.txt") ; "closure")]

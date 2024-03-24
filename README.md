@@ -18,7 +18,7 @@ By default this will build in `dev` or debug mode, and a release build can be ob
 
 ## Tests
 
-Tests can be performed using `cargo test`, only tests of the Sabre crate can be executed with `cargo test -p sabre --lib` and `cargo test -- --no-capture` can be used to show the output of tests. Alternatively, an improved test runner called [nextest](https://nexte.st/) can be used with `cargo nextest run`. This can be installed using `cargo install cargo-nextest`. This test runner offers many improvements such as always showing output of failing tests, running more tests in parallel, and offer better error messages for segfaults.
+Tests can be performed using `cargo test`, only tests of the Sabre crate can be executed with `cargo test -p sabre --lib` and `cargo test -- --no-capture` can be used to show the output of tests. Alternatively, an improved test runner called [nextest](https://nexte.st/) can be used with `cargo nextest run`. This can be installed using `cargo install cargo-nextest`. This test runner offers many improvements such as always showing output of failing tests, running more tests in parallel, and offer better error messages for segfaults. Some tests that are ignored by default require a larger stack size, which can be set using the environment variable `RUST_MIN_STACK`.
 
 ## LLVM Sanitizer
 

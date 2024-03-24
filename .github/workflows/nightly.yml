@@ -31,7 +31,7 @@ jobs:
         submodules: true
 
     - name: Run tests
-      run: cargo nextest run --release -- --include-ignored
+      run: RUST_MIN_STACK=104857600 cargo nextest run --release -- --include-ignored
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
