@@ -21,18 +21,19 @@ impl RewriteEngine for SabreCompiling {
 }
 
 /// Apply the value from compilation_toml for every given variable as an environment variable.
-fn apply_env(builder: Expression, compilation_toml: &Map<String, Value>, variables: &[&'static str]) -> Expression
+fn apply_env(builder: Expression, compilation_toml: &Map<String, Value>, variables: &[&'static str]) -> Result<Expression, Box<dyn Error>>
 {
     let mut result = builder;
+    let env = compilation_toml.get("env").ok_or("Missing [env] table")?;
 
     for var in variables {
-        let value = compilation_toml.get(*var).unwrap().to_string();
+        let value = env.get(*var).ok_or("Missing var")?.as_str().ok_or("Not a string")?;
 
-        info!("Variable {} = {}", var, value);
+        info!("Setting environment variable {} = {}", var, value);
         result = result.env(var, value);
     }
 
-    result
+    Ok(result)
 }
 
 impl SabreCompiling {
@@ -40,7 +41,7 @@ impl SabreCompiling {
     pub fn new(spec: &RewriteSpecification, use_local_tmp: bool) -> Result<SabreCompiling, Box<dyn Error>> {
         let apma = SetAutomaton::new(spec, |_| (), true);
 
-        let compilation_toml = fs::read_to_string("./Compilation.toml")?.parse::<Table>().unwrap();
+        let compilation_toml = include_str!("../Compilation.toml").parse::<Table>()?;
 
         // Create the directory structure for a Cargo project
         let system_tmp_dir = TempDir::new()?;
@@ -101,7 +102,7 @@ impl SabreCompiling {
         info!("Compiling...");
         let mut expr = cmd("cargo", &["build", "--lib"])
             .dir(temp_dir);
-        expr = apply_env(expr, &compilation_toml, &["RUSTFLAGS", "CFLAGS", "CXXFLAGS"]);
+        expr = apply_env(expr, &compilation_toml, &["RUSTFLAGS", "CFLAGS", "CXXFLAGS"])?;
         expr.run()?;
 
         println!("finished.");
