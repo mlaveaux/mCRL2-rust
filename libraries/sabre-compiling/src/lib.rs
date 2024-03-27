@@ -1,12 +1,13 @@
 use std::{error::Error, fs::{self, File}, io::Write, path::{Path, PathBuf}};
 
-use duct::cmd;
+use duct::{cmd, Expression};
 use indoc::indoc;
 use libloading::{Library, Symbol};
 use log::info;
 use mcrl2::data::DataExpression;
 use sabre::{set_automaton::SetAutomaton, RewriteEngine, RewriteSpecification};
 use temp_dir::TempDir;
+use toml::{map::Map, Table, Value};
 
 pub struct SabreCompiling {
     library: Library,
@@ -19,10 +20,27 @@ impl RewriteEngine for SabreCompiling {
     }
 }
 
+/// Apply the value from compilation_toml for every given variable as an environment variable.
+fn apply_env(builder: Expression, compilation_toml: &Map<String, Value>, variables: &[&'static str]) -> Expression
+{
+    let mut result = builder;
+
+    for var in variables {
+        let value = compilation_toml.get(*var).unwrap().to_string();
+
+        info!("Variable {} = {}", var, value);
+        result = result.env(var, value);
+    }
+
+    result
+}
+
 impl SabreCompiling {
     
     pub fn new(spec: &RewriteSpecification, use_local_tmp: bool) -> Result<SabreCompiling, Box<dyn Error>> {
         let apma = SetAutomaton::new(spec, |_| (), true);
+
+        let compilation_toml = fs::read_to_string("./Compilation.toml")?.parse::<Table>().unwrap();
 
         // Create the directory structure for a Cargo project
         let system_tmp_dir = TempDir::new()?;
@@ -81,10 +99,12 @@ impl SabreCompiling {
 
         // Compile the dynamic object.
         info!("Compiling...");
-        cmd("cargo", &["build", "--lib"])
-            .dir(temp_dir)
-            .run()?;
-        println!("ok.");
+        let mut expr = cmd("cargo", &["build", "--lib"])
+            .dir(temp_dir);
+        expr = apply_env(expr, &compilation_toml, &["RUSTFLAGS", "CFLAGS", "CXXFLAGS"]);
+        expr.run()?;
+
+        println!("finished.");
 
         // Figure out the path to the library (it is based on platform: linux, windows and then macos)
         let mut path = PathBuf::from(temp_dir).join("./target/debug/libsabre_generated.so");
