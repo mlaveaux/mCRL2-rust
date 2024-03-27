@@ -3933,6 +3933,7 @@ dependencies = [
  "sabre",
  "temp-dir",
  "test-log",
+ "toml",
 ]
 
 [[package]]
