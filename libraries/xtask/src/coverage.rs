@@ -72,13 +72,7 @@ pub fn coverage(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
     let mut prof_directory = base_directory.clone();
     prof_directory.push("cargo-test-%p-%m.profraw");
 
-    let mut arguments: Vec<String> = vec![
-        "nextest".to_string(),
-        "run".to_string(),
-    ];
-    arguments.extend(cargo_arguments);
-
-    cmd("cargo", arguments)
+    cmd("cargo", cargo_arguments)
         .env("CARGO_INCREMENTAL", "0")
         .env("RUSTFLAGS", "-Cinstrument-coverage")
         .env("LLVM_PROFILE_FILE", prof_directory)
@@ -98,6 +92,8 @@ pub fn coverage(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
         fmt,
         "--branch",
         "--ignore-not-existing",
+        "--ignore",
+        "**/target/*",
         "-o",
         file,
     )

@@ -53,7 +53,7 @@ jobs:
           submodules: true
   
       - name: Generating Code Coverage
-        run: cargo xtask coverage        
+        run: cargo xtask coverage nextest run       
         env:
           RUSTC_WRAPPER: sccache
 
