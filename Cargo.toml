@@ -8,6 +8,7 @@ debug = "line-tables-only"
 resolver = "2"
 members = [
     "libraries/*",
+    "libraries/sabre-compiling/sabre-ffi",
     "libraries/**/benchmarks",
     "tools/*",
     "tools/**/benchmarks",
@@ -77,4 +78,5 @@ mcrl2-macros = { path = "libraries/mcrl2-macros" }
 mcrl2-sys = { path = "libraries/mcrl2-sys" }
 rec-tests = { path = "libraries/rec-tests" }
 sabre = { path = "libraries/sabre" }
+sabre-compiling = { path = "libraries/sabre-compiling" }
 utilities = { path = "libraries/utilities" }

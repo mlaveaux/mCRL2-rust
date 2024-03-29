@@ -15,6 +15,7 @@ env_logger.workspace = true
 log.workspace = true
 mcrl2.workspace = true
 rec-tests.workspace = true
+sabre-compiling.workspace = true
 sabre.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]

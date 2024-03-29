@@ -2964,6 +2964,7 @@ dependencies = [
  "mcrl2",
  "rec-tests",
  "sabre",
+ "sabre-compiling",
 ]
 
 [[package]]
@@ -3984,9 +3985,18 @@ dependencies = [
  "log",
  "mcrl2",
  "sabre",
+ "sabre-ffi",
  "temp-dir",
  "test-log",
  "toml",
+]
+
+[[package]]
+name = "sabre-ffi"
+version = "0.1.0"
+dependencies = [
+ "stabby",
+ "test-log",
 ]
 
 [[package]]
@@ -4119,6 +4129,12 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
+
+[[package]]
+name = "sha2-const-stable"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f179d4e11094a893b82fff208f74d448a7512f99f5a0acbd5c679b705f83ed9"
 
 [[package]]
 name = "sharded-slab"
@@ -4391,6 +4407,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "076e103ed41b9864aa838287efe5f4e3a7a0362dd00671ae62a212e5e4612da2"
 dependencies = [
  "pin-utils",
+]
+
+[[package]]
+name = "stabby"
+version = "4.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d703a24a549fc06c1535ad416df7375e781a0613b6ef965218c698e52383edb"
+dependencies = [
+ "lazy_static",
+ "rustversion",
+ "stabby-abi",
+]
+
+[[package]]
+name = "stabby-abi"
+version = "4.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94ee77c602ee96c410efd3756dbab4c0f7ccf35a6a3d3dca5c55dcf5cc7ad175"
+dependencies = [
+ "libc",
+ "rustversion",
+ "sha2-const-stable",
+ "stabby-macros",
+]
+
+[[package]]
+name = "stabby-macros"
+version = "4.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3fdde04cf3de956591380cf08c0cba18fd225156c3a0a1092d6fde5d93103a0"
+dependencies = [
+ "proc-macro-crate 3.1.0",
+ "proc-macro2",
+ "quote",
+ "rand",
+ "syn 1.0.109",
 ]
 
 [[package]]
