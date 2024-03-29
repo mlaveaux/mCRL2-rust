@@ -1,3 +1,4 @@
+use std::fs;
 use std::{env, error::Error, fs::File};
 
 use std::io::Write;
@@ -12,13 +13,17 @@ fn write_env(writer: &mut impl Write, variables: &[&'static str]) -> Result<(), 
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Write compiler related environment variables to a configuration file.
-
     for (from, to) in env::vars() {
         println!("{} to {}", from, to);
     }
 
     let mut file = File::create("./Compilation.toml")?;
+    // Write the developement location.
+    writeln!(file, "[sabrec]")?;
+    writeln!(file, "path = \"{}\"", fs::canonicalize(".")?.to_string_lossy())?;
+
+    // Write compilation related environment variables to the configuration file.
+    writeln!(file)?;
     writeln!(file, "[env]")?;
     write_env(&mut file, &["RUSTFLAGS", "CFLAGS", "CXXFLAGS"])?;
 
