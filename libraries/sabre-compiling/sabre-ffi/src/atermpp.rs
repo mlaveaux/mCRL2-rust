@@ -1,6 +1,1 @@
-use stabby::stabby;
-
-#[stabby]
-struct ATermFFI {
-
-}
+pub use mcrl2::aterm::ATerm;

@@ -3995,6 +3995,7 @@ dependencies = [
 name = "sabre-ffi"
 version = "0.1.0"
 dependencies = [
+ "mcrl2",
  "stabby",
  "test-log",
 ]

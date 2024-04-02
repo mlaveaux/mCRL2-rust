@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 stabby = "4.0"
+mcrl2.workspace = true
 
 [dev-dependencies]
 test-log.workspace = true

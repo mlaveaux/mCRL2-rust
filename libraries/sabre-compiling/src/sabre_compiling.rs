@@ -20,7 +20,14 @@ pub struct SabreCompilingRewriter {
 
 impl RewriteEngine for SabreCompilingRewriter {
     fn rewrite(&mut self, term: DataExpression) -> DataExpression {
-        term
+        // TODO: This ought to be stored somewhere for repeated calls.
+        unsafe {
+            let func: Symbol<extern "C" fn()> = self.library.get(b"rewrite_term").unwrap();
+
+            func();
+
+            term
+        }
     }
 }
 
@@ -35,7 +42,6 @@ impl SabreCompilingRewriter {
         use_local_workspace: bool,
         use_local_tmp: bool,
     ) -> Result<SabreCompilingRewriter, Box<dyn Error>> {
-        let apma = SetAutomaton::new(spec, |_| (), true);
 
         let system_tmp_dir = TempDir::new()?;
         let temp_dir = if use_local_tmp {
@@ -69,29 +75,28 @@ impl SabreCompilingRewriter {
 
         let mut compilation_crate = RuntimeLibrary::new(temp_dir, dependencies)?;
 
+        // Generate the automata used for matching
+        let apma = SetAutomaton::new(spec, |_| (), true);
+
         // Write the output source file(s).
         {
             let mut file =
                 File::create(PathBuf::from(compilation_crate.source_dir()).join("lib.rs"))?;
+                
             writeln!(
                 &mut file,
                 indoc! {"
+                use sabre_ffi::ATerm;
+
                 #[no_mangle]
-                pub unsafe extern \"C\" fn rewrite_term() {{
-                    println!(\"Hello world!\");
+                pub unsafe extern \"C\" fn rewrite_term(term: ATerm) -> ATerm {{
+                    term
                 }}
             "}
             )?;
         }
 
         let library = compilation_crate.compile()?;
-
-        unsafe {
-            let func: Symbol<extern "C" fn()> = library.get(b"rewrite_term")?;
-
-            func();
-        }
-
         Ok(SabreCompilingRewriter { library })
     }
 }
@@ -107,6 +112,6 @@ mod tests {
         let spec = RewriteSpecification::default();
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        SabreCompilingRewriter::new(tp, &spec, true, false).unwrap();
+        SabreCompilingRewriter::new(tp, &spec, true, true).unwrap();
     }
 }
