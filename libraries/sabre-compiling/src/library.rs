@@ -93,7 +93,7 @@ impl RuntimeLibrary {
 
     /// Compiles the library into 
     pub fn compile(&mut self) -> Result<Library, Box<dyn Error>> {
-        let compilation_toml = include_str!("../Compilation.toml").parse::<Table>()?;
+        let compilation_toml = include_str!("../../../target/Compilation.toml").parse::<Table>()?;
 
         // Compile the dynamic object.
         info!("Compiling...");

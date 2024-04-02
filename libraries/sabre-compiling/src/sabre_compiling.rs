@@ -47,7 +47,7 @@ impl SabreCompilingRewriter {
         let mut dependencies = vec![];
 
         if use_local_workspace {
-            let compilation_toml = include_str!("../Compilation.toml").parse::<Table>()?;
+            let compilation_toml = include_str!("../../../target/Compilation.toml").parse::<Table>()?;
             let path = compilation_toml
             .get("sabrec")
             .ok_or("Missing [sabre] section)")?

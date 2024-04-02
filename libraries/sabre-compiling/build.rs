@@ -1,6 +1,8 @@
 use std::fs;
 use std::{env, error::Error, fs::File};
 
+use toml::{map::Map, Table, Value};
+
 use std::io::Write;
 
 /// Write every environment variable in the variables array.
@@ -17,13 +19,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{} to {}", from, to);
     }
 
-    let mut file = File::create("./Compilation.toml")?;
+    let mut file = File::create("../../target/Compilation.toml")?;
+
     // Write the developement location.
-    writeln!(file, "[sabrec]")?;
-    writeln!(file, "path = \"{}\"", fs::canonicalize(".")?.to_string_lossy())?;
+    let mut table = Map::new();
+
+    let mut sabrec = Table::new();
+    sabrec.insert("path".to_string(), Value::String(fs::canonicalize(".")?.to_string_lossy().to_string()));
+    table.insert("sabrec".to_string(), Value::Table(sabrec));
+    
+    writeln!(file, "{}", table)?;
 
     // Write compilation related environment variables to the configuration file.
-    writeln!(file)?;
     writeln!(file, "[env]")?;
     write_env(&mut file, &["RUSTFLAGS", "CFLAGS", "CXXFLAGS"])?;
 
