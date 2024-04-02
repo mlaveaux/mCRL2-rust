@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut table = Map::new();
 
     let mut sabrec = Table::new();
-    sabrec.insert("path".to_string(), Value::String(fs::canonicalize(".")?.to_string_lossy().to_string()));
+    sabrec.insert("path".to_string(), Value::String(fs::canonicalize(".")?.to_string_lossy().escape_default().to_string()));
     table.insert("sabrec".to_string(), Value::Table(sabrec));
     
     writeln!(file, "{}", table)?;
