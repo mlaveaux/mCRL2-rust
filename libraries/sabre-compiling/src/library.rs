@@ -48,6 +48,8 @@ impl RuntimeLibrary {
             fs::create_dir(&source_dir)?;
         }
 
+        
+
         // Write the cargo configuration
         {
             let mut file = File::create(PathBuf::from(temp_dir).join("Cargo.toml"))?;
@@ -102,7 +104,7 @@ impl RuntimeLibrary {
         expr = apply_env(expr, &compilation_toml, &["RUSTFLAGS", "CFLAGS", "CXXFLAGS"])?;
         expr.run()?;
 
-        println!("finished.");
+        info!("finished.");
 
         // Figure out the path to the library (it is based on platform: linux, windows and then macos)
         let mut path = self.temp_dir.clone().join("./target/debug/libsabre_generated.so");
