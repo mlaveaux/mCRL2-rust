@@ -23,11 +23,6 @@ pub fn is_data_function_symbol(term: &ATermRef<'_>) -> bool {
     unsafe { ffi::is_data_function_symbol(term.get()) }
 }
 
-pub fn is_sort_expression(term: &ATermRef<'_>) -> bool {
-    term.require_valid();
-    unsafe { ffi::is_data_sort_expression(term.get()) }
-}
-
 pub fn is_data_where_clause(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_where_clause(term.get()) }
@@ -43,10 +38,6 @@ pub fn is_data_untyped_identifier(term: &ATermRef<'_>) -> bool {
     unsafe { ffi::is_data_untyped_identifier(term.get()) }
 }
 
-pub fn is_bool_sort(term: &ATermRef<'_>) -> bool {
-    term.require_valid();
-    true
-}
 
 pub fn is_data_application(term: &ATermRef<'_>) -> bool {
     term.require_valid();
@@ -64,7 +55,7 @@ mod inner {
     use std::ops::Deref;
     
     use mcrl2_macros::{mcrl2_term, mcrl2_ignore};
-    use crate::aterm::{Markable, Todo, TermPool};
+    use crate::{aterm::{Markable, TermPool, Todo}, data::{SortExpression, SortExpressionRef}};
 
     /// A data expression can be any of:
     ///     - a variable
@@ -196,6 +187,7 @@ mod inner {
 
     impl DataVariable {
 
+        /// Create a new untyped variable with the given name.
         #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataVariable {
             DataVariable {
@@ -205,10 +197,23 @@ mod inner {
             }
         }
 
+        /// Create a variable with the given sort and name.
+        pub fn with_sort(tp: &mut TermPool, name: &str, sort: &SortExpressionRef<'_>) -> DataVariable {
+            DataVariable {
+                term: tp.create_with(|| {
+                    unsafe {
+                        mcrl2_sys::data::ffi::create_sorted_data_variable(name.to_string(), sort.get())
+                    }
+                }),
+            }
+        }
+
+        /// Returns the name of the variable.
         pub fn name(&self) -> String {
             String::from(self.arg(0).get_head_symbol().name())
         }
 
+        /// Returns the sort of the variable.
         pub fn sort(&self) -> SortExpressionRef<'_> {
             self.arg(1).into()
         }
@@ -280,57 +285,6 @@ mod inner {
             }
     
             Ok(())
-        }
-    }
-
-    #[mcrl2_term(is_bool_sort)]
-    pub struct BoolSort {
-        pub(crate) term: ATerm,
-    }
-    
-    impl BoolSort {
-
-        /// Returns the term representing true.
-        pub fn true_term() -> DataExpression {
-            DataExpression {
-                term: ffi::true_term().into(),
-            }
-        }
-    
-        /// Returns the term representing false.
-        pub fn false_term() -> DataExpression {
-            DataExpression {
-                term: ffi::false_term().into(),
-            }
-        }
-    }
-
-    #[mcrl2_term(is_sort_expression)]
-    pub struct SortExpression {
-        term: ATerm,
-    }
-
-    impl SortExpression {
-
-        /// Returns the name of the sort.
-        pub fn name(&self) -> String {
-            String::from(self.arg(0).get_head_symbol().name())
-        }
-
-        /// Returns true iff this is a basic sort
-        pub fn is_basic_sort(&self) -> bool {
-            unsafe { ffi::is_data_basic_sort(self.term.get()) }
-        }
-        
-        /// Returns true iff this is a function sort
-        pub fn is_function_sort(&self) -> bool {
-            unsafe { ffi::is_data_function_sort(self.term.get()) }
-        }
-    }
-    
-    impl fmt::Display for SortExpression {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.name())
         }
     }
 }

@@ -18,8 +18,10 @@
 
 pub mod data_specification;
 pub mod data_terms;
+pub mod sort_terms;
 pub mod jitty;
 
 pub use data_specification::*;
 pub use data_terms::*;
+pub use sort_terms::*;
 pub use jitty::*;
