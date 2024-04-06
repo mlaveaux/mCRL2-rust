@@ -64,8 +64,11 @@ pub mod ffi {
         // For data::variable
         unsafe fn is_data_variable(term: *const _aterm) -> bool;
 
-        /// Creates an unprotected data variable, must be within in a critical section.
+        /// Creates an unsorted data variable, must be within in a critical section.
         fn create_data_variable(name: String) -> *const _aterm;
+
+        /// Creates an sorted data variable, must be within in a critical section.
+        unsafe fn create_sorted_data_variable(name: String, sort: *const _aterm) -> *const _aterm;
 
         // For data::function_symbol        
         unsafe fn is_data_function_symbol(term: *const _aterm) -> bool;

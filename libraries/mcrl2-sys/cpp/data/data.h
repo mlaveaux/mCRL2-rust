@@ -149,6 +149,16 @@ const atermpp::detail::_aterm* create_data_variable(rust::String name)
   return atermpp::detail::address(result);
 }
 
+const atermpp::detail::_aterm* create_sorted_data_variable(rust::String name, const atermpp::detail::_aterm* sort)
+{
+  atermpp::unprotected_aterm t(sort);
+
+  atermpp::unprotected_aterm result(nullptr);
+  make_variable(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), sort_expression(static_cast<const atermpp::aterm&>(t)));
+  return atermpp::detail::address(result);
+}
+
+
 bool is_data_sort_expression(const atermpp::detail::_aterm* term)
 {
   atermpp::unprotected_aterm t(term);
