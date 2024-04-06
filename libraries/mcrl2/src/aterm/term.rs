@@ -374,6 +374,24 @@ impl<'a, T> From<ATermRef<'a>> for ATermList<T> {
     }
 }
 
+impl<T: From<ATerm>> IntoIterator for ATermList<T> {
+    type IntoIter = ATermListIter<T>;
+    type Item = T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T: From<ATerm>> IntoIterator for &ATermList<T> {
+    type IntoIter = ATermListIter<T>;
+    type Item = T;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 /// The same as [ATerm] but protected on the global protection set. This allows
 /// the term to be Send and Sync among threads.
 #[derive(Default)]
