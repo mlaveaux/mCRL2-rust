@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 rustc-hash = "1.1"
-smallvec = "1.11"
+smallvec = "1.13"
 html-escape = "0.2"
 ahash.workspace = true
 env_logger.workspace = true
