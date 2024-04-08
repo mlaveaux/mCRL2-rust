@@ -84,45 +84,9 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     // Stores the shared state of the GUI components.
-    let state = Arc::new(RwLock::new(None));
+    let state = Arc::new(RwLock::new(None::<GuiState>));
     let settings = Arc::new(Mutex::new(GuiSettings::new()));
     let canvas = Arc::new(Mutex::new(SharedPixelBuffer::new(1, 1)));
-
-    // Load an LTS from the given path and updates the state.
-    let load_lts = {
-        let state = state.clone();
-
-        move |path: &Path| {
-            debug!("Loading LTS {} ...", path.to_string_lossy());
-            let file = File::open(path).unwrap();
-
-            match read_aut(file) {
-                Ok(lts) => {
-                    let lts = Arc::new(lts);
-                    info!("{}", lts);
-
-                    // Create the layout and viewer separately to make the initial state sensible.
-                    let layout = GraphLayout::new(&lts);
-                    let mut viewer = Viewer::new(&lts);
-
-                    viewer.update(&layout);
-
-                    *state.write().unwrap() = Some(GuiState {
-                        graph_layout: Mutex::new(layout),
-                        viewer: Mutex::new((viewer, SharedPixelBuffer::new(1, 1))),
-                    });
-                }
-                Err(x) => {
-                    error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
-                }
-            }
-        }
-    };
-
-    // Loads the given LTS.
-    if let Some(path) = &cli.labelled_transition_system {
-        load_lts(Path::new(path));
-    };
 
     // Show the UI
     let app = Application::new()?;
@@ -176,16 +140,6 @@ async fn main() -> anyhow::Result<()> {
     }
 
     {
-        // Open the file dialog and load another LTS if necessary.
-        app.on_open_filedialog(move || {
-            // Open a file dialog to open a new LTS.
-            if let Some(path) = rfd::FileDialog::new().add_filter("", &["aut"]).pick_file() {
-                load_lts(&path);
-            }
-        });
-    }
-
-    {
         let settings = settings.clone();
         app.on_request_redraw(move || {
             debug!("Request redraw");            
@@ -199,7 +153,7 @@ async fn main() -> anyhow::Result<()> {
         let app_weak: slint::Weak<Application> = app.as_weak();
         let settings = settings.clone();
 
-        PauseableThread::new(
+        Arc::new(PauseableThread::new(
             "ltsgraph canvas worker",
             move || {
                 let settings_clone = settings.lock().unwrap().clone();
@@ -252,7 +206,7 @@ async fn main() -> anyhow::Result<()> {
                     .unwrap();
                 }
             }
-        )?
+        )?)
     };
 
     // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
@@ -286,6 +240,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     {
+        // When the simulation is toggled enable the layout thread.
         let layout_handle = layout_handle.clone();
         app.on_run_simulation(move |enabled| {
             if enabled {
@@ -294,6 +249,63 @@ async fn main() -> anyhow::Result<()> {
                 layout_handle.pause();
             }
         })
+    }
+    
+    // Load an LTS from the given path and updates the state.
+    let load_lts = {
+        let state = state.clone();
+        let layout_handle = layout_handle.clone();
+        let canvas_handle = canvas_handle.clone();
+
+        move |path: &Path| {
+            debug!("Loading LTS {} ...", path.to_string_lossy());
+            let file = File::open(path).unwrap();
+
+            match read_aut(file) {
+                Ok(lts) => {
+                    let lts = Arc::new(lts);
+                    info!("{}", lts);
+
+                    // Create the layout and viewer separately to make the initial state sensible.
+                    let layout = GraphLayout::new(&lts);
+                    let mut viewer = Viewer::new(&lts);
+
+                    viewer.update(&layout);
+
+                    *state.write().unwrap() = Some(GuiState {
+                        graph_layout: Mutex::new(layout),
+                        viewer: Mutex::new((viewer, SharedPixelBuffer::new(1, 1))),
+                    });
+
+                    // Enable the layout and rendering threads.
+                    layout_handle.resume();
+                    canvas_handle.resume();
+                }
+                Err(x) => {
+                    error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
+                }
+            }
+        }
+    };
+    
+    {
+        // Open the file dialog and load another LTS if necessary.
+        let load_lts = load_lts.clone();
+        app.on_open_filedialog(move || {
+            // Open a file dialog to open a new LTS.
+            if let Some(path) = rfd::FileDialog::new().add_filter("", &["aut"]).pick_file() {
+                load_lts(&path);
+            }
+        });
+    }
+
+    // Loads the LTS given on the command line.
+    if let Some(path) = &cli.labelled_transition_system {
+        load_lts(Path::new(path));
+    } else {
+        // Pause simulation when no LTS is loaded.
+        layout_handle.pause();
+        canvas_handle.pause();
     }
 
     app.run()?;
