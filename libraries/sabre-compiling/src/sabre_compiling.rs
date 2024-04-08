@@ -64,12 +64,12 @@ impl SabreCompilingRewriter {
 
             info!("Using local dependency {}", path);
             dependencies.push(format!(
-                "sabre-ffi = {{ path = \"{}\" }}", PathBuf::from(path).join("sabre-ffi").to_string_lossy()             
+                "sabre-ffi = {{ path = '{}' }}", PathBuf::from(path).join("sabre-ffi").to_string_lossy()            
             ));
         } else {
             info!("Using git dependency https://github.com/mlaveaux/mCRL2-rust.git");
             dependencies.push(
-                "sabre-ffi = { git = \"https://github.com/mlaveaux/mCRL2-rust.git\" }".to_string(),
+                "sabre-ffi = { git = 'https://github.com/mlaveaux/mCRL2-rust.git' }".to_string(),
             );
         }
 
