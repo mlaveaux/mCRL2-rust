@@ -1,3 +1,6 @@
+// This is a GUI application
+#![windows_subsystem = "windows"]
+
 slint::include_modules!();
 
 use std::{
@@ -9,7 +12,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anyhow::Result;
 use clap::Parser;
 
 use io::io_aut::read_aut;
@@ -20,6 +22,7 @@ use ltsgraph_lib::{GraphLayout, Viewer};
 
 mod error_dialog;
 mod pauseable_thread;
+mod console;
 
 #[derive(Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A lts viewing tool")]
@@ -71,7 +74,10 @@ impl GuiSettings {
 
 // Initialize a tokio runtime for async calls
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
+    // Attach the standard output to the command line.
+    let _console = console::init()?;
+
     // Parse the command line arguments.
     env_logger::init();
 
