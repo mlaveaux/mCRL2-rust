@@ -158,6 +158,8 @@ async fn main() -> anyhow::Result<()> {
             move || {
                 let settings_clone = settings.lock().unwrap().clone();
                 if settings_clone.redraw {
+                    let start = Instant::now();
+
                     if let Some(state) = state.read().unwrap().deref() {
                         // Render a new frame...
                         {
@@ -204,6 +206,10 @@ async fn main() -> anyhow::Result<()> {
                         };
                     })
                     .unwrap();
+                
+                    // Keep at least 16 milliseconds between two render runs.
+                    let duration = Instant::now() - start;
+                    thread::sleep(Duration::from_millis(16).saturating_sub(duration));
                 }
             }
         )?)
@@ -235,7 +241,7 @@ async fn main() -> anyhow::Result<()> {
             // Keep at least 16 milliseconds between two layout runs.
             let duration = Instant::now() - start;
             debug!("Layout step took {} ms", duration.as_millis());
-            thread::sleep(Duration::from_millis(100).saturating_sub(duration));
+            thread::sleep(Duration::from_millis(16).saturating_sub(duration));
         })?)
     };
 

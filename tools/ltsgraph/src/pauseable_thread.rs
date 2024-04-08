@@ -53,8 +53,8 @@ impl PauseableThread {
 
     /// Signal the thread to quit, will be joined when it is dropped.
     pub fn stop(&self) {
+        self.shared.running.store(false, Ordering::Relaxed);
         self.resume();
-        self.shared.running.store(false, Ordering::Relaxed)
     }
 
     /// Pause the thread on the next iteration.
@@ -90,7 +90,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_textcache() {
+    fn test_pausablethread() {
         let thread = PauseableThread::new("test", move || {
             // Do nothing.
         }).unwrap();
