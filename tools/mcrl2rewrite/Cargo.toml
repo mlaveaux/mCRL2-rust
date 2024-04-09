@@ -8,10 +8,10 @@ edition.workspace = true
 measure-allocs = []
 
 [dependencies]
-anyhow = "1.0"
 mcrl2 = { path = "../../libraries/mcrl2" }
 rec-tests = { path = "../../libraries/rec-tests" }
 sabre = { path = "../../libraries/sabre" }
+anyhow.workspace = true
 ahash.workspace = true
 clap.workspace = true
 env_logger.workspace = true

@@ -23,6 +23,7 @@ rust-version = "1.75.0"
 version = "0.1.0"
 
 [workspace.dependencies]
+anyhow = { version = "1.0", features = ["backtrace"] }
 ahash = "0.8"
 clap = { version = "4.5", features = ["derive"] }
 env_logger = "0.11"
