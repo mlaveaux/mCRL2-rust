@@ -26,7 +26,7 @@ impl GraphLayout {
         let mut states_simulation = Vec::with_capacity(lts.states.len());
         states_simulation.resize_with(lts.states.len(), StateLayout::default);
 
-        // Place the states at a render position
+        // Place the states at a random position
         let mut rng = rand::thread_rng();
         for state in &mut states_simulation {
             state.position.x = rng.gen_range(-1000.0..1000.0);
@@ -40,7 +40,9 @@ impl GraphLayout {
     }
 
     /// Update the layout one step using spring forces for transitions and repulsion between states.
-    pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) {
+    /// 
+    /// Returns true iff the layout is stable.
+    pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) -> bool {
 
         for (state_index, state) in self.lts.states.iter().enumerate() {
             // Ignore the last state since it cannot repulse with any other state.
@@ -92,9 +94,13 @@ impl GraphLayout {
             }
         }
 
+        // Keep track of the total displacement of the system, to determine stablity
+        let mut displacement = 0.0;
+
         for state_info in &mut self.layout_states {
             // Integrate the forces.
             state_info.position += state_info.force * delta;
+            displacement += (state_info.force * delta).length_squared();
 
             // Reset the force.
             state_info.force = Vec3::default();
@@ -106,6 +112,8 @@ impl GraphLayout {
                 state_info.position
             );
         }
+
+        (displacement / self.layout_states.len() as f32) < 0.01
     }
 }
 

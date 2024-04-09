@@ -158,7 +158,6 @@ async fn main() -> anyhow::Result<()> {
             move || {
                 let settings_clone = settings.lock().unwrap().clone();
                 if settings_clone.redraw {
-                    let start = Instant::now();
 
                     if let Some(state) = state.read().unwrap().deref() {
                         // Render a new frame...
@@ -194,6 +193,8 @@ async fn main() -> anyhow::Result<()> {
                             // Redraw was performed, what if redraw should happen again during update?
                             settings.lock().unwrap().redraw = false;
                         }
+                    } else {
+                        return false;
                     }
 
                     // Request a redraw when the canvas has been updated.
@@ -206,11 +207,9 @@ async fn main() -> anyhow::Result<()> {
                         };
                     })
                     .unwrap();
-                
-                    // Keep at least 16 milliseconds between two render runs.
-                    let duration = Instant::now() - start;
-                    thread::sleep(Duration::from_millis(16).saturating_sub(duration));
                 }
+                
+                return true;
             }
         )?)
     };
@@ -222,13 +221,17 @@ async fn main() -> anyhow::Result<()> {
 
         Arc::new(PauseableThread::new("ltsgraph layout worker", move || {
             let start = Instant::now();
+            let mut is_stable = true;
 
             if let Some(state) = state.read().unwrap().deref() {
                 // Read the settings and free the lock since otherwise the callback above blocks.
                 let settings = settings.lock().unwrap().clone();
                 let mut layout = state.graph_layout.lock().unwrap();
 
-                layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
+                is_stable = layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
+                if is_stable {
+                    debug!("Layout is stable!");
+                }
 
                 // Copy layout into the view.
                 let (ref mut viewer, _) = *state.viewer.lock().unwrap();
@@ -242,6 +245,9 @@ async fn main() -> anyhow::Result<()> {
             let duration = Instant::now() - start;
             debug!("Layout step took {} ms", duration.as_millis());
             thread::sleep(Duration::from_millis(16).saturating_sub(duration));
+
+            // If stable pause the thread.
+            return !is_stable;
         })?)
     };
 
@@ -308,10 +314,6 @@ async fn main() -> anyhow::Result<()> {
     // Loads the LTS given on the command line.
     if let Some(path) = &cli.labelled_transition_system {
         load_lts(Path::new(path));
-    } else {
-        // Pause simulation when no LTS is loaded.
-        layout_handle.pause();
-        canvas_handle.pause();
     }
 
     app.run()?;

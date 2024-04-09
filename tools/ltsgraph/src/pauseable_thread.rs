@@ -1,6 +1,6 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Condvar, Mutex}, thread::{Builder, JoinHandle}};
 
-/// A thread that can be paused and quit, used for interactive parts of the UI.
+/// A thread that can be paused and stopped, used for interactive parts of the UI.
 pub struct PauseableThread {
     handle: Option<JoinHandle<()>>,
     shared: Arc<PauseableThreadShared>,
@@ -14,9 +14,11 @@ struct PauseableThreadShared {
 
 impl PauseableThread {
 
-    /// Spawns a new thread that can be paused and stopped.
+    /// Spawns a new thread that runs `loop_function` continuously while enabled.
+    /// 
+    /// The loop_function can return false to pause the thread.
     pub fn new<F>(name: &str, loop_function: F) -> Result<PauseableThread, std::io::Error> 
-        where F: Fn() + Send + 'static,
+        where F: Fn() -> bool + Send + 'static,
         {
         
         let shared = Arc::new(PauseableThreadShared{
@@ -40,7 +42,10 @@ impl PauseableThread {
                             }
                         }
 
-                        loop_function();
+                        if !loop_function() {
+                            // Pause the thread when requested by the loop function.
+                            *shared.paused.lock().unwrap() = true;
+                        }
                     }
                 })
         }?;
@@ -93,6 +98,7 @@ mod tests {
     fn test_pausablethread() {
         let thread = PauseableThread::new("test", move || {
             // Do nothing.
+            true
         }).unwrap();
 
         thread.stop();
