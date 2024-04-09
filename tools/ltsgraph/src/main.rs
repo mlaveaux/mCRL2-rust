@@ -271,28 +271,34 @@ async fn main() -> anyhow::Result<()> {
 
         move |path: &Path| {
             debug!("Loading LTS {} ...", path.to_string_lossy());
-            let file = File::open(path).unwrap();
 
-            match read_aut(file) {
-                Ok(lts) => {
-                    let lts = Arc::new(lts);
-                    info!("{}", lts);
+            match File::open(path) {
+                Ok(file) => {
+                    match read_aut(file) {
+                        Ok(lts) => {
+                            let lts = Arc::new(lts);
+                            info!("{}", lts);
 
-                    // Create the layout and viewer separately to make the initial state sensible.
-                    let layout = GraphLayout::new(&lts);
-                    let mut viewer = Viewer::new(&lts);
+                            // Create the layout and viewer separately to make the initial state sensible.
+                            let layout = GraphLayout::new(&lts);
+                            let mut viewer = Viewer::new(&lts);
 
-                    viewer.update(&layout);
+                            viewer.update(&layout);
 
-                    *state.write().unwrap() = Some(GuiState {
-                        graph_layout: Mutex::new(layout),
-                        viewer: Mutex::new((viewer, SharedPixelBuffer::new(1, 1))),
-                    });
+                            *state.write().unwrap() = Some(GuiState {
+                                graph_layout: Mutex::new(layout),
+                                viewer: Mutex::new((viewer, SharedPixelBuffer::new(1, 1))),
+                            });
 
-                    // Enable the layout and rendering threads.
-                    layout_handle.resume();
-                    canvas_handle.resume();
-                }
+                            // Enable the layout and rendering threads.
+                            layout_handle.resume();
+                            canvas_handle.resume();
+                        }
+                        Err(x) => {
+                            error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
+                        }
+                    }
+                },
                 Err(x) => {
                     error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
                 }
@@ -310,7 +316,7 @@ async fn main() -> anyhow::Result<()> {
             }
         });
     }
-
+    
     // Loads the LTS given on the command line.
     if let Some(path) = &cli.labelled_transition_system {
         load_lts(Path::new(path));
