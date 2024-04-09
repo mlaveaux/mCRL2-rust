@@ -75,8 +75,12 @@ impl Viewer {
             .post_scale(zoom_level, zoom_level)
             .post_translate(screen_x as f32 / 2.0, screen_y as f32 / 2.0);
 
-        // The information for states.
-        let state_inner = tiny_skia::Paint {
+        // The color information for states.
+        let state_inner_paint = tiny_skia::Paint {
+            shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)),
+            ..Default::default()
+        };
+        let state_initial_state_paint = tiny_skia::Paint {
             shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)),
             ..Default::default()
         };
@@ -85,10 +89,10 @@ impl Viewer {
             ..Default::default()
         };
 
-        // The information for edges
+        // The color information for edges
         let edge_paint = tiny_skia::Paint::default();
 
-        // The arrow to indicate the direction of the edge
+        // The arrow to indicate the direction of the edge, this unwrap should never fail.
         let arrow = {
             let mut builder = tiny_skia::PathBuilder::new();
             builder.line_to(2.0, -5.0);
@@ -103,9 +107,8 @@ impl Viewer {
                 .resize(buffer, Metrics::new(label_text_size, label_text_size));
         }
 
-        // Draw the edges.
+        // Draw the edges and the arrows on them
         let mut edge_builder = tiny_skia::PathBuilder::new();
-
         let mut arrow_builder = tiny_skia::PathBuilder::new();
 
         for (index, state) in self.lts.states.iter().enumerate() {
@@ -129,20 +132,18 @@ impl Viewer {
                 }
 
                 // Draw the arrow of the edge
-                arrow_builder.push_path(
-                    &arrow
-                        .clone()
-                        .transform(
-                            Transform::from_translate(0.0, -state_radius - 0.5)
-                                .post_rotate(
-                                    -f32::sin((to_position - position).normalize_or_zero().y)
-                                        .to_degrees()
-                                        + 90.0,
-                                )
-                                .post_translate(to_position.x, to_position.y),
-                        )
-                        .unwrap(),
-                );
+                if let Some(path) = arrow
+                    .clone()
+                    .transform(
+                        Transform::from_translate(0.0, -state_radius - 0.5)
+                            .post_rotate(
+                                (position - to_position).angle_between(Vec3::new(0.0, -1.0, 0.0))
+                                    .to_degrees(),
+                            )
+                            .post_translate(to_position.x, to_position.y),
+                ) {
+                    arrow_builder.push_path(&path);
+                };
             }
         }
 
@@ -162,17 +163,16 @@ impl Viewer {
         }
 
         // Draw the states on top.
-        let mut state_builder = tiny_skia::PathBuilder::new();
+        let mut state_path_builder = tiny_skia::PathBuilder::new();
         for position in &self.layout_states {
-            state_builder.push_circle(position.x, position.y, state_radius);
+            state_path_builder.push_circle(position.x, position.y, state_radius);
         }
-
         
-        // Draw the state.
-        if let Some(path) = state_builder.finish() {
+        // Draw the states with an outline.
+        if let Some(path) = state_path_builder.finish() {
             pixmap.fill_path(
                 &path,
-                &state_inner,
+                &state_inner_paint,
                 tiny_skia::FillRule::Winding,
                 view_transform,
                 None,
