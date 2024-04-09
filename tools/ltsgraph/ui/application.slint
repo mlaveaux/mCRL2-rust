@@ -51,20 +51,28 @@ export component Application inherits Window {
                 // Keep track of the original before it was moved to compute the delta.
                 out property <length> view_x_start: 0px;
                 out property <length> view_y_start: 0px;
+                out property <bool> dragging: false;
 
                 pointer-event(e) => {
-                    if e.kind == PointerEventKind.down {
-                        view_x_start = Settings.view_x;
-                        view_y_start = Settings.view_y;
+                    if e.button == PointerEventButton.left {
+                        if e.kind == PointerEventKind.down {
+                            view_x_start = Settings.view_x;
+                            view_y_start = Settings.view_y;
+                            dragging = true;
+                        } else {
+                            dragging = false
+                        }
                     }
                 }
 
                 moved => {
-                    // Scale the amount of panning by the zoom level for more consistency.
-                    Settings.view_x = view_x_start + (self.mouse-x - self.pressed-x) / Settings.zoom_level;
-                    Settings.view_y = view_y_start + (self.mouse-y - self.pressed-y) / Settings.zoom_level;
-                    settings_changed();
-                    request_redraw();
+                    if dragging {
+                        // Scale the amount of panning by the zoom level for more consistency.
+                        Settings.view_x = view_x_start + (self.mouse-x - self.pressed-x) / Settings.zoom_level;
+                        Settings.view_y = view_y_start + (self.mouse-y - self.pressed-y) / Settings.zoom_level;
+                        settings_changed();
+                        request_redraw();
+                    }
                 }
 
                 scroll-event(e) => {
