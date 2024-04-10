@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cosmic_text::Metrics;
+use cosmic_text::{rustybuzz::ttf_parser::apple_layout::state, Metrics};
 use glam::Vec3;
 use io::LabelledTransitionSystem;
 use tiny_skia::{Shader, Stroke, Transform};
@@ -80,8 +80,8 @@ impl Viewer {
             shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)),
             ..Default::default()
         };
-        let state_initial_state_paint = tiny_skia::Paint {
-            shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(255, 255, 255, 255)),
+        let initial_state_paint = tiny_skia::Paint {
+            shader: Shader::SolidColor(tiny_skia::Color::from_rgba8(100, 255, 100, 255)),
             ..Default::default()
         };
         let state_outer = tiny_skia::Paint {
@@ -98,6 +98,13 @@ impl Viewer {
             builder.line_to(2.0, -5.0);
             builder.line_to(-2.0, -5.0);
             builder.close();
+            builder.finish().unwrap()
+        };
+
+        // A single circle that is used to render colored states.
+        let circle = {
+            let mut builder = tiny_skia::PathBuilder::new();
+            builder.push_circle(0.0, 0.0, state_radius);
             builder.finish().unwrap()
         };
 
@@ -132,15 +139,14 @@ impl Viewer {
                 }
 
                 // Draw the arrow of the edge
-                if let Some(path) = arrow
-                    .clone()
-                    .transform(
-                        Transform::from_translate(0.0, -state_radius - 0.5)
-                            .post_rotate(
-                                (position - to_position).angle_between(Vec3::new(0.0, -1.0, 0.0))
-                                    .to_degrees(),
-                            )
-                            .post_translate(to_position.x, to_position.y),
+                if let Some(path) = arrow.clone().transform(
+                    Transform::from_translate(0.0, -state_radius - 0.5)
+                        .post_rotate(
+                            (position - to_position)
+                                .angle_between(Vec3::new(0.0, -1.0, 0.0))
+                                .to_degrees(),
+                        )
+                        .post_translate(to_position.x, to_position.y),
                 ) {
                     arrow_builder.push_path(&path);
                 };
@@ -164,10 +170,27 @@ impl Viewer {
 
         // Draw the states on top.
         let mut state_path_builder = tiny_skia::PathBuilder::new();
-        for position in &self.layout_states {
-            state_path_builder.push_circle(position.x, position.y, state_radius);
+
+        for (index, position) in self.layout_states.iter().enumerate() {
+            if index != self.lts.initial_state {
+                state_path_builder.push_circle(position.x, position.y, state_radius);
+            } else {
+                // Draw the colored states individually
+                let transform = Transform::from_translate(position.x, position.y)
+                    .post_concat(view_transform);
+
+                pixmap.fill_path(
+                    &circle,
+                    &initial_state_paint,
+                    tiny_skia::FillRule::Winding,
+                    transform,
+                    None,
+                );
+
+                pixmap.stroke_path(&circle, &state_outer, &Stroke::default(), transform, None);
+            }
         }
-        
+
         // Draw the states with an outline.
         if let Some(path) = state_path_builder.finish() {
             pixmap.fill_path(
