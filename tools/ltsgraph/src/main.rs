@@ -310,10 +310,14 @@ async fn main() -> anyhow::Result<()> {
         // Open the file dialog and load another LTS if necessary.
         let load_lts = load_lts.clone();
         app.on_open_filedialog(move || {
-            // Open a file dialog to open a new LTS.
-            if let Some(path) = rfd::FileDialog::new().add_filter("", &["aut"]).pick_file() {
-                load_lts(&path);
-            }
+            let load_lts = load_lts.clone();
+            invoke_from_event_loop(move || {
+                slint::spawn_local(async move {
+                    if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("", &["aut"]).pick_file().await {
+                        load_lts(&handle.path());
+                    }
+                }).unwrap();
+            }).unwrap();
         });
     }
     
