@@ -1,14 +1,13 @@
 use std::fmt;
 
 use ahash::HashSet;
-use mcrl2::{aterm::{ATermRef, ATermTrait}, data::{is_data_application, is_data_function_symbol, is_data_variable, DataExpressionRef, DataFunctionSymbolRef, DataVariableRef}};
+use mcrl2::{aterm::ATermRef, data::{is_data_application, is_data_function_symbol, is_data_variable, DataExpressionRef, DataFunctionSymbolRef, DataVariableRef}};
 use sabre::{set_automaton::is_supported_rule, RewriteSpecification};
 
 
 /// Finds all data symbols in the term and adds them to the symbol index.
 fn find_variables(t: &DataExpressionRef<'_>, variables: &mut HashSet<String>) {
     
-    let t: ATermRef<'_> = t.copy().into();
     for child in t.iter() {
         if is_data_variable(&child) {
             variables.insert(DataVariableRef::from(child.copy()).name());

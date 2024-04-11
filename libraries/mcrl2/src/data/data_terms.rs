@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait, ATermArgs, THREAD_TERM_POOL};
+use crate::aterm::{ATerm, ATermRef, ATermArgs, THREAD_TERM_POOL};
 use mcrl2_macros::mcrl2_derive_terms;
 use mcrl2_sys::data::ffi;
 
@@ -52,7 +52,7 @@ pub fn is_data_application(term: &ATermRef<'_>) -> bool {
 mod inner {
     use super::*;
     
-    use std::ops::Deref;
+    use std::{borrow::Borrow, ops::Deref};
     
     use mcrl2_macros::{mcrl2_term, mcrl2_ignore};
     use crate::{aterm::{Markable, TermPool, Todo}, data::{SortExpression, SortExpressionRef}};
@@ -133,7 +133,7 @@ mod inner {
 
     #[mcrl2_term(is_data_function_symbol)]
     pub struct DataFunctionSymbol {
-        pub(crate) term: ATerm,
+        term: ATerm,
     }
 
     impl DataFunctionSymbol {
@@ -147,16 +147,16 @@ mod inner {
             }
         }
 
+        /// Returns the sort of the function symbol.
         pub fn sort(&self) -> SortExpressionRef<'_> {
-            self.arg(1).into()
+            self.term.arg(1).into()
         }
 
-        pub fn name(&self) -> String {
-            self.term.arg(0).get_head_symbol().name().to_string()
-        }
-
-        pub fn is_default(&self) -> bool {
-            self.term.is_default()
+        /// Returns the name of the function symbol
+        pub fn name(&self) -> &str {
+            let t = self.term.arg(0);
+            
+            t.get_head_symbol().name()
         }
 
         /// Returns the internal operation id (a unique number) for the data::function_symbol.
@@ -182,7 +182,7 @@ mod inner {
 
     #[mcrl2_term(is_data_variable)]
     pub struct DataVariable {
-        pub(crate) term: ATerm,
+        term: ATerm,
     }
 
     impl DataVariable {
@@ -202,20 +202,20 @@ mod inner {
             DataVariable {
                 term: tp.create_with(|| {
                     unsafe {
-                        mcrl2_sys::data::ffi::create_sorted_data_variable(name.to_string(), sort.get())
+                        mcrl2_sys::data::ffi::create_sorted_data_variable(name.to_string(), sort.term.get())
                     }
                 }),
             }
         }
 
         /// Returns the name of the variable.
-        pub fn name(&self) -> String {
-            String::from(self.arg(0).get_head_symbol().name())
+        pub fn name(&self) -> &str {
+            self.term.arg(0).get_head_symbol().name()
         }
 
         /// Returns the sort of the variable.
         pub fn sort(&self) -> SortExpressionRef<'_> {
-            self.arg(1).into()
+            self.term.arg(1).into()
         }
     }
 
@@ -227,18 +227,18 @@ mod inner {
 
     #[mcrl2_term(is_data_application)]
     pub struct DataApplication {
-        pub(crate) term: ATerm,
+        term: ATerm,
     }
 
     impl DataApplication {
         
         #[mcrl2_ignore]
-        pub fn new(tp: &mut TermPool, head: &ATermRef<'_>, arguments: &[impl ATermTrait]) -> DataApplication{
+        pub fn new<'a, 'b>(tp: &mut TermPool, head: &impl Borrow<ATermRef<'a>>, arguments: &[impl Borrow<ATermRef<'b>>]) -> DataApplication{
             DataApplication {
                 term: tp.create_data_application(head, arguments)
             }
         }
-        
+
         /// Returns the head symbol a data application
         pub fn data_function_symbol(&self) -> DataFunctionSymbolRef<'_> {
             self.term.arg(0).upgrade(&self.term).into()
@@ -250,17 +250,10 @@ mod inner {
             result.next();
             result
         }
-
-        /// Create a new data application from the given head symbol and arguments.
-        pub fn from_refs(tp: &mut TermPool, head: &ATermRef<'_>, arguments: &[DataExpressionRef<'_>]) -> DataApplication{
-            DataApplication {
-                term: tp.create_data_application2(head, arguments)
-            }
-        }
         
         /// Returns the sort of a data application.
         pub fn sort(&self) -> SortExpression {
-            DataFunctionSymbolRef::from(self.arg(0)).sort().protect()
+            DataFunctionSymbolRef::from(self.term.arg(0)).sort().protect()
         }
     }
         
@@ -287,27 +280,30 @@ mod inner {
             Ok(())
         }
     }
+
+    #[mcrl2_ignore]
+    impl From<DataFunctionSymbol> for DataExpression {
+        fn from(value: DataFunctionSymbol) -> Self {
+            value.term.into()
+        }
+    }
+    
+    #[mcrl2_ignore]
+    impl From<DataApplication> for DataExpression {
+        fn from(value: DataApplication) -> Self {
+            value.term.into()
+        }
+    }
+    
+    #[mcrl2_ignore]
+    impl From<DataVariable> for DataExpression {
+        fn from(value: DataVariable) -> Self {
+            value.term.into()
+        }
+    }
 }
 
 pub use inner::*;
-
-impl From<DataFunctionSymbol> for DataExpression {
-    fn from(value: DataFunctionSymbol) -> Self {
-        value.term.into()
-    }
-}
-
-impl From<DataApplication> for DataExpression {
-    fn from(value: DataApplication) -> Self {
-        value.term.into()
-    }
-}
-
-impl From<DataVariable> for DataExpression {
-    fn from(value: DataVariable) -> Self {
-        value.term.into()
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -323,7 +319,7 @@ mod tests {
         // Check printing of data applications.
         let f = DataFunctionSymbol::new(&mut tp, "f");
         let a_term: ATerm = a.clone().into();
-        let appl = DataApplication::new(&mut tp, &f.copy().into(), &[a_term]);
+        let appl = DataApplication::new(&mut tp, &f, &[a_term]);
         assert_eq!("f(a)", format!("{}", appl));
     }
 
@@ -334,7 +330,7 @@ mod tests {
         let a = DataFunctionSymbol::new(&mut tp, "a");
         let f = DataFunctionSymbol::new(&mut tp, "f");
         let a_term: ATerm = a.clone().into();
-        let appl = DataApplication::new(&mut tp, &f.copy().into(), &[a_term]);
+        let appl = DataApplication::new(&mut tp, &f, &[a_term]);
 
         let term: ATerm = appl.into();
         assert!(is_data_application(&term));

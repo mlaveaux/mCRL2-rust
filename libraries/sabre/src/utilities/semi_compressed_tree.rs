@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::utilities::ExplicitPosition;
 use mcrl2::{
-    aterm::{ATerm, TermPool, ATermTrait, ATermRef, Symbol, TermBuilder, Yield},
+    aterm::{ATerm, TermPool, ATermRef, Symbol, TermBuilder, Yield},
     data::{DataVariable, is_data_variable}
 };
 
@@ -80,7 +80,7 @@ impl SemiCompressedTermTree {
         if is_data_variable(t) {
             Variable(
                 var_map
-                    .get(&t.protect().into())
+                    .get(&t.protect())
                     .unwrap_or_else(|| panic!("{t} not contained in variable mapping var_map"))
                     .clone(),
             )
@@ -158,7 +158,7 @@ pub fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
 mod tests {
     use super::*;
     use ahash::AHashSet;
-    use mcrl2::aterm::{TermPool, apply, SymbolTrait};
+    use mcrl2::aterm::{TermPool, apply};
 
     /// Converts a slice of static strings into a set of owned strings
     /// 

@@ -5,7 +5,7 @@ use anyhow::Result as AnyResult;
 use clap::Parser;
 
 use log::{info, warn};
-use mcrl2::{aterm::{ATermTrait, TermPool}, data::DataSpecification};
+use mcrl2::{aterm::TermPool, data::DataSpecification};
 use mcrl2rewrite::{rewrite_data_spec, rewrite_rec, Rewriter};
 use sabre::RewriteSpecification;
 

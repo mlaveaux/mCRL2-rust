@@ -4,7 +4,7 @@ use mcrl2_sys::atermpp::ffi;
 
 use crate::aterm::{ATermRef, BfTermPool, BfTermPoolThreadWrite, THREAD_TERM_POOL};
 
-use super::{BfTermPoolRead, ATermTrait};
+use super::BfTermPoolRead;
 
 #[cfg(debug_assertions)]
 use std::cell::RefCell;

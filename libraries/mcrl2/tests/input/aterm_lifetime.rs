@@ -1,4 +1,4 @@
-use mcrl2::aterm::{ATerm, ATermTrait};
+use mcrl2::aterm::ATerm;
 
 
 fn main() {

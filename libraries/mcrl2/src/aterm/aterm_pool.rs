@@ -1,4 +1,5 @@
 use core::fmt;
+use std::borrow::Borrow;
 use std::{cell::RefCell, mem::ManuallyDrop, sync::Arc};
 
 use log::trace;
@@ -9,8 +10,9 @@ use mcrl2_sys::{
 };
 use utilities::protection_set::ProtectionSet;
 
-use crate::{aterm::{ATerm, ATermTrait, BfTermPoolThreadWrite, Symbol, SymbolTrait}, data::{DataExpressionRef, DataExpression, BoolSort}};
+use crate::{aterm::{ATerm, BfTermPoolThreadWrite, Symbol}, data::{DataExpression, BoolSort}};
 
+use super::SymbolRef;
 use super::{ATermRef, global_aterm_pool::{SharedProtectionSet, SharedContainerProtectionSet, ATermPtr, mark_protection_sets, protection_set_size, GLOBAL_TERM_POOL}, Markable};
 
 /// The number of times before garbage collection is tested again.
@@ -201,7 +203,7 @@ impl TermPool {
     }
 
     /// Creates an [ATerm] with the given symbol and arguments.
-    pub fn create(&mut self, symbol: &impl SymbolTrait, arguments: &[impl ATermTrait]) -> ATerm {
+    pub fn create<'a, 'b>(&mut self, symbol: &impl Borrow<SymbolRef<'a>>, arguments: &[impl Borrow<ATermRef<'b>>]) -> ATerm {
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() {
             self.arguments.push(std::ptr::null());
@@ -210,12 +212,12 @@ impl TermPool {
         self.arguments.clear();
         for arg in arguments {
             unsafe {
-                self.arguments.push(arg.copy().get());
+                self.arguments.push(arg.borrow().get());
             }
         }
 
         debug_assert_eq!(
-            symbol.arity(),
+            symbol.borrow().arity(),
             self.arguments.len(),
             "Number of arguments does not match arity"
         );
@@ -224,7 +226,7 @@ impl TermPool {
             unsafe {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive(true);
-                let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
+                let term: *const ffi::_aterm = ffi::create_aterm(symbol.borrow().address(), &self.arguments);
                 protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             }
         });
@@ -233,7 +235,7 @@ impl TermPool {
     }   
     
      /// Creates an [ATerm] with the given symbol, head argument and other arguments.
-    pub fn create_data_application(&mut self, head: &impl ATermTrait, arguments: &[impl ATermTrait]) -> ATerm { 
+    pub fn create_data_application<'a, 'b>(&mut self, head: &impl Borrow<ATermRef<'a>>, arguments: &[impl Borrow<ATermRef<'b>>]) -> ATerm { 
         // Make the temp vector sufficient length.
         while self.arguments.len() < arguments.len() {
             self.arguments.push(std::ptr::null());
@@ -241,9 +243,9 @@ impl TermPool {
 
         self.arguments.clear();
         unsafe {
-            self.arguments.push(head.copy().get());
+            self.arguments.push(head.borrow().get());
             for arg in arguments {
-                    self.arguments.push(arg.copy().get());
+                    self.arguments.push(arg.borrow().get());
             }
         }    
 
@@ -263,46 +265,6 @@ impl TermPool {
 
             let result = unsafe {
                 // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
-                let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
-                protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
-            };
-
-            result
-        })
-    }
-    
-     /// Creates an [ATerm] with the given symbol, head argument and other arguments.
-     pub fn create_data_application2(&mut self, head: &impl ATermTrait, arguments: &[DataExpressionRef<'_>]) -> ATerm { 
-        // Make the temp vector sufficient length.
-        while self.arguments.len() < arguments.len() {
-            self.arguments.push(std::ptr::null());
-        }
-
-        self.arguments.clear();
-        unsafe {
-            self.arguments.push(head.copy().get());
-            for arg in arguments {
-                    self.arguments.push(arg.copy().get());
-            }
-        }    
-
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            while tp.data_appl.len() <= arguments.len() + 1 {
-                let symbol = self.create_symbol("DataAppl", tp.data_appl.len());
-                tp.data_appl.push(symbol);
-            }
-
-            let symbol = &tp.data_appl[arguments.len() + 1];
-
-            debug_assert_eq!(
-                symbol.arity(),
-                self.arguments.len(),
-                "Number of arguments does not match arity"
-            );
-
-            // ThreadPool is not Sync, so only one has access.
-            let result = unsafe {
                 let protection_set = tp.protection_set.write_exclusive(true);
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
                 protect_with(protection_set, &mut tp.gc_counter, tp.index, term)

@@ -9,7 +9,7 @@ use utilities::protection_set::ProtectionSet;
 
 use crate::aterm::{BfTermPool, ATermRef};
 
-use super::{ATermGlobal, ATermTrait, Markable};
+use super::{ATermGlobal, Markable};
 
 /// This newtype is necessary since plain pointers cannot be marked as Send.
 /// However since terms are immutable pointers it is fine to read them in multiple

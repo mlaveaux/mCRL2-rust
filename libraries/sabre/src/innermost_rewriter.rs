@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, info, trace};
 use mcrl2::{
-    aterm::{ATerm, ATermRef, ATermTrait, TermPool},
+    aterm::{ATerm, ATermRef, TermPool},
     data::{DataApplication, DataExpression, DataExpressionRef},
 };
 
@@ -108,7 +108,7 @@ impl InnermostRewriter {
                         let term: DataExpression = if arguments.is_empty() {
                             symbol.protect().into()
                         } else {
-                            DataApplication::from_refs(tp, &symbol.copy().into(), arguments).into()
+                            DataApplication::new(tp, &symbol, arguments).into()
                         };
 
                         // Remove the arguments from the stack.

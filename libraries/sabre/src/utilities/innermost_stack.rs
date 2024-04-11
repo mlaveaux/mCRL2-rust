@@ -1,7 +1,7 @@
 use std::fmt;
 
 use itertools::Itertools;
-use mcrl2::{aterm::{ATermRef, ATermTrait, Markable, Protected, Protector, TermPool, Todo}, data::{is_data_expression, is_data_variable, DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef}};
+use mcrl2::{aterm::{ATermRef, Markable, Protected, Protector, TermPool, Todo}, data::{is_data_expression, is_data_variable, DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef}};
 
 use crate::{utilities::PositionIndexed, Rule};
 
@@ -184,7 +184,7 @@ impl RHSStack {
             }
 
             if is_data_variable(&term) {
-                variables.push((var_map.get(&term.protect().into()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
+                variables.push((var_map.get(&term.protect()).expect("All variables in the right hand side must occur in the left hand side").clone(), stack_size));
                 stack_size += 1;
             } else if is_data_expression(&term) {
                 let t: DataExpressionRef = term.into();
@@ -230,7 +230,7 @@ impl RHSStack {
                         let term: DataExpression = if arguments.is_empty() {
                             symbol.protect().into()
                         } else {
-                            DataApplication::from_refs(tp, &symbol.copy().into(), arguments).into()
+                            DataApplication::new(tp, &symbol.copy(), arguments).into()
                         };
                         
                         // Add the term on the stack.

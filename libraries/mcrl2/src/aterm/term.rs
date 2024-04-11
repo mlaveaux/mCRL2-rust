@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -6,41 +7,9 @@ use std::{collections::VecDeque, fmt};
 
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
 
-use crate::aterm::{THREAD_TERM_POOL, SymbolTrait, SymbolRef};
+use crate::aterm::{THREAD_TERM_POOL, SymbolRef};
 
 use super::global_aterm_pool::GLOBAL_TERM_POOL;
-
-pub trait ATermTrait {
-    /// Returns the indexed argument of the term
-    fn arg(&self, index: usize) -> ATermRef<'_>;
-
-    /// Returns the list of arguments as a collection
-    fn arguments(&self) -> ATermArgs<'_>;
-
-    /// Makes a copy of the term with the same lifetime as itself.
-    fn copy(& self) -> ATermRef<'_>;
-
-    /// Returns whether the term is the default term (not initialised)
-    fn is_default(&self) -> bool;
-
-    /// Returns true iff this is an aterm_list
-    fn is_list(&self) -> bool;
-
-    /// Returns true iff this is the empty aterm_list
-    fn is_empty_list(&self) -> bool;
-
-    /// Returns true iff this is a aterm_int
-    fn is_int(&self) -> bool;
-
-    /// Returns the head function symbol of the term.
-    fn get_head_symbol(&self) -> SymbolRef<'_>;
-
-    /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
-    fn iter(&self) -> TermIterator<'_>;
-
-    /// Panics if the term is default
-    fn require_valid(&self);
-}
 
 /// This represents a lifetime bound reference to an existing ATerm that is
 /// protected somewhere. Can be 'static if the term is protected in a container.
@@ -123,8 +92,9 @@ impl<'a> ATermRef<'a> {
     }
 }
 
-impl<'a> ATermTrait for ATermRef<'a> {
-    fn arg(&self, index: usize) -> ATermRef {
+impl ATermRef<'_> {
+    /// Returns the indexed argument of the term
+    pub fn arg(&self, index: usize) -> ATermRef<'_> {
         self.require_valid();
         debug_assert!(
             index < self.get_head_symbol().arity(),
@@ -140,42 +110,51 @@ impl<'a> ATermTrait for ATermRef<'a> {
         }
     }
 
-    fn arguments(&self) -> ATermArgs<'_> {
+    /// Returns the list of arguments as a collection
+    pub fn arguments(&self) -> ATermArgs<'_> {
         self.require_valid();
 
         ATermArgs::new(self.copy())
     }
-    
-    fn copy(&self) -> ATermRef<'_> {
+
+    /// Makes a copy of the term with the same lifetime as itself.
+    pub fn copy(&self) -> ATermRef<'_> {
         ATermRef::new(self.term)
     }
 
-    fn is_default(&self) -> bool {
+    /// Returns whether the term is the default term (not initialised)
+    pub fn is_default(&self) -> bool {
         self.term.is_null()
     }
 
-    fn is_list(&self) -> bool {
+    /// Returns true iff this is an aterm_list
+    pub fn is_list(&self) -> bool {
         unsafe { ffi::aterm_is_list(self.term) }
     }
 
-    fn is_empty_list(&self) -> bool {
+    /// Returns true iff this is the empty aterm_list
+    pub fn is_empty_list(&self) -> bool {
         unsafe { ffi::aterm_is_empty_list(self.term) }
     }
 
-    fn is_int(&self) -> bool {
+    /// Returns true iff this is a aterm_int
+    pub fn is_int(&self) -> bool {
         unsafe { ffi::aterm_is_int(self.term) }
     }
 
-    fn get_head_symbol(&self) -> SymbolRef<'a> {
+    /// Returns the head function symbol of the term.
+    pub fn get_head_symbol(&self) -> SymbolRef<'_> {
         self.require_valid();
         unsafe { ffi::get_aterm_function_symbol(self.term).into() }
     }
-
-    fn iter(&self) -> TermIterator<'_> {
+    
+    /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
+    pub fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.copy())
     }
 
-    fn require_valid(&self) {
+    /// Panics if the term is default
+    pub fn require_valid(&self) {
         debug_assert!(
             !self.is_default(),
             "This function can only be called on valid terms, i.e., not default terms"
@@ -242,6 +221,12 @@ impl Deref for ATerm {
 
     fn deref(&self) -> &Self::Target {
         &self.term        
+    }
+}
+
+impl<'a> Borrow<ATermRef<'a>> for ATerm {
+    fn borrow(&self) -> &ATermRef<'a> {
+        &self.term
     }
 }
 
@@ -602,90 +587,5 @@ impl fmt::Display for ATermGlobal {
 impl fmt::Debug for ATermGlobal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.copy())
-    }
-}
-
-// This is just boiler plate unfortunately
-impl ATermTrait for ATerm {
-    fn arg(&self, index: usize) -> ATermRef {
-        self.term.arg(index)
-    }
-
-    fn arguments(&self) -> ATermArgs<'_> {
-        self.term.arguments()
-    }
-    
-    fn copy(&self) -> ATermRef<'_> {
-        self.term.copy()
-    }
-
-    fn is_default(&self) -> bool {
-        self.term.is_default()
-    }
-
-    fn is_list(&self) -> bool {
-        self.term.is_list()
-    }
-
-    fn is_empty_list(&self) -> bool {
-        self.term.is_empty_list()
-    }
-
-    fn is_int(&self) -> bool {
-        self.term.is_int()
-    }
-
-    fn get_head_symbol(&self) -> SymbolRef<'_> {
-        self.term.get_head_symbol()
-    }
-
-    fn iter(&self) -> TermIterator<'_> {
-        self.term.iter()
-    }
-
-    fn require_valid(&self) {
-        self.term.require_valid();
-    }
-}
-
-impl ATermTrait for ATermGlobal {
-    fn arg(&self, index: usize) -> ATermRef {
-        self.term.arg(index)
-    }
-
-    fn arguments(&self) -> ATermArgs<'_> {
-        self.term.arguments()
-    }
-    
-    fn copy(&self) -> ATermRef<'_> {
-        self.term.copy()
-    }
-
-    fn is_default(&self) -> bool {
-        self.term.is_default()
-    }
-
-    fn is_list(&self) -> bool {
-        self.term.is_list()
-    }
-
-    fn is_empty_list(&self) -> bool {
-        self.term.is_empty_list()
-    }
-
-    fn is_int(&self) -> bool {
-        self.term.is_int()
-    }
-
-    fn get_head_symbol(&self) -> SymbolRef<'_> {
-        self.term.get_head_symbol()
-    }
-
-    fn iter(&self) -> TermIterator<'_> {
-        self.term.iter()
-    }
-
-    fn require_valid(&self) {
-        self.term.require_valid();
     }
 }

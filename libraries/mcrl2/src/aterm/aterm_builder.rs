@@ -4,7 +4,7 @@ use std::fmt;
 use ahash::AHashSet;
 use log::trace;
 
-use crate::aterm::{ATerm, TermPool, ATermTrait, Symbol};
+use crate::aterm::{ATerm, TermPool, Symbol};
 
 /// This can be used to construct a term from a given input of (inductive) type I, 
 /// without using the system stack, i.e. recursion. See evaluate.

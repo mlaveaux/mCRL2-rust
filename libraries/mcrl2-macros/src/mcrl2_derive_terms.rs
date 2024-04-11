@@ -51,7 +51,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                         // the implementation and both protect and borrow. Also add
                         // the conversion from and to an ATerm.
                         let name_ref = format_ident!("{}Ref", object.ident);
-                        let generated: TokenStream = quote!(
+                        let generated: TokenStream = quote!(                            
                             impl #name {
                                 pub fn copy<'a>(&'a self) -> #name_ref<'a> {
                                     self.term.copy().into()
@@ -75,9 +75,21 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
 
                             impl Deref for #name {                                
                                 type Target = ATerm;
-
+                                
                                 fn deref(&self) -> &Self::Target {
                                     &self.term        
+                                }
+                            }
+                            
+                            impl Borrow<ATerm> for #name {
+                                fn borrow(&self) -> &ATerm {
+                                    &self.term
+                                }
+                            }
+                            
+                            impl Borrow<ATermRef<'static>> for #name {
+                                fn borrow(&self) -> &ATermRef<'static> {
+                                    &self.term
                                 }
                             }
 
@@ -97,7 +109,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
 
                             #[derive(Default, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                             pub struct #name_ref<'a> {
-                                term: ATermRef<'a>
+                                pub(crate) term: ATermRef<'a>
                             }
 
                             impl<'a> #name_ref<'a> {
@@ -127,9 +139,15 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
 
                             impl<'a> Deref for #name_ref<'a> {                                
                                 type Target = ATermRef<'a>;
-
+                                
                                 fn deref(&self) -> &Self::Target {
                                     &self.term        
+                                }
+                            }
+
+                            impl<'a> Borrow<ATermRef<'a>> for #name_ref<'a> {
+                                fn borrow(&self) -> &ATermRef<'a> {
+                                    &self.term
                                 }
                             }
 

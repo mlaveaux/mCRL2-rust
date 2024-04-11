@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::aterm::{ATerm, ATermRef, ATermTrait, SymbolTrait};
+use crate::aterm::{ATerm, ATermRef};
 use mcrl2_macros::mcrl2_derive_terms;
 use mcrl2_sys::data::ffi;
 
@@ -29,11 +29,10 @@ pub fn is_data_function_sort(term: &ATermRef<'_>) -> bool {
 mod inner {
     use super::*;
     
-    use std::ops::Deref;
+    use std::{borrow::Borrow, ops::Deref};
     
     use mcrl2_macros::{mcrl2_ignore, mcrl2_term};
     use crate::{aterm::{ATermList, Markable, Todo}, data::DataExpression};
-
 
     #[mcrl2_term(is_bool_sort)]
     pub struct BoolSort {
@@ -62,7 +61,7 @@ mod inner {
 
         /// Returns the name of the sort.
         pub fn name(&self) -> String {
-            String::from(self.arg(0).get_head_symbol().name())
+            String::from(self.term.arg(0).get_head_symbol().name())
         }
 
         /// Returns true iff this is a basic sort
@@ -90,7 +89,7 @@ mod inner {
     impl BasicSort {
         /// Returns the name of the sort.
         pub fn name(&self) -> String {
-            String::from(self.arg(0).get_head_symbol().name())
+            String::from(self.term.arg(0).get_head_symbol().name())
         }
     }
 
@@ -103,12 +102,12 @@ mod inner {
     impl FunctionSort {
         /// Returns the name of the sort.
         pub fn domain(&self) -> ATermList<SortExpression> {
-            ATermList::<SortExpression>::from(self.arg(0).protect())
+            ATermList::<SortExpression>::from(self.term.arg(0).protect())
         }
 
         /// Returns the name of the sort.
         pub fn codomain(&self) -> SortExpression {
-            SortExpression::from(self.arg(1).protect())
+            SortExpression::from(self.term.arg(1).protect())
         }
     }
 
@@ -122,8 +121,8 @@ mod inner {
     }
     
     #[mcrl2_ignore]
-    impl From<SortExpressionRef<'_>> for FunctionSortRef<'_> {
-        fn from(sort: SortExpressionRef<'_>) -> Self {
+    impl<'a> From<SortExpressionRef<'a>> for FunctionSortRef<'a> {
+        fn from(sort: SortExpressionRef<'a>) -> Self {
             unsafe {
                 std::mem::transmute(sort)
             }

@@ -3,7 +3,7 @@ use std::error::Error;
 use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
 use utilities::lock_global;
 
-use crate::aterm::{ATerm, ATermList, ATermTrait, ATermRef};
+use crate::aterm::{ATerm, ATermList, ATermRef};
 
 use super::{DataVariable, DataExpression, DataFunctionSymbol, SortExpressionRef};
 

@@ -3,7 +3,7 @@ use std::{collections::VecDeque, fmt::Debug, time::Instant};
 use ahash::HashMap;
 use log::{debug, info, log_enabled, trace, warn};
 use mcrl2::{
-    aterm::{ATermRef, ATermTrait},
+    aterm::ATermRef,
     data::{
         is_data_abstraction, is_data_application, is_data_function_symbol,
         is_data_untyped_identifier, is_data_variable, is_data_where_clause, DataExpression,

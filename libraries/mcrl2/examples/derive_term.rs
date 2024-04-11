@@ -9,7 +9,7 @@ fn main() {
 #[mcrl2_derive_terms]
 mod term {
     use super::*;
-    use std::ops::Deref;
+    use std::{borrow::Borrow, ops::Deref};
 
     #[mcrl2_term()]
     struct BoolSort {
