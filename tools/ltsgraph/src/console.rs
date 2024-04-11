@@ -37,7 +37,7 @@ pub fn init() -> anyhow::Result<Console> {
                         attached: false
                     })
                 } else {
-                    Err(anyhow::anyhow!("Failed to attach to a console"))
+                    anyhow::bail!("Failed to attach to a console, and to create one")
                 }
             } else {
                 // We attached to an existing console.
