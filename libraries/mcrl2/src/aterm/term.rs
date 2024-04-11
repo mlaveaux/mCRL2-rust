@@ -12,7 +12,15 @@ use crate::aterm::{THREAD_TERM_POOL, SymbolRef};
 use super::global_aterm_pool::GLOBAL_TERM_POOL;
 
 /// This represents a lifetime bound reference to an existing ATerm that is
-/// protected somewhere. Can be 'static if the term is protected in a container.
+/// protected somewhere. 
+/// 
+/// Can be 'static if the term is protected in a container or ATerm. That means
+/// we either return &'a ATermRef<'static> or with a concrete lifetime
+/// ATermRef<'a>. However, this means that the functions for ATermRef cannot use
+/// the associated lifetime for the results parameters, as that would allow us
+/// to acquire the 'static lifetime. This occasionally gives rise to issues
+/// where we look at the argument of a term and want to return it's name, but
+/// this is not allowed since the temporary returned by the argument is dropped.
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ATermRef<'a> {
     term: *const ffi::_aterm,
@@ -51,7 +59,7 @@ impl<'a> ATermRef<'a> {
     }
 
     /// This allows us to extend our borrowed lifetime from 'a to 'b based on
-    /// existing parent term called `witness` which lives longer than us.
+    /// existing parent term which has lifetime 'b.
     /// 
     /// The main usecase is to establish transitive lifetimes. For example given
     /// a term t from which we borrow `u = t.arg(0)` then we cannot have
@@ -69,7 +77,7 @@ impl<'a> ATermRef<'a> {
         ATermRef::new(self.term)
     }
 
-    /// A local unchecked version of [`ATermRef::upgrade`] since the above one uses the iterators.
+    /// A private unchecked version of [`ATermRef::upgrade`] to use in iterators.
     unsafe fn upgrade_unchecked<'b: 'a>(&'a self, _parent: &ATermRef<'b>) -> ATermRef<'b> {
         ATermRef::new(self.term)
     }

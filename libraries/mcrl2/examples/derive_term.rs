@@ -1,5 +1,5 @@
 use mcrl2_macros::{mcrl2_derive_terms, mcrl2_term};
-use mcrl2::aterm::{ATerm, ATermRef, ATermTrait};
+use mcrl2::aterm::{ATerm, ATermRef};
 use mcrl2::aterm::{Markable, Todo};
 
 fn main() {

@@ -10,7 +10,7 @@ fn find_variables(t: &DataExpressionRef<'_>, variables: &mut HashSet<String>) {
     
     for child in t.iter() {
         if is_data_variable(&child) {
-            variables.insert(DataVariableRef::from(child.copy()).name());
+            variables.insert(DataVariableRef::from(child.copy()).name().into());
         }
     }
 }

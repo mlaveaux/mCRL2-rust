@@ -154,9 +154,10 @@ mod inner {
 
         /// Returns the name of the function symbol
         pub fn name(&self) -> &str {
-            let t = self.term.arg(0);
-            
-            t.get_head_symbol().name()
+            // We only change the lifetime, but that is fine since it is derived from the current term.
+            unsafe {
+                std::mem::transmute(self.term.arg(0).get_head_symbol().name())
+            }
         }
 
         /// Returns the internal operation id (a unique number) for the data::function_symbol.
@@ -210,7 +211,10 @@ mod inner {
 
         /// Returns the name of the variable.
         pub fn name(&self) -> &str {
-            self.term.arg(0).get_head_symbol().name()
+            // We only change the lifetime, but that is fine since it is derived from the current term.
+            unsafe {
+                std::mem::transmute(self.term.arg(0).get_head_symbol().name())
+            }
         }
 
         /// Returns the sort of the variable.
@@ -252,8 +256,11 @@ mod inner {
         }
         
         /// Returns the sort of a data application.
-        pub fn sort(&self) -> SortExpression {
-            DataFunctionSymbolRef::from(self.term.arg(0)).sort().protect()
+        pub fn sort(&self) -> SortExpressionRef<'_> {
+            // We only change the lifetime, but that is fine since it is derived from the current term.
+            unsafe {
+                std::mem::transmute(SortExpressionRef::from(self.term.arg(0)))
+            }
         }
     }
         

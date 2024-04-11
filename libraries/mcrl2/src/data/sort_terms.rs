@@ -60,8 +60,11 @@ mod inner {
     impl SortExpression {
 
         /// Returns the name of the sort.
-        pub fn name(&self) -> String {
-            String::from(self.term.arg(0).get_head_symbol().name())
+        pub fn name(&self) -> &str {
+            // We only change the lifetime, but that is fine since it is derived from the current term.
+            unsafe {
+                std::mem::transmute(self.term.arg(0).get_head_symbol().name())
+            }
         }
 
         /// Returns true iff this is a basic sort
@@ -88,8 +91,10 @@ mod inner {
 
     impl BasicSort {
         /// Returns the name of the sort.
-        pub fn name(&self) -> String {
-            String::from(self.term.arg(0).get_head_symbol().name())
+        pub fn name(&self) -> &str {
+            unsafe {
+                std::mem::transmute(self.term.arg(0).get_head_symbol().name())
+            }
         }
     }
 
