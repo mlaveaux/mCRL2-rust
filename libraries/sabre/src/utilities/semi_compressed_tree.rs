@@ -104,7 +104,8 @@ impl SemiCompressedTermTree {
         }
     }
 
-    /// Used to check if a subterm is duplicated, for example in times(s(x), y) = plus(y, times(x,y))
+    /// Used to check if a subterm is duplicated, for example "times(s(x), y) =
+    /// plus(y, times(x,y))" is duplicating.
     pub(crate) fn contains_duplicate_var_references(&self) -> bool {
         let references = self.get_all_var_references();
         let mut seen = HashSet::new();
@@ -115,10 +116,11 @@ impl SemiCompressedTermTree {
             }
             seen.insert(r);
         }
+        
         false
     }
 
-    /// Get all references to all variables. The resulting sequence contains duplicates
+    /// Get all positions to variables in the left hand side.
     fn get_all_var_references(&self) -> Vec<ExplicitPosition> {
         let mut result = vec![];
         match self {
@@ -168,8 +170,8 @@ mod tests {
         AHashSet::from_iter(vars.iter().map(|x| String::from(*x) ))
     }
     
-    /// Convert terms in variables to a [TermVariable].
-    pub fn tag_variables(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
+    /// Convert terms in variables to a [DataVariable].
+    pub fn convert_variables(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
         apply(tp, t, &|tp, arg| {
             if variables.contains(arg.get_head_symbol().name()) {
                 // Convert a constant variable, for example 'x', into an untyped variable.
@@ -207,7 +209,7 @@ mod tests {
             let tmp = tp
                 .from_string("f(x,x)")
                 .unwrap();
-            tag_variables(&mut tp, &tmp, &var_map(&["x"]))
+            convert_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
 
         let mut map = HashMap::new();
@@ -231,7 +233,7 @@ mod tests {
         let mut tp = TermPool::new();
         let t = {
             let tmp = tp.from_string("f(f(a,a),x)").unwrap();
-            tag_variables(&mut tp, &tmp, &var_map(&["x"]))
+            convert_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
         let compressible = tp.from_string("f(a,a)").unwrap();
 
@@ -255,11 +257,11 @@ mod tests {
         let mut tp = TermPool::new();
         let t_rhs = {
             let tmp = tp.from_string("f(f(a,a),x)").unwrap();
-            tag_variables(&mut tp, &tmp, &var_map(&["x"]))
+            convert_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
         let t_lhs = tp.from_string("g(b)").unwrap();
 
-        // Make a variable map with only x@2.
+        // Make a variable map with only x@1.
         let mut map = HashMap::new();
         map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
 
@@ -274,11 +276,27 @@ mod tests {
         let mut tp = TermPool::new();
         let t =  {
             let tmp = tp.from_string("f(x,x)").unwrap();
-            tag_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
+            convert_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
         };
         let x = DataVariable::new(&mut tp, "x");
 
         let map = create_var_map(&t);
         assert!(map.contains_key(&x));
+    }
+
+    #[test]
+    fn test_is_duplicating() {
+        let mut tp = TermPool::new();
+        let t_rhs =  {
+            let tmp = tp.from_string("f(x,x)").unwrap();
+            convert_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
+        };
+
+        // Make a variable map with only x@1.
+        let mut map = HashMap::new();
+        map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
+        
+        let sctt = SemiCompressedTermTree::from_term(&t_rhs, &map);
+        assert!(sctt.contains_duplicate_var_references(), "This sctt is duplicating");
     }
 }
