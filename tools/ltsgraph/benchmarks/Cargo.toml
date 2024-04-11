@@ -1,5 +1,5 @@
 [package]
-name = "ltsgraph-benchmarks"
+name = "benchmarks-ltsgraph"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
@@ -14,5 +14,5 @@ rand.workspace = true
 io.workspace = true
 
 [[bench]]
-name = "benchmarks"
+name = "benchmark_ltsgraph"
 harness = false

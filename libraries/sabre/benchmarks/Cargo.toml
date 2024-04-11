@@ -1,5 +1,5 @@
 [package]
-name = "sabre-benchmarks"
+name = "benchmarks-sabre"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
@@ -16,5 +16,5 @@ utilities.workspace = true
 ahash.workspace = true
 
 [[bench]]
-name = "benchmarks"
+name = "benchmark_sabre"
 harness = false
