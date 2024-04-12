@@ -12,7 +12,7 @@ use crate::{
         nonlinear::{check_equivalence_classes, derive_equivalence_classes, EquivalenceClass},
     },
     set_automaton::{MatchAnnouncement, SetAutomaton},
-    utilities::{Config, InnermostStack, PositionIndexed, RHSStack},
+    utilities::{Config, InnermostStack, MatchTerm, RHSStack},
     RewriteEngine, RewriteSpecification, RewritingStatistics, Rule,
 };
 
@@ -48,10 +48,10 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         automaton: &SetAutomaton<AnnouncementInnermost>,
-        term: DataExpression,
+        input_term: DataExpression,
         stats: &mut RewritingStatistics,
     ) -> DataExpression {
-        debug_assert!(!term.is_default(), "Cannot rewrite the default term");
+        debug_assert!(!input_term.is_default(), "Cannot rewrite the default term");
 
         stats.recursions += 1;
 
@@ -59,7 +59,7 @@ impl InnermostRewriter {
         let mut write_terms = stack.terms.write();
         let mut write_configs = stack.configs.write();
         write_terms.push(DataExpressionRef::default());
-        InnermostStack::add_rewrite(&mut write_configs, &mut write_terms, term.copy(), 0);
+        InnermostStack::add_rewrite(&mut write_configs, &mut write_terms, input_term.copy(), 0);
         drop(write_terms);
         drop(write_configs);
 
@@ -105,18 +105,15 @@ impl InnermostRewriter {
 
                         let arguments = &write_terms[length - arity..];
 
-                        let term: DataExpression = if arguments.is_empty() {
-                            symbol.protect().into()
-                        } else {
-                            DataApplication::new(tp, &symbol, arguments).into()
-                        };
+                        let match_term = MatchTerm::new(symbol, arguments);
 
                         // Remove the arguments from the stack.
                         write_terms.drain(length - arity..);
                         drop(write_terms);
 
-                        match InnermostRewriter::find_match(tp, automaton, &term, stats) {
+                        match InnermostRewriter::find_match(tp, automaton, &match_term, stats) {
                             Some((announcement, annotation)) => {
+                                let term = match_term.to_term(tp);
                                 debug!(
                                     "rewrite {} => {} using rule {}",
                                     term,
@@ -137,6 +134,7 @@ impl InnermostRewriter {
                             None => {
                                 // Add the term on the stack.
                                 let mut write_terms = stack.terms.write();
+                                let term = match_term.to_term(tp);
                                 let t = write_terms.protect(&term);
                                 write_terms[index] = t.into();
                             }
@@ -176,10 +174,10 @@ impl InnermostRewriter {
     }
 
     /// Use the APMA to find a match for the given term.
-    fn find_match<'a>(
+    fn find_match<'a,'b>(
         tp: &mut TermPool,
         automaton: &'a SetAutomaton<AnnouncementInnermost>,
-        t: &DataExpression,
+        t: &MatchTerm<'b>,
         stats: &mut RewritingStatistics,
     ) -> Option<(&'a MatchAnnouncement, &'a AnnouncementInnermost)> {
         // Start at the initial state
@@ -189,8 +187,7 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let pos: DataExpressionRef = t.get_position(&state.label).into();
-            let symbol = pos.data_function_symbol();
+            let symbol = t.data_function_symbol(&state.label);
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = automaton
@@ -198,12 +195,12 @@ impl InnermostRewriter {
                 .get(&(state_index, symbol.operation_id()))
             {
                 for (announcement, annotation) in &transition.announcements {
-                    let t2: &ATermRef<'_> = t;
-                    if check_equivalence_classes(t2, &annotation.equivalence_classes)
-                        && InnermostRewriter::check_conditions(tp, automaton, t, annotation, stats)
-                    {
-                        // We found a matching pattern
-                        return Some((announcement, annotation));
+                    if check_equivalence_classes(t, &annotation.equivalence_classes) {
+                        let t = &t.to_term(tp);
+                        if InnermostRewriter::check_conditions(tp, automaton, &t.copy(), annotation, stats) {
+                            // We found a matching pattern
+                            return Some((announcement, annotation));
+                        }
                     }
                 }
 
@@ -222,10 +219,10 @@ impl InnermostRewriter {
     }
 
     /// Checks whether the condition holds for given match announcement.
-    fn check_conditions(
+    fn check_conditions<'a>(
         tp: &mut TermPool,
         automaton: &SetAutomaton<AnnouncementInnermost>,
-        t: &ATerm,
+        t: &DataExpressionRef<'_>,
         announcement: &AnnouncementInnermost,
         stats: &mut RewritingStatistics,
     ) -> bool {
