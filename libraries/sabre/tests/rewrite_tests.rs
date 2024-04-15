@@ -1,4 +1,4 @@
-use mcrl2::data::{DataSpecification, DataExpression};
+use mcrl2::data::{DataExpression, DataSpecification};
 use std::{cell::RefCell, rc::Rc};
 use test_case::test_case;
 
@@ -24,9 +24,14 @@ use sabre::{InnermostRewriter, RewriteEngine};
 #[test_case(include_str!("../../../examples/REC/mcrl2/soundnessofparallelengines.dataspec"), include_str!("../../../examples/REC/mcrl2/soundnessofparallelengines.expressions"), include_str!("snapshot/result_soundnessofparallelengines.txt") ; "soundnessofparallelengines")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/tautologyhard.dataspec"), include_str!("../../../examples/REC/mcrl2/tautologyhard.expressions"), include_str!("snapshot/result_tautologyhard.txt") ; "tautologyhard")]
 fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
+    let _ = env_logger::builder().is_test(true).try_init();
+
     let tp = Rc::new(RefCell::new(TermPool::new()));
     let spec = DataSpecification::new(data_spec).unwrap();
-    let terms: Vec<DataExpression> = expressions.lines().map(|text| spec.parse(text).unwrap()).collect();
+    let terms: Vec<DataExpression> = expressions
+        .lines()
+        .map(|text| spec.parse(text).unwrap())
+        .collect();
 
     // let mut sa = SabreRewriter::new(tp.clone(), &spec.clone().into());
     let mut inner = InnermostRewriter::new(tp.clone(), &spec.clone().into());
@@ -37,8 +42,7 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
 
         let result = inner.rewrite(term.clone());
         assert_eq!(
-            result,
-            expected_result,
+            result, expected_result,
             "The inner rewrite result doesn't match the expected result"
         );
 
