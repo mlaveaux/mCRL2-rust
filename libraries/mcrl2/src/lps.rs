@@ -35,3 +35,18 @@ impl fmt::Display for LinearProcessSpecification {
         write!(f, "{}", ffi::print_linear_process_specification(&self.lps))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_linear_process_specification()
+    {
+        let lps = LinearProcessSpecification::read("../../examples/lps/abp.lps").unwrap();
+
+        let _data_spec = lps.data_specification();
+
+        println!("{}", lps);
+    }
+}

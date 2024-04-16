@@ -57,7 +57,7 @@ fn protect_with(mut guard: BfTermPoolThreadWrite<'_, ProtectionSet<ATermPtr>>, g
         index,
     );
 
-    let result = ATerm { term, root };
+    let result = ATerm::new(term, root);
 
     // Test for garbage collection intermediately.
     *gc_counter = gc_counter.saturating_sub(1);
@@ -335,39 +335,34 @@ mod tests {
 
     #[test]
     fn test_thread_aterm_pool_parallel() {
-        let mut threads = vec![];
-
         let seed: u64 =  rand::thread_rng().gen();
         println!("seed: {}", seed);
 
-        for _ in 0..2 {
-            threads.push(thread::spawn(move || {
-                let mut tp = TermPool::new();                
-
-                let mut rng = StdRng::seed_from_u64(seed);
-                let terms: Vec<ATerm> = (0..100)
-                    .map(|_| {
-                        random_term(
-                            &mut tp,
-                            &mut rng,
-                            &[("f".to_string(), 2)],
-                            &["a".to_string(), "b".to_string()],
-                            10,
-                        )
-                    })
-                    .collect();
-
-                tp.collect();
-
-                for term in &terms {
-                    verify_term(term);
-                }
-            }));
-        }
-
-        // Join the threads
-        for thread in threads {
-            thread.join().unwrap();
-        }
+        thread::scope(|s| {
+            for _ in 0..2 {
+                s.spawn(|| {
+                    let mut tp = TermPool::new();                
+    
+                    let mut rng = StdRng::seed_from_u64(seed);
+                    let terms: Vec<ATerm> = (0..100)
+                        .map(|_| {
+                            random_term(
+                                &mut tp,
+                                &mut rng,
+                                &[("f".to_string(), 2)],
+                                &["a".to_string(), "b".to_string()],
+                                10,
+                            )
+                        })
+                        .collect();
+    
+                    tp.collect();
+    
+                    for term in &terms {
+                        verify_term(term);
+                    }
+                });
+            }
+        });
     }
 }

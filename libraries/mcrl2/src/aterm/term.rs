@@ -6,13 +6,14 @@ use std::ops::Deref;
 use std::{collections::VecDeque, fmt};
 
 use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
+use utilities::PhantomUnsend;
 
 use crate::aterm::{THREAD_TERM_POOL, SymbolRef};
 
 use super::global_aterm_pool::GLOBAL_TERM_POOL;
 
 /// This represents a lifetime bound reference to an existing ATerm that is
-/// protected somewhere. 
+/// protected somewhere statically. 
 /// 
 /// Can be 'static if the term is protected in a container or ATerm. That means
 /// we either return &'a ATermRef<'static> or with a concrete lifetime
@@ -27,7 +28,11 @@ pub struct ATermRef<'a> {
     marker: PhantomData<&'a ()>,
 }
 
+/// These are safe because terms are never modified. Garbage collection is
+/// always performed with exclusive access and uses relaxed atomics to perform
+/// some interior mutability.
 unsafe impl<'a> Send for ATermRef<'a> {}
+unsafe impl<'a> Sync for ATermRef<'a> {}
 
 impl<'a> Default for ATermRef<'a> {
     fn default() -> Self {
@@ -83,9 +88,6 @@ impl<'a> ATermRef<'a> {
     }
 
     /// Obtains the underlying pointer
-    /// 
-    /// # Safety 
-    /// Should not be modified in any way.
     pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
         self.term
     }
@@ -196,6 +198,10 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 pub struct ATerm {
     pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,
+
+    // ATerm is not Send because it uses thread-local state for its protection
+    // mechanism.
+    _marker: PhantomUnsend,
 }
 
 impl ATerm {
@@ -205,6 +211,16 @@ impl ATerm {
     /// Should not be modified in any way.
     pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
         self.term.get()
+    }
+
+    /// Creates a new term from the given reference and protection set root
+    /// entry.
+    pub(crate) fn new(term: ATermRef<'static>, root: usize) -> ATerm {
+        ATerm {
+            term,
+            root,
+            _marker: PhantomData::default(),
+        }
     }
 }
 
@@ -235,6 +251,12 @@ impl Deref for ATerm {
 impl<'a> Borrow<ATermRef<'a>> for ATerm {
     fn borrow(&self) -> &ATermRef<'a> {
         &self.term
+    }
+}
+
+impl fmt::Display for ATerm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.copy())
     }
 }
 
@@ -284,6 +306,80 @@ impl From<&ffi::aterm> for ATerm {
         THREAD_TERM_POOL.with_borrow_mut(|tp| {
             unsafe { tp.protect(ffi::aterm_address(value)) }
         })
+    }
+}
+
+/// The same as [ATerm] but protected on the global protection set. This allows
+/// the term to be Send and Sync among threads.
+#[derive(Default)]
+pub struct ATermGlobal {
+    pub(crate) term: ATermRef<'static>,
+    pub(crate) root: usize,
+}
+
+impl Drop for ATermGlobal {
+    fn drop(&mut self) {
+        if !self.is_default() {
+            GLOBAL_TERM_POOL.lock().drop_term(self);
+        }
+    }
+}
+
+impl Clone for ATermGlobal {
+    fn clone(&self) -> Self {
+        self.copy().protect_global()
+    }
+}
+
+impl Deref for ATermGlobal {
+    type Target = ATermRef<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.term        
+    }
+}
+
+impl Hash for ATermGlobal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.term.hash(state)
+    }
+}
+
+impl PartialEq for ATermGlobal {
+    fn eq(&self, other: &Self) -> bool {
+        self.term.eq(&other.term)
+    }
+}
+
+impl PartialOrd for ATermGlobal {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.term.cmp(&other.term))
+    }
+}
+
+impl Ord for ATermGlobal {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.term.cmp(&other.term)
+    }
+}
+
+impl Eq for ATermGlobal {}
+
+impl fmt::Display for ATermGlobal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.copy())
+    }
+}
+
+impl fmt::Debug for ATermGlobal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.copy())
+    }
+}
+
+impl From<ATerm> for ATermGlobal {
+    fn from(value: ATerm) -> Self {
+        value.protect_global()
     }
 }
 
@@ -384,29 +480,6 @@ impl<T: From<ATerm>> IntoIterator for &ATermList<T> {
         self.iter()
     }
 }
-
-/// The same as [ATerm] but protected on the global protection set. This allows
-/// the term to be Send and Sync among threads.
-#[derive(Default)]
-pub struct ATermGlobal {
-    pub(crate) term: ATermRef<'static>,
-    pub(crate) root: usize,
-}
-
-impl Drop for ATermGlobal {
-    fn drop(&mut self) {
-        if !self.is_default() {
-            GLOBAL_TERM_POOL.lock().drop_term(self);
-        }
-    }
-}
-
-impl Clone for ATermGlobal {
-    fn clone(&self) -> Self {
-        self.copy().protect_global()
-    }
-}
-
 
 /// An iterator over the arguments of a term.
 #[derive(Default)]
@@ -511,6 +584,8 @@ impl<'a> Iterator for TermIterator<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+
     use test_log::test;
 
     use crate::aterm::TermPool;
@@ -544,56 +619,19 @@ mod tests {
         assert_eq!(values[2], tp.from_string("h").unwrap());
         assert_eq!(values[3], tp.from_string("i").unwrap());
     }
-}
 
-impl fmt::Display for ATerm {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.term)
-    }
-}
-
-impl Deref for ATermGlobal {
-    type Target = ATermRef<'static>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.term        
-    }
-}
-
-impl Hash for ATermGlobal {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.term.hash(state)
-    }
-}
-
-impl PartialEq for ATermGlobal {
-    fn eq(&self, other: &Self) -> bool {
-        self.term.eq(&other.term)
-    }
-}
-
-impl PartialOrd for ATermGlobal {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.term.cmp(&other.term))
-    }
-}
-
-impl Ord for ATermGlobal {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.term.cmp(&other.term)
-    }
-}
-
-impl Eq for ATermGlobal {}
-
-impl fmt::Display for ATermGlobal {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.copy())
-    }
-}
-
-impl fmt::Debug for ATermGlobal {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.copy())
+    #[test]
+    fn test_global_aterm() {
+        // Create a few random terms
+        let mut tp = TermPool::new();
+        let global_terms: Vec::<ATermGlobal> = vec![tp.from_string("f").unwrap().into()];
+        
+        thread::scope(|s| {
+            for _ in 0..2 {
+                s.spawn(|| {
+                    let _t = global_terms[0].clone();
+                });
+            }
+        });
     }
 }
