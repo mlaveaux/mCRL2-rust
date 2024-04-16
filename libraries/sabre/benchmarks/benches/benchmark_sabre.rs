@@ -49,7 +49,7 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 
         c.bench_function(&format!("jitty {}", name), |bencher| {
             bencher.iter(|| {
-                let _ = black_box(jitty.rewrite(&expressions[0]));
+                let _ = black_box(jitty.rewrite(expressions[0].clone()));
             })
         });
     }
