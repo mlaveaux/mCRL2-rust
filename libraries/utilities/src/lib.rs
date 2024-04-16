@@ -5,8 +5,10 @@
  
 #![forbid(unsafe_code)]
 
-pub mod protection_set;
 pub mod global_guard;
+pub mod helper;
+pub mod protection_set;
 
-pub use protection_set::*;
 pub use global_guard::*;
+pub use helper::*;
+pub use protection_set::*;
