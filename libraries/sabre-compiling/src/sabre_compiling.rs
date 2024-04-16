@@ -1,8 +1,10 @@
 use std::{
-    cell::RefCell, error::Error, fs::File, io::Write, path::{Path, PathBuf}, rc::Rc
+    cell::RefCell,
+    error::Error,
+    path::{Path, PathBuf},
+    rc::Rc,
 };
 
-use indoc::indoc;
 use libloading::{Library, Symbol};
 use log::info;
 use temp_dir::TempDir;
@@ -11,7 +13,7 @@ use toml::Table;
 use mcrl2::{aterm::TermPool, data::DataExpression};
 use sabre::{set_automaton::SetAutomaton, RewriteEngine, RewriteSpecification};
 
-use crate::library::RuntimeLibrary;
+use crate::{generate, library::RuntimeLibrary};
 
 pub struct SabreCompilingRewriter {
     library: Library,
@@ -42,7 +44,6 @@ impl SabreCompilingRewriter {
         use_local_workspace: bool,
         use_local_tmp: bool,
     ) -> Result<SabreCompilingRewriter, Box<dyn Error>> {
-
         let system_tmp_dir = TempDir::new()?;
         let temp_dir = if use_local_tmp {
             &Path::new("./tmp")
@@ -53,18 +54,20 @@ impl SabreCompilingRewriter {
         let mut dependencies = vec![];
 
         if use_local_workspace {
-            let compilation_toml = include_str!("../../../target/Compilation.toml").parse::<Table>()?;
+            let compilation_toml =
+                include_str!("../../../target/Compilation.toml").parse::<Table>()?;
             let path = compilation_toml
-            .get("sabrec")
-            .ok_or("Missing [sabre] section)")?
-            .get("path")
-            .ok_or("Missing path entry")?
-            .as_str()
-            .ok_or("Not a string")?;
+                .get("sabrec")
+                .ok_or("Missing [sabre] section)")?
+                .get("path")
+                .ok_or("Missing path entry")?
+                .as_str()
+                .ok_or("Not a string")?;
 
             info!("Using local dependency {}", path);
             dependencies.push(format!(
-                "sabre-ffi = {{ path = '{}' }}", PathBuf::from(path).join("sabre-ffi").to_string_lossy()            
+                "mcrl2 = {{ path = '{}' }}",
+                PathBuf::from(path).join("../mcrl2").to_string_lossy()
             ));
         } else {
             info!("Using git dependency https://github.com/mlaveaux/mCRL2-rust.git");
@@ -79,22 +82,7 @@ impl SabreCompilingRewriter {
         let _apma = SetAutomaton::new(spec, |_| (), true);
 
         // Write the output source file(s).
-        {
-            let mut file =
-                File::create(PathBuf::from(compilation_crate.source_dir()).join("lib.rs"))?;
-                
-            writeln!(
-                &mut file,
-                indoc! {"
-                use sabre_ffi::ATerm;
-
-                #[no_mangle]
-                pub unsafe extern \"C\" fn rewrite_term(term: ATerm) -> ATerm {{
-                    term
-                }}
-            "}
-            )?;
-        }
+        generate(compilation_crate.source_dir())?;
 
         let library = compilation_crate.compile()?;
         Ok(SabreCompilingRewriter { library })

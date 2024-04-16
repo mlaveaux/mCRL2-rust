@@ -26,8 +26,8 @@ use super::global_aterm_pool::GLOBAL_TERM_POOL;
 /// to acquire the 'static lifetime. This occasionally gives rise to issues
 /// where we look at the argument of a term and want to return it's name, but
 /// this is not allowed since the temporary returned by the argument is dropped.
-#[repr(transparent)]
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct ATermRef<'a> {
     term: *const ffi::_aterm,
     marker: PhantomData<&'a ()>,

@@ -8,7 +8,6 @@ debug = "line-tables-only"
 resolver = "2"
 members = [
     "libraries/*",
-    "libraries/sabre-compiling/sabre-ffi",
     "libraries/**/benchmarks",
     "tools/*",
     "tools/**/benchmarks",

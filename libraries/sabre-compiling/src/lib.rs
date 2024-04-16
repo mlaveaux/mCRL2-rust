@@ -5,5 +5,7 @@
 
 mod library;
 mod sabre_compiling;
+mod innermost_codegen;
 
 pub use sabre_compiling::*;
+pub use innermost_codegen::*;

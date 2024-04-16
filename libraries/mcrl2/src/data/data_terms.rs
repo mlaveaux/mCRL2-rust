@@ -82,6 +82,7 @@ mod inner {
     ///     - bag enumeration
     ///
     #[mcrl2_term(is_data_expression)]
+    #[repr(transparent)]
     pub struct DataExpression {
         term: ATerm,
     }
