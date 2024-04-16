@@ -1,8 +1,6 @@
 use std::fs;
 use std::{env, error::Error, fs::File};
 
-use toml::{map::Map, Table, Value};
-
 use std::io::Write;
 
 /// Write every environment variable in the variables array.

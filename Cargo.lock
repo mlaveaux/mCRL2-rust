@@ -4412,9 +4412,9 @@ dependencies = [
 
 [[package]]
 name = "stabby"
-version = "4.0.3"
+version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d703a24a549fc06c1535ad416df7375e781a0613b6ef965218c698e52383edb"
+checksum = "6ec04c5825384722310b6a1fd83023bee0bfdc838f7aa3069f0a59e10203836b"
 dependencies = [
  "lazy_static",
  "rustversion",
@@ -4423,9 +4423,9 @@ dependencies = [
 
 [[package]]
 name = "stabby-abi"
-version = "4.0.3"
+version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94ee77c602ee96c410efd3756dbab4c0f7ccf35a6a3d3dca5c55dcf5cc7ad175"
+checksum = "976322da1deb6cc64a8406fd24378b840b1962acaac1978a993131c3838d81b3"
 dependencies = [
  "libc",
  "rustversion",
@@ -4435,9 +4435,9 @@ dependencies = [
 
 [[package]]
 name = "stabby-macros"
-version = "4.0.3"
+version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3fdde04cf3de956591380cf08c0cba18fd225156c3a0a1092d6fde5d93103a0"
+checksum = "736712a13ab37b1fa6e073831efca751bbcb31033af4d7308bd5d9d605939183"
 dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
@@ -4566,9 +4566,9 @@ dependencies = [
 
 [[package]]
 name = "temp-dir"
-version = "0.1.12"
+version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd16aa9ffe15fe021c6ee3766772132c6e98dfa395a167e16864f61a9cfb71d6"
+checksum = "1f227968ec00f0e5322f9b8173c7a0cbcff6181a0a5b28e9892491c286277231"
 
 [[package]]
 name = "tempfile"

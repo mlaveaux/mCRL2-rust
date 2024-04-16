@@ -37,7 +37,7 @@ impl SabreCompilingRewriter {
     /// - use_local_workspace: Use the developement version of the toolset instead of referring to the github one.
     /// - use_local_tmp: Use a relative 'tmp' directory instead of using the system directory. Mostly used for debugging purposes.
     pub fn new(
-        tp: Rc<RefCell<TermPool>>,
+        _tp: Rc<RefCell<TermPool>>,
         spec: &RewriteSpecification,
         use_local_workspace: bool,
         use_local_tmp: bool,
@@ -76,7 +76,7 @@ impl SabreCompilingRewriter {
         let mut compilation_crate = RuntimeLibrary::new(temp_dir, dependencies)?;
 
         // Generate the automata used for matching
-        let apma = SetAutomaton::new(spec, |_| (), true);
+        let _apma = SetAutomaton::new(spec, |_| (), true);
 
         // Write the output source file(s).
         {
