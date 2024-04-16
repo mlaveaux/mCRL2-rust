@@ -28,6 +28,6 @@ jobs:
         submodules: true
 
     - name: Run Benchmarks
-      run: cargo bench -p sabre-benchmarks && cargo bench -p ltsgraph-benchmarks
+      run: cargo bench -p benchmarks-sabre && cargo bench -p benchmarks-ltsgraph
       env:
         RUSTC_WRAPPER: sccache
