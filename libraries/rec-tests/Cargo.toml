@@ -10,8 +10,8 @@ edition.workspace = true
 pest = "2.7"
 pest_derive = "2.7"
 ahash.workspace = true
-mcrl2 = { path="../mcrl2" }
-sabre = { path="../sabre" }
+mcrl2.workspace = true
+sabre.workspace = true
 
 [dev-dependencies]
 test-case = "3.1"
