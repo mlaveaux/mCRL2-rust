@@ -171,9 +171,9 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                 }
                 Item::Impl(implementation) => {
                     
-                    if implementation.attrs.iter().find(|attr| {
+                    if !implementation.attrs.iter().any(|attr| {
                         attr.meta.path().is_ident("mcrl2_ignore")
-                    }).is_none() {
+                    }) {
                         // Duplicate the implementation for the ATermRef struct that is generated above.
                         let mut ref_implementation = implementation.clone();
 

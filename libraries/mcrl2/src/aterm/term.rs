@@ -219,7 +219,7 @@ impl ATerm {
         ATerm {
             term,
             root,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
@@ -584,13 +584,25 @@ impl<'a> Iterator for TermIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
+    use std::{sync::Mutex, thread};
 
     use test_log::test;
 
-    use crate::aterm::TermPool;
+    use crate::aterm::{random_term, TermPool};
+    use rand::{rngs::StdRng, Rng, SeedableRng};
 
     use super::*;
+
+    /// Make sure that the term has the same number of arguments as its arity.
+    fn verify_term(term: &ATermRef<'_>) {
+        for subterm in term.iter() {
+            assert_eq!(
+                subterm.get_head_symbol().arity(),
+                subterm.arguments().len(),
+                "The arity matches the number of arguments."
+            )
+        }
+    }
 
     #[test]
     fn test_term_iterator() {
@@ -621,17 +633,39 @@ mod tests {
     }
 
     #[test]
-    fn test_global_aterm() {
-        // Create a few random terms
-        let mut tp = TermPool::new();
-        let global_terms: Vec::<ATermGlobal> = vec![tp.from_string("f").unwrap().into()];
-        
+    fn test_global_aterm_pool_parallel() {
+        let seed: u64 =  rand::thread_rng().gen();
+        println!("seed: {}", seed);
+
+        let terms: Mutex<Vec<ATermGlobal>> = Mutex::new(vec![]);
+
         thread::scope(|s| {
             for _ in 0..2 {
                 s.spawn(|| {
-                    let _t = global_terms[0].clone();
+                    let mut tp = TermPool::new();                
+    
+                    let mut rng = StdRng::seed_from_u64(seed);
+                    for _ in 0..100 {
+                        let t = random_term(
+                            &mut tp,
+                            &mut rng,
+                            &[("f".to_string(), 2)],
+                            &["a".to_string(), "b".to_string()],
+                            10,
+                        );
+
+                        terms.lock().unwrap().push(t.clone().into());
+
+                        tp.collect();
+                        
+                        verify_term(&t);
+                    }
                 });
             }
         });
+
+        for term in &*terms.lock().unwrap() {
+            verify_term(&term);
+        }
     }
 }

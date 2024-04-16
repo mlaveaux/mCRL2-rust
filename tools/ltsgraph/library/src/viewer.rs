@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cosmic_text::{rustybuzz::ttf_parser::apple_layout::state, Metrics};
+use cosmic_text::Metrics;
 use glam::Vec3;
 use io::LabelledTransitionSystem;
 use tiny_skia::{Shader, Stroke, Transform};

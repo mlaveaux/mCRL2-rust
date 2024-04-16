@@ -209,7 +209,7 @@ async fn main() -> anyhow::Result<()> {
                     .unwrap();
                 }
                 
-                return true;
+                true
             }
         )?)
     };
@@ -247,7 +247,7 @@ async fn main() -> anyhow::Result<()> {
             thread::sleep(Duration::from_millis(16).saturating_sub(duration));
 
             // If stable pause the thread.
-            return !is_stable;
+            !is_stable
         })?)
     };
 
@@ -314,7 +314,7 @@ async fn main() -> anyhow::Result<()> {
             invoke_from_event_loop(move || {
                 slint::spawn_local(async move {
                     if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("", &["aut"]).pick_file().await {
-                        load_lts(&handle.path());
+                        load_lts(handle.path());
                     }
                 }).unwrap();
             }).unwrap();
