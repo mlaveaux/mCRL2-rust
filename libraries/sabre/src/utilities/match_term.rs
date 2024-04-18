@@ -14,6 +14,9 @@ pub struct MatchTerm<'a> {
     arguments: &'a Protected<Vec<DataExpressionRef<'static>>>,
 }
 
+/// A term that has been matched for which PositionIndexed returns terms.
+pub struct MatchedTerm<'a>(pub MatchTerm<'a>);
+
 #[derive(Debug)]
 pub enum MatchTermInner<'a> {
     Match(
@@ -99,6 +102,42 @@ impl PositionIndexed for MatchTerm<'_> {
                 }
         
                 unsafe { MatchTermInner::Term(std::mem::transmute(result)) }
+            }
+        }
+    }
+}
+
+
+impl PositionIndexed for MatchedTerm<'_> {
+    type Target<'a> = ATermRef<'a> where Self: 'a;
+
+    fn get_position<'a>(&'a self, position: &ExplicitPosition) -> Self::Target<'a> {
+
+        // Loop through the position
+        let mut it = position.indices.iter();
+        match it.next() {
+            None => {
+                unreachable!("Cannot index the empty position");
+            }
+            Some(index) => {
+                let read = self.0.arguments.read();
+
+                // Take into account that [symbol, t1, ..., tn]
+                let root = if *index == 1 {
+                    let t: ATermRef = self.0.symbol.copy().into();
+                    let t: DataExpressionRef = t.into();
+                    t
+                } else {
+                    read[*index - 2].copy()
+                };
+
+                let mut result = root.copy();
+
+                for index in it {
+                    result = result.arg(index - 1).upgrade(&root).into(); // Note that positions are 1 indexed.
+                }
+        
+                unsafe { std::mem::transmute(result) }
             }
         }
     }

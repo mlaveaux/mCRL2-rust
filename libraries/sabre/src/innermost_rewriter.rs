@@ -12,7 +12,7 @@ use crate::{
         nonlinear::{check_equivalence_classes, derive_equivalence_classes, EquivalenceClass},
     },
     set_automaton::{MatchAnnouncement, SetAutomaton},
-    utilities::{Config, InnermostStack, MatchTerm, RHSStack},
+    utilities::{Config, InnermostStack, MatchTerm, MatchedTerm, RHSStack},
     RewriteEngine, RewriteSpecification, RewritingStatistics, Rule,
 };
 
@@ -115,20 +115,23 @@ impl InnermostRewriter {
 
                         match InnermostRewriter::find_match(tp, automaton, &match_term, stats) {
                             Some((announcement, annotation)) => {
-                                let term = match_term.to_term(tp);
-                                debug!(
-                                    "rewrite {} => {} using rule {}",
-                                    term,
-                                    annotation.rhs_stack.evaluate(tp, &term),
-                                    announcement.rule
-                                );
+                                if log::log_enabled!(log::Level::Debug) {
+                                    // Only create this when debug logging is enabled.
+                                    let t = match_term.to_term(tp);
+                                    debug!(
+                                        "rewrite {} => {} using rule {}",
+                                        t,
+                                        annotation.rhs_stack.evaluate(tp, &t),
+                                        announcement.rule
+                                    );
+                                }
 
                                 let mut write_terms = stack.terms.write();
                                 InnermostStack::integrate(
                                     &mut write_configs,
                                     &mut write_terms,
                                     &annotation.rhs_stack,
-                                    &term,
+                                    &MatchedTerm(match_term),
                                     index,
                                 );
                                 stats.rewrite_steps += 1;
@@ -176,10 +179,10 @@ impl InnermostRewriter {
     }
 
     /// Use the APMA to find a match for the given term.
-    fn find_match<'a,'b>(
+    fn find_match<'a>(
         tp: &mut TermPool,
         automaton: &'a SetAutomaton<AnnouncementInnermost>,
-        t: &MatchTerm<'b>,
+        match_term: &MatchTerm<'_>,
         stats: &mut RewritingStatistics,
     ) -> Option<(&'a MatchAnnouncement, &'a AnnouncementInnermost)> {
         // Start at the initial state
@@ -189,7 +192,7 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let symbol = t.data_function_symbol(&state.label);
+            let symbol = match_term.data_function_symbol(&state.label);
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = automaton
@@ -197,12 +200,11 @@ impl InnermostRewriter {
                 .get(&(state_index, symbol.operation_id()))
             {
                 for (announcement, annotation) in &transition.announcements {
-                    if check_equivalence_classes(t, &annotation.equivalence_classes) {
-                        let t = &t.to_term(tp);
-                        if InnermostRewriter::check_conditions(tp, automaton, &t.copy(), annotation, stats) {
-                            // We found a matching pattern
-                            return Some((announcement, annotation));
-                        }
+                    if check_equivalence_classes(match_term, &annotation.equivalence_classes)
+                        && InnermostRewriter::check_conditions(tp, automaton, match_term, annotation, stats)
+                    {
+                        // We found a matching pattern
+                        return Some((announcement, annotation));
                     }
                 }
 
@@ -224,24 +226,28 @@ impl InnermostRewriter {
     fn check_conditions<'a>(
         tp: &mut TermPool,
         automaton: &SetAutomaton<AnnouncementInnermost>,
-        t: &DataExpressionRef<'_>,
+        t: &MatchTerm<'_>,
         announcement: &AnnouncementInnermost,
         stats: &mut RewritingStatistics,
     ) -> bool {
-        for c in &announcement.conditions {
-            let rhs: DataExpression = c.semi_compressed_rhs.evaluate(t, tp).into();
-            let lhs: DataExpression = c.semi_compressed_lhs.evaluate(t, tp).into();
+        if !announcement.conditions.is_empty() {
+            let t = t.to_term(tp);
 
-            let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
-            let lhs_normal = if &lhs == tp.true_term() {
-                // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
-                lhs
-            } else {
-                InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats)
-            };
+            for c in &announcement.conditions {
+                let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&t, tp).into();
+                let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&t, tp).into();
 
-            if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {
-                return false;
+                let rhs_normal = InnermostRewriter::rewrite_aux(tp, automaton, rhs, stats);
+                let lhs_normal = if &lhs == tp.true_term() {
+                    // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
+                    lhs
+                } else {
+                    InnermostRewriter::rewrite_aux(tp, automaton, lhs, stats)
+                };
+
+                if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {
+                    return false;
+                }
             }
         }
 
@@ -300,7 +306,7 @@ mod tests {
         };
         let mut inner = InnermostRewriter::new(tp.clone(), &spec);
 
-        let seed: u64 =  rand::thread_rng().gen();
+        let seed: u64 = rand::thread_rng().gen();
         println!("seed: {}", seed);
         let mut rng = StdRng::seed_from_u64(seed);
 
