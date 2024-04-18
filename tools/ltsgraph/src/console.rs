@@ -14,6 +14,7 @@ use winapi::um::consoleapi::AllocConsole;
 use winapi::um::wincon::{AttachConsole, FreeConsole, GetConsoleWindow, ATTACH_PARENT_PROCESS};
 
 pub struct Console {
+    #[cfg(windows)]
     attached: bool,
 }
 
@@ -55,9 +56,7 @@ pub fn init() -> anyhow::Result<Console> {
 
     #[cfg(not(windows))]
     {
-        Ok(Console {
-            attached: true
-        })
+        Ok(Console { })
     }
 }
 
