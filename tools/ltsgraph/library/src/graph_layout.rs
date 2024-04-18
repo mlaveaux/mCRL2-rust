@@ -18,7 +18,6 @@ pub struct StateLayout {
     pub force: Vec3,
 }
 
-
 impl GraphLayout {
     /// Construct a new layout for the given LTS.
     pub fn new(lts: &Arc<LabelledTransitionSystem>) -> GraphLayout {
@@ -26,11 +25,12 @@ impl GraphLayout {
         let mut states_simulation = Vec::with_capacity(lts.states.len());
         states_simulation.resize_with(lts.states.len(), StateLayout::default);
 
-        // Place the states at a random position
+        // Place the states at a random position within some bound based on the number of states.
         let mut rng = rand::thread_rng();
-        for state in &mut states_simulation {
-            state.position.x = rng.gen_range(-1000.0..1000.0);
-            state.position.y = rng.gen_range(-1000.0..1000.0);
+        let bound = (lts.states.len() as f32).sqrt().ceil();
+        for layout_state in &mut states_simulation {
+            layout_state.position.x = rng.gen_range(-bound..bound);
+            layout_state.position.y = rng.gen_range(-bound..bound);
         }
 
         GraphLayout {
@@ -72,21 +72,21 @@ impl GraphLayout {
                     Edge::Selfloop(_) => {
                         // Handle self loop, but we apply no forces in this case.
                     }
-                    Edge::Regular(from_info, to_info) => {
+                    Edge::Regular(from_layout, to_layout) => {
                         let force = compute_spring_force(
-                            &from_info.position,
-                            &to_info.position,
+                            &from_layout.position,
+                            &to_layout.position,
                             handle_length,
                         );
 
-                        from_info.force += force;
-                        to_info.force -= force;
+                        from_layout.force += force;
+                        to_layout.force -= force;
 
                         // Remove the forces applied above since these vertices are connected, this is cheaper than trying to figure
                         // out that states are not connected. The graph is typically sparse.
-                        from_info.force -= compute_repulsion_force(
-                            &from_info.position,
-                            &to_info.position,
+                        from_layout.force -= compute_repulsion_force(
+                            &from_layout.position,
+                            &to_layout.position,
                             repulsion_strength,
                         );
                     }
@@ -97,19 +97,19 @@ impl GraphLayout {
         // Keep track of the total displacement of the system, to determine stablity
         let mut displacement = 0.0;
 
-        for state_info in &mut self.layout_states {
+        for state_layout in &mut self.layout_states {
             // Integrate the forces.
-            state_info.position += state_info.force * delta;
-            displacement += (state_info.force * delta).length_squared();
+            state_layout.position += state_layout.force * delta;
+            displacement += (state_layout.force * delta).length_squared();
 
             // Reset the force.
-            state_info.force = Vec3::default();
+            state_layout.force = Vec3::default();
 
             // A safety check for when the layout exploded.
             assert!(
-                state_info.position.is_finite(),
+                state_layout.position.is_finite(),
                 "Invalid position {} obtained",
-                state_info.position
+                state_layout.position
             );
         }
 
