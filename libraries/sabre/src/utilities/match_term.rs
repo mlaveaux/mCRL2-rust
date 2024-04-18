@@ -1,5 +1,5 @@
 use mcrl2::{
-    aterm::{ATermRef, ATermTrait, Protected, TermPool},
+    aterm::{ATermRef, Protected, TermPool},
     data::{
         DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef
     },
@@ -11,7 +11,7 @@ use super::{ExplicitPosition, PositionIndexed};
 /// constructing a potentially useless term.
 pub struct MatchTerm<'a> {
     symbol: DataFunctionSymbolRef<'a>,
-    arguments: Protected<Vec<DataExpressionRef<'static>>>,
+    arguments: &'a Protected<Vec<DataExpressionRef<'static>>>,
 }
 
 #[derive(Debug)]
@@ -27,10 +27,12 @@ impl<'a> MatchTerm<'a> {
     /// Create a new MatchTerm from its components
     pub fn new(symbol: DataFunctionSymbolRef<'a>,
         input_arguments: &[DataExpressionRef<'static>],
+        arguments: &'a mut Protected<Vec<DataExpressionRef<'static>>>,
     ) -> MatchTerm<'a> {
-        let mut arguments = Protected::new(vec![]);
         {
             let mut write = arguments.write();
+            write.clear();
+
             for arg in input_arguments {
                 let arg = write.protect(arg);
                 write.push(arg.into());
@@ -46,7 +48,7 @@ impl<'a> MatchTerm<'a> {
         if read.is_empty() {
             self.symbol.protect().into()
         } else {
-            DataApplication::from_refs(tp, &self.symbol, &read).into()
+            DataApplication::new(tp, &self.symbol, &read).into()
         }
     }
 
@@ -169,7 +171,8 @@ mod tests {
                 write.push(arg.into());
             }
 
-            let match_term = MatchTerm::new(t.data_function_symbol(), &write);
+            let mut args2 = Protected::new(Vec::<DataExpressionRef<'static>>::new());
+            let match_term = MatchTerm::new(t.data_function_symbol(), &write, &mut args2);
 
             // Check that the match term is equal to the term from which it was constructed
             println!("Testing {:?}", t);

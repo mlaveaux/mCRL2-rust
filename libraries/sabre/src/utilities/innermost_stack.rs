@@ -21,7 +21,11 @@ pub struct InnermostStack {
 impl InnermostStack {
 
     /// Updates the InnermostStack to integrate the rhs_stack instructions.
-    pub fn integrate(write_configs: &mut Protector<Vec<Config>>, write_terms: &mut Protector<Vec<DataExpressionRef<'static>>>, rhs_stack: &RHSStack, term: &DataExpression, result_index: usize) {
+    pub fn integrate(write_configs: &mut Protector<Vec<Config>>, 
+        write_terms: &mut Protector<Vec<DataExpressionRef<'static>>>, 
+        rhs_stack: &RHSStack, 
+        term: &DataExpression, 
+        result_index: usize) {
         
         // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
         let top_of_stack = write_terms.len();

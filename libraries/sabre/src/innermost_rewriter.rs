@@ -2,8 +2,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, info, trace};
 use mcrl2::{
-    aterm::{ATerm, ATermRef, TermPool},
-    data::{DataApplication, DataExpression, DataExpressionRef},
+    aterm::{Protected, TermPool},
+    data::{DataExpression, DataExpressionRef},
 };
 
 use crate::{
@@ -55,6 +55,8 @@ impl InnermostRewriter {
 
         stats.recursions += 1;
 
+        let mut tmp_arguments = Protected::new(Vec::<DataExpressionRef<'static>>::new());
+
         let mut stack = InnermostStack::default();
         let mut write_terms = stack.terms.write();
         let mut write_configs = stack.configs.write();
@@ -105,7 +107,7 @@ impl InnermostRewriter {
 
                         let arguments = &write_terms[length - arity..];
 
-                        let match_term = MatchTerm::new(symbol, arguments);
+                        let match_term = MatchTerm::new(symbol, arguments, &mut tmp_arguments);
 
                         // Remove the arguments from the stack.
                         write_terms.drain(length - arity..);
