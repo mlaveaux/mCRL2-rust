@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cosmic_text::Metrics;
-use glam::Vec3;
+use glam::{Mat3, Vec3};
 use io::LabelledTransitionSystem;
 use tiny_skia::{Shader, Stroke, Transform};
 
@@ -18,8 +18,21 @@ pub struct Viewer {
     lts: Arc<LabelledTransitionSystem>,
 
     /// Stores a local copy of the state positions.
-    layout_states: Vec<Vec3>,
+    view_states: Vec<StateView>,
 }
+
+#[derive(Default)]
+struct StateView {
+    pub position: Vec3,    
+    pub outgoing: Vec<TransitionView>,
+}
+
+#[derive(Default)]
+pub struct TransitionView {
+    /// The offset of the handle w.r.t. the 'from' state.
+    pub handle_offset: Vec3,
+}
+
 
 impl Viewer {
     pub fn new(lts: &Arc<LabelledTransitionSystem>) -> Viewer {
@@ -34,25 +47,48 @@ impl Viewer {
             labels_cache.push(buffer);
         }
 
-        // Initialize the layout information for the states.
-        let mut layout_states = Vec::with_capacity(lts.states.len());
-        layout_states.resize(lts.states.len(), Default::default());
+        // Initialize the view information for the states.
+        let mut view_states = Vec::with_capacity(lts.states.len());
+        view_states.resize_with(lts.states.len(), StateView::default);
+        
+        // Add the transition view information
+        for (index, state_view) in view_states.iter_mut().enumerate() {
+            let state = &lts.states[index];
+            
+            state_view.outgoing = Vec::with_capacity(state.outgoing.len());
+            state_view.outgoing.resize_with(state.outgoing.len(), TransitionView::default);
+
+            // Compute the offsets for self-loops, put them at equal distance around the state.
+            let num_selfloops = state.outgoing.iter().filter(|(_, to)| { *to == index }).count();
+
+            let mut index_selfloop = 0;
+            for (transition_index, (_, to)) in state.outgoing.iter().enumerate() {
+
+                if index == *to {
+                    // This is a self loop so compute a rotation around the state for its handle.
+                    let rotation_mat = Mat3::from_euler(glam::EulerRot::XYZ, 0.0, 0.0, (index_selfloop as f32 / num_selfloops as f32) * 2.0 * std::f32::consts::PI);
+                    state_view.outgoing[transition_index].handle_offset = rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));        
+
+                    println!("{}", state_view.outgoing[transition_index].handle_offset);          
+
+                    index_selfloop += 1;
+                }
+            } 
+        }
 
         Viewer {
             text_cache,
             labels_cache,
             lts: lts.clone(),
-            layout_states,
+            view_states,
         }
     }
 
     /// Update the state of the viewer with the given graph layout.
     pub fn update(&mut self, layout: &GraphLayout) {
-        self.layout_states = layout
-            .layout_states
-            .iter()
-            .map(|state| state.position)
-            .collect();
+        for (index, layout_state) in self.view_states.iter_mut().enumerate() {
+            layout_state.position = layout.layout_states[index].position;
+        }
     }
 
     /// Render the current state of the simulation into the pixmap.
@@ -119,37 +155,50 @@ impl Viewer {
         let mut arrow_builder = tiny_skia::PathBuilder::new();
 
         for (index, state) in self.lts.states.iter().enumerate() {
-            let position = self.layout_states[index];
+            let state_view = &self.view_states[index];
 
-            for (label, to) in &state.outgoing {
-                let to_position = self.layout_states[*to];
+            // For now we only draw 2D graphs properly.
+            debug_assert!(state_view.position.z.abs() < 0.01);
 
-                edge_builder.move_to(position.x, position.y);
-                edge_builder.line_to(to_position.x, to_position.y);
+            for (transition_index, (label, to)) in state.outgoing.iter().enumerate() {
+                let to_state_view = &self.view_states[*to];
+                let transition_view = &state_view.outgoing[transition_index];
+
+                let label_position = if *to != index {
+                    // Draw the transition
+                    edge_builder.move_to(state_view.position.x, state_view.position.y);
+                    edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
+
+                    // Draw the arrow of the edge
+                    if let Some(path) = arrow.clone().transform(
+                        Transform::from_translate(0.0, -state_radius - 0.5)
+                            .post_rotate(
+                                (state_view.position - to_state_view.position)
+                                    .angle_between(Vec3::new(0.0, -1.0, 0.0))
+                                    .to_degrees(),
+                            )
+                            .post_translate(to_state_view.position.x, to_state_view.position.y),
+                    ) {
+                        arrow_builder.push_path(&path);
+                    };
+
+                    (to_state_view.position + state_view.position) / 2.0
+                } else {
+                    // This is a self loop so draw a circle around the middle of the position and the handle.
+                    let middle = (state_view.position + transition_view.handle_offset) / 2.0;
+                    edge_builder.push_circle(middle.x, middle.y, middle.length());
+                    state_view.position + transition_view.handle_offset
+                };
 
                 // Draw the text label
                 if draw_actions {
-                    let middle = (to_position + position) / 2.0;
                     let buffer = &self.labels_cache[*label];
                     self.text_cache.draw(
                         buffer,
                         pixmap,
-                        Transform::from_translate(middle.x, middle.y).post_concat(view_transform),
+                        Transform::from_translate(label_position.x, label_position.y).post_concat(view_transform),
                     );
                 }
-
-                // Draw the arrow of the edge
-                if let Some(path) = arrow.clone().transform(
-                    Transform::from_translate(0.0, -state_radius - 0.5)
-                        .post_rotate(
-                            (position - to_position)
-                                .angle_between(Vec3::new(0.0, -1.0, 0.0))
-                                .to_degrees(),
-                        )
-                        .post_translate(to_position.x, to_position.y),
-                ) {
-                    arrow_builder.push_path(&path);
-                };
             }
         }
 
@@ -171,12 +220,12 @@ impl Viewer {
         // Draw the states on top.
         let mut state_path_builder = tiny_skia::PathBuilder::new();
 
-        for (index, position) in self.layout_states.iter().enumerate() {
+        for (index, view_state) in self.view_states.iter().enumerate() {
             if index != self.lts.initial_state {
-                state_path_builder.push_circle(position.x, position.y, state_radius);
+                state_path_builder.push_circle(view_state.position.x, view_state.position.y, state_radius);
             } else {
                 // Draw the colored states individually
-                let transform = Transform::from_translate(position.x, position.y)
+                let transform = Transform::from_translate(view_state.position.x, view_state.position.y)
                     .post_concat(view_transform);
 
                 pixmap.fill_path(
