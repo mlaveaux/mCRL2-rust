@@ -84,14 +84,6 @@ impl GraphLayout {
 
                         from_layout.force += force;
                         to_layout.force -= force;
-
-                        // Remove the forces applied above since these vertices are connected, this is cheaper than trying to figure
-                        // out that states are not connected. The graph is typically sparse.
-                        from_layout.force -= compute_repulsion_force(
-                            &from_layout.position,
-                            &to_layout.position,
-                            repulsion_strength,
-                        );
                     }
                 }
             }
