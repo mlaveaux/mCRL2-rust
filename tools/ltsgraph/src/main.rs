@@ -51,8 +51,6 @@ pub struct GuiSettings {
     pub label_text_size: f32,
     pub draw_action_labels: bool,
 
-    pub redraw: bool,
-
     pub zoom_level: f32,
     pub view_x: f32,
     pub view_y: f32,
@@ -63,7 +61,6 @@ impl GuiSettings {
         GuiSettings {
             width: 1,
             height: 1,
-            redraw: false,
             zoom_level: 1.0,
             view_x: 500.0,
             view_y: 500.0,
@@ -78,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     // Attach the standard output to the command line.
     let _console = console::init()?;
 
-    // Parse the command line arguments.
+    // Parse the command line arguments and enable the logger.
     env_logger::init();
 
     let cli = Cli::parse();
@@ -88,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
     let settings = Arc::new(Mutex::new(GuiSettings::new()));
     let canvas = Arc::new(Mutex::new(SharedPixelBuffer::new(1, 1)));
 
-    // Show the UI
+    // Initialize the GUI, but show it later.
     let app = Application::new()?;
 
     {
@@ -116,88 +113,50 @@ async fn main() -> anyhow::Result<()> {
     // Trigger it once to set the default values.
     app.invoke_settings_changed();
 
-    {
-        let canvas = canvas.clone();
-        let settings = settings.clone();
-
-        // Simply return the current canvas, can be updated in the meantime.
-        app.on_update_canvas(move |width, height, _| {
-            let mut settings = settings.lock().unwrap();
-            settings.width = width as u32;
-            settings.height = height as u32;
-
-            let buffer = canvas.lock().unwrap().clone();
-
-            if buffer.width() != settings.width || buffer.height() != settings.height {
-                // Request another redraw when the size has changed.
-                debug!("Request redraw");
-                settings.redraw = true;
-            }
-
-            debug!("Updating canvas");
-            Image::from_rgba8_premultiplied(buffer)
-        });
-    }
-
-    {
-        let settings = settings.clone();
-        app.on_request_redraw(move || {
-            debug!("Request redraw");            
-            settings.lock().unwrap().redraw = true;
-        })
-    }
-
     // Render the view continuously, but only update the canvas when necessary
-    let canvas_handle = {
+    let render_handle = {
         let state = state.clone();
         let app_weak: slint::Weak<Application> = app.as_weak();
         let settings = settings.clone();
+        let canvas = canvas.clone();
 
         Arc::new(PauseableThread::new(
             "ltsgraph canvas worker",
             move || {
-                let settings_clone = settings.lock().unwrap().clone();
-                if settings_clone.redraw {
 
                     if let Some(state) = state.read().unwrap().deref() {
                         // Render a new frame...
-                        {
-                            let start = Instant::now();
-                            let (ref mut viewer, ref mut pixel_buffer) = *state.viewer.lock().unwrap();                           
+                        let start = Instant::now();
+                        let (ref mut viewer, ref mut pixel_buffer) = *state.viewer.lock().unwrap();                           
 
-                            // Resize the canvas when necessary
-                            if pixel_buffer.width() != settings_clone.width || pixel_buffer.height() != settings_clone.height {
-                                *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(settings_clone.width, settings_clone.height);
-                            }
-
-                            viewer.render(
-                                &mut tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), settings_clone.width, settings_clone.height).unwrap(),
-                                settings_clone.draw_action_labels,
-                                settings_clone.state_radius,
-                                settings_clone.view_x,
-                                settings_clone.view_y,
-                                settings_clone.width,
-                                settings_clone.height,
-                                settings_clone.zoom_level,
-                                settings_clone.label_text_size,
-                            );
-
-                            debug!(
-                                "Rendering {} by {} step took {} ms",
-                                settings_clone.width,
-                                settings_clone.height,
-                                (Instant::now() - start).as_millis()
-                            );
-                            *canvas.lock().unwrap() = pixel_buffer.clone();
-
-                            // Redraw was performed, what if redraw should happen again during update?
-                            settings.lock().unwrap().redraw = false;
+                        // Resize the canvas when necessary
+                        let settings_clone = settings.lock().unwrap().clone();
+                        if pixel_buffer.width() != settings_clone.width || pixel_buffer.height() != settings_clone.height {
+                            *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(settings_clone.width, settings_clone.height);
                         }
-                    } else {
-                        return false;
+
+                        viewer.render(
+                            &mut tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), settings_clone.width, settings_clone.height).unwrap(),
+                            settings_clone.draw_action_labels,
+                            settings_clone.state_radius,
+                            settings_clone.view_x,
+                            settings_clone.view_y,
+                            settings_clone.width,
+                            settings_clone.height,
+                            settings_clone.zoom_level,
+                            settings_clone.label_text_size,
+                        );
+
+                        debug!(
+                            "Rendering step ({} by {}) took {} ms",
+                            settings_clone.width,
+                            settings_clone.height,
+                            (Instant::now() - start).as_millis()
+                        );
+                        *canvas.lock().unwrap() = pixel_buffer.clone();
                     }
 
-                    // Request a redraw when the canvas has been updated.
+                    // Request the to be updated.
                     let app_weak = app_weak.clone();
                     invoke_from_event_loop(move || {
                         if let Some(app) = app_weak.upgrade() {
@@ -207,17 +166,16 @@ async fn main() -> anyhow::Result<()> {
                         };
                     })
                     .unwrap();
-                }
-                
-                true
-            }
-        )?)
+
+                    false
+                })?)
     };
 
     // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
     let layout_handle = {
         let state = state.clone();
         let settings = settings.clone();
+        let render_handle = render_handle.clone();
 
         Arc::new(PauseableThread::new("ltsgraph layout worker", move || {
             let start = Instant::now();
@@ -236,10 +194,10 @@ async fn main() -> anyhow::Result<()> {
                 // Copy layout into the view.
                 let (ref mut viewer, _) = *state.viewer.lock().unwrap();
                 viewer.update(&layout);
+                
+                // Request a redraw (if not already in progress).
+                render_handle.resume();
             }
-
-            // Request a redraw (if not already in progress).
-            settings.lock().unwrap().redraw = true;
 
             // Keep at least 16 milliseconds between two layout runs.
             let duration = Instant::now() - start;
@@ -250,24 +208,12 @@ async fn main() -> anyhow::Result<()> {
             !is_stable
         })?)
     };
-
-    {
-        // When the simulation is toggled enable the layout thread.
-        let layout_handle = layout_handle.clone();
-        app.on_run_simulation(move |enabled| {
-            if enabled {
-                layout_handle.resume();
-            } else {
-                layout_handle.pause();
-            }
-        })
-    }
     
     // Load an LTS from the given path and updates the state.
     let load_lts = {
         let state = state.clone();
         let layout_handle = layout_handle.clone();
-        let canvas_handle = canvas_handle.clone();
+        let render_handle = render_handle.clone();
 
         move |path: &Path| {
             debug!("Loading LTS {} ...", path.to_string_lossy());
@@ -292,7 +238,7 @@ async fn main() -> anyhow::Result<()> {
 
                             // Enable the layout and rendering threads.
                             layout_handle.resume();
-                            canvas_handle.resume();
+                            render_handle.resume();
                         }
                         Err(x) => {
                             error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
@@ -306,11 +252,56 @@ async fn main() -> anyhow::Result<()> {
         }
     };
     
+
+    // When the simulation is toggled enable the layout thread.
     {
-        // Open the file dialog and load another LTS if necessary.
+        let layout_handle = layout_handle.clone();
+        app.on_run_simulation(move |enabled| {
+            if enabled {
+                layout_handle.resume();
+            } else {
+                layout_handle.pause();
+            }
+        })
+    }
+    
+    // Simply return the current canvas, can be updated in the meantime.
+    {
+        let canvas = canvas.clone();
+        let settings = settings.clone();
+        let render_handle = render_handle.clone();
+
+        app.on_update_canvas(move |width, height, _| {
+            let mut settings = settings.lock().unwrap();
+            settings.width = width as u32;
+            settings.height = height as u32;
+
+            let buffer = canvas.lock().unwrap().clone();
+            if buffer.width() != settings.width || buffer.height() != settings.height {
+                // Request another redraw when the size has changed.
+                debug!("Canvas size changed from {}x{} to {width}x{height}, request redraw", buffer.width(), buffer.height());
+                render_handle.resume();
+            }
+
+            debug!("Updating canvas");
+            Image::from_rgba8_premultiplied(buffer)
+        });
+    }
+
+    // If a redraw was requested resume the render thread.
+    {
+        let render_handle = render_handle.clone();
+        app.on_request_redraw(move || {         
+            render_handle.resume();
+        })
+    }
+    
+    // Open the file dialog and load another LTS if necessary.
+    {
         let load_lts = load_lts.clone();
         app.on_open_filedialog(move || {
             let load_lts = load_lts.clone();
+            
             invoke_from_event_loop(move || {
                 slint::spawn_local(async move {
                     if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("", &["aut"]).pick_file().await {
@@ -362,7 +353,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Stop the layout and quit.
     layout_handle.stop();
-    canvas_handle.stop();
+    render_handle.stop();
 
     Ok(())
 }

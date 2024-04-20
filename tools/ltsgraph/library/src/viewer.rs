@@ -91,6 +91,11 @@ impl Viewer {
         }
     }
 
+    /// Returns the center of the graph.
+    pub fn center(&self) -> Vec3 {
+        self.view_states.iter().map(|x| { x.position }).sum::<Vec3>() / self.view_states.len() as f32
+    }
+
     /// Render the current state of the simulation into the pixmap.
     pub fn render(
         &mut self,
