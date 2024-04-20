@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cosmic_text::Metrics;
-use glam::{Mat3, Vec3};
+use glam::{Mat3, Quat, Vec3};
 use io::LabelledTransitionSystem;
 use tiny_skia::{Shader, Stroke, Transform};
 
@@ -76,6 +76,21 @@ impl Viewer {
                     transition_view.handle_offset = rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));      
 
                     index_selfloop += 1;
+                } else {                    
+                    // Determine whether any of the outgoing edges from the reached state point back.
+                    let has_backtransition = lts.states[*to].outgoing.iter().filter(|(_, other_to)| { *other_to == index }).count() > 0;
+
+                    // Compute the number of transitions going to the same state.
+                    let num_transitions = state.outgoing.iter().filter(|(_, to)| { *to == index }).count();
+
+                    if has_backtransition {
+                        // Offset the outgoing transitions towards that state to the right.
+                        transition_view.handle_offset = Vec3::new(0.0, index_transition as f32 / num_transitions as f32, 0.0);
+                    } else {
+                        // Balance transitions around the midpoint.
+                    }
+
+                    index_transition += 1;
                 }
             } 
         }
@@ -178,7 +193,7 @@ impl Viewer {
                     edge_builder.move_to(state_view.position.x, state_view.position.y);
                     edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
 
-                    // Draw the arrow of the edge
+                    // Draw the arrow of the transition
                     if let Some(path) = arrow.clone().transform(
                         Transform::from_translate(0.0, -state_radius - 0.5)
                             .post_rotate(
@@ -190,8 +205,12 @@ impl Viewer {
                     ) {
                         arrow_builder.push_path(&path);
                     };
+                    
+                    // Draw the edge handle
+                    let middle = (to_state_view.position + state_view.position) / 2.0;
+                    edge_builder.push_circle(middle.x + transition_view.handle_offset.x, middle.y + transition_view.handle_offset.y, 1.0);
 
-                    (to_state_view.position + state_view.position) / 2.0
+                    middle
                 } else {
                     // This is a self loop so draw a circle around the middle of the position and the handle.
                     let middle = (2.0 * state_view.position + transition_view.handle_offset) / 2.0;
