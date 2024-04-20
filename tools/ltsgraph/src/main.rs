@@ -320,6 +320,38 @@ async fn main() -> anyhow::Result<()> {
             }).unwrap();
         });
     }
+
+    // Focus on the graph
+    {
+        let settings = settings.clone();
+        let state = state.clone();
+        let render_handle = render_handle.clone();
+        let app_weak = app.as_weak();
+        let settings = settings.clone();
+
+        app.on_focus_view(move || {
+            
+            if let Some(app) = app_weak.upgrade() {
+                if let Some(state) = state.read().unwrap().deref() {
+                    debug!("Centering view on graph.");
+
+                    let (ref viewer, _) = *state.viewer.lock().unwrap();
+
+                    let center = viewer.center();
+
+                    // Change the view to show the LTS in full.
+                    app.global::<Settings>().set_view_x(center.x);
+                    app.global::<Settings>().set_view_y(center.y);
+
+                    let mut settings = settings.lock().unwrap();
+                    settings.view_x = center.x;
+                    settings.view_y = center.y;
+
+                    render_handle.resume();
+                }
+            }
+        });
+    }
     
     // Loads the LTS given on the command line.
     if let Some(path) = &cli.labelled_transition_system {

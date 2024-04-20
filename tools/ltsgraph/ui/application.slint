@@ -25,6 +25,7 @@ export component Application inherits Window {
 
     preferred-width: 1280px;
     preferred-height: 720px;
+    forward-focus: key-handler;
 
     /// Render the simulation to an image.
     pure callback update_canvas(length, length, bool) -> image;
@@ -37,6 +38,9 @@ export component Application inherits Window {
 
     /// Trigger a file dialog to open to select another LTS.
     pure callback open_filedialog();
+
+    /// Moves the camera to focus on the loaded LTS.
+    pure callback focus_view();
 
     /// Used to pause the simulation.
     pure callback run_simulation(bool);
@@ -214,7 +218,17 @@ export component Application inherits Window {
                 }
             }
         }
+    }
 
-}
+    key-handler := FocusScope {
 
+        key-pressed(e) => {
+            if e.text == "f" {
+                focus_view();
+                return EventResult.accept;
+            }
+
+            return EventResult.reject;
+        }   
+    }
 }
