@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use glam::Vec3;
 use io::{index_edge, LabelledTransitionSystem, Edge};
+use log::debug;
 use rand::Rng;
 
 pub struct GraphLayout {
@@ -28,6 +29,8 @@ impl GraphLayout {
         // Place the states at a random position within some bound based on the number of states.
         let mut rng = rand::thread_rng();
         let bound = (lts.states.len() as f32).sqrt().ceil();
+
+        debug!("Placing states within bound {bound}");
         for layout_state in &mut states_simulation {
             layout_state.position.x = rng.gen_range(-bound..bound);
             layout_state.position.y = rng.gen_range(-bound..bound);
@@ -121,9 +124,9 @@ impl GraphLayout {
 fn compute_spring_force(p1: &Vec3, p2: &Vec3, rest_length: f32) -> Vec3 {
     let dist = p1.distance(*p2);
 
-    if dist < 1.0 {
+    if dist < 0.1 {
         // Give it some offset force.
-        Vec3::new(0.0, 0.0, 0.0)
+        Vec3::new(0.0, 0.2, 0.0)
     } else {
         // This is already multiplied by -1.0, i.e. (p2 - p1) == (p1 - p2) * -1.0
         (*p2 - *p1) / dist * f32::log2(dist / rest_length)
