@@ -279,7 +279,7 @@ async fn main() -> anyhow::Result<()> {
             let buffer = canvas.lock().unwrap().clone();
             if buffer.width() != settings.width || buffer.height() != settings.height {
                 // Request another redraw when the size has changed.
-                debug!("Canvas size changed from {}x{} to {width}x{height}, request redraw", buffer.width(), buffer.height());
+                debug!("Canvas size changed from {}x{} to {width}x{height}", buffer.width(), buffer.height());
                 render_handle.resume();
             }
 

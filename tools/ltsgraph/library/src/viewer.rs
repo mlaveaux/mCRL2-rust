@@ -61,15 +61,19 @@ impl Viewer {
             // Compute the offsets for self-loops, put them at equal distance around the state.
             let num_selfloops = state.outgoing.iter().filter(|(_, to)| { *to == index }).count();
 
+            // Keep track of the current self loop index.
             let mut index_selfloop = 0;
+
+            // Keep track of the current transition index.
+            let mut index_transition = 0;
+
             for (transition_index, (_, to)) in state.outgoing.iter().enumerate() {
+                let transition_view = &mut state_view.outgoing[transition_index];
 
                 if index == *to {
                     // This is a self loop so compute a rotation around the state for its handle.
                     let rotation_mat = Mat3::from_euler(glam::EulerRot::XYZ, 0.0, 0.0, (index_selfloop as f32 / num_selfloops as f32) * 2.0 * std::f32::consts::PI);
-                    state_view.outgoing[transition_index].handle_offset = rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));        
-
-                    println!("{}", state_view.outgoing[transition_index].handle_offset);          
+                    transition_view.handle_offset = rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));      
 
                     index_selfloop += 1;
                 }
@@ -190,8 +194,11 @@ impl Viewer {
                     (to_state_view.position + state_view.position) / 2.0
                 } else {
                     // This is a self loop so draw a circle around the middle of the position and the handle.
-                    let middle = (state_view.position + transition_view.handle_offset) / 2.0;
-                    edge_builder.push_circle(middle.x, middle.y, middle.length());
+                    let middle = (2.0 * state_view.position + transition_view.handle_offset) / 2.0;
+                    edge_builder.push_circle(middle.x, middle.y, transition_view.handle_offset.length() / 2.0);
+                    
+                    // Draw the edge handle
+                    edge_builder.push_circle(state_view.position.x + transition_view.handle_offset.x, state_view.position.y + transition_view.handle_offset.y, 1.0);
                     state_view.position + transition_view.handle_offset
                 };
 
@@ -225,12 +232,12 @@ impl Viewer {
         // Draw the states on top.
         let mut state_path_builder = tiny_skia::PathBuilder::new();
 
-        for (index, view_state) in self.view_states.iter().enumerate() {
+        for (index, state_view) in self.view_states.iter().enumerate() {
             if index != self.lts.initial_state {
-                state_path_builder.push_circle(view_state.position.x, view_state.position.y, state_radius);
+                state_path_builder.push_circle(state_view.position.x, state_view.position.y, state_radius);
             } else {
                 // Draw the colored states individually
-                let transform = Transform::from_translate(view_state.position.x, view_state.position.y)
+                let transform = Transform::from_translate(state_view.position.x, state_view.position.y)
                     .post_concat(view_transform);
 
                 pixmap.fill_path(

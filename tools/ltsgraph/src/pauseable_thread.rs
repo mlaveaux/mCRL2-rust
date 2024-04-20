@@ -1,6 +1,6 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Condvar, Mutex}, thread::{Builder, JoinHandle}};
 
-/// A thread that can be paused and stopped, used for interactive parts of the UI.
+/// A thread that can be paused and stopped.
 pub struct PauseableThread {
     handle: Option<JoinHandle<()>>,
     shared: Arc<PauseableThreadShared>,
