@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use cosmic_text::Metrics;
-use glam::{Mat3, Quat, Vec3};
+use glam::{Mat3, Vec2, Vec3, Vec3Swizzles};
 use io::LabelledTransitionSystem;
 use tiny_skia::{Shader, Stroke, Transform};
 
@@ -193,14 +193,15 @@ impl Viewer {
                     edge_builder.move_to(state_view.position.x, state_view.position.y);
                     edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
 
+                    let direction = (state_view.position - to_state_view.position).normalize();
+                    let angle = -1.0 * direction.xy()
+                        .angle_between(Vec2::new(0.0, -1.0))
+                        .to_degrees();
+                    
                     // Draw the arrow of the transition
                     if let Some(path) = arrow.clone().transform(
                         Transform::from_translate(0.0, -state_radius - 0.5)
-                            .post_rotate(
-                                (state_view.position - to_state_view.position)
-                                    .angle_between(Vec3::new(0.0, -1.0, 0.0))
-                                    .to_degrees(),
-                            )
+                            .post_rotate(angle)
                             .post_translate(to_state_view.position.x, to_state_view.position.y),
                     ) {
                         arrow_builder.push_path(&path);
