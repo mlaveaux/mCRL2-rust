@@ -1,5 +1,5 @@
 use ahash::AHashSet;
-use mcrl2::{aterm::{ATerm, TermBuilder, Yield, TermPool, Protected, ATermRef}, data::{DataExpression, DataVariable, DataFunctionSymbol}};
+use mcrl2::{aterm::{ATerm, ATermRef, ATermReturn, Protected, TermBuilder, TermPool, Yield}, data::{DataExpression, DataFunctionSymbol, DataVariable}};
 
 pub type SubstitutionBuilder = Protected<Vec<ATermRef<'static>>>;
 
@@ -75,9 +75,11 @@ pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHas
 
         if variables.contains(t.get_head_symbol().name()) {
             // Convert a constant variable, for example 'x', into an untyped variable.
-            Ok(Yield::Term(DataVariable::new(tp, t.get_head_symbol().name()).into()))
+            let t: &ATermRef<'_> = &DataVariable::new(tp, t.get_head_symbol().name());
+            Ok(Yield::Term(t.copy().into()))
         } else if t.get_head_symbol().arity() == 0 {
-            Ok(Yield::Term(DataFunctionSymbol::new(tp, t.get_head_symbol().name()).into()))
+            let t: &ATermRef<'_> = &DataFunctionSymbol::new(tp, t.get_head_symbol().name());
+            Ok(Yield::Term(t.copy().into()))
         } else {
             // This is a function symbol applied to a number of arguments (higher order terms not allowed)
             let head = DataFunctionSymbol::new(tp, t.get_head_symbol().name());

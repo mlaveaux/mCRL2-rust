@@ -11,6 +11,7 @@ use utilities::PhantomUnsend;
 use crate::aterm::{THREAD_TERM_POOL, SymbolRef};
 
 use super::global_aterm_pool::GLOBAL_TERM_POOL;
+use super::{BfTermPool, BfTermPoolRead};
 
 /// This represents a lifetime bound reference to an existing ATerm that is
 /// protected somewhere statically. 
@@ -190,6 +191,14 @@ impl<'a> fmt::Debug for ATermRef<'a> {
         }
 
         Ok(())
+    }
+}
+
+impl<'a> From<ATermReturn> for ATermRef<'a> {
+    fn from(value: ATermReturn) -> Self {
+        ATermRef::new(unsafe {
+            value.get()
+        })
     }
 }
 
@@ -383,6 +392,51 @@ impl From<ATerm> for ATermGlobal {
     }
 }
 
+/// A temporarily protected aterm that can be used a cheap
+/// return value to avoid explicit protections.
+pub struct ATermReturn {
+    term: ATermRef<'static>,
+    _pool: BfTermPool<()>,
+    _guard: BfTermPoolRead<'static, ()>,
+}
+
+impl ATermReturn {
+
+    /// Constructs
+    pub fn new(term: ATermRef<'_>) -> Self {
+        let _pool = BfTermPool::new(());
+        let _guard = unsafe { std::mem::transmute(_pool.read()) };
+
+        ATermReturn {
+            term: unsafe { std::mem::transmute(term) },
+            _pool,
+            _guard,
+        }
+    }
+}
+
+impl From<ATerm> for ATermReturn {
+    fn from(value: ATerm) -> Self {
+        ATermReturn::new(value.copy())
+    }
+}
+
+impl From<ATermRef<'_>> for ATermReturn {
+    fn from(value: ATermRef<'_>) -> Self {
+        ATermReturn::new(value.copy())
+    }
+}
+
+impl Deref for ATermReturn {
+    type Target = ATermRef<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.term        
+    }
+}
+
+/// A list aterm consisting of list constructors chained
+/// terms.
 pub struct ATermList<T> {
     term: ATerm,
     _marker: PhantomData<T>,
