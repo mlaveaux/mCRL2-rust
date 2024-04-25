@@ -204,11 +204,7 @@ impl TermPool {
 
     /// Creates an [ATerm] with the given symbol and arguments.
     pub fn create<'a, 'b>(&mut self, symbol: &impl Borrow<SymbolRef<'a>>, arguments: &[impl Borrow<ATermRef<'b>>]) -> ATerm {
-        // Make the temp vector sufficient length.
-        while self.arguments.len() < arguments.len() {
-            self.arguments.push(std::ptr::null());
-        }
-
+        // Copy the arguments to make a slice.
         self.arguments.clear();
         for arg in arguments {
             unsafe {
