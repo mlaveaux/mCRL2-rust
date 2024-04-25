@@ -151,8 +151,6 @@ impl SabreRewriter {
                                 .transitions
                                 .get(&(leaf.state, function_symbol.operation_id()))
                             {
-                                drop(read_terms);
-
                                 // Loop over the match announcements of the transition
                                 for (announcement, annotation) in &tr.announcements {
                                     if annotation.conditions.is_empty()
@@ -211,8 +209,6 @@ impl SabreRewriter {
                                     cs.grow(leaf_index, tr_slice);
                                 }
                             } else {
-                                drop(read_terms);
-
                                 let prev = cs.get_prev_with_side_info();
                                 cs.current_node = prev;
                                 if let Some(n) = prev {
@@ -224,11 +220,9 @@ impl SabreRewriter {
                             match sit {
                                 SideInfoType::SideBranch(sb) => {
                                     // If there is a SideBranch pick the next child configuration
-                                    drop(read_terms);
                                     cs.grow(leaf_index, sb);
                                 }
                                 SideInfoType::DelayedRewriteRule(announcement, annotation) => {
-                                    drop(read_terms);
                                     // apply the delayed rewrite rule
                                     SabreRewriter::apply_rewrite_rule(
                                         tp,
@@ -257,7 +251,6 @@ impl SabreRewriter {
                                         leaf_term,
                                         stats,
                                     ) {
-                                        drop(read_terms);
                                         SabreRewriter::apply_rewrite_rule(
                                             tp,
                                             automaton,
@@ -310,7 +303,6 @@ impl SabreRewriter {
             "rewrote {} to {} using rule {}",
             &leaf_subterm, &new_subterm, announcement.rule
         );
-        drop(read_terms);
 
         // The match announcement tells us how far we need to prune back.
         let prune_point = leaf_index - announcement.symbols_seen;

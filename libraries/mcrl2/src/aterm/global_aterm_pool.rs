@@ -32,7 +32,7 @@ unsafe impl Send for ATermPtr {}
 /// The protection set for terms.
 pub(crate) type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
 
-/// The protection set for containers. Note that we store ATermRef<'static> here because we manage lifetime ourselves.
+/// The protection set for containers.
 pub(crate) type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<dyn Markable + Sync + Send>>>>;
 
 /// The single global (singleton) term pool.
@@ -118,7 +118,7 @@ impl GlobalTermPool {
         for set in self.thread_protection_sets.iter().flatten() {
             // Do not lock since we acquired a global lock.
             unsafe {
-                let protection_set = set.write_exclusive(false);
+                let protection_set = set.get();
 
                 for (term, root) in protection_set.iter() {
                     ffi::aterm_mark_address(term.ptr, todo.as_mut());
@@ -139,7 +139,7 @@ impl GlobalTermPool {
         for set in self.thread_container_sets.iter().flatten() {
             // Do not lock since we acquired a global lock.
             unsafe {
-                let protection_set = set.write_exclusive(false);
+                let protection_set = set.get();
 
                 for (container, root) in protection_set.iter() {
                     container.mark(todo.as_mut());

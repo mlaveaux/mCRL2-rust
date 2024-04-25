@@ -1,10 +1,11 @@
-use std::{pin::Pin, sync::Arc, mem::transmute, marker::PhantomData, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug};
+use std::{pin::Pin, sync::Arc, mem::transmute, ops::{DerefMut, Deref}, hash::Hash, fmt::Debug};
 
 use mcrl2_sys::atermpp::ffi;
+use utilities::PhantomUnsend;
 
-use crate::aterm::{ATermRef, BfTermPool, BfTermPoolThreadWrite, THREAD_TERM_POOL};
+use crate::aterm::{ATermRef, BfTermPool, THREAD_TERM_POOL};
 
-use super::BfTermPoolRead;
+use super::BfTermPoolThreadWrite;
 
 #[cfg(debug_assertions)]
 use std::cell::RefCell;
@@ -15,11 +16,15 @@ use std::cell::RefCell;
 pub struct Protected<C> {
     container: Arc<BfTermPool<C>>,
     root: usize,
-    marker: PhantomData<C>,
+
+    // Protected is not Send because it uses thread-local state for its protection
+    // mechanism.
+    _unsend: PhantomUnsend,
 }
 
 impl<C: Markable + Send +'static> Protected<C> {
 
+    /// Creates a new Protected container from a given container.
     pub fn new(container: C) -> Protected<C> {
         let shared = Arc::new(BfTermPool::new(container));
 
@@ -30,7 +35,7 @@ impl<C: Markable + Send +'static> Protected<C> {
         Protected {
             container: shared,
             root,
-            marker: Default::default(),
+            _unsend: Default::default(),
         }
     }
 
@@ -41,15 +46,15 @@ impl<C: Markable + Send +'static> Protected<C> {
     pub fn write(&mut self) -> Protector<'_, C> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
-            Protector::new(transmute(self.container.write_exclusive(true)))
+            Protector::new(transmute(self.container.write_exclusive()))
         }
     }
 
     /// Provides immutable access to the underlying container.
-    pub fn read(&self) -> BfTermPoolRead<'_, C> {
+    pub fn read(&self) -> &C {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
         unsafe {
-            transmute(self.container.read())
+            self.container.get()
         }
     }
 
@@ -167,11 +172,8 @@ impl<T: Markable> Markable for Vec<T> {
 
 impl<T: Markable + ?Sized> Markable for BfTermPool<T> {
     fn mark(&self, mut todo: Pin<&mut ffi::term_mark_stack>) {
-        // Marking will done while an exclusive lock is already held, also this
-        // does not implement the Markable trait since self must be immutable
-        // here.
         unsafe {
-            self.write_exclusive(false).mark(todo.as_mut());
+            self.get().mark(todo.as_mut());
         }
     }    
 

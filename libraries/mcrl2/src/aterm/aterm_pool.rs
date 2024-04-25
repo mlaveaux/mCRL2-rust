@@ -89,14 +89,14 @@ impl ThreadTermPool {
     /// Protects the given aterm address and returns the term.
     pub fn protect(&mut self, term: *const ffi::_aterm) -> ATerm {
         unsafe {
-            protect_with(self.protection_set.write_exclusive(true), &mut self.gc_counter, self.index, term)
+            protect_with(self.protection_set.write_exclusive(), &mut self.gc_counter, self.index, term)
         }
     }
 
     /// Protects the given aterm address and returns the term.
     pub fn protect_container(&mut self, container: Arc<dyn Markable + Send + Sync>) -> usize {
         let root = unsafe {
-            self.container_protection_set.write_exclusive(true).protect(container)
+            self.container_protection_set.write_exclusive().protect(container)
         };
     
         trace!(
@@ -113,7 +113,7 @@ impl ThreadTermPool {
         term.require_valid();
 
         unsafe {
-            let mut protection_set = self.protection_set.write_exclusive(true);
+            let mut protection_set = self.protection_set.write_exclusive();
             trace!(
                 "Dropped term {:?}, index {}, protection set {}",
                 term.term,
@@ -128,7 +128,7 @@ impl ThreadTermPool {
     pub fn drop_container(&mut self, container_root: usize) {
         
         unsafe {
-            let mut container_protection_set = self.container_protection_set.write_exclusive(true);
+            let mut container_protection_set = self.container_protection_set.write_exclusive();
             trace!(
                 "Dropped container index {}, protection set {}",
                 container_root,
@@ -225,7 +225,7 @@ impl TermPool {
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             unsafe {
                 // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
+                let protection_set = tp.protection_set.write_exclusive();
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.borrow().address(), &self.arguments);
                 protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             }
@@ -265,7 +265,7 @@ impl TermPool {
 
             let result = unsafe {
                 // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
+                let protection_set = tp.protection_set.write_exclusive();
                 let term: *const ffi::_aterm = ffi::create_aterm(symbol.address(), &self.arguments);
                 protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             };
@@ -286,7 +286,7 @@ impl TermPool {
         let result = THREAD_TERM_POOL.with_borrow_mut(|tp| {
             unsafe {
                 // ThreadPool is not Sync, so only one has access.
-                let protection_set = tp.protection_set.write_exclusive(true);
+                let protection_set = tp.protection_set.write_exclusive();
                 protect_with(protection_set, &mut tp.gc_counter, tp.index, create())
             }
         });

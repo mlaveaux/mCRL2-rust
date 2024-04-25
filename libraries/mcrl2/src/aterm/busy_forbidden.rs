@@ -35,30 +35,39 @@ impl<'a, T: ?Sized> BfTermPool<T> {
         }
     }
 
-    /// Provides write access to the underlying object
-    ///
-    /// # Safety
-    ///
-    /// Provides mutable access given that other threads use write exclusively. If we are already in an exclusive context
-    /// then lock can be set to false.
-    pub unsafe fn write_exclusive(&'a self, lock: bool) -> BfTermPoolThreadWrite<'a, T> {
-        // This is a lock shared, but assuming that only ONE thread uses this function.
-        if lock {
-            ffi::lock_shared();
-        }
-
-        BfTermPoolThreadWrite {
+    /// Provides write access to the underlying object.
+    pub fn write(&'a self) -> BfTermPoolWrite<'a, T> {
+        ffi::lock_exclusive();
+        
+        BfTermPoolWrite {
             mutex: self,
-            locked: lock,
             _marker: Default::default(),
         }
     }
 
-    /// Provides write access to the underlying object.
-    pub fn write(&'a self) -> BfTermPoolWrite<'a, T> {
-        ffi::lock_exclusive();
-        BfTermPoolWrite {
+    /// Provides read access to the underlying object.
+    /// 
+    /// # Safety
+    /// 
+    /// Assumes that we are in an exclusive section.
+    pub unsafe fn get(&'a self) -> &T {
+        unsafe { &*self.object.get() }
+    }
+
+    /// Provides write access to the underlying object
+    ///
+    /// # Safety
+    ///
+    /// Provides mutable access given that other threads use [write] and [read]
+    /// exclusively. If we are already in an exclusive context then lock can be
+    /// set to false.
+    pub unsafe fn write_exclusive(&'a self) -> BfTermPoolThreadWrite<'a, T> {
+        // This is a lock shared, but assuming that only ONE thread uses this function.
+        ffi::lock_shared();
+
+        BfTermPoolThreadWrite {
             mutex: self,
+            locked: true,
             _marker: Default::default(),
         }
     }
