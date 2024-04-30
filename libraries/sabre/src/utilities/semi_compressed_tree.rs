@@ -42,6 +42,8 @@ use SemiCompressedTermTree::*;
 
 use super::{PositionIndexed, PositionIterator};
 
+pub type SCCTBuilder = TermBuilder::<&'static SemiCompressedTermTree, &'static Symbol>;
+
 impl SemiCompressedTermTree {
     /// Given an [ATerm] and a term pool this function instantiates the SCTT and computes a [ATerm].
     ///
@@ -51,8 +53,13 @@ impl SemiCompressedTermTree {
     /// evaluate will encounter an ExplicitNode and make two recursive calls to get the subterms.
     /// Both these recursive calls will return the term '0'.
     /// The term pool will be used to construct the term minus(0, 0).
-    pub fn evaluate(&self, t: &ATermRef<'_>, tp: &mut TermPool) -> ATerm {
-        let mut builder = TermBuilder::<&SemiCompressedTermTree, &Symbol>::new();
+    pub fn evaluate_with<'a>(&'a self, builder: &mut SCCTBuilder, t: &ATermRef<'_>, tp: &mut TermPool) -> ATerm {
+
+        // TODO: Figure out if this can be done properly. This is safe because evaluate will always leave the
+        // underlying vectors empty.
+        let builder: &mut TermBuilder::<&'a SemiCompressedTermTree, &'a Symbol> = unsafe {
+            std::mem::transmute(builder)
+        };
 
         builder.evaluate(tp, self, |_tp, args, node| {
                 match node {
@@ -69,6 +76,13 @@ impl SemiCompressedTermTree {
                 }
             }, 
             |tp, symbol, args| { Ok(tp.create(symbol, args)) } ).unwrap()
+    }
+
+    /// The same as [evaluate_with], but allocates a [SCCTBuilder] internally.
+    pub fn evaluate(&self, t: &ATermRef<'_>, tp: &mut TermPool) -> ATerm {
+        let mut builder = TermBuilder::<&SemiCompressedTermTree, &Symbol>::new();
+
+        self.evaluate_with(&mut builder, t, tp)
     }
 
     /// Creates a SCTT from a term. The var_map parameter should specify where the variable can be

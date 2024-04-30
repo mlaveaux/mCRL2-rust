@@ -12,7 +12,7 @@ use crate::{
         nonlinear::{check_equivalence_classes, derive_equivalence_classes, EquivalenceClass},
     },
     set_automaton::{MatchAnnouncement, SetAutomaton},
-    utilities::{Config, InnermostStack, PositionIndexed, RHSStack},
+    utilities::{Config, InnermostStack, PositionIndexed, RHSStack, SCCTBuilder},
     RewriteEngine, RewriteSpecification, RewritingStatistics, Rule,
 };
 
@@ -23,7 +23,7 @@ impl RewriteEngine for InnermostRewriter {
         debug!("input: {}", t);
 
         let result =
-            InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &mut self.stack, &mut stats, &self.apma, t);
+            InnermostRewriter::rewrite_aux(&mut self.tp.borrow_mut(), &mut self.stack, &mut self.builder, &mut stats, &self.apma, t);
         info!(
             "{} rewrites, {} single steps and {} symbol comparisons",
             stats.recursions, stats.rewrite_steps, stats.symbol_comparisons
@@ -41,6 +41,7 @@ impl InnermostRewriter {
             apma,
             tp: tp.clone(),
             stack: InnermostStack::default(),
+            builder: SCCTBuilder::new(),
         }
     }
 
@@ -61,6 +62,7 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         stack: &mut InnermostStack,
+        builder: &mut SCCTBuilder,
         stats: &mut RewritingStatistics,
         automaton: &SetAutomaton<AnnouncementInnermost>,
         input_term: DataExpression,
@@ -133,7 +135,7 @@ impl InnermostRewriter {
                         drop(write_terms);
                         drop(write_configs);
 
-                        match InnermostRewriter::find_match(tp, stack, stats, automaton, &term) {
+                        match InnermostRewriter::find_match(tp, stack, builder, stats, automaton, &term) {
                             Some((announcement, annotation)) => {
                                 debug!(
                                     "rewrite {} => {} using rule {}",
@@ -195,6 +197,7 @@ impl InnermostRewriter {
     fn find_match<'a>(
         tp: &mut TermPool,
         stack: &mut InnermostStack,
+        builder: &mut SCCTBuilder,
         stats: &mut RewritingStatistics,
         automaton: &'a SetAutomaton<AnnouncementInnermost>,
         t: &ATermRef<'_>,
@@ -206,7 +209,7 @@ impl InnermostRewriter {
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let pos: DataExpressionRef = t.get_position(&state.label).into();
+            let pos: DataExpressionRef<'_> = t.get_position(&state.label).into();
             let symbol = pos.data_function_symbol();
 
             // Get the transition for the label and check if there is a pattern match
@@ -216,7 +219,7 @@ impl InnermostRewriter {
             {
                 for (announcement, annotation) in &transition.announcements {
                     if check_equivalence_classes(t, &annotation.equivalence_classes)
-                        && InnermostRewriter::check_conditions(tp, stack, stats, automaton, annotation, t)
+                        && InnermostRewriter::check_conditions(tp, stack, builder, stats, automaton, annotation, t)
                     {
                         // We found a matching pattern
                         return Some((announcement, annotation));
@@ -241,22 +244,23 @@ impl InnermostRewriter {
     fn check_conditions(
         tp: &mut TermPool,
         stack: &mut InnermostStack,
+        builder: &mut SCCTBuilder,
         stats: &mut RewritingStatistics,
         automaton: &SetAutomaton<AnnouncementInnermost>,
         announcement: &AnnouncementInnermost,
         t: &ATermRef<'_>,
     ) -> bool {
         for c in &announcement.conditions {
-            let rhs: DataExpression = c.semi_compressed_rhs.evaluate(t, tp).into();
-            let lhs: DataExpression = c.semi_compressed_lhs.evaluate(t, tp).into();
+            let rhs: DataExpression = c.semi_compressed_rhs.evaluate_with(builder, &t, tp).into();
+            let lhs: DataExpression = c.semi_compressed_lhs.evaluate_with(builder, &t, tp).into();
 
-                let rhs_normal = InnermostRewriter::rewrite_aux(tp, stack, stats, automaton, rhs);
-                let lhs_normal = if &lhs == tp.true_term() {
-                    // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
-                    lhs
-                } else {
-                    InnermostRewriter::rewrite_aux(tp, stack, stats, automaton, lhs)
-                };
+            let rhs_normal = InnermostRewriter::rewrite_aux(tp, stack, builder, stats, automaton, rhs);
+            let lhs_normal = if &lhs == tp.true_term() {
+                // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
+                lhs
+            } else {
+                InnermostRewriter::rewrite_aux(tp, stack, builder, stats, automaton, lhs)
+            };
 
             if lhs_normal != rhs_normal && c.equality || lhs_normal == rhs_normal && !c.equality {
                 return false;
@@ -272,6 +276,7 @@ pub struct InnermostRewriter {
     tp: Rc<RefCell<TermPool>>,
     apma: SetAutomaton<AnnouncementInnermost>,
     stack: InnermostStack,
+    builder: SCCTBuilder,
 }
 
 pub(crate) struct AnnouncementInnermost {
