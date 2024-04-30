@@ -64,8 +64,11 @@ impl SemiCompressedTermTree {
 
                         Ok(Yield::Construct(&node.head))
                     }
-                    Compressed(ct) => Ok(Yield::Term(ct.clone())),
-                    Variable(p) => Ok(Yield::Term(t.get_position(p).protect())),
+                    Compressed(ct) => {
+                        let t: &ATermRef<'_> = &ct;
+                        Ok(Yield::Term(t.copy().into()))
+                    },
+                    Variable(p) => Ok(Yield::Term(t.get_position(p).into())),
                 }
             }, 
             |tp, symbol, args| { Ok(tp.create(symbol, args)) } ).unwrap()
@@ -160,7 +163,7 @@ pub fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
 mod tests {
     use super::*;
     use ahash::AHashSet;
-    use mcrl2::aterm::{TermPool, apply};
+    use mcrl2::aterm::{apply, TermPool};
 
     /// Converts a slice of static strings into a set of owned strings
     /// 
@@ -175,7 +178,8 @@ mod tests {
         apply(tp, t, &|tp, arg| {
             if variables.contains(arg.get_head_symbol().name()) {
                 // Convert a constant variable, for example 'x', into an untyped variable.
-                Some(DataVariable::new(tp, &arg.get_head_symbol().name()).into())
+                let t: &ATermRef<'_> = &DataVariable::new(tp, &arg.get_head_symbol().name());
+                Some(t.copy().into())
             } else {
                 None
             }

@@ -6,12 +6,14 @@ use log::trace;
 
 use crate::aterm::{ATerm, TermPool, Symbol};
 
+use super::{ATermRef, ATermReturn, Protected};
+
 /// This can be used to construct a term from a given input of (inductive) type I, 
 /// without using the system stack, i.e. recursion. See evaluate.
 #[derive(Default)]
 pub struct TermBuilder<I, C> {
     // The stack of terms
-    terms: Vec<ATerm>,
+    terms: Protected<Vec<ATermRef<'static>>>,
     configs: Vec<Config<I, C>>,
 }
 
@@ -21,7 +23,7 @@ pub struct TermBuilder<I, C> {
 ///         Some(x), in which case subterm is replaced by x.
 pub fn apply<F>(tp: &mut TermPool, t: &ATerm, function: &F) -> ATerm
 where
-    F: Fn(&mut TermPool, &ATerm) -> Option<ATerm>,
+    F: Fn(&mut TermPool, &ATermRef<'static>) -> Option<ATermReturn>,
 {
     let mut builder = TermBuilder::<ATerm, Symbol>::new();
 
@@ -47,7 +49,7 @@ where
 impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
     pub fn new() -> TermBuilder<I, C> {
         TermBuilder {
-            terms: vec![],
+            terms: Protected::new(vec![]),
             configs: vec![],
         }
     }
@@ -89,10 +91,10 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
     ) -> Result<ATerm, Box<dyn Error>>
     where
         F: Fn(&mut TermPool, &mut ArgStack<I, C>, I) -> Result<Yield<C>, Box<dyn Error>>,
-        G: Fn(&mut TermPool, C, &[ATerm]) -> Result<ATerm, Box<dyn Error>>,
+        G: Fn(&mut TermPool, C, &[ATermRef<'static>]) -> Result<ATerm, Box<dyn Error>>,
     {
         trace!("Transforming {:?}", input);
-        self.terms.push(ATerm::default());
+        self.terms.write().push(ATermRef::default());
         self.configs.push(Config::Apply(input, 0));
 
         while let Some(config) = self.configs.pop() {
@@ -111,17 +113,21 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
                                 .insert(top_of_stack, Config::Construct(input, arity, result));
                         }
                         Yield::Term(term) => {
-                            self.terms[result] = term;
+                            let mut write_terms = self.terms.write();
+                            write_terms[result] = term.into();
                         }
                     }
                 }
                 Config::Construct(input, arity, result) => {
-                    let arguments = &self.terms[self.terms.len() - arity..];
+                    let mut write_terms = self.terms.write();
+                    let length = write_terms.len();
+                    let arguments = &write_terms[length - arity..];
 
-                    self.terms[result] = construct(tp, input, arguments)?;
+                    let t = write_terms.protect(&construct(tp, input, arguments)?.copy());
+                    write_terms[result] = t;
 
                     // Remove elements from the stack.
-                    self.terms.drain(self.terms.len() - arity..);
+                    write_terms.drain(length - arity..);
                 }
             }
 
@@ -129,14 +135,15 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
         }
 
         debug_assert!(
-            self.terms.len() == 1,
+            self.terms.read().len() == 1,
             "Expect exactly one term on the result stack"
         );
 
-        Ok(self
-            .terms
+        let mut write_terms = self.terms.write();
+        Ok(write_terms
             .pop()
-            .expect("There should be at last one result"))
+            .expect("There should be at last one result")
+            .protect())
     }
 }
 
@@ -146,20 +153,20 @@ enum Config<I, C> {
 }
 
 pub enum Yield<C> {
-    Term(ATerm),  // Yield this term as is.
+    Term(ATermReturn),  // Yield this term as is.
     Construct(C), // Yield f(args) for every arg push to the argument stack, with the function applied to it.
 }
 
 /// This struct defines a local argument stack on the global stack.
 pub struct ArgStack<'a, I, C> {
-    terms: &'a mut Vec<ATerm>,
+    terms: &'a mut Protected<Vec<ATermRef<'static>>>,
     configs: &'a mut Vec<Config<I, C>>,
     top_of_stack: usize,
 }
 
 impl<'a, I, C> ArgStack<'a, I, C> {
-    fn new(terms: &'a mut Vec<ATerm>, configs: &'a mut Vec<Config<I, C>>) -> ArgStack<'a, I, C> {
-        let top_of_stack = terms.len();
+    fn new(terms: &'a mut Protected<Vec<ATermRef<'static>>>, configs: &'a mut Vec<Config<I, C>>) -> ArgStack<'a, I, C> {
+        let top_of_stack = terms.read().len();
         ArgStack {
             terms,
             configs,
@@ -169,13 +176,13 @@ impl<'a, I, C> ArgStack<'a, I, C> {
 
     /// Returns the amount of arguments added.
     fn len(&self) -> usize {
-        self.terms.len() - self.top_of_stack
+        self.terms.read().len() - self.top_of_stack
     }
 
     /// Adds the term to the argument stack, will construct construct(C, args...) with the transformer applied to arguments.
     pub fn push(&mut self, input: I) {
-        self.configs.push(Config::Apply(input, self.terms.len()));
-        self.terms.push(ATerm::default());
+        self.configs.push(Config::Apply(input, self.terms.read().len()));
+        self.terms.write().push(ATermRef::default());
     }
 }
 
@@ -183,7 +190,7 @@ impl<'a, I, C> ArgStack<'a, I, C> {
 impl<I: fmt::Debug, C: fmt::Debug> fmt::Debug for TermBuilder<I, C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Terms: [")?;
-        for (i, term) in self.terms.iter().enumerate() {
+        for (i, term) in self.terms.read().iter().enumerate() {
             writeln!(f, "{}\t{:?}", i, term)?;
         }
         writeln!(f, "]")?;

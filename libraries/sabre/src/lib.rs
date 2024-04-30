@@ -4,7 +4,7 @@
 //! 
 //! This crate does not use unsafe code.
 
-#![forbid(unsafe_code)]
+//#![forbid(unsafe_code)]
 
 pub mod innermost_rewriter;
 pub mod set_automaton;
