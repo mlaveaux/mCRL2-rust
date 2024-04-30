@@ -47,7 +47,10 @@ impl InnermostStack {
                     }
                 }
                 Config::Rewrite(_) => {
-                    panic!("This case should not happen");
+                    unreachable!("This case should not happen");
+                }
+                Config::Return() => {
+                    unreachable!("This case should not happen");
                 }
             }
             first = false;
@@ -95,7 +98,9 @@ pub enum Config {
     /// Rewrite the top of the stack and put result at the given index.
     Rewrite(usize), 
     /// Constructs function symbol with given arity at the given index.
-    Construct(DataFunctionSymbolRef<'static>, usize, usize), 
+    Construct(DataFunctionSymbolRef<'static>, usize, usize),
+    /// Yields the given index as returned term.
+    Return(),
 }
 
 impl Markable for Config {
@@ -151,6 +156,7 @@ impl fmt::Display for Config {
             Config::Construct(symbol, arity, result) => {
                 write!(f, "Construct({}, {}, {})", symbol, arity, result)
             }
+            Config::Return() => write!(f, "Return()"),
         }
     }
 }
@@ -239,7 +245,10 @@ impl RHSStack {
                         write_terms[index] = t.into();
                     }
                     Config::Rewrite(_) => {
-                        panic!("This case should not happen");
+                        unreachable!("This case should not happen");
+                    }
+                    Config::Return() => {
+                        unreachable!("This case should not happen");
                     }
                 }
             } else {
@@ -279,6 +288,7 @@ impl Clone for RHSStack {
                     let f = write.protect(&f.copy().into());
                     write.push(Config::Construct(f.into(), *x, *y));
                 }
+                Config::Return() => write.push(Config::Return()),
             }
         }
         drop(write);
