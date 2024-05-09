@@ -19,6 +19,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:    
+
     - name: Setup sccache
       uses: mozilla-actions/sccache-action@v0.0.4
       
@@ -39,8 +40,9 @@ jobs:
         brew link --overwrite python@3.11
       if: matrix.os == 'macos-latest'  
 
-    - name: Install Nightly Rust and Sources
-      run: rustup toolchain install nightly --component rust-src
+    - name: Install nightly rust
+      uses: dtolnay/rust-toolchain@nightly
+      components: rust-src
 
     - name: Checkout the repository
       uses: actions/checkout@v4

@@ -19,6 +19,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+    - name: Install nightly rust
+      uses: dtolnay/rust-toolchain@nightly
+
     - name: Setup sccache
       uses: mozilla-actions/sccache-action@v0.0.4
 
