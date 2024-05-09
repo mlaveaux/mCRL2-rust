@@ -41,7 +41,8 @@ jobs:
 
     - name: Install nightly rust
       uses: dtolnay/rust-toolchain@nightly
-      components: rust-src
+      with:
+        components: rust-src
 
     - name: Checkout the repository
       uses: actions/checkout@v4
