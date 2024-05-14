@@ -5,10 +5,10 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bitstream-io = "2.2"
-thiserror = "1"
-streaming-iterator = "0.1"
-fxhash = "0.2"
+bitstream-io.workspace = true
+thiserror.workspace = true
+streaming-iterator.workspace = true
+fxhash.workspace = true
 regex.workspace = true
 log.workspace = true
 

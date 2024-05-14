@@ -6,9 +6,9 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-cxx = "1.0"
+cxx.workspace = true
 
 [build-dependencies]
-cxx-build = { version = "1.0", features = ["parallel"] }
-cc = "1.0"
-cargo-emit = "0.2"
+cxx-build.workspace = true
+cc.workspace = true
+cargo-emit.workspace = true

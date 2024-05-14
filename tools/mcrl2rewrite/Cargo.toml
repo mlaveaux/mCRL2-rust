@@ -18,4 +18,4 @@ rec-tests.workspace = true
 sabre.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-jemallocator = "0.5"
+jemallocator.workspace = true

@@ -7,12 +7,12 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pest = "2.7"
-pest_derive = "2.7"
+pest.workspace = true
+pest_derive.workspace = true
 ahash.workspace = true
 mcrl2.workspace = true
 sabre.workspace = true
 
 [dev-dependencies]
-test-case = "3.1"
+test-case.workspace = true
 env_logger.workspace = true
