@@ -80,6 +80,7 @@ fn main() {
         "data.cpp",
         "data_io.cpp",
         "data_specification.cpp",
+        "machine_word.cpp",
         "typecheck.cpp",
         //"detail/prover/smt_lib_solver.cpp",
         "detail/rewrite/jitty.cpp",
@@ -192,6 +193,9 @@ fn main() {
 
     // Enable thread safety since Rust executes its tests at least by default, and allow threading in general.
     build.define("MCRL2_ENABLE_MULTITHREADING", "1");
+
+    // Disable machine numbers since their changes are not compatible with Sabre yet
+    build.define("MCRL2_ENABLE_MACHINENUMBERS", "0");
 
     add_compile_flags(&mut build, mcrl2_path);
     add_cpp_flags(&mut build);

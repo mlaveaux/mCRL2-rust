@@ -62,7 +62,7 @@ std::unique_ptr<detail::RewriterCompilingJitty> create_jitty_compiling_rewriter(
 std::unique_ptr<atermpp::aterm> rewrite(detail::RewriterJitty& rewriter, const atermpp::detail::_aterm* term)
 {
   detail::RewriterJitty::substitution_type subsitution;
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
 
   data_expression result = rewriter.rewrite(static_cast<const data_expression&>(t), subsitution);
   return std::make_unique<atermpp::aterm>(static_cast<const atermpp::aterm&>(result));
@@ -70,7 +70,7 @@ std::unique_ptr<atermpp::aterm> rewrite(detail::RewriterJitty& rewriter, const a
 
 std::size_t get_data_function_symbol_index(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
   return atermpp::detail::index_traits<mcrl2::data::function_symbol, function_symbol_key_type, 2>::index(
       static_cast<const mcrl2::data::function_symbol&>(t));
 }
@@ -98,83 +98,89 @@ std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_equations(co
 
 std::unique_ptr<std::vector<atermpp::aterm>> get_data_specification_constructors(const data_specification& data_spec, const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  sort_expression sort(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  sort_expression sort(static_cast<const atermpp::aterm&>(t));
   auto constructors = data_spec.constructors(sort);
   return std::make_unique<std::vector<atermpp::aterm>>(constructors.begin(), constructors.end());
 }
 
 bool is_data_where_clause(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return is_where_clause(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return is_where_clause(static_cast<const atermpp::aterm&>(t));
 }
 
 bool is_data_abstraction(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return is_abstraction(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return is_abstraction(static_cast<const atermpp::aterm&>(t));
 }
 
 bool is_data_untyped_identifier(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return is_untyped_identifier(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return is_untyped_identifier(static_cast<const atermpp::aterm&>(t));
 }
 
 
 bool is_data_function_symbol(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_function_symbol(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return mcrl2::data::is_function_symbol(static_cast<const atermpp::aterm&>(t));
 }
 
 const atermpp::detail::_aterm* create_data_function_symbol(rust::String name)
 {
-  atermpp::unprotected_aterm result(nullptr);
-  make_function_symbol(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
+  atermpp::unprotected_aterm_core result(nullptr);
+  make_function_symbol(reinterpret_cast<atermpp::aterm&>(result), identifier_string(static_cast<std::string>(name)), untyped_sort());
   return atermpp::detail::address(result);
 }
 
 bool is_data_variable(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
   return mcrl2::data::is_variable(static_cast<const atermpp::aterm&>(t));
 }
 
 const atermpp::detail::_aterm* create_data_variable(rust::String name)
 {
-  atermpp::unprotected_aterm result(nullptr);
-  make_variable(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), sort_expression());
+  atermpp::unprotected_aterm_core result(nullptr);
+  make_variable(reinterpret_cast<atermpp::aterm&>(result), identifier_string(static_cast<std::string>(name)), sort_expression());
   return atermpp::detail::address(result);
 }
 
 const atermpp::detail::_aterm* create_sorted_data_variable(rust::String name, const atermpp::detail::_aterm* sort)
 {
-  atermpp::unprotected_aterm t(sort);
+  atermpp::unprotected_aterm_core t(sort);
 
-  atermpp::unprotected_aterm result(nullptr);
-  make_variable(reinterpret_cast<atermpp::aterm_appl&>(result), identifier_string(static_cast<std::string>(name)), sort_expression(static_cast<const atermpp::aterm&>(t)));
+  atermpp::unprotected_aterm_core result(nullptr);
+  make_variable(reinterpret_cast<atermpp::aterm&>(result), identifier_string(static_cast<std::string>(name)), sort_expression(static_cast<const atermpp::aterm&>(t)));
   return atermpp::detail::address(result);
 }
 
 
 bool is_data_sort_expression(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_sort_expression(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return mcrl2::data::is_sort_expression(static_cast<const atermpp::aterm&>(t));
 }
 
 bool is_data_basic_sort(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_basic_sort(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return mcrl2::data::is_basic_sort(static_cast<const atermpp::aterm&>(t));
 }
 
 bool is_data_function_sort(const atermpp::detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
-  return mcrl2::data::is_function_sort(static_cast<const atermpp::aterm_appl&>(t));
+  atermpp::unprotected_aterm_core t(term);
+  return mcrl2::data::is_function_sort(static_cast<const atermpp::aterm&>(t));
+}
+
+bool is_data_machine_number(const atermpp::detail::_aterm* term)
+{
+  atermpp::unprotected_aterm_core t(term);
+  return mcrl2::data::is_machine_number(static_cast<const atermpp::aterm&>(t));
 }
 
 std::unique_ptr<atermpp::aterm> true_term() 

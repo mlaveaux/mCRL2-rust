@@ -4,7 +4,7 @@
 
 #include "mcrl2/core/identifier_string.h"
 
-#include "mcrl2/atermpp/aterm.h"
+#include "mcrl2/atermpp/aterm_core.h"
 #include "mcrl2/atermpp/aterm_io_text.h"
 #include "mcrl2/atermpp/detail/aterm_hash.h"
 #include "mcrl2/atermpp/detail/aterm_pool_storage_implementation.h"
@@ -139,7 +139,7 @@ const detail::_aterm* create_aterm(const detail::_function_symbol* symbol, rust:
   rust::Slice<aterm> aterm_slice(const_cast<aterm*>(reinterpret_cast<const aterm*>(arguments.data())),
       arguments.length());
 
-  unprotected_aterm result(nullptr);
+  unprotected_aterm_core result(nullptr);
   make_term_appl(reinterpret_cast<aterm&>(result), function_symbol(symbol), aterm_slice.begin(), aterm_slice.end());
   return detail::address(result);
 }
@@ -156,25 +156,25 @@ std::unique_ptr<aterm> aterm_from_string(rust::String text)
 
 bool aterm_is_int(const detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
   return t.type_is_int();
 }
 
 bool aterm_is_list(const detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
   return t.type_is_list();
 }
 
 bool aterm_is_empty_list(const detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
   return t.function() == detail::g_as_empty_list;
 }
 
 rust::String print_aterm(const detail::_aterm* term)
 {
-  atermpp::unprotected_aterm t(term);
+  atermpp::unprotected_aterm_core t(term);
   std::stringstream str;
   str << static_cast<const aterm&>(t);
   return str.str();
@@ -182,7 +182,7 @@ rust::String print_aterm(const detail::_aterm* term)
 
 const detail::_function_symbol* get_aterm_function_symbol(const detail::_aterm* term)
 { 
-  return atermpp::unprotected_aterm(term).function().address();
+  return atermpp::unprotected_aterm_core(term).function().address();
 }
 
 rust::Str get_function_symbol_name(const detail::_function_symbol* symbol)
@@ -197,8 +197,8 @@ std::size_t get_function_symbol_arity(const detail::_function_symbol* symbol)
 
 const detail::_aterm* get_term_argument(const detail::_aterm* term, std::size_t index)
 {
-  atermpp::unprotected_aterm t(term);
-  return detail::address(static_cast<const aterm_appl&>(t)[index]);
+  atermpp::unprotected_aterm_core t(term);
+  return detail::address(static_cast<const aterm&>(t)[index]);
 }
 
 void protect_function_symbol(const detail::_function_symbol* symbol)

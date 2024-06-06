@@ -85,5 +85,6 @@ pub mod ffi {
         unsafe fn is_data_where_clause(term: *const _aterm) -> bool;
         unsafe fn is_data_abstraction(term: *const _aterm) -> bool;
         unsafe fn is_data_untyped_identifier(term: *const _aterm) -> bool;
+        unsafe fn is_data_machine_number(term: *const _aterm) -> bool;
     }
 }
