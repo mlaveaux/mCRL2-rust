@@ -13,6 +13,7 @@ pub fn is_data_expression(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     is_data_variable(term)
         || is_data_function_symbol(term)
+        || is_data_machine_number(term)
         || is_data_application(term)
         || is_data_abstraction(term)
         || is_data_where_clause(term)
@@ -21,6 +22,11 @@ pub fn is_data_expression(term: &ATermRef<'_>) -> bool {
 pub fn is_data_function_symbol(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_function_symbol(term.get()) }
+}
+
+pub fn is_data_machine_number(term: &ATermRef<'_>) -> bool {
+    term.require_valid();
+    unsafe { ffi::is_data_machine_number(term.get()) }
 }
 
 pub fn is_data_where_clause(term: &ATermRef<'_>) -> bool {
@@ -37,7 +43,6 @@ pub fn is_data_untyped_identifier(term: &ATermRef<'_>) -> bool {
     term.require_valid();
     unsafe { ffi::is_data_untyped_identifier(term.get()) }
 }
-
 
 pub fn is_data_application(term: &ATermRef<'_>) -> bool {
     term.require_valid();
@@ -62,6 +67,7 @@ mod inner {
     ///     - a function symbol, i.e. f without arguments.
     ///     - a term applied to a number of arguments, i.e., t_0(t1, ..., tn).
     ///     - an abstraction lambda x: Sort . e, or forall and exists.
+    ///     - machine number, a value [0, ..., 2^64-1].
     /// 
     /// Not supported:
     ///     - a where clause "e where [x := f, ...]"
@@ -125,6 +131,8 @@ mod inner {
                 write!(f, "{}", DataApplicationRef::from(self.term.copy()))
             } else if is_data_variable(&self.term) {
                 write!(f, "{}", DataVariableRef::from(self.term.copy()))
+            } else if is_data_machine_number(&self.term) {
+                write!(f, "{}", MachineNumberRef::from(self.term.copy()))
             } else {
                 write!(f, "{}", self.term)
             }
@@ -286,6 +294,25 @@ mod inner {
     
             Ok(())
         }
+    }
+
+    #[mcrl2_term(is_data_machine_number)]
+    struct MachineNumber {
+        pub term: ATerm,
+    }
+
+    impl MachineNumber {
+        
+        /// Obtain the underlying value of a machine number.
+        pub fn value(&self) -> u64 {
+            0
+        }
+    }
+
+    impl fmt::Display for MachineNumber {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
+            write!(f, "{}", self.value()) 
+        }            
     }
 
     #[mcrl2_ignore]

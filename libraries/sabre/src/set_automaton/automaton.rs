@@ -5,9 +5,7 @@ use log::{debug, info, log_enabled, trace, warn};
 use mcrl2::{
     aterm::ATermRef,
     data::{
-        is_data_abstraction, is_data_application, is_data_function_symbol,
-        is_data_untyped_identifier, is_data_variable, is_data_where_clause, DataExpression,
-        DataExpressionRef, DataFunctionSymbol,
+        is_data_abstraction, is_data_application, is_data_function_symbol, is_data_machine_number, is_data_untyped_identifier, is_data_variable, is_data_where_clause, DataExpression, DataExpressionRef, DataFunctionSymbol
     },
 };
 use smallvec::{smallvec, SmallVec};
@@ -563,6 +561,8 @@ fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut HashMap<DataFunctionSym
         for arg in t.data_arguments() {
             find_symbols(&arg.into(), symbols);
         }
+    } else if is_data_machine_number(t) {
+        // Ignore machine numbers during matching?        
     } else if !is_data_variable(t) {
         panic!("Unexpected term {:?}", t);
     }
