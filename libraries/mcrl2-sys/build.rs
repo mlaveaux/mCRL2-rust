@@ -195,7 +195,7 @@ fn main() {
     build.define("MCRL2_ENABLE_MULTITHREADING", "1");
 
     // Disable machine numbers since their changes are not compatible with Sabre yet
-    build.define("MCRL2_ENABLE_MACHINENUMBERS", "0");
+    //build.define("MCRL2_ENABLE_MACHINENUMBERS", "1");
 
     add_compile_flags(&mut build, mcrl2_path);
     add_cpp_flags(&mut build);
