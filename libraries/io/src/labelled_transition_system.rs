@@ -26,9 +26,10 @@ impl LabelledTransitionSystem {
 
     /// Returns the set of outgoing transitions for the given state.
     pub fn outgoing_transitions<'a>(&'a self, state: &'a State) -> impl Iterator + 'a {
-        state.outgoing.iter().map(|(label_index, out_index)| {
-            (&self.labels[*label_index], &self.states[*out_index])
-        })
+        state
+            .outgoing
+            .iter()
+            .map(|(label_index, out_index)| (&self.labels[*label_index], &self.states[*out_index]))
     }
 }
 
@@ -64,7 +65,7 @@ pub fn index_edge<T>(slice: &mut [T], a: usize, b: usize) -> Edge<&mut T> {
 }
 
 impl fmt::Display for LabelledTransitionSystem {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {        
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Print some information about the LTS.
         writeln!(f, "Number of states: {}", self.states.len())?;
         writeln!(f, "Number of action labels: {}", self.labels.len())?;
@@ -79,7 +80,6 @@ mod tests {
 
     #[test]
     fn test_traversal_lts() {
-
         let file = include_str!("../../../examples/lts/abp.aut");
 
         let lts = read_aut(file.as_bytes()).unwrap();

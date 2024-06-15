@@ -1,4 +1,6 @@
-use std::io::{BufReader, Read, BufRead};
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Read;
 use streaming_iterator::StreamingIterator;
 
 /// A lending iterator over the lines of a type implementing Read.
@@ -16,14 +18,12 @@ impl<T: Read> LineIterator<T> {
             end: false,
         }
     }
-
 }
 
 impl<T: Read> StreamingIterator for LineIterator<T> {
     type Item = String;
 
     fn advance(&mut self) {
-        
         self.buffer.clear();
         match self.reader.read_line(&mut self.buffer) {
             Ok(n) if n > 0 => {
@@ -33,7 +33,7 @@ impl<T: Read> StreamingIterator for LineIterator<T> {
                         self.buffer.pop();
                     }
                 }
-            },
+            }
             Ok(_) => self.end = true,
             Err(_) => self.end = true,
         }

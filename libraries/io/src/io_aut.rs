@@ -1,14 +1,16 @@
-use std::{collections::HashMap, error::Error, io::Read};
+use std::collections::HashMap;
+use std::error::Error;
+use std::io::Read;
 
 use log::trace;
 use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
-use crate::{
-    labelled_transition_system::{LabelIndex, LabelledTransitionSystem, State},
-    line_iterator::LineIterator,
-};
+use crate::labelled_transition_system::LabelIndex;
+use crate::labelled_transition_system::LabelledTransitionSystem;
+use crate::labelled_transition_system::State;
+use crate::line_iterator::LineIterator;
 
 #[derive(Error, Debug)]
 pub enum IOError {
@@ -78,7 +80,6 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
         let from: usize = from_txt.parse()?;
         let to: usize = to_txt.parse()?;
 
-
         let label_index = *labels_index
             .entry(label_txt.to_string())
             .or_insert(labels.len());
@@ -132,7 +133,6 @@ mod tests {
 
     #[test]
     fn test_lts_failure() {
-
         let wrong_header = "
         des (0,2,                                     
             (0,\"r1(d1)\",1)

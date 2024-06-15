@@ -3,26 +3,32 @@
 
 slint::include_modules!();
 
-use std::{
-    fs::File,
-    ops::Deref,
-    path::Path,
-    sync::{Arc, Mutex, RwLock},
-    thread,
-    time::{Duration, Instant},
-};
+use std::fs::File;
+use std::ops::Deref;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::RwLock;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 
 use clap::Parser;
 
 use io::io_aut::read_aut;
-use log::{debug, info};
-use slint::{invoke_from_event_loop, Image, Rgba8Pixel, SharedPixelBuffer};
+use log::debug;
+use log::info;
+use ltsgraph_lib::GraphLayout;
+use ltsgraph_lib::Viewer;
 use pauseable_thread::PauseableThread;
-use ltsgraph_lib::{GraphLayout, Viewer};
+use slint::invoke_from_event_loop;
+use slint::Image;
+use slint::Rgba8Pixel;
+use slint::SharedPixelBuffer;
 
+mod console;
 mod error_dialog;
 mod pauseable_thread;
-mod console;
 
 #[derive(Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A lts viewing tool")]
@@ -120,55 +126,62 @@ async fn main() -> anyhow::Result<()> {
         let settings = settings.clone();
         let canvas = canvas.clone();
 
-        Arc::new(PauseableThread::new(
-            "ltsgraph canvas worker",
-            move || {
+        Arc::new(PauseableThread::new("ltsgraph canvas worker", move || {
+            if let Some(state) = state.read().unwrap().deref() {
+                // Render a new frame...
+                let start = Instant::now();
+                let (ref mut viewer, ref mut pixel_buffer) = *state.viewer.lock().unwrap();
 
-                    if let Some(state) = state.read().unwrap().deref() {
-                        // Render a new frame...
-                        let start = Instant::now();
-                        let (ref mut viewer, ref mut pixel_buffer) = *state.viewer.lock().unwrap();                           
+                // Resize the canvas when necessary
+                let settings_clone = settings.lock().unwrap().clone();
+                if pixel_buffer.width() != settings_clone.width
+                    || pixel_buffer.height() != settings_clone.height
+                {
+                    *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(
+                        settings_clone.width,
+                        settings_clone.height,
+                    );
+                }
 
-                        // Resize the canvas when necessary
-                        let settings_clone = settings.lock().unwrap().clone();
-                        if pixel_buffer.width() != settings_clone.width || pixel_buffer.height() != settings_clone.height {
-                            *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(settings_clone.width, settings_clone.height);
-                        }
+                viewer.render(
+                    &mut tiny_skia::PixmapMut::from_bytes(
+                        pixel_buffer.make_mut_bytes(),
+                        settings_clone.width,
+                        settings_clone.height,
+                    )
+                    .unwrap(),
+                    settings_clone.draw_action_labels,
+                    settings_clone.state_radius,
+                    settings_clone.view_x,
+                    settings_clone.view_y,
+                    settings_clone.width,
+                    settings_clone.height,
+                    settings_clone.zoom_level,
+                    settings_clone.label_text_size,
+                );
 
-                        viewer.render(
-                            &mut tiny_skia::PixmapMut::from_bytes(pixel_buffer.make_mut_bytes(), settings_clone.width, settings_clone.height).unwrap(),
-                            settings_clone.draw_action_labels,
-                            settings_clone.state_radius,
-                            settings_clone.view_x,
-                            settings_clone.view_y,
-                            settings_clone.width,
-                            settings_clone.height,
-                            settings_clone.zoom_level,
-                            settings_clone.label_text_size,
-                        );
+                debug!(
+                    "Rendering step ({} by {}) took {} ms",
+                    settings_clone.width,
+                    settings_clone.height,
+                    (Instant::now() - start).as_millis()
+                );
+                *canvas.lock().unwrap() = pixel_buffer.clone();
+            }
 
-                        debug!(
-                            "Rendering step ({} by {}) took {} ms",
-                            settings_clone.width,
-                            settings_clone.height,
-                            (Instant::now() - start).as_millis()
-                        );
-                        *canvas.lock().unwrap() = pixel_buffer.clone();
-                    }
+            // Request the to be updated.
+            let app_weak = app_weak.clone();
+            invoke_from_event_loop(move || {
+                if let Some(app) = app_weak.upgrade() {
+                    // Update the canvas
+                    app.global::<Settings>()
+                        .set_refresh(!app.global::<Settings>().get_refresh());
+                };
+            })
+            .unwrap();
 
-                    // Request the to be updated.
-                    let app_weak = app_weak.clone();
-                    invoke_from_event_loop(move || {
-                        if let Some(app) = app_weak.upgrade() {
-                            // Update the canvas
-                            app.global::<Settings>()
-                                .set_refresh(!app.global::<Settings>().get_refresh());
-                        };
-                    })
-                    .unwrap();
-
-                    false
-                })?)
+            false
+        })?)
     };
 
     // Run the graph layout algorithm in a separate thread to avoid blocking the UI.
@@ -186,7 +199,11 @@ async fn main() -> anyhow::Result<()> {
                 let settings = settings.lock().unwrap().clone();
                 let mut layout = state.graph_layout.lock().unwrap();
 
-                is_stable = layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
+                is_stable = layout.update(
+                    settings.handle_length,
+                    settings.repulsion_strength,
+                    settings.delta,
+                );
                 if is_stable {
                     debug!("Layout is stable!");
                 }
@@ -194,7 +211,7 @@ async fn main() -> anyhow::Result<()> {
                 // Copy layout into the view.
                 let (ref mut viewer, _) = *state.viewer.lock().unwrap();
                 viewer.update(&layout);
-                
+
                 // Request a redraw (if not already in progress).
                 render_handle.resume();
             }
@@ -208,7 +225,7 @@ async fn main() -> anyhow::Result<()> {
             !is_stable
         })?)
     };
-    
+
     // Load an LTS from the given path and updates the state.
     let load_lts = {
         let state = state.clone();
@@ -241,17 +258,19 @@ async fn main() -> anyhow::Result<()> {
                             render_handle.resume();
                         }
                         Err(x) => {
-                            error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
+                            error_dialog::show_error_dialog(
+                                "Failed to load LTS!",
+                                &format!("{}", x),
+                            );
                         }
                     }
-                },
+                }
                 Err(x) => {
                     error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
                 }
             }
         }
     };
-    
 
     // When the simulation is toggled enable the layout thread.
     {
@@ -264,7 +283,7 @@ async fn main() -> anyhow::Result<()> {
             }
         })
     }
-    
+
     // Simply return the current canvas, can be updated in the meantime.
     {
         let canvas = canvas.clone();
@@ -279,7 +298,11 @@ async fn main() -> anyhow::Result<()> {
             let buffer = canvas.lock().unwrap().clone();
             if buffer.width() != settings.width || buffer.height() != settings.height {
                 // Request another redraw when the size has changed.
-                debug!("Canvas size changed from {}x{} to {width}x{height}", buffer.width(), buffer.height());
+                debug!(
+                    "Canvas size changed from {}x{} to {width}x{height}",
+                    buffer.width(),
+                    buffer.height()
+                );
                 render_handle.resume();
             }
 
@@ -291,24 +314,30 @@ async fn main() -> anyhow::Result<()> {
     // If a redraw was requested resume the render thread.
     {
         let render_handle = render_handle.clone();
-        app.on_request_redraw(move || {         
+        app.on_request_redraw(move || {
             render_handle.resume();
         })
     }
-    
+
     // Open the file dialog and load another LTS if necessary.
     {
         let load_lts = load_lts.clone();
         app.on_open_filedialog(move || {
             let load_lts = load_lts.clone();
-            
+
             invoke_from_event_loop(move || {
                 slint::spawn_local(async move {
-                    if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("", &["aut"]).pick_file().await {
+                    if let Some(handle) = rfd::AsyncFileDialog::new()
+                        .add_filter("", &["aut"])
+                        .pick_file()
+                        .await
+                    {
                         load_lts(handle.path());
                     }
-                }).unwrap();
-            }).unwrap();
+                })
+                .unwrap();
+            })
+            .unwrap();
         });
     }
 
@@ -321,7 +350,6 @@ async fn main() -> anyhow::Result<()> {
         let settings = settings.clone();
 
         app.on_focus_view(move || {
-            
             if let Some(app) = app_weak.upgrade() {
                 if let Some(state) = state.read().unwrap().deref() {
                     debug!("Centering view on graph.");
@@ -343,7 +371,7 @@ async fn main() -> anyhow::Result<()> {
             }
         });
     }
-    
+
     // Loads the LTS given on the command line.
     if let Some(path) = &cli.labelled_transition_system {
         load_lts(Path::new(path));

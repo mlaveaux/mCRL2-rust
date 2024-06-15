@@ -1,17 +1,23 @@
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
+use std::rc::Rc;
 
-use log::{debug, info, trace};
-use mcrl2::{
-    aterm::{ATermRef, TermPool},
-    data::{DataExpression, DataExpressionRef},
-};
+use log::debug;
+use log::info;
+use log::trace;
+use mcrl2::aterm::ATermRef;
+use mcrl2::aterm::TermPool;
+use mcrl2::data::DataExpression;
+use mcrl2::data::DataExpressionRef;
 
-use crate::{
-    matching::nonlinear::check_equivalence_classes,
-    set_automaton::{MatchAnnouncement, SetAutomaton},
-    utilities::{AnnouncementSabre, ConfigurationStack, PositionIndexed, SideInfo, SideInfoType},
-    RewriteSpecification,
-};
+use crate::matching::nonlinear::check_equivalence_classes;
+use crate::set_automaton::MatchAnnouncement;
+use crate::set_automaton::SetAutomaton;
+use crate::utilities::AnnouncementSabre;
+use crate::utilities::ConfigurationStack;
+use crate::utilities::PositionIndexed;
+use crate::utilities::SideInfo;
+use crate::utilities::SideInfoType;
+use crate::RewriteSpecification;
 
 /// A shared trait for all the rewriters
 pub trait RewriteEngine {
@@ -101,7 +107,9 @@ impl SabreRewriter {
                     ) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos: DataExpressionRef = leaf_term.get_position(&automaton.states[leaf.state].label).into();
+                            let pos: DataExpressionRef = leaf_term
+                                .get_position(&automaton.states[leaf.state].label)
+                                .into();
 
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
@@ -117,7 +125,10 @@ impl SabreRewriter {
                                         && annotation.equivalence_classes.is_empty()
                                     {
                                         if annotation.is_duplicating {
-                                            trace!("Delaying duplicating rule {}", announcement.rule);
+                                            trace!(
+                                                "Delaying duplicating rule {}",
+                                                announcement.rule
+                                            );
 
                                             // We do not want to apply duplicating rules straight away
                                             cs.side_branch_stack.push(SideInfo {
@@ -142,7 +153,10 @@ impl SabreRewriter {
                                         }
                                     } else {
                                         // We delay the condition checks
-                                        trace!("Delaying condition check for rule {}", announcement.rule);
+                                        trace!(
+                                            "Delaying condition check for rule {}",
+                                            announcement.rule
+                                        );
                                         cs.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
                                             info: SideInfoType::EquivalenceAndConditionCheck(
@@ -200,17 +214,16 @@ impl SabreRewriter {
                                 ) => {
                                     // Apply the delayed rewrite rule if the conditions hold
                                     let t: &ATermRef<'_> = leaf_term;
-                                    if check_equivalence_classes(
-                                        t,
-                                        &annotation.equivalence_classes,
-                                    ) && SabreRewriter::conditions_hold(
-                                        tp,
-                                        automaton,
-                                        announcement,
-                                        annotation,
-                                        leaf_term,
-                                        stats,
-                                    ) {
+                                    if check_equivalence_classes(t, &annotation.equivalence_classes)
+                                        && SabreRewriter::conditions_hold(
+                                            tp,
+                                            automaton,
+                                            announcement,
+                                            annotation,
+                                            leaf_term,
+                                            stats,
+                                        )
+                                    {
                                         SabreRewriter::apply_rewrite_rule(
                                             tp,
                                             automaton,
@@ -253,10 +266,7 @@ impl SabreRewriter {
         // Computes the new subterm of the configuration
         let new_subterm = annotation
             .semi_compressed_rhs
-            .evaluate(
-                &leaf_subterm.get_position(&announcement.position),
-                tp,
-            )
+            .evaluate(&leaf_subterm.get_position(&announcement.position), tp)
             .into();
 
         debug!(

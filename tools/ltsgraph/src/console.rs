@@ -11,7 +11,13 @@
 use winapi::um::consoleapi::AllocConsole;
 
 #[cfg(windows)]
-use winapi::um::wincon::{AttachConsole, FreeConsole, GetConsoleWindow, ATTACH_PARENT_PROCESS};
+use winapi::um::wincon::AttachConsole;
+#[cfg(windows)]
+use winapi::um::wincon::FreeConsole;
+#[cfg(windows)]
+use winapi::um::wincon::GetConsoleWindow;
+#[cfg(windows)]
+use winapi::um::wincon::ATTACH_PARENT_PROCESS;
 
 pub struct Console {
     #[cfg(windows)]
@@ -20,10 +26,8 @@ pub struct Console {
 
 /// Initialises the console. On Windows this either attaches to the
 pub fn init() -> anyhow::Result<Console> {
-    
     #[cfg(windows)]
     unsafe {
-
         // Check if we're attached to an existing Windows console
         if GetConsoleWindow().is_null() {
             // Try to attach to an existing Windows console.
@@ -34,34 +38,28 @@ pub fn init() -> anyhow::Result<Console> {
             if AttachConsole(ATTACH_PARENT_PROCESS) == 0 {
                 // Try to attach to a console, and if not, allocate ourselves a new one.
                 if AllocConsole() != 0 {
-                    Ok(Console {
-                        attached: false
-                    })
+                    Ok(Console { attached: false })
                 } else {
                     anyhow::bail!("Failed to attach to a console, and to create one")
                 }
             } else {
                 // We attached to an existing console.
-                Ok(Console {
-                    attached: true
-                })
+                Ok(Console { attached: true })
             }
         } else {
             // The program was started with a console attached.
-            Ok(Console {
-                attached: true
-            })  
-        }    
+            Ok(Console { attached: true })
+        }
     }
 
     #[cfg(not(windows))]
     {
-        Ok(Console { })
+        Ok(Console {})
     }
 }
 
 impl Drop for Console {
-    fn drop(&mut self) {    
+    fn drop(&mut self) {
         // Free the allocated console, when it was not attached.
         #[cfg(windows)]
         if !self.attached {

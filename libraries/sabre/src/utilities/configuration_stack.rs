@@ -1,23 +1,32 @@
 use std::fmt;
 use std::ops::Deref;
 
-use crate::matching::conditions::{extend_conditions, EMACondition};
-use crate::matching::nonlinear::{derive_equivalence_classes, EquivalenceClass};
-use crate::set_automaton::{MatchAnnouncement, SetAutomaton};
+use crate::matching::conditions::extend_conditions;
+use crate::matching::conditions::EMACondition;
+use crate::matching::nonlinear::derive_equivalence_classes;
+use crate::matching::nonlinear::EquivalenceClass;
+use crate::set_automaton::MatchAnnouncement;
+use crate::set_automaton::SetAutomaton;
 use crate::utilities::ExplicitPosition;
 use crate::Rule;
 
-use mcrl2::aterm::{Protected, TermPool};
-use mcrl2::data::{DataExpression, DataExpressionRef};
+use mcrl2::aterm::Protected;
+use mcrl2::aterm::TermPool;
+use mcrl2::data::DataExpression;
+use mcrl2::data::DataExpressionRef;
 
-use super::{create_var_map, substitute_with, PositionIndexed, SemiCompressedTermTree, SubstitutionBuilder};
+use super::create_var_map;
+use super::substitute_with;
+use super::PositionIndexed;
+use super::SemiCompressedTermTree;
+use super::SubstitutionBuilder;
 
 /// This is the announcement for Sabre, which stores additional information about the rewrite rules.
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct AnnouncementSabre {
     /// Positions in the pattern with the same variable, for non-linear patterns
     pub equivalence_classes: Vec<EquivalenceClass>,
-    
+
     /// Conditions for applying the rule.
     pub conditions: Vec<EMACondition>,
 
@@ -67,7 +76,7 @@ pub(crate) struct SideInfo<'a> {
     pub corresponding_configuration: usize,
     pub info: SideInfoType<'a>,
 }
- 
+
 /// A "side stack" is used besides the configuration stack to
 /// remember a couple of things. There are 4 options.
 ///

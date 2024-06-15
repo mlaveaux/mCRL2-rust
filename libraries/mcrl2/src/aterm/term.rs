@@ -1,20 +1,24 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
+use std::collections::VecDeque;
+use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::{collections::VecDeque, fmt};
 
-use mcrl2_sys::{atermpp::ffi, cxx::UniquePtr};
+use mcrl2_sys::atermpp::ffi;
+use mcrl2_sys::cxx::UniquePtr;
 use utilities::PhantomUnsend;
 
-use crate::aterm::{THREAD_TERM_POOL, SymbolRef};
+use crate::aterm::SymbolRef;
+use crate::aterm::THREAD_TERM_POOL;
 
 use super::global_aterm_pool::GLOBAL_TERM_POOL;
 
 /// This represents a lifetime bound reference to an existing ATerm that is
-/// protected somewhere statically. 
-/// 
+/// protected somewhere statically.
+///
 /// Can be 'static if the term is protected in a container or ATerm. That means
 /// we either return &'a ATermRef<'static> or with a concrete lifetime
 /// ATermRef<'a>. However, this means that the functions for ATermRef cannot use
@@ -44,16 +48,15 @@ impl<'a> Default for ATermRef<'a> {
 }
 
 impl<'a> ATermRef<'a> {
-    
     /// Protects the reference on the thread local protection pool.
     pub fn protect(&self) -> ATerm {
         if self.is_default() {
             ATerm::default()
         } else {
-            THREAD_TERM_POOL.with_borrow_mut(|tp| { tp.protect(self.term) })
+            THREAD_TERM_POOL.with_borrow_mut(|tp| tp.protect(self.term))
         }
     }
-    
+
     /// Protects the reference on the global protection pool.
     pub fn protect_global(&self) -> ATermGlobal {
         if self.is_default() {
@@ -65,19 +68,22 @@ impl<'a> ATermRef<'a> {
 
     /// This allows us to extend our borrowed lifetime from 'a to 'b based on
     /// existing parent term which has lifetime 'b.
-    /// 
+    ///
     /// The main usecase is to establish transitive lifetimes. For example given
     /// a term t from which we borrow `u = t.arg(0)` then we cannot have
     /// u.arg(0) live as long as t since the intermediate temporary u is
     /// dropped. However, since we know that u.arg(0) is a subterm of `t` we can
     /// upgrade its lifetime to the lifetime of `t` using this function.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// This function might only be used if witness is a parent term of the
     /// current term.
     pub fn upgrade<'b: 'a>(&'a self, parent: &ATermRef<'b>) -> ATermRef<'b> {
-        debug_assert!(parent.iter().any(|t| t.copy() == *self), "Upgrade has been used on a witness that is not a parent term");
+        debug_assert!(
+            parent.iter().any(|t| t.copy() == *self),
+            "Upgrade has been used on a witness that is not a parent term"
+        );
 
         ATermRef::new(self.term)
     }
@@ -157,7 +163,7 @@ impl ATermRef<'_> {
         self.require_valid();
         unsafe { ffi::get_aterm_function_symbol(self.term).into() }
     }
-    
+
     /// Returns an iterator over all arguments of the term that runs in pre order traversal of the term trees.
     pub fn iter(&self) -> TermIterator<'_> {
         TermIterator::new(self.copy())
@@ -174,7 +180,7 @@ impl ATermRef<'_> {
 
 impl<'a> fmt::Display for ATermRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.require_valid();        
+        self.require_valid();
         write!(f, "{:?}", self)
     }
 }
@@ -206,8 +212,8 @@ pub struct ATerm {
 
 impl ATerm {
     /// Obtains the underlying pointer
-    /// 
-    /// # Safety 
+    ///
+    /// # Safety
     /// Should not be modified in any way.
     pub(crate) unsafe fn get(&self) -> *const ffi::_aterm {
         self.term.get()
@@ -244,7 +250,7 @@ impl Deref for ATerm {
     type Target = ATermRef<'static>;
 
     fn deref(&self) -> &Self::Target {
-        &self.term        
+        &self.term
     }
 }
 
@@ -295,17 +301,13 @@ impl Eq for ATerm {}
 // Some convenient conversions.
 impl From<UniquePtr<ffi::aterm>> for ATerm {
     fn from(value: UniquePtr<ffi::aterm>) -> Self {
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            unsafe { tp.protect(ffi::aterm_address(&value)) }
-        })
+        THREAD_TERM_POOL.with_borrow_mut(|tp| unsafe { tp.protect(ffi::aterm_address(&value)) })
     }
 }
 
 impl From<&ffi::aterm> for ATerm {
     fn from(value: &ffi::aterm) -> Self {
-        THREAD_TERM_POOL.with_borrow_mut(|tp| {
-            unsafe { tp.protect(ffi::aterm_address(value)) }
-        })
+        THREAD_TERM_POOL.with_borrow_mut(|tp| unsafe { tp.protect(ffi::aterm_address(value)) })
     }
 }
 
@@ -335,7 +337,7 @@ impl Deref for ATermGlobal {
     type Target = ATermRef<'static>;
 
     fn deref(&self) -> &Self::Target {
-        &self.term        
+        &self.term
     }
 }
 
@@ -509,9 +511,7 @@ impl<'a> Iterator for ATermArgs<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            let res = unsafe {
-               Some(self.term.arg(self.index).upgrade_unchecked(&self.term))
-            };
+            let res = unsafe { Some(self.term.arg(self.index).upgrade_unchecked(&self.term)) };
 
             self.index += 1;
             res
@@ -524,9 +524,7 @@ impl<'a> Iterator for ATermArgs<'a> {
 impl<'a> DoubleEndedIterator for ATermArgs<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
-            let res = unsafe {
-                Some(self.term.arg(self.arity - 1).upgrade_unchecked(&self.term))
-            };
+            let res = unsafe { Some(self.term.arg(self.arity - 1).upgrade_unchecked(&self.term)) };
 
             self.arity -= 1;
             res
@@ -572,24 +570,26 @@ impl<'a> Iterator for TermIterator<'a> {
                         self.queue.push_back(argument.upgrade_unchecked(&term));
                     }
                 }
-    
+
                 Some(term)
-            },
-            None => {
-                None
             }
+            None => None,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::Mutex, thread};
+    use std::sync::Mutex;
+    use std::thread;
 
     use test_log::test;
 
-    use crate::aterm::{random_term, TermPool};
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use crate::aterm::random_term;
+    use crate::aterm::TermPool;
+    use rand::rngs::StdRng;
+    use rand::Rng;
+    use rand::SeedableRng;
 
     use super::*;
 
@@ -610,8 +610,14 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         let mut result = t.iter();
-        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap().copy());
-        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap().copy());
+        assert_eq!(
+            result.next().unwrap(),
+            tp.from_string("f(g(a),b)").unwrap().copy()
+        );
+        assert_eq!(
+            result.next().unwrap(),
+            tp.from_string("g(a)").unwrap().copy()
+        );
         assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap().copy());
         assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap().copy());
     }
@@ -634,7 +640,7 @@ mod tests {
 
     #[test]
     fn test_global_aterm_pool_parallel() {
-        let seed: u64 =  rand::thread_rng().gen();
+        let seed: u64 = rand::thread_rng().gen();
         println!("seed: {}", seed);
 
         let terms: Mutex<Vec<ATermGlobal>> = Mutex::new(vec![]);
@@ -642,8 +648,8 @@ mod tests {
         thread::scope(|s| {
             for _ in 0..2 {
                 s.spawn(|| {
-                    let mut tp = TermPool::new();                
-    
+                    let mut tp = TermPool::new();
+
                     let mut rng = StdRng::seed_from_u64(seed);
                     for _ in 0..100 {
                         let t = random_term(
@@ -657,7 +663,7 @@ mod tests {
                         terms.lock().unwrap().push(t.clone().into());
 
                         tp.collect();
-                        
+
                         verify_term(&t);
                     }
                 });

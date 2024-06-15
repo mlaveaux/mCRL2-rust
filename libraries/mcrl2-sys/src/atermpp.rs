@@ -25,7 +25,7 @@ pub mod ffi {
         fn initialise();
 
         /// Enable automated garbage collection.
-        /// 
+        ///
         /// # Warning
         /// This will deadlock when any Rust terms are created due to the
         /// interaction with the busy flags. Instead, call collect_garbage
@@ -47,7 +47,7 @@ pub mod ffi {
         /// Provides shared access to the aterm library.
         fn lock_shared();
 
-        /// Returns true iff the shared section was actually left. 
+        /// Returns true iff the shared section was actually left.
         fn unlock_shared() -> bool;
 
         /// Provides exclusive access to the aterm library.
@@ -55,19 +55,25 @@ pub mod ffi {
         fn unlock_exclusive();
 
         /// Register a function to be called during marking of the garbage collection
-        fn register_mark_callback(callback_mark: fn(Pin<&mut term_mark_stack>) -> (), callback_size: fn() -> usize) -> UniquePtr<tls_callback_container>;
+        fn register_mark_callback(
+            callback_mark: fn(Pin<&mut term_mark_stack>) -> (),
+            callback_size: fn() -> usize,
+        ) -> UniquePtr<tls_callback_container>;
 
         /// Prints various metrics that are being tracked for terms.
         fn print_metrics();
 
         /// Creates a term from the given function and arguments, must be
         /// protected before the busy flags are set to false.
-        /// 
+        ///
         /// # Safety
         /// The function symbol and arguments will not be modified unless
-        /// garbage collection marks the terms, which is done atomically. 
-        unsafe fn create_aterm(function: *const _function_symbol, arguments: &[*const _aterm]) -> *const _aterm;
-        
+        /// garbage collection marks the terms, which is done atomically.
+        unsafe fn create_aterm(
+            function: *const _function_symbol,
+            arguments: &[*const _aterm],
+        ) -> *const _aterm;
+
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;
 
@@ -111,7 +117,7 @@ pub mod ffi {
         unsafe fn drop_function_symbol(symbol: *const _function_symbol);
 
         /// Obtain the address of the given function symbol.
-        unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;        
+        unsafe fn function_symbol_address(symbol: &function_symbol) -> *const _function_symbol;
 
         /// This function is to generate necessary data types
         fn generate_types() -> UniquePtr<CxxVector<aterm>>;

@@ -2,9 +2,11 @@
 //! Safe abstraction for the LPS library,
 //!
 
-use std::{fmt, error::Error};
+use std::error::Error;
+use std::fmt;
 
-use mcrl2_sys::{cxx::UniquePtr, lps::ffi};
+use mcrl2_sys::cxx::UniquePtr;
+use mcrl2_sys::lps::ffi;
 
 use crate::data::DataSpecification;
 
@@ -14,7 +16,6 @@ pub struct LinearProcessSpecification {
 }
 
 impl LinearProcessSpecification {
-
     /// Reads the linear process specification from the given path.
     pub fn read(filename: &str) -> Result<LinearProcessSpecification, Box<dyn Error>> {
         Ok(LinearProcessSpecification {
@@ -25,7 +26,7 @@ impl LinearProcessSpecification {
     /// Returns the underlying data specification.
     pub fn data_specification(&self) -> DataSpecification {
         DataSpecification {
-            data_spec: ffi::get_data_specification(&self.lps)
+            data_spec: ffi::get_data_specification(&self.lps),
         }
     }
 }
@@ -41,8 +42,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_read_linear_process_specification()
-    {
+    fn test_read_linear_process_specification() {
         let lps = LinearProcessSpecification::read("../../examples/lps/abp.lps").unwrap();
 
         let _data_spec = lps.data_specification();

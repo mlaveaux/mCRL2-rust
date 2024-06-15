@@ -91,7 +91,10 @@ impl<T> ProtectionSet<T> {
     /// Remove protection from the given LDD node. Note that index must be the
     /// index returned by the [ProtectionSet::protect] call.
     pub fn unprotect(&mut self, index: usize) {
-        debug_assert!(matches!(self.roots[index], Entry::Filled(_)), "Index {index} is not valid");
+        debug_assert!(
+            matches!(self.roots[index], Entry::Filled(_)),
+            "Index {index} is not valid"
+        );
         self.size -= 1;
 
         match self.free {
@@ -112,15 +115,12 @@ impl<T> Index<usize> for ProtectionSet<T> {
 
     fn index(&self, index: usize) -> &Self::Output {
         match &self.roots[index] {
-            Entry::Filled(value) => {
-                value
-            },
+            Entry::Filled(value) => value,
             Entry::Free(_) => {
                 panic!("Attempting to index free spot {}", index);
             }
         }
     }
-
 }
 
 pub struct ProtSetIter<'a, T> {
@@ -157,7 +157,9 @@ impl<'a, T> IntoIterator for &'a ProtectionSet<T> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::rngs::StdRng;
+    use rand::Rng;
+    use rand::SeedableRng;
 
     use super::*;
 
@@ -167,8 +169,8 @@ mod tests {
 
         // Protect a number of indices and record their roots.
         let mut indices: Vec<usize> = Vec::new();
-        
-        let seed: u64 =  rand::thread_rng().gen();
+
+        let seed: u64 = rand::thread_rng().gen();
         println!("seed: {}", seed);
         let mut rng = StdRng::seed_from_u64(seed);
 
@@ -182,7 +184,7 @@ mod tests {
             protection_set.unprotect(indices[index]);
             indices.remove(index);
         }
-        
+
         // Protect more to test the freelist
         for _ in 0..1000 {
             indices.push(protection_set.protect(rng.gen_range(0..1000)));
@@ -195,7 +197,11 @@ mod tests {
             );
         }
 
-        assert_eq!(protection_set.iter().count(), 6000 - 2500, "This is the number of roots remaining");
+        assert_eq!(
+            protection_set.iter().count(),
+            6000 - 2500,
+            "This is the number of roots remaining"
+        );
         assert_eq!(protection_set.number_of_insertions(), 6000);
         assert!(protection_set.maximum_size() >= 5000);
         assert!(!protection_set.is_empty());

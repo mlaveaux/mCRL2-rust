@@ -4,8 +4,8 @@
 //! See <https://arxiv.org/abs/2202.08687> for a paper on the construction of set automata.
 
 mod automaton;
-mod match_goal;
 mod display;
+mod match_goal;
 
 pub use automaton::*;
 pub(crate) use match_goal::*;

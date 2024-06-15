@@ -1,5 +1,6 @@
-use std::{cell::RefCell, rc::Rc};
 use mcrl2::data::DataExpression;
+use std::cell::RefCell;
+use std::rc::Rc;
 use test_case::test_case;
 
 use ahash::AHashSet;
@@ -7,7 +8,10 @@ use ahash::AHashSet;
 use mcrl2::aterm::TermPool;
 use rec_tests::load_REC_from_strings;
 use sabre::utilities::to_untyped_data_expression;
-use sabre::{InnermostRewriter, RewriteEngine, RewriteSpecification, SabreRewriter};
+use sabre::InnermostRewriter;
+use sabre::RewriteEngine;
+use sabre::RewriteSpecification;
+use sabre::SabreRewriter;
 
 #[test_case(vec![include_str!("../../../examples/REC/rec/benchexpr10.rec"), include_str!("../../../examples/REC/rec/asfsdfbenchmark.rec")], include_str!("snapshot/result_benchexpr10.txt") ; "benchexpr10")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/benchsym10.rec"), include_str!("../../../examples/REC/rec/asfsdfbenchmark.rec")], include_str!("snapshot/result_benchsym10.txt") ; "benchsym10")]
@@ -69,7 +73,8 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
             to_untyped_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
 
         let result = inner.rewrite(term.clone());
-        assert_eq!(result,
+        assert_eq!(
+            result,
             expected_result.clone().into(),
             "The inner rewrite result doesn't match the expected result",
         );

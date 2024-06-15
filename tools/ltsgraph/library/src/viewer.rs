@@ -1,11 +1,17 @@
 use std::sync::Arc;
 
 use cosmic_text::Metrics;
-use glam::{Mat3, Vec2, Vec3, Vec3Swizzles};
+use glam::Mat3;
+use glam::Vec2;
+use glam::Vec3;
+use glam::Vec3Swizzles;
 use io::LabelledTransitionSystem;
-use tiny_skia::{Shader, Stroke, Transform};
+use tiny_skia::Shader;
+use tiny_skia::Stroke;
+use tiny_skia::Transform;
 
-use crate::{graph_layout::GraphLayout, text_cache::TextCache};
+use crate::graph_layout::GraphLayout;
+use crate::text_cache::TextCache;
 
 pub struct Viewer {
     /// A cache used to cache strings and font information.
@@ -23,7 +29,7 @@ pub struct Viewer {
 
 #[derive(Default)]
 struct StateView {
-    pub position: Vec3,    
+    pub position: Vec3,
     pub outgoing: Vec<TransitionView>,
 }
 
@@ -32,7 +38,6 @@ pub struct TransitionView {
     /// The offset of the handle w.r.t. the 'from' state.
     pub handle_offset: Vec3,
 }
-
 
 impl Viewer {
     pub fn new(lts: &Arc<LabelledTransitionSystem>) -> Viewer {
@@ -50,16 +55,18 @@ impl Viewer {
         // Initialize the view information for the states.
         let mut view_states = Vec::with_capacity(lts.states.len());
         view_states.resize_with(lts.states.len(), StateView::default);
-        
+
         // Add the transition view information
         for (index, state_view) in view_states.iter_mut().enumerate() {
             let state = &lts.states[index];
-            
+
             state_view.outgoing = Vec::with_capacity(state.outgoing.len());
-            state_view.outgoing.resize_with(state.outgoing.len(), TransitionView::default);
+            state_view
+                .outgoing
+                .resize_with(state.outgoing.len(), TransitionView::default);
 
             // Compute the offsets for self-loops, put them at equal distance around the state.
-            let num_selfloops = state.outgoing.iter().filter(|(_, to)| { *to == index }).count();
+            let num_selfloops = state.outgoing.iter().filter(|(_, to)| *to == index).count();
 
             // Keep track of the current self loop index.
             let mut index_selfloop = 0;
@@ -72,27 +79,40 @@ impl Viewer {
 
                 if index == *to {
                     // This is a self loop so compute a rotation around the state for its handle.
-                    let rotation_mat = Mat3::from_euler(glam::EulerRot::XYZ, 0.0, 0.0, (index_selfloop as f32 / num_selfloops as f32) * 2.0 * std::f32::consts::PI);
-                    transition_view.handle_offset = rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));      
+                    let rotation_mat = Mat3::from_euler(
+                        glam::EulerRot::XYZ,
+                        0.0,
+                        0.0,
+                        (index_selfloop as f32 / num_selfloops as f32) * 2.0 * std::f32::consts::PI,
+                    );
+                    transition_view.handle_offset =
+                        rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));
 
                     index_selfloop += 1;
-                } else {                    
+                } else {
                     // Determine whether any of the outgoing edges from the reached state point back.
-                    let has_backtransition = lts.states[*to].outgoing.iter().filter(|(_, other_to)| { *other_to == index }).count() > 0;
+                    let has_backtransition = lts.states[*to]
+                        .outgoing
+                        .iter()
+                        .filter(|(_, other_to)| *other_to == index)
+                        .count()
+                        > 0;
 
                     // Compute the number of transitions going to the same state.
-                    let num_transitions = state.outgoing.iter().filter(|(_, to)| { *to == index }).count();
+                    let num_transitions =
+                        state.outgoing.iter().filter(|(_, to)| *to == index).count();
 
                     if has_backtransition {
                         // Offset the outgoing transitions towards that state to the right.
-                        transition_view.handle_offset = Vec3::new(0.0, index_transition as f32 / num_transitions as f32, 0.0);
+                        transition_view.handle_offset =
+                            Vec3::new(0.0, index_transition as f32 / num_transitions as f32, 0.0);
                     } else {
                         // Balance transitions around the midpoint.
                     }
 
                     index_transition += 1;
                 }
-            } 
+            }
         }
 
         Viewer {
@@ -112,7 +132,7 @@ impl Viewer {
 
     /// Returns the center of the graph.
     pub fn center(&self) -> Vec3 {
-        self.view_states.iter().map(|x| { x.position }).sum::<Vec3>() / self.view_states.len() as f32
+        self.view_states.iter().map(|x| x.position).sum::<Vec3>() / self.view_states.len() as f32
     }
 
     /// Render the current state of the simulation into the pixmap.
@@ -194,10 +214,12 @@ impl Viewer {
                     edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
 
                     let direction = (state_view.position - to_state_view.position).normalize();
-                    let angle = -1.0 * direction.xy()
-                        .angle_between(Vec2::new(0.0, -1.0))
-                        .to_degrees();
-                    
+                    let angle = -1.0
+                        * direction
+                            .xy()
+                            .angle_between(Vec2::new(0.0, -1.0))
+                            .to_degrees();
+
                     // Draw the arrow of the transition
                     if let Some(path) = arrow.clone().transform(
                         Transform::from_translate(0.0, -state_radius - 0.5)
@@ -206,19 +228,31 @@ impl Viewer {
                     ) {
                         arrow_builder.push_path(&path);
                     };
-                    
+
                     // Draw the edge handle
                     let middle = (to_state_view.position + state_view.position) / 2.0;
-                    edge_builder.push_circle(middle.x + transition_view.handle_offset.x, middle.y + transition_view.handle_offset.y, 1.0);
+                    edge_builder.push_circle(
+                        middle.x + transition_view.handle_offset.x,
+                        middle.y + transition_view.handle_offset.y,
+                        1.0,
+                    );
 
                     middle
                 } else {
                     // This is a self loop so draw a circle around the middle of the position and the handle.
                     let middle = (2.0 * state_view.position + transition_view.handle_offset) / 2.0;
-                    edge_builder.push_circle(middle.x, middle.y, transition_view.handle_offset.length() / 2.0);
-                    
+                    edge_builder.push_circle(
+                        middle.x,
+                        middle.y,
+                        transition_view.handle_offset.length() / 2.0,
+                    );
+
                     // Draw the edge handle
-                    edge_builder.push_circle(state_view.position.x + transition_view.handle_offset.x, state_view.position.y + transition_view.handle_offset.y, 1.0);
+                    edge_builder.push_circle(
+                        state_view.position.x + transition_view.handle_offset.x,
+                        state_view.position.y + transition_view.handle_offset.y,
+                        1.0,
+                    );
                     state_view.position + transition_view.handle_offset
                 };
 
@@ -228,7 +262,8 @@ impl Viewer {
                     self.text_cache.draw(
                         buffer,
                         pixmap,
-                        Transform::from_translate(label_position.x, label_position.y).post_concat(view_transform),
+                        Transform::from_translate(label_position.x, label_position.y)
+                            .post_concat(view_transform),
                     );
                 }
             }
@@ -254,11 +289,16 @@ impl Viewer {
 
         for (index, state_view) in self.view_states.iter().enumerate() {
             if index != self.lts.initial_state {
-                state_path_builder.push_circle(state_view.position.x, state_view.position.y, state_radius);
+                state_path_builder.push_circle(
+                    state_view.position.x,
+                    state_view.position.y,
+                    state_radius,
+                );
             } else {
                 // Draw the colored states individually
-                let transform = Transform::from_translate(state_view.position.x, state_view.position.y)
-                    .post_concat(view_transform);
+                let transform =
+                    Transform::from_translate(state_view.position.x, state_view.position.y)
+                        .post_concat(view_transform);
 
                 pixmap.fill_path(
                     &circle,
@@ -296,7 +336,8 @@ impl Viewer {
 #[cfg(test)]
 mod tests {
     use io::io_aut::read_aut;
-    use tiny_skia::{Pixmap, PixmapMut};
+    use tiny_skia::Pixmap;
+    use tiny_skia::PixmapMut;
 
     use super::*;
 

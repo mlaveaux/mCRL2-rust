@@ -1,21 +1,33 @@
-use std::{collections::VecDeque, fmt::Debug, time::Instant};
+use std::collections::VecDeque;
+use std::fmt::Debug;
+use std::time::Instant;
 
 use ahash::HashMap;
-use log::{debug, info, log_enabled, trace, warn};
-use mcrl2::{
-    aterm::ATermRef,
-    data::{
-        is_data_abstraction, is_data_application, is_data_function_symbol, is_data_machine_number, is_data_untyped_identifier, is_data_variable, is_data_where_clause, DataExpression, DataExpressionRef, DataFunctionSymbol
-    },
-};
-use smallvec::{smallvec, SmallVec};
+use log::debug;
+use log::info;
+use log::log_enabled;
+use log::trace;
+use log::warn;
+use mcrl2::aterm::ATermRef;
+use mcrl2::data::is_data_abstraction;
+use mcrl2::data::is_data_application;
+use mcrl2::data::is_data_function_symbol;
+use mcrl2::data::is_data_machine_number;
+use mcrl2::data::is_data_untyped_identifier;
+use mcrl2::data::is_data_variable;
+use mcrl2::data::is_data_where_clause;
+use mcrl2::data::DataExpression;
+use mcrl2::data::DataExpressionRef;
+use mcrl2::data::DataFunctionSymbol;
+use smallvec::smallvec;
+use smallvec::SmallVec;
 
-use crate::{
-    rewrite_specification::{RewriteSpecification, Rule},
-    utilities::ExplicitPosition,
-};
+use crate::rewrite_specification::RewriteSpecification;
+use crate::rewrite_specification::Rule;
+use crate::utilities::ExplicitPosition;
 
-use super::{DotFormatter, MatchGoal};
+use super::DotFormatter;
+use super::MatchGoal;
 
 // The Set Automaton used to find all matching patterns in a term. Based on the
 // following article. Implemented by Mark Bouwman, and adapted by Maurice
@@ -57,7 +69,11 @@ enum GoalsOrInitial {
 }
 
 impl<M> SetAutomaton<M> {
-    pub fn new(spec: &RewriteSpecification, annotate: impl Fn(&Rule) -> M, apma: bool) -> SetAutomaton<M> {
+    pub fn new(
+        spec: &RewriteSpecification,
+        annotate: impl Fn(&Rule) -> M,
+        apma: bool,
+    ) -> SetAutomaton<M> {
         let start = Instant::now();
 
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
@@ -133,18 +149,13 @@ impl<M> SetAutomaton<M> {
 
         // Pick a state to explore
         while let Some(s_index) = queue.pop_front() {
-
             for (symbol, arity) in &symbols {
-                let (mut announcements, pos_to_goals) = states.get(s_index).unwrap().derive_transition(
-                    symbol,
-                    *arity,
-                    &supported_rules,
-                    apma,
-                );
-                    
-                announcements.sort_by(|ma1, ma2| {
-                    ma1.position.cmp(&ma2.position)
-                });
+                let (mut announcements, pos_to_goals) = states
+                    .get(s_index)
+                    .unwrap()
+                    .derive_transition(symbol, *arity, &supported_rules, apma);
+
+                announcements.sort_by(|ma1, ma2| ma1.position.cmp(&ma2.position));
 
                 // For the destinations we convert the match goal destinations to states
                 let mut destinations = smallvec![];
@@ -173,21 +184,35 @@ impl<M> SetAutomaton<M> {
                 }
 
                 // Add the annotation for every match announcement.
-                let announcements = announcements.into_iter().map(|ma| {
-                    let annotation = annotate(&ma.rule);
-                    (ma, annotation)
-                }).collect();
+                let announcements = announcements
+                    .into_iter()
+                    .map(|ma| {
+                        let annotation = annotate(&ma.rule);
+                        (ma, annotation)
+                    })
+                    .collect();
 
                 // Add the resulting outgoing transition to the state.
-                debug_assert!(!&transitions.contains_key(&(s_index, symbol.operation_id())), "Set automaton should not contain duplicated transitions");
-                transitions.insert((s_index, symbol.operation_id()), Transition {
-                    symbol: symbol.clone(),
-                    announcements,
-                    destinations,
-                });
+                debug_assert!(
+                    !&transitions.contains_key(&(s_index, symbol.operation_id())),
+                    "Set automaton should not contain duplicated transitions"
+                );
+                transitions.insert(
+                    (s_index, symbol.operation_id()),
+                    Transition {
+                        symbol: symbol.clone(),
+                        announcements,
+                        destinations,
+                    },
+                );
             }
 
-            info!("Queue size {}, currently {} states and {} transitions", queue.len(), states.len(), transitions.len());
+            info!(
+                "Queue size {}, currently {} states and {} transitions",
+                queue.len(),
+                states.len(),
+                transitions.len()
+            );
         }
 
         // Clear the match goals since they are only for debugging purposes.
@@ -196,11 +221,20 @@ impl<M> SetAutomaton<M> {
                 state.match_goals.clear();
             }
         }
-        info!("Created set automaton (states: {}, transitions: {}, apma: {}) in {} ms", states.len(), transitions.len(), apma, (Instant::now() - start).as_millis());
+        info!(
+            "Created set automaton (states: {}, transitions: {}, apma: {}) in {} ms",
+            states.len(),
+            transitions.len(),
+            apma,
+            (Instant::now() - start).as_millis()
+        );
 
-        let result = SetAutomaton { states, transitions };
+        let result = SetAutomaton {
+            states,
+            transitions,
+        };
         debug!("{}", result);
-         
+
         result
     }
 
@@ -215,11 +249,12 @@ impl<M> SetAutomaton<M> {
     }
 
     /// Provides a formatter for the .dot file format
-    pub fn to_dot_graph(
-        &self,
-        show_backtransitions: bool,
-        show_final: bool) -> DotFormatter<M> {
-        DotFormatter { automaton: self, show_backtransitions, show_final }
+    pub fn to_dot_graph(&self, show_backtransitions: bool, show_final: bool) -> DotFormatter<M> {
+        DotFormatter {
+            automaton: self,
+            show_backtransitions,
+            show_final,
+        }
     }
 }
 
@@ -237,7 +272,6 @@ pub(crate) struct State {
 }
 
 impl State {
-
     /// Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
     /// The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
     /// We don't use the struct Transition as it requires that the destination is a full state, with name.
@@ -351,11 +385,7 @@ impl State {
 
     /// For a transition 'symbol' of state 'self' this function computes which match goals are
     /// completed, unchanged and reduced.
-    fn compute_derivative(
-        &self,
-        symbol: &DataFunctionSymbol,
-        arity: usize,
-    ) -> Derivative {
+    fn compute_derivative(&self, symbol: &DataFunctionSymbol, arity: usize) -> Derivative {
         let mut result = Derivative {
             completed: vec![],
             unchanged: vec![],
@@ -373,8 +403,8 @@ impl State {
                 && mg.obligations.iter().any(|mo| {
                     mo.position == self.label
                         && mo.pattern.data_function_symbol() == symbol.copy()
-                        && mo.pattern.data_arguments()
-                            .all(|x| is_data_variable(&x)) // Again skip the function symbol
+                        && mo.pattern.data_arguments().all(|x| is_data_variable(&x))
+                    // Again skip the function symbol
                 })
             {
                 result.completed.push(mg.clone());
@@ -396,7 +426,8 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if mo.pattern.data_function_symbol() == symbol.copy() && mo.position == self.label
+                    if mo.pattern.data_function_symbol() == symbol.copy()
+                        && mo.position == self.label
                     {
                         // Reduced match obligation
                         for (index, t) in mo.pattern.data_arguments().enumerate() {
@@ -428,7 +459,8 @@ impl State {
 
         trace!(
             "=== compute_derivative(symbol = {}, label = {}) ===",
-            symbol, self.label
+            symbol,
+            self.label
         );
         trace!("Match goals: {{");
         for mg in &self.match_goals {
@@ -490,7 +522,6 @@ impl State {
     }
 }
 
-
 /// Adds the given function symbol to the indexed symbols. Errors when a
 /// function symbol is overloaded with different arities.
 fn add_symbol(
@@ -500,8 +531,7 @@ fn add_symbol(
 ) {
     if let Some(x) = symbols.get(&function_symbol) {
         assert_eq!(
-            *x,
-            arity,
+            *x, arity,
             "Function symbol {} occurs with different arities",
             function_symbol,
         );
@@ -557,12 +587,16 @@ fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut HashMap<DataFunctionSym
             t
         );
 
-        add_symbol(t.data_function_symbol().protect(), t.data_arguments().len(), symbols);
+        add_symbol(
+            t.data_function_symbol().protect(),
+            t.data_arguments().len(),
+            symbols,
+        );
         for arg in t.data_arguments() {
             find_symbols(&arg.into(), symbols);
         }
     } else if is_data_machine_number(t) {
-        // Ignore machine numbers during matching?        
+        // Ignore machine numbers during matching?
     } else if !is_data_variable(t) {
         panic!("Unexpected term {:?}", t);
     }

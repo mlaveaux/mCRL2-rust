@@ -1,5 +1,8 @@
-use std::alloc::{System, GlobalAlloc, Layout};
-use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+use std::alloc::GlobalAlloc;
+use std::alloc::Layout;
+use std::alloc::System;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::Relaxed;
 
 /// An allocator that can be used globally to count metrics
 /// on the allocations performed.
@@ -8,7 +11,6 @@ pub struct AllocCounter;
 static NUMBER_OF_ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
 
 impl AllocCounter {
-
     /// Returns the total number of allocations since program start.
     #[allow(dead_code)]
     pub fn number_of_allocations(&self) -> usize {
@@ -29,4 +31,3 @@ unsafe impl GlobalAlloc for AllocCounter {
         System.dealloc(ptr, layout);
     }
 }
-

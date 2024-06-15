@@ -2,7 +2,7 @@
 //! This crate defines general utility functions.
 //!
 //! This crate does not use unsafe code.
- 
+
 #![forbid(unsafe_code)]
 
 pub mod global_guard;

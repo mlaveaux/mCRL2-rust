@@ -9,13 +9,13 @@ pub mod ffi {
 
         #[namespace = "mcrl2::data::detail"]
         type RewriterJitty;
-        
+
         #[namespace = "mcrl2::data::detail"]
         type RewriterCompilingJitty;
 
         #[namespace = "atermpp"]
         type aterm = crate::atermpp::ffi::aterm;
-        
+
         #[namespace = "atermpp::detail"]
         type _aterm = crate::atermpp::ffi::_aterm;
 
@@ -29,28 +29,37 @@ pub mod ffi {
         ) -> Result<UniquePtr<aterm>>;
 
         /// Parses the given text v: Sort as a variable and typechecks it using the given data specification
-        fn parse_variable(
-            text: &str,
-            data_spec: &data_specification,
-        ) -> Result<UniquePtr<aterm>>;
+        fn parse_variable(text: &str, data_spec: &data_specification) -> Result<UniquePtr<aterm>>;
 
         /// Returns the data equations for the given specification.
-        fn get_data_specification_equations(data_spec: &data_specification) -> UniquePtr<CxxVector<aterm>>;
+        fn get_data_specification_equations(
+            data_spec: &data_specification,
+        ) -> UniquePtr<CxxVector<aterm>>;
 
         /// Returns the data constructors for the given sort.
-        unsafe fn get_data_specification_constructors(data_spec: &data_specification, sort: *const _aterm) -> UniquePtr<CxxVector<aterm>>;
+        unsafe fn get_data_specification_constructors(
+            data_spec: &data_specification,
+            sort: *const _aterm,
+        ) -> UniquePtr<CxxVector<aterm>>;
 
         /// Creates an instance of the jitty rewriter.
         fn create_jitty_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJitty>;
 
         /// Creates an instance of the compiling jitty rewriter.
-        fn create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterCompilingJitty>;
+        fn create_jitty_compiling_rewriter(
+            data_spec: &data_specification,
+        ) -> UniquePtr<RewriterCompilingJitty>;
 
         /// Rewrites the given term to normal form.
-        unsafe fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: *const _aterm) -> UniquePtr<aterm>;   
+        unsafe fn rewrite(
+            rewriter: Pin<&mut RewriterJitty>,
+            term: *const _aterm,
+        ) -> UniquePtr<aterm>;
 
         /// Clone the data specification
-        fn data_specification_clone(data_spec: &data_specification) -> UniquePtr<data_specification>;
+        fn data_specification_clone(
+            data_spec: &data_specification,
+        ) -> UniquePtr<data_specification>;
 
         /// Obtain the index assigned internally to every data function symbol.
         unsafe fn get_data_function_symbol_index(term: *const _aterm) -> usize;
@@ -60,7 +69,7 @@ pub mod ffi {
 
         /// Create the data::false term
         fn false_term() -> UniquePtr<aterm>;
-        
+
         // For data::variable
         unsafe fn is_data_variable(term: *const _aterm) -> bool;
 
@@ -70,7 +79,7 @@ pub mod ffi {
         /// Creates an sorted data variable, must be within in a critical section.
         unsafe fn create_sorted_data_variable(name: String, sort: *const _aterm) -> *const _aterm;
 
-        // For data::function_symbol        
+        // For data::function_symbol
         unsafe fn is_data_function_symbol(term: *const _aterm) -> bool;
 
         /// Creates an unprotected data function symbol, must be within in a critical section.
@@ -80,8 +89,8 @@ pub mod ffi {
         unsafe fn is_data_sort_expression(term: *const _aterm) -> bool;
         unsafe fn is_data_basic_sort(term: *const _aterm) -> bool;
         unsafe fn is_data_function_sort(term: *const _aterm) -> bool;
-        
-        // For data::data_expression        
+
+        // For data::data_expression
         unsafe fn is_data_where_clause(term: *const _aterm) -> bool;
         unsafe fn is_data_abstraction(term: *const _aterm) -> bool;
         unsafe fn is_data_untyped_identifier(term: *const _aterm) -> bool;

@@ -1,6 +1,8 @@
 //! Defines helper types
 
-use std::{cell::Cell, marker::PhantomData, sync::MutexGuard};
+use std::cell::Cell;
+use std::marker::PhantomData;
+use std::sync::MutexGuard;
 
 /// Indicates that a type is !Sync
 pub type PhantomUnsync = PhantomData<Cell<()>>;

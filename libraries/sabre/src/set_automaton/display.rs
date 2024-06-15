@@ -1,9 +1,12 @@
 use itertools::Itertools;
 
-use crate::set_automaton::{SetAutomaton, State};
+use crate::set_automaton::SetAutomaton;
+use crate::set_automaton::State;
 use core::fmt;
 
-use super::{MatchAnnouncement, MatchObligation, Transition};
+use super::MatchAnnouncement;
+use super::MatchObligation;
+use super::Transition;
 
 impl<M> fmt::Debug for SetAutomaton<M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -87,10 +90,12 @@ impl<'a, M> fmt::Display for DotFormatter<'a, M> {
         }
 
         for (i, s) in self.automaton.states.iter().enumerate() {
-            let match_goals = s
-                .match_goals
-                .iter()
-                .format_with("\\n", |goal, f| f(&format_args!("{}", html_escape::encode_safe(&format!("{}", goal)))));
+            let match_goals = s.match_goals.iter().format_with("\\n", |goal, f| {
+                f(&format_args!(
+                    "{}",
+                    html_escape::encode_safe(&format!("{}", goal))
+                ))
+            });
 
             writeln!(
                 f,
@@ -100,15 +105,15 @@ impl<'a, M> fmt::Display for DotFormatter<'a, M> {
         }
 
         for ((i, _), tr) in &self.automaton.transitions {
-            let announcements = tr
-                .announcements
-                .iter()
-                .format_with(", ", |(announcement, _), f| {
-                    f(&format_args!(
-                        "{}@{}",
-                        announcement.rule.rhs, announcement.position
-                    ))
-                });
+            let announcements =
+                tr.announcements
+                    .iter()
+                    .format_with(", ", |(announcement, _), f| {
+                        f(&format_args!(
+                            "{}@{}",
+                            announcement.rule.rhs, announcement.position
+                        ))
+                    });
 
             if tr.destinations.is_empty() {
                 if self.show_final {

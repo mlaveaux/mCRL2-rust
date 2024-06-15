@@ -4,9 +4,11 @@ use std::fmt;
 use ahash::AHashSet;
 use log::trace;
 
-use crate::aterm::{ATerm, TermPool, Symbol};
+use crate::aterm::ATerm;
+use crate::aterm::Symbol;
+use crate::aterm::TermPool;
 
-/// This can be used to construct a term from a given input of (inductive) type I, 
+/// This can be used to construct a term from a given input of (inductive) type I,
 /// without using the system stack, i.e. recursion. See evaluate.
 #[derive(Default)]
 pub struct TermBuilder<I, C> {
@@ -54,7 +56,7 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
 
     /// This can be used to construct a term from a given input of (inductive)
     /// type I, without using the system stack, i.e. recursion.
-    /// 
+    ///
     /// The `transformer` function is applied to every instance I, which can put
     /// more generate more inputs using a so-called argument stack and some
     /// instance C that is used to construct the result term. Alternatively, it
@@ -178,7 +180,6 @@ impl<'a, I, C> ArgStack<'a, I, C> {
         self.terms.push(ATerm::default());
     }
 }
-
 
 impl<I: fmt::Debug, C: fmt::Debug> fmt::Debug for TermBuilder<I, C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

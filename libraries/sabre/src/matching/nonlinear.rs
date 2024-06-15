@@ -1,9 +1,14 @@
 use std::fmt;
 
 use itertools::Itertools;
-use mcrl2::data::{DataVariable, DataVariableRef, is_data_variable};
+use mcrl2::data::is_data_variable;
+use mcrl2::data::DataVariable;
+use mcrl2::data::DataVariableRef;
 
-use crate::{utilities::{ExplicitPosition, PositionIndexed, PositionIterator}, Rule};
+use crate::utilities::ExplicitPosition;
+use crate::utilities::PositionIndexed;
+use crate::utilities::PositionIterator;
+use crate::Rule;
 
 /// An equivalence class is a variable with (multiple) positions. This is
 /// necessary for non-linear patterns.
@@ -36,14 +41,17 @@ pub fn derive_equivalence_classes(rule: &Rule) -> Vec<EquivalenceClass> {
     var_equivalences
 }
 
-
 /// Checks if the equivalence classes hold for the given term.
 pub fn check_equivalence_classes<'a, T, P>(term: &'a P, eqs: &[EquivalenceClass]) -> bool
-    where P: PositionIndexed<Target<'a> = T> + 'a,
-          T: PartialEq 
+where
+    P: PositionIndexed<Target<'a> = T> + 'a,
+    T: PartialEq,
 {
     eqs.iter().all(|ec| {
-        debug_assert!(ec.positions.len() >= 2, "An equivalence class must contain at least two positions");
+        debug_assert!(
+            ec.positions.len() >= 2,
+            "An equivalence class must contain at least two positions"
+        );
 
         // The term at the first position must be equivalent to all other positions.
         let mut iter_pos = ec.positions.iter();
@@ -53,7 +61,11 @@ pub fn check_equivalence_classes<'a, T, P>(term: &'a P, eqs: &[EquivalenceClass]
 }
 
 /// Adds the position of a variable to the equivalence classes
-fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &DataVariableRef<'_>, pos: ExplicitPosition) {
+fn update_equivalences(
+    ve: &mut Vec<EquivalenceClass>,
+    variable: &DataVariableRef<'_>,
+    pos: ExplicitPosition,
+) {
     // Check if the variable was seen before
     if ve.iter().any(|ec| ec.variable.copy() == *variable) {
         for ec in ve.iter_mut() {
@@ -86,31 +98,41 @@ impl fmt::Display for EquivalenceClass {
 #[cfg(test)]
 mod tests {
     use ahash::AHashSet;
-    use mcrl2::{aterm::{ATermRef, TermPool}, data::DataVariable};
+    use mcrl2::aterm::ATermRef;
+    use mcrl2::aterm::TermPool;
+    use mcrl2::data::DataVariable;
 
-    use crate::{utilities::to_untyped_data_expression, test_utility::create_rewrite_rule};
+    use crate::test_utility::create_rewrite_rule;
+    use crate::utilities::to_untyped_data_expression;
 
     use super::*;
 
     #[test]
-    fn test_derive_equivalence_classes()
-    {                
+    fn test_derive_equivalence_classes() {
         let mut tp = TermPool::new();
-        let eq: Vec<EquivalenceClass> = derive_equivalence_classes(&create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]).unwrap());
+        let eq: Vec<EquivalenceClass> = derive_equivalence_classes(
+            &create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]).unwrap(),
+        );
 
-        assert_eq!(eq,
-            vec![
-                EquivalenceClass {
-                    variable: DataVariable::new(&mut tp, "x").into(),
-                    positions: vec![ExplicitPosition::new(&[2]), ExplicitPosition::new(&[3, 2])]
-                },
-            ], "The resulting config stack is not as expected");
+        assert_eq!(
+            eq,
+            vec![EquivalenceClass {
+                variable: DataVariable::new(&mut tp, "x").into(),
+                positions: vec![ExplicitPosition::new(&[2]), ExplicitPosition::new(&[3, 2])]
+            },],
+            "The resulting config stack is not as expected"
+        );
 
         // Check the equivalence class for an example
         let term = tp.from_string("f(a(b), h(a(b)))").unwrap();
         let expression = to_untyped_data_expression(&mut tp, &term, &AHashSet::new());
 
         let t: &ATermRef<'_> = &expression;
-        assert!(check_equivalence_classes(t, &eq), "The equivalence classes are not checked correctly, equivalences: {:?} and term {}", &eq, &expression);
+        assert!(
+            check_equivalence_classes(t, &eq),
+            "The equivalence classes are not checked correctly, equivalences: {:?} and term {}",
+            &eq,
+            &expression
+        );
     }
 }

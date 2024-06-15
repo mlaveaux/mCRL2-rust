@@ -4,10 +4,12 @@
 //! The parse_rec module contains functions for loading a REC file.
 //!
 //! This crate does not use any unsafe code.
- 
+
 #![forbid(unsafe_code)]
 
 mod parse_rec;
 mod syntax;
 
-pub use parse_rec::{from_string, load_REC_from_strings, load_REC_from_file};
+pub use parse_rec::from_string;
+pub use parse_rec::load_REC_from_file;
+pub use parse_rec::load_REC_from_strings;

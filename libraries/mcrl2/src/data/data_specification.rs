@@ -1,11 +1,18 @@
 use std::error::Error;
 
-use mcrl2_sys::{cxx::{UniquePtr, self}, data::ffi};
+use mcrl2_sys::cxx::UniquePtr;
+use mcrl2_sys::cxx::{self};
+use mcrl2_sys::data::ffi;
 use utilities::lock_global;
 
-use crate::aterm::{ATerm, ATermList, ATermRef};
+use crate::aterm::ATerm;
+use crate::aterm::ATermList;
+use crate::aterm::ATermRef;
 
-use super::{DataVariable, DataExpression, DataFunctionSymbol, SortExpressionRef};
+use super::DataExpression;
+use super::DataFunctionSymbol;
+use super::DataVariable;
+use super::SortExpressionRef;
 
 /// A safe abstraction for the mCRL2 data specification.
 pub struct DataSpecification {
@@ -18,9 +25,7 @@ impl DataSpecification {
         let _guard = lock_global();
         let data_spec = ffi::parse_data_specification(text)?;
 
-        Ok(DataSpecification {
-            data_spec,
-        })
+        Ok(DataSpecification { data_spec })
     }
 
     /// Parses the given text as a data expression for the spec.
@@ -51,9 +56,9 @@ impl DataSpecification {
         let t: ATermRef<'_> = sort.copy().into();
         unsafe {
             ffi::get_data_specification_constructors(&self.data_spec, t.get())
-            .iter()
-            .map(|x| ATerm::from(x).into())
-            .collect()
+                .iter()
+                .map(|x| ATerm::from(x).into())
+                .collect()
         }
     }
 }

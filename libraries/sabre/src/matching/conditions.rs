@@ -1,4 +1,6 @@
-use crate::{utilities::{create_var_map, SemiCompressedTermTree}, Rule};
+use crate::utilities::create_var_map;
+use crate::utilities::SemiCompressedTermTree;
+use crate::Rule;
 
 /// This is a [Rule] condition stored as semi compressed trees such that they can be
 /// subsituted efficiently.
@@ -14,7 +16,6 @@ pub struct EMACondition {
 
 /// Computes the extended condition from a given rewrite rule.
 pub fn extend_conditions(rule: &Rule) -> Vec<EMACondition> {
-           
     let var_map = create_var_map(&rule.lhs.clone().into());
     let mut conditions = vec![];
 

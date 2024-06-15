@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use glam::Vec3;
-use io::{index_edge, LabelledTransitionSystem, Edge};
+use io::index_edge;
+use io::Edge;
+use io::LabelledTransitionSystem;
 use log::debug;
 use rand::Rng;
 
@@ -43,16 +45,14 @@ impl GraphLayout {
     }
 
     /// Update the layout one step using spring forces for transitions and repulsion between states.
-    /// 
+    ///
     /// Returns true iff the layout is stable.
     pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) -> bool {
-
         for (state_index, state) in self.lts.states.iter().enumerate() {
             // Ignore the last state since it cannot repulse with any other state.
             if state_index < self.layout_states.len() {
                 // Use split_at_mut to get two mutable slices at every split point.
-                let (left_layout, right_layout) =
-                    self.layout_states.split_at_mut(state_index + 1);
+                let (left_layout, right_layout) = self.layout_states.split_at_mut(state_index + 1);
                 let state_layout = left_layout.last_mut().unwrap();
 
                 // Accumulate repulsion forces between vertices.

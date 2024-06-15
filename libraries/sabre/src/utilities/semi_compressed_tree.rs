@@ -1,12 +1,17 @@
 // Author(s): Mark Bouwman
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::utilities::ExplicitPosition;
-use mcrl2::{
-    aterm::{ATerm, TermPool, ATermRef, Symbol, TermBuilder, Yield},
-    data::{DataVariable, is_data_variable}
-};
+use mcrl2::aterm::ATerm;
+use mcrl2::aterm::ATermRef;
+use mcrl2::aterm::Symbol;
+use mcrl2::aterm::TermBuilder;
+use mcrl2::aterm::TermPool;
+use mcrl2::aterm::Yield;
+use mcrl2::data::is_data_variable;
+use mcrl2::data::DataVariable;
 
 /// A SemiCompressedTermTree (SCTT) is a mix between a [ATerm] and a syntax tree and is used
 /// to represent the rhs of rewrite rules and the lhs and rhs of conditions.
@@ -40,9 +45,10 @@ pub struct ExplicitNode {
 
 use SemiCompressedTermTree::*;
 
-use super::{PositionIndexed, PositionIterator};
+use super::PositionIndexed;
+use super::PositionIterator;
 
-pub type SCCTBuilder = TermBuilder::<&'static SemiCompressedTermTree, &'static Symbol>;
+pub type SCCTBuilder = TermBuilder<&'static SemiCompressedTermTree, &'static Symbol>;
 
 impl SemiCompressedTermTree {
     /// Given an [ATerm] and a term pool this function instantiates the SCTT and computes a [ATerm].
@@ -53,29 +59,38 @@ impl SemiCompressedTermTree {
     /// evaluate will encounter an ExplicitNode and make two recursive calls to get the subterms.
     /// Both these recursive calls will return the term '0'.
     /// The term pool will be used to construct the term minus(0, 0).
-    pub fn evaluate_with<'a>(&'a self, builder: &mut SCCTBuilder, t: &ATermRef<'_>, tp: &mut TermPool) -> ATerm {
-
+    pub fn evaluate_with<'a>(
+        &'a self,
+        builder: &mut SCCTBuilder,
+        t: &ATermRef<'_>,
+        tp: &mut TermPool,
+    ) -> ATerm {
         // TODO: Figure out if this can be done properly. This is safe because evaluate will always leave the
         // underlying vectors empty.
-        let builder: &mut TermBuilder::<&'a SemiCompressedTermTree, &'a Symbol> = unsafe {
-            std::mem::transmute(builder)
-        };
+        let builder: &mut TermBuilder<&'a SemiCompressedTermTree, &'a Symbol> =
+            unsafe { std::mem::transmute(builder) };
 
-        builder.evaluate(tp, self, |_tp, args, node| {
-                match node {
-                    Explicit(node) => {
-                        // Create an ATerm with as arguments all the evaluated semi compressed term trees.    
-                        for i in 0..node.children.len() {
-                            args.push(&node.children[i]);
+        builder
+            .evaluate(
+                tp,
+                self,
+                |_tp, args, node| {
+                    match node {
+                        Explicit(node) => {
+                            // Create an ATerm with as arguments all the evaluated semi compressed term trees.
+                            for i in 0..node.children.len() {
+                                args.push(&node.children[i]);
+                            }
+
+                            Ok(Yield::Construct(&node.head))
                         }
-
-                        Ok(Yield::Construct(&node.head))
+                        Compressed(ct) => Ok(Yield::Term(ct.clone())),
+                        Variable(p) => Ok(Yield::Term(t.get_position(p).protect())),
                     }
-                    Compressed(ct) => Ok(Yield::Term(ct.clone())),
-                    Variable(p) => Ok(Yield::Term(t.get_position(p).protect())),
-                }
-            }, 
-            |tp, symbol, args| { Ok(tp.create(symbol, args)) } ).unwrap()
+                },
+                |tp, symbol, args| Ok(tp.create(symbol, args)),
+            )
+            .unwrap()
     }
 
     /// The same as [evaluate_with], but allocates a [SCCTBuilder] internally.
@@ -130,7 +145,7 @@ impl SemiCompressedTermTree {
             }
             seen.insert(r);
         }
-        
+
         false
     }
 
@@ -174,16 +189,17 @@ pub fn create_var_map(t: &ATerm) -> HashMap<DataVariable, ExplicitPosition> {
 mod tests {
     use super::*;
     use ahash::AHashSet;
-    use mcrl2::aterm::{TermPool, apply};
+    use mcrl2::aterm::apply;
+    use mcrl2::aterm::TermPool;
 
     /// Converts a slice of static strings into a set of owned strings
-    /// 
+    ///
     /// example:
     ///     make_var_map(["x"])
     fn var_map(vars: &[&str]) -> AHashSet<String> {
-        AHashSet::from_iter(vars.iter().map(|x| String::from(*x) ))
+        AHashSet::from_iter(vars.iter().map(|x| String::from(*x)))
     }
-    
+
     /// Convert terms in variables to a [DataVariable].
     pub fn convert_variables(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
         apply(tp, t, &|tp, arg| {
@@ -220,9 +236,7 @@ mod tests {
     fn test_not_compressible() {
         let mut tp = TermPool::new();
         let t = {
-            let tmp = tp
-                .from_string("f(x,x)")
-                .unwrap();
+            let tmp = tp.from_string("f(x,x)").unwrap();
             convert_variables(&mut tp, &tmp, &var_map(&["x"]))
         };
 
@@ -288,7 +302,7 @@ mod tests {
     #[test]
     fn test_create_varmap() {
         let mut tp = TermPool::new();
-        let t =  {
+        let t = {
             let tmp = tp.from_string("f(x,x)").unwrap();
             convert_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
         };
@@ -301,7 +315,7 @@ mod tests {
     #[test]
     fn test_is_duplicating() {
         let mut tp = TermPool::new();
-        let t_rhs =  {
+        let t_rhs = {
             let tmp = tp.from_string("f(x,x)").unwrap();
             convert_variables(&mut tp, &tmp, &AHashSet::from([String::from("x")]))
         };
@@ -309,8 +323,11 @@ mod tests {
         // Make a variable map with only x@1.
         let mut map = HashMap::new();
         map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
-        
+
         let sctt = SemiCompressedTermTree::from_term(&t_rhs, &map);
-        assert!(sctt.contains_duplicate_var_references(), "This sctt is duplicating");
+        assert!(
+            sctt.contains_duplicate_var_references(),
+            "This sctt is duplicating"
+        );
     }
 }

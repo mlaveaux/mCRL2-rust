@@ -1,8 +1,7 @@
-use std::{
-    cell::UnsafeCell,
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-};
+use std::cell::UnsafeCell;
+use std::marker::PhantomData;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use mcrl2_sys::atermpp::ffi;
 
@@ -38,7 +37,7 @@ impl<'a, T: ?Sized> BfTermPool<T> {
     /// Provides write access to the underlying object.
     pub fn write(&'a self) -> BfTermPoolWrite<'a, T> {
         ffi::lock_exclusive();
-        
+
         BfTermPoolWrite {
             mutex: self,
             _marker: Default::default(),
@@ -46,9 +45,9 @@ impl<'a, T: ?Sized> BfTermPool<T> {
     }
 
     /// Provides read access to the underlying object.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// Assumes that we are in an exclusive section.
     pub unsafe fn get(&'a self) -> &T {
         unsafe { &*self.object.get() }
@@ -128,7 +127,6 @@ pub struct BfTermPoolThreadWrite<'a, T: ?Sized> {
 }
 
 impl<'a, T: ?Sized> BfTermPoolThreadWrite<'a, T> {
-
     /// Unlocks the guard prematurely, but returns whether the shared section was actually left.
     pub fn unlock(&mut self) -> bool {
         if self.locked {

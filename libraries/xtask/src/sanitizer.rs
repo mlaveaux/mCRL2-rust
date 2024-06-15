@@ -4,17 +4,16 @@ pub use duct::cmd;
 
 #[allow(clippy::ptr_arg)]
 fn add_target_flag(_arguments: &mut Vec<String>) {
-
     #[cfg(target_os = "linux")]
     {
         _arguments.push("--target".to_string());
-        _arguments.push( "x86_64-unknown-linux-gnu".to_string());        
+        _arguments.push("x86_64-unknown-linux-gnu".to_string());
     }
 
     #[cfg(target_os = "macos")]
     {
         _arguments.push("--target".to_string());
-        _arguments.push( "x86_64-apple-darwin".to_string());
+        _arguments.push("x86_64-apple-darwin".to_string());
     }
 }
 
@@ -49,10 +48,7 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
 /// This only works under Linux and MacOS currently and requires the nightly toolchain.
 ///
 pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let mut arguments: Vec<String> = vec![
-        "test".to_string(),
-        "-Zbuild-std".to_string(),
-    ];
+    let mut arguments: Vec<String> = vec!["test".to_string(), "-Zbuild-std".to_string()];
 
     add_target_flag(&mut arguments);
     arguments.extend(cargo_arguments);

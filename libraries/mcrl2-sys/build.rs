@@ -15,7 +15,6 @@ fn add_prefix(prefix: String, paths: &[&str]) -> Vec<String> {
 /// Add platform specific compile flags and definitions.
 #[allow(unused_variables)]
 fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
-
     #[cfg(unix)]
     build
         .flag_if_supported("-Wall")
@@ -42,7 +41,6 @@ fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
 
 /// Add compiler specific flags to enable C++17 compilation.
 fn add_cpp_flags(build: &mut Build) {
-
     #[cfg(windows)]
     build.flag_if_supported("/std:c++17");
 
@@ -188,7 +186,7 @@ fn main() {
         }
         _ => {
             panic!("Unsupported profile {}", profile);
-        },
+        }
     }
 
     // Enable thread safety since Rust executes its tests at least by default, and allow threading in general.

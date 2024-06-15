@@ -1,6 +1,6 @@
 use slint::slint;
 
-slint!{
+slint! {
     import { StandardButton, Button } from "std-widgets.slint";
 
     export component ErrorDialog inherits Dialog {
@@ -10,14 +10,14 @@ slint!{
 
         in property <string> error_text: "Message";
         in property <string> error_title: "Error!";
-    
+
         VerticalLayout {
             Text {
                 vertical-alignment: center;
                 text: error_text;
-            }    
+            }
         }
-    
+
         StandardButton { kind: ok; }
     }
 }

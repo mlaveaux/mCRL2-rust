@@ -5,11 +5,11 @@
 
 use fs_extra as fsx;
 use glob::glob;
-use std::{
-    env,
-    fs::create_dir_all,
-    path::{Path, PathBuf}, error::Error,
-};
+use std::env;
+use std::error::Error;
+use std::fs::create_dir_all;
+use std::path::Path;
+use std::path::PathBuf;
 
 use duct::cmd;
 

@@ -1,12 +1,14 @@
-use std::{cmp::min, fmt};
+use std::cmp::min;
+use std::fmt;
 
 use crate::utilities::ExplicitPosition;
-use ahash::{HashMap, HashMapExt};
+use ahash::HashMap;
+use ahash::HashMapExt;
 use log::trace;
 use smallvec::SmallVec;
 
-use super::{MatchObligation, MatchAnnouncement};
-
+use super::MatchAnnouncement;
+use super::MatchObligation;
 
 /// A match goal contains a number of obligations (positions that must still be
 /// matched) and the corresponding rule that can be announced as being a match.
@@ -75,7 +77,6 @@ impl MatchGoal {
         goals
     }
 
-
     /// Returns a Vec where each element is a partition containing the goals and
     /// the positions. This partitioning can be done in multiple ways, but
     /// currently match goals are equivalent when their match announcements have
@@ -98,7 +99,7 @@ impl MatchGoal {
                 }
             }
             partitions.push((goals, all_positions));
-            partitions            
+            partitions
         } else {
             // Create a mapping from positions to goals, goals are represented with an index
             // on function parameter goals
@@ -113,7 +114,8 @@ impl MatchGoal {
             }
 
             // Sort the positions. They are now in depth first order.
-            let mut all_positions: Vec<ExplicitPosition> = position_to_goals.keys().cloned().collect();
+            let mut all_positions: Vec<ExplicitPosition> =
+                position_to_goals.keys().cloned().collect();
             all_positions.sort_unstable();
 
             // Compute the partitions, finished when all positions are processed
@@ -167,7 +169,7 @@ impl MatchGoal {
 
         partitions
     }
-    
+
     // Assumes two slices are of the same length and computes to what length they are equal
     fn common_prefix_length(pos1: &[usize], pos2: &[usize]) -> usize {
         debug_assert_eq!(
@@ -197,7 +199,6 @@ impl MatchGoal {
             }
 
             if p1.indices[index] != p2.indices[index] {
-               
                 return false;
             }
             index += 1;

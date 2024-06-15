@@ -1,23 +1,23 @@
 use core::fmt;
 
 use ahash::AHashSet;
-use mcrl2::aterm::{ATerm, TermPool};
-use sabre::{
-    rewrite_specification::{Condition, RewriteSpecification, Rule},
-    utilities::to_untyped_data_expression,
-};
+use mcrl2::aterm::ATerm;
+use mcrl2::aterm::TermPool;
+use sabre::rewrite_specification::Condition;
+use sabre::rewrite_specification::RewriteSpecification;
+use sabre::rewrite_specification::Rule;
+use sabre::utilities::to_untyped_data_expression;
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
 /// Parsing a REC file results in a RewriteSpecificationSyntax.
 #[derive(Clone, Default, Debug)]
 pub struct RewriteSpecificationSyntax {
     pub rewrite_rules: Vec<RewriteRuleSyntax>,
-    pub constructors: Vec<(String,usize)>,
+    pub constructors: Vec<(String, usize)>,
     pub variables: Vec<String>,
 }
 
 impl RewriteSpecificationSyntax {
-
     pub fn to_rewrite_spec(&self, tp: &mut TermPool) -> RewriteSpecification {
         // The names for all variables
         let variables = AHashSet::from_iter(self.variables.clone());
@@ -25,7 +25,6 @@ impl RewriteSpecificationSyntax {
         // Store the rewrite rules in the maximally shared term storage
         let mut rewrite_rules = Vec::new();
         for rule in &self.rewrite_rules {
-
             // Convert the conditions.
             let mut conditions = vec![];
             for c in &rule.conditions {
@@ -36,7 +35,6 @@ impl RewriteSpecificationSyntax {
                 };
                 conditions.push(condition);
             }
-            
 
             rewrite_rules.push(Rule {
                 lhs: to_untyped_data_expression(tp, &rule.lhs, &variables),
@@ -45,17 +43,13 @@ impl RewriteSpecificationSyntax {
             });
         }
 
-        RewriteSpecification {
-            rewrite_rules,
-        }
+        RewriteSpecification { rewrite_rules }
     }
 
     pub fn merge(&mut self, include_spec: &RewriteSpecificationSyntax) {
-        self
-            .rewrite_rules
+        self.rewrite_rules
             .extend_from_slice(&include_spec.rewrite_rules);
-        self
-            .constructors
+        self.constructors
             .extend_from_slice(&include_spec.constructors);
 
         for s in &include_spec.variables {

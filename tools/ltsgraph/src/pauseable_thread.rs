@@ -1,4 +1,10 @@
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc, Condvar, Mutex}, thread::{Builder, JoinHandle}};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Condvar;
+use std::sync::Mutex;
+use std::thread::Builder;
+use std::thread::JoinHandle;
 
 /// A thread that can be paused and stopped.
 pub struct PauseableThread {
@@ -13,15 +19,14 @@ struct PauseableThreadShared {
 }
 
 impl PauseableThread {
-
     /// Spawns a new thread that runs `loop_function` continuously while enabled.
-    /// 
+    ///
     /// The loop_function can return false to pause the thread.
-    pub fn new<F>(name: &str, loop_function: F) -> Result<PauseableThread, std::io::Error> 
-        where F: Fn() -> bool + Send + 'static,
-        {
-        
-        let shared = Arc::new(PauseableThreadShared{
+    pub fn new<F>(name: &str, loop_function: F) -> Result<PauseableThread, std::io::Error>
+    where
+        F: Fn() -> bool + Send + 'static,
+    {
+        let shared = Arc::new(PauseableThreadShared {
             running: AtomicBool::new(true),
             paused: Mutex::new(false),
             cond_var: Condvar::new(),
@@ -29,30 +34,27 @@ impl PauseableThread {
 
         let thread = {
             let shared = shared.clone();
-            Builder::new()
-                .name(name.to_string())
-                .spawn(move || {
-                    while shared.running.load(std::sync::atomic::Ordering::Relaxed) {
-
-                        // Check if paused is true and wait for it.
-                        {
-                            let mut paused = shared.paused.lock().unwrap();
-                            while *paused {
-                                paused = shared.cond_var.wait(paused).unwrap();
-                            }
-                        }
-
-                        if !loop_function() {
-                            // Pause the thread when requested by the loop function.
-                            *shared.paused.lock().unwrap() = true;
+            Builder::new().name(name.to_string()).spawn(move || {
+                while shared.running.load(std::sync::atomic::Ordering::Relaxed) {
+                    // Check if paused is true and wait for it.
+                    {
+                        let mut paused = shared.paused.lock().unwrap();
+                        while *paused {
+                            paused = shared.cond_var.wait(paused).unwrap();
                         }
                     }
-                })
+
+                    if !loop_function() {
+                        // Pause the thread when requested by the loop function.
+                        *shared.paused.lock().unwrap() = true;
+                    }
+                }
+            })
         }?;
 
         Ok(PauseableThread {
             handle: Some(thread),
-            shared
+            shared,
         })
     }
 
@@ -75,9 +77,7 @@ impl PauseableThread {
         // We notify the condvar that the value has changed.
         self.shared.cond_var.notify_one();
     }
-    
 }
-
 
 impl Drop for PauseableThread {
     fn drop(&mut self) {
@@ -99,7 +99,8 @@ mod tests {
         let thread = PauseableThread::new("test", move || {
             // Do nothing.
             true
-        }).unwrap();
+        })
+        .unwrap();
 
         thread.stop();
     }

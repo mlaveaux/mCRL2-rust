@@ -1,29 +1,42 @@
 use std::cell::RefCell;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader};
+use std::fmt::Debug;
+use std::fs::File;
+use std::fs::{self};
+use std::io::BufRead;
+use std::io::BufReader;
 use std::rc::Rc;
 use std::time::Instant;
-use std::fmt::Debug;
 
 use ahash::AHashSet;
-use anyhow::{Result as AnyResult, bail};
+use anyhow::bail;
+use anyhow::Result as AnyResult;
 use clap::ValueEnum;
 use mcrl2::aterm::TermPool;
-use mcrl2::data::{DataSpecification, JittyRewriter, DataExpression};
+use mcrl2::data::DataExpression;
+use mcrl2::data::DataSpecification;
+use mcrl2::data::JittyRewriter;
 use rec_tests::load_REC_from_file;
 use sabre::utilities::to_untyped_data_expression;
-use sabre::{InnermostRewriter, RewriteEngine, SabreRewriter, RewriteSpecification};
+use sabre::InnermostRewriter;
+use sabre::RewriteEngine;
+use sabre::RewriteSpecification;
+use sabre::SabreRewriter;
 
 #[derive(ValueEnum, Debug, Clone)]
 pub enum Rewriter {
     Jitty,
     Innermost,
-    Sabre
+    Sabre,
 }
 
 /// Rewrites the given expressions with the given data specification and optionally prints the result.
-pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename_dataspec: &str, filename_terms: &str, output: bool) -> AnyResult<()> {
-    
+pub fn rewrite_data_spec(
+    tp: Rc<RefCell<TermPool>>,
+    rewriter: Rewriter,
+    filename_dataspec: &str,
+    filename_terms: &str,
+    output: bool,
+) -> AnyResult<()> {
     // Read the data specification
     let data_spec_text = fs::read_to_string(filename_dataspec)?;
     let data_spec = DataSpecification::new(&data_spec_text)?;
@@ -32,9 +45,10 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
     let file = File::open(filename_terms).unwrap();
 
     // Read and convert the terms
-    let terms: Vec::<DataExpression> = BufReader::new(file).lines().map(|x| {
-        data_spec.parse(&x.unwrap()).unwrap()
-    }).collect();
+    let terms: Vec<DataExpression> = BufReader::new(file)
+        .lines()
+        .map(|x| data_spec.parse(&x.unwrap()).unwrap())
+        .collect();
 
     match rewriter {
         Rewriter::Jitty => {
@@ -50,11 +64,11 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                 }
             }
             println!("Jitty rewrite took {} ms", now.elapsed().as_millis());
-        },
-        Rewriter::Innermost => {    
+        }
+        Rewriter::Innermost => {
             let rewrite_spec = RewriteSpecification::from(data_spec.clone());
-            let mut inner_rewriter = InnermostRewriter::new(tp.clone(), &rewrite_spec);  
-        
+            let mut inner_rewriter = InnermostRewriter::new(tp.clone(), &rewrite_spec);
+
             // Read the file line by line, and return an iterator of the lines of the file.
             let now = Instant::now();
             for term in &terms {
@@ -64,13 +78,13 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
                 }
             }
             println!("Innermost rewrite took {} ms", now.elapsed().as_millis());
-        },
-        Rewriter::Sabre => {                
+        }
+        Rewriter::Sabre => {
             let rewrite_spec = RewriteSpecification::from(data_spec.clone());
-            let mut sabre_rewriter = SabreRewriter::new(tp.clone(), &rewrite_spec);  
-        
+            let mut sabre_rewriter = SabreRewriter::new(tp.clone(), &rewrite_spec);
+
             let now = Instant::now();
-            for term in &terms {                
+            for term in &terms {
                 let result = sabre_rewriter.rewrite(term.clone());
                 if output {
                     println!("{}", result)
@@ -84,7 +98,11 @@ pub fn rewrite_data_spec(tp: Rc<RefCell<TermPool>>, rewriter: Rewriter, filename
 }
 
 /// Rewrites the given REC specification.
-pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: bool) -> AnyResult<()> {
+pub fn rewrite_rec(
+    rewriter: Rewriter,
+    filename_specification: &str,
+    output: bool,
+) -> AnyResult<()> {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     let (syntax_spec, syntax_terms) =
@@ -105,10 +123,10 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
                 }
             }
             println!("Innermost rewrite took {} ms", now.elapsed().as_millis());
-        },
+        }
         Rewriter::Sabre => {
-            let mut sa = SabreRewriter::new(tp.clone(), &spec);        
-        
+            let mut sa = SabreRewriter::new(tp.clone(), &spec);
+
             let now = Instant::now();
             for term in &syntax_terms {
                 let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
@@ -118,7 +136,7 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
                 }
             }
             println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
-        },
+        }
         Rewriter::Jitty => {
             bail!("Cannot use REC specifications with mCRL2's jitty rewriter");
         }
@@ -126,4 +144,3 @@ pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: boo
 
     Ok(())
 }
-

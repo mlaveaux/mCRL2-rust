@@ -1,16 +1,19 @@
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    error::Error,
-    fs::{self, File},
-    io::{BufRead, Write},
-    path::Path,
-};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::env;
+use std::error::Error;
+use std::fs::File;
+use std::fs::{self};
+use std::io::BufRead;
+use std::io::Write;
+use std::path::Path;
 
 use duct::cmd;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
+use serde::Deserialize;
+use serde::Serialize;
+use strum::Display;
+use strum::EnumString;
 
 #[derive(Deserialize, Serialize)]
 struct MeasurementEntry {
@@ -121,7 +124,6 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
 
             // Run the benchmarks several times until one of them fails
             for _ in 0..5 {
-
                 match cmd("timeout", &arguments)
                     .stdout_capture()
                     .stderr_capture()
@@ -152,12 +154,9 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
                         break;
                     }
                 };
-            };
-            
-            serde_json::to_writer(
-                &mut result_file,
-                &measurements,
-            )?;
+            }
+
+            serde_json::to_writer(&mut result_file, &measurements)?;
 
             writeln!(&result_file)?;
         }
@@ -223,7 +222,7 @@ pub fn create_table(json_path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
                 print!("| {: >10}", "-");
             }
         }
-        
+
         println!();
     }
 

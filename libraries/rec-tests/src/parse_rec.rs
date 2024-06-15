@@ -1,15 +1,20 @@
-use std::{fs, error::Error};
+use std::error::Error;
+use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use mcrl2::aterm::{ATerm, TermPool, TermBuilder, Symbol, Yield};
+use mcrl2::aterm::ATerm;
+use mcrl2::aterm::Symbol;
+use mcrl2::aterm::TermBuilder;
+use mcrl2::aterm::TermPool;
+use mcrl2::aterm::Yield;
 use pest::iterators::Pair;
 use pest::Parser;
 use pest_derive::Parser;
 
-use crate::syntax::{
-    ConditionSyntax, RewriteRuleSyntax, RewriteSpecificationSyntax,
-};
+use crate::syntax::ConditionSyntax;
+use crate::syntax::RewriteRuleSyntax;
+use crate::syntax::RewriteSpecificationSyntax;
 
 #[derive(Parser)]
 #[grammar = "rec_grammar.pest"]
@@ -33,7 +38,7 @@ fn parse_REC(
 
     // Use Pest parser (generated automatically from the grammar.pest file)
     let mut pairs = RecParser::parse(Rule::rec_spec, contents)?;
-    
+
     // Get relevant sections from the REC file
     let pair = pairs.next().unwrap();
     let mut inner = pair.into_inner();
@@ -84,7 +89,10 @@ fn parse_REC(
 
 /// Load a REC specification from a specified file.
 #[allow(non_snake_case)]
-pub fn load_REC_from_file(tp: &mut TermPool, file: PathBuf) -> Result<(RewriteSpecificationSyntax, Vec<ATerm>), Box<dyn Error>> {
+pub fn load_REC_from_file(
+    tp: &mut TermPool,
+    file: PathBuf,
+) -> Result<(RewriteSpecificationSyntax, Vec<ATerm>), Box<dyn Error>> {
     let contents = fs::read_to_string(file.clone()).unwrap();
     parse_REC(tp, &contents, Some(file))
 }
@@ -130,7 +138,7 @@ fn parse_constructors(pair: Pair<Rule>) -> Vec<(String, usize)> {
     for decl in pair.into_inner() {
         debug_assert_eq!(decl.as_rule(), Rule::cons_decl);
         let mut inner = decl.into_inner();
-        let symbol = inner.next().unwrap().as_str().to_string();        
+        let symbol = inner.next().unwrap().as_str().to_string();
         let arity = inner.count() - 1;
         constructors.push((symbol, arity));
     }
@@ -197,10 +205,7 @@ fn parse_eval(tp: &mut TermPool, pair: Pair<Rule>) -> Vec<ATerm> {
 /// Constructs a ATerm from a string.
 pub fn from_string(tp: &mut TermPool, str: &str) -> Result<ATerm, Box<dyn Error>> {
     let mut pairs = RecParser::parse(Rule::term, str)?;
-    parse_term(
-        tp,
-        pairs.next().unwrap(),
-    )
+    parse_term(tp, pairs.next().unwrap())
 }
 
 /// Extracts data from parsed term.
@@ -209,35 +214,42 @@ fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> Result<ATerm, Box<dyn Erro
 
     let mut builder = TermBuilder::<Pair<'_, Rule>, Symbol>::new();
 
-    Ok(builder.evaluate(tp, pair, |tp, stack, pair| {
-        match pair.as_rule() {
-            Rule::term => {
-                let mut inner = pair.into_inner();
-                let head_symbol = inner.next().unwrap().as_str();
+    Ok(builder
+        .evaluate(
+            tp,
+            pair,
+            |tp, stack, pair| {
+                match pair.as_rule() {
+                    Rule::term => {
+                        let mut inner = pair.into_inner();
+                        let head_symbol = inner.next().unwrap().as_str();
 
-                // Queue applications for all the arguments.
-                let mut arity = 0;
-                if let Some(args) = inner.next() {
-                    for arg in args.into_inner() {
-                        stack.push(arg);
-                        arity += 1;
+                        // Queue applications for all the arguments.
+                        let mut arity = 0;
+                        if let Some(args) = inner.next() {
+                            for arg in args.into_inner() {
+                                stack.push(arg);
+                                arity += 1;
+                            }
+                        }
+
+                        Ok(Yield::Construct(tp.create_symbol(head_symbol, arity)))
+                    }
+                    _ => {
+                        panic!("Should be unreachable!")
                     }
                 }
-                
-                Ok(Yield::Construct(tp.create_symbol(head_symbol, arity)))
-            }
-            _ => {
-                panic!("Should be unreachable!")
-            }
-        }
-    }, |tp, symbol, args| {
-        Ok(tp.create(&symbol, args))
-    }).unwrap())
+            },
+            |tp, symbol, args| Ok(tp.create(&symbol, args)),
+        )
+        .unwrap())
 }
 
 // /Extracts data from parsed rewrite rule
 fn parse_rewrite_rule(tp: &mut TermPool, pair: Pair<Rule>) -> RewriteRuleSyntax {
-    debug_assert!(pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule);
+    debug_assert!(
+        pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule
+    );
 
     let mut inner = match pair.as_rule() {
         Rule::single_rewrite_rule => pair.into_inner().next().unwrap().into_inner(),
@@ -343,12 +355,20 @@ mod tests {
 
     #[test]
     fn test_parsing_rec() {
-        assert!(RecParser::parse(Rule::rec_spec, include_str!("../../../examples/REC/rec/missionaries.rec")).is_ok());
+        assert!(RecParser::parse(
+            Rule::rec_spec,
+            include_str!("../../../examples/REC/rec/missionaries.rec")
+        )
+        .is_ok());
     }
 
     #[test]
     fn loading_rec() {
         let mut tp = TermPool::new();
-        let _ = parse_REC(&mut tp, include_str!("../../../examples/REC/rec/missionaries.rec"), None);
+        let _ = parse_REC(
+            &mut tp,
+            include_str!("../../../examples/REC/rec/missionaries.rec"),
+            None,
+        );
     }
 }

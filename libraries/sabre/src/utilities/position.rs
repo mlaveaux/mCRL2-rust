@@ -1,7 +1,8 @@
 //! Module for storing positions of terms
 use core::fmt;
 use mcrl2::aterm::ATermRef;
-use smallvec::{smallvec, SmallVec};
+use smallvec::smallvec;
+use smallvec::SmallVec;
 use std::collections::VecDeque;
 
 /// An ExplicitPosition stores a list of position indices. The index starts at 1.
@@ -46,21 +47,22 @@ impl PositionIndexed for ATermRef<'_> {
         for index in &position.indices {
             result = result.arg(index - 1).upgrade(self); // Note that positions are 1 indexed.
         }
-        
+
         result
     }
 }
 
 pub trait PositionIndexed {
     type Target<'a>
-        where Self: 'a;
+    where
+        Self: 'a;
 
     /// Returns the Target at the given position.
     fn get_position<'a>(&'a self, position: &ExplicitPosition) -> Self::Target<'a>;
 }
 
 impl fmt::Display for ExplicitPosition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {       
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.indices.is_empty() {
             write!(f, "ε")?;
         } else {
@@ -112,7 +114,8 @@ impl<'a> Iterator for PositionIterator<'a> {
             for (i, argument) in term.arguments().enumerate() {
                 let mut new_position = pos.clone();
                 new_position.indices.push(i + 1);
-                self.queue.push_back((argument.upgrade(&term), new_position));
+                self.queue
+                    .push_back((argument.upgrade(&term), new_position));
             }
 
             Some((term, pos))
@@ -132,7 +135,10 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
-        assert_eq!(t.get_position(&ExplicitPosition::new(&[1, 1])), expected.copy());
+        assert_eq!(
+            t.get_position(&ExplicitPosition::new(&[1, 1])),
+            expected.copy()
+        );
     }
 
     #[test]

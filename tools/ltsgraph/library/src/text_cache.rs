@@ -1,5 +1,13 @@
-use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping, SwashCache};
-use tiny_skia::{PathBuilder, PixmapMut, PixmapPaint, Transform};
+use cosmic_text::Attrs;
+use cosmic_text::Buffer;
+use cosmic_text::FontSystem;
+use cosmic_text::Metrics;
+use cosmic_text::Shaping;
+use cosmic_text::SwashCache;
+use tiny_skia::PathBuilder;
+use tiny_skia::PixmapMut;
+use tiny_skia::PixmapPaint;
+use tiny_skia::Transform;
 
 pub struct TextCache {
     /// A FontSystem provides access to detected system fonts, create one per application
@@ -91,9 +99,12 @@ impl TextCache {
                             &path,
                             &paint,
                             tiny_skia::FillRule::Winding,
-                                Transform::from_translate(physical_glyph.x as f32, physical_glyph.y as f32)
-                                .pre_scale(1.0, -1.0)
-                                .post_concat(transform),
+                            Transform::from_translate(
+                                physical_glyph.x as f32,
+                                physical_glyph.y as f32,
+                            )
+                            .pre_scale(1.0, -1.0)
+                            .post_concat(transform),
                             None,
                         );
                     }
@@ -140,6 +151,10 @@ mod tests {
         cache.resize(&mut buffer, Metrics::new(50.0, 50.0));
 
         let mut pixel_buffer = Pixmap::new(800, 600).unwrap();
-        cache.draw(&buffer, &mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(), Transform::default());
+        cache.draw(
+            &buffer,
+            &mut PixmapMut::from_bytes(pixel_buffer.data_mut(), 800, 600).unwrap(),
+            Transform::default(),
+        );
     }
 }

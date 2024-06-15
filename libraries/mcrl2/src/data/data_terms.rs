@@ -1,6 +1,9 @@
 use core::fmt;
 
-use crate::aterm::{ATerm, ATermRef, ATermArgs, THREAD_TERM_POOL};
+use crate::aterm::ATerm;
+use crate::aterm::ATermArgs;
+use crate::aterm::ATermRef;
+use crate::aterm::THREAD_TERM_POOL;
 use mcrl2_macros::mcrl2_derive_terms;
 use mcrl2_sys::data::ffi;
 
@@ -47,20 +50,24 @@ pub fn is_data_untyped_identifier(term: &ATermRef<'_>) -> bool {
 pub fn is_data_application(term: &ATermRef<'_>) -> bool {
     term.require_valid();
 
-    THREAD_TERM_POOL.with_borrow_mut(|tp| {
-        tp.is_data_application(term)
-    })
+    THREAD_TERM_POOL.with_borrow_mut(|tp| tp.is_data_application(term))
 }
 
 // This module is only used internally to run the proc macro.
 #[mcrl2_derive_terms]
 mod inner {
     use super::*;
-    
-    use std::{borrow::Borrow, ops::Deref};
-    
-    use mcrl2_macros::{mcrl2_term, mcrl2_ignore};
-    use crate::{aterm::{Markable, TermPool, Todo}, data::{SortExpression, SortExpressionRef}};
+
+    use std::borrow::Borrow;
+    use std::ops::Deref;
+
+    use crate::aterm::Markable;
+    use crate::aterm::TermPool;
+    use crate::aterm::Todo;
+    use crate::data::SortExpression;
+    use crate::data::SortExpressionRef;
+    use mcrl2_macros::mcrl2_ignore;
+    use mcrl2_macros::mcrl2_term;
 
     /// A data expression can be any of:
     ///     - a variable
@@ -68,19 +75,18 @@ mod inner {
     ///     - a term applied to a number of arguments, i.e., t_0(t1, ..., tn).
     ///     - an abstraction lambda x: Sort . e, or forall and exists.
     ///     - machine number, a value [0, ..., 2^64-1].
-    /// 
+    ///
     /// Not supported:
     ///     - a where clause "e where [x := f, ...]"
     ///     - set enumeration
     ///     - bag enumeration
-    /// 
+    ///
     #[mcrl2_term(is_data_expression)]
     pub struct DataExpression {
         term: ATerm,
     }
-    
-    impl DataExpression {    
 
+    impl DataExpression {
         /// Returns the head symbol a data expression
         ///     - function symbol                  f -> f
         ///     - application       f(t_0, ..., t_n) -> f
@@ -114,7 +120,9 @@ mod inner {
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
         pub fn data_sort(&self) -> SortExpression {
             if is_data_function_symbol(&self.term) {
-                DataFunctionSymbolRef::from(self.term.copy()).sort().protect()
+                DataFunctionSymbolRef::from(self.term.copy())
+                    .sort()
+                    .protect()
             } else if is_data_variable(&self.term) {
                 DataVariableRef::from(self.term.copy()).sort().protect()
             } else {
@@ -122,8 +130,8 @@ mod inner {
             }
         }
     }
- 
-    impl fmt::Display for DataExpression {        
+
+    impl fmt::Display for DataExpression {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if is_data_function_symbol(&self.term) {
                 write!(f, "{}", DataFunctionSymbolRef::from(self.term.copy()))
@@ -145,13 +153,12 @@ mod inner {
     }
 
     impl DataFunctionSymbol {
-
         #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataFunctionSymbol {
             DataFunctionSymbol {
                 term: tp.create_with(|| {
                     mcrl2_sys::data::ffi::create_data_function_symbol(name.to_string())
-                })
+                }),
             }
         }
 
@@ -163,9 +170,7 @@ mod inner {
         /// Returns the name of the function symbol
         pub fn name(&self) -> &str {
             // We only change the lifetime, but that is fine since it is derived from the current term.
-            unsafe {
-                std::mem::transmute(self.term.arg(0).get_head_symbol().name())
-            }
+            unsafe { std::mem::transmute(self.term.arg(0).get_head_symbol().name()) }
         }
 
         /// Returns the internal operation id (a unique number) for the data::function_symbol.
@@ -182,10 +187,10 @@ mod inner {
     impl fmt::Display for DataFunctionSymbol {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             if !self.is_default() {
-                write!(f, "{}", self.name()) 
+                write!(f, "{}", self.name())
             } else {
                 write!(f, "<default>")
-            }       
+            }
         }
     }
 
@@ -195,24 +200,27 @@ mod inner {
     }
 
     impl DataVariable {
-
         /// Create a new untyped variable with the given name.
         #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataVariable {
             DataVariable {
-                term: tp.create_with(|| {
-                    mcrl2_sys::data::ffi::create_data_variable(name.to_string())
-                }),
+                term: tp
+                    .create_with(|| mcrl2_sys::data::ffi::create_data_variable(name.to_string())),
             }
         }
 
         /// Create a variable with the given sort and name.
-        pub fn with_sort(tp: &mut TermPool, name: &str, sort: &SortExpressionRef<'_>) -> DataVariable {
+        pub fn with_sort(
+            tp: &mut TermPool,
+            name: &str,
+            sort: &SortExpressionRef<'_>,
+        ) -> DataVariable {
             DataVariable {
-                term: tp.create_with(|| {
-                    unsafe {
-                        mcrl2_sys::data::ffi::create_sorted_data_variable(name.to_string(), sort.term.get())
-                    }
+                term: tp.create_with(|| unsafe {
+                    mcrl2_sys::data::ffi::create_sorted_data_variable(
+                        name.to_string(),
+                        sort.term.get(),
+                    )
                 }),
             }
         }
@@ -220,9 +228,7 @@ mod inner {
         /// Returns the name of the variable.
         pub fn name(&self) -> &str {
             // We only change the lifetime, but that is fine since it is derived from the current term.
-            unsafe {
-                std::mem::transmute(self.term.arg(0).get_head_symbol().name())
-            }
+            unsafe { std::mem::transmute(self.term.arg(0).get_head_symbol().name()) }
         }
 
         /// Returns the sort of the variable.
@@ -243,11 +249,14 @@ mod inner {
     }
 
     impl DataApplication {
-        
         #[mcrl2_ignore]
-        pub fn new<'a, 'b>(tp: &mut TermPool, head: &impl Borrow<ATermRef<'a>>, arguments: &[impl Borrow<ATermRef<'b>>]) -> DataApplication{
+        pub fn new<'a, 'b>(
+            tp: &mut TermPool,
+            head: &impl Borrow<ATermRef<'a>>,
+            arguments: &[impl Borrow<ATermRef<'b>>],
+        ) -> DataApplication {
             DataApplication {
-                term: tp.create_data_application(head, arguments)
+                term: tp.create_data_application(head, arguments),
             }
         }
 
@@ -262,20 +271,18 @@ mod inner {
             result.next();
             result
         }
-        
+
         /// Returns the sort of a data application.
         pub fn sort(&self) -> SortExpressionRef<'_> {
             // We only change the lifetime, but that is fine since it is derived from the current term.
-            unsafe {
-                std::mem::transmute(SortExpressionRef::from(self.term.arg(0)))
-            }
+            unsafe { std::mem::transmute(SortExpressionRef::from(self.term.arg(0))) }
         }
     }
-        
+
     impl fmt::Display for DataApplication {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {    
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "{}", self.data_function_symbol())?;
-    
+
             let mut first = true;
             for arg in self.data_arguments() {
                 if !first {
@@ -283,15 +290,15 @@ mod inner {
                 } else {
                     write!(f, "(")?;
                 }
-    
+
                 write!(f, "{}", DataExpressionRef::from(arg.copy()))?;
                 first = false;
             }
-    
+
             if !first {
                 write!(f, ")")?;
             }
-    
+
             Ok(())
         }
     }
@@ -302,7 +309,6 @@ mod inner {
     }
 
     impl MachineNumber {
-        
         /// Obtain the underlying value of a machine number.
         pub fn value(&self) -> u64 {
             0
@@ -310,9 +316,9 @@ mod inner {
     }
 
     impl fmt::Display for MachineNumber {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
-            write!(f, "{}", self.value()) 
-        }            
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.value())
+        }
     }
 
     #[mcrl2_ignore]
@@ -321,14 +327,14 @@ mod inner {
             value.term.into()
         }
     }
-    
+
     #[mcrl2_ignore]
     impl From<DataApplication> for DataExpression {
         fn from(value: DataApplication) -> Self {
             value.term.into()
         }
     }
-    
+
     #[mcrl2_ignore]
     impl From<DataVariable> for DataExpression {
         fn from(value: DataVariable) -> Self {
@@ -341,7 +347,11 @@ pub use inner::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::{aterm::{TermPool, ATerm}, data::{is_data_application, DataFunctionSymbol, DataApplication}};
+    use crate::aterm::ATerm;
+    use crate::aterm::TermPool;
+    use crate::data::is_data_application;
+    use crate::data::DataApplication;
+    use crate::data::DataFunctionSymbol;
 
     #[test]
     fn test_print() {
@@ -360,7 +370,7 @@ mod tests {
     #[test]
     fn test_recognizers() {
         let mut tp = TermPool::new();
-        
+
         let a = DataFunctionSymbol::new(&mut tp, "a");
         let f = DataFunctionSymbol::new(&mut tp, "f");
         let a_term: ATerm = a.clone().into();

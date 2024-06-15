@@ -2,8 +2,9 @@ use std::borrow::Borrow;
 use std::marker::PhantomData;
 
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
 use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::ops::Deref;
 
 use mcrl2_sys::atermpp::ffi::{self};
@@ -11,12 +12,12 @@ use mcrl2_sys::atermpp::ffi::{self};
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SymbolRef<'a> {
     symbol: *const ffi::_function_symbol,
-    marker: PhantomData<&'a ()>
+    marker: PhantomData<&'a ()>,
 }
 
 /// A Symbol references to an aterm function symbol, which has a name and an arity.
 impl<'a> SymbolRef<'a> {
-    fn new(symbol: *const ffi::_function_symbol,) -> SymbolRef<'a> {
+    fn new(symbol: *const ffi::_function_symbol) -> SymbolRef<'a> {
         SymbolRef {
             symbol,
             marker: PhantomData,
@@ -35,16 +36,12 @@ impl<'a> SymbolRef<'a> {
 impl<'a> SymbolRef<'a> {
     /// Obtain the symbol's name
     pub fn name(&self) -> &str {
-        unsafe {
-            ffi::get_function_symbol_name(self.symbol)
-        }
+        unsafe { ffi::get_function_symbol_name(self.symbol) }
     }
 
     /// Obtain the symbol's arity
     pub fn arity(&self) -> usize {
-        unsafe {
-            ffi::get_function_symbol_arity(self.symbol)
-        }
+        unsafe { ffi::get_function_symbol_arity(self.symbol) }
     }
 
     /// Returns the index of the function symbol
@@ -59,7 +56,7 @@ impl<'a> fmt::Display for SymbolRef<'a> {
     }
 }
 
-impl<'a> fmt::Debug  for SymbolRef<'a> {
+impl<'a> fmt::Debug for SymbolRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -75,7 +72,7 @@ impl<'a> From<*const ffi::_function_symbol> for SymbolRef<'a> {
     fn from(symbol: *const ffi::_function_symbol) -> Self {
         SymbolRef {
             symbol,
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
@@ -86,17 +83,17 @@ pub struct Symbol {
 
 impl Symbol {
     /// Takes ownership of the given pointer without changing the reference counter.
-    pub(crate) fn take(symbol: *const ffi::_function_symbol) -> Symbol {  
+    pub(crate) fn take(symbol: *const ffi::_function_symbol) -> Symbol {
         Symbol {
-            symbol: SymbolRef::new(symbol)
+            symbol: SymbolRef::new(symbol),
         }
     }
 
     /// Protects the given pointer.
-    pub(crate) fn new(symbol: *const ffi::_function_symbol) -> Symbol {     
-        unsafe { ffi::protect_function_symbol(symbol) };   
+    pub(crate) fn new(symbol: *const ffi::_function_symbol) -> Symbol {
+        unsafe { ffi::protect_function_symbol(symbol) };
         Symbol {
-            symbol: SymbolRef::new(symbol)
+            symbol: SymbolRef::new(symbol),
         }
     }
 }
@@ -170,7 +167,6 @@ impl Ord for Symbol {
 }
 
 impl Borrow<SymbolRef<'static>> for Symbol {
-    
     fn borrow(&self) -> &SymbolRef<'static> {
         &self.symbol
     }
