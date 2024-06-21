@@ -165,7 +165,7 @@ impl InnermostRewriter {
                                     "rewrite {} => {} using rule {}",
                                     term,
                                     annotation.rhs_stack.evaluate(tp, &term),
-                                    announcement.rule
+                                    announcement.rule()
                                 );
 
                                 // Reacquire the write access and add the matching RHSStack.
@@ -195,6 +195,9 @@ impl InnermostRewriter {
                             .pop()
                             .expect("The result should be the last element on the stack")
                             .protect();
+                    },
+                    Config::Yield(_, _) => {
+                        unreachable!("");
                     }
                 }
 
@@ -206,6 +209,7 @@ impl InnermostRewriter {
                                 match x {
                                     Config::Construct(_, _, result) => index == *result,
                                     Config::Rewrite(result) => index == *result,
+                                    Config::Yield(_, _) => true,
                                     Config::Return() => true,
                                 }
                             }),
@@ -229,19 +233,18 @@ impl InnermostRewriter {
         // Start at the initial state
         let mut state_index = 0;
         loop {
-            let state = &automaton.states[state_index];
+            let state = &automaton.states()[state_index];
 
             // Get the symbol at the position state.label
             stats.symbol_comparisons += 1;
-            let pos: DataExpressionRef<'_> = t.get_position(&state.label).into();
+            let pos: DataExpressionRef<'_> = t.get_position(&state.label()).into();
             let symbol = pos.data_function_symbol();
 
             // Get the transition for the label and check if there is a pattern match
             if let Some(transition) = automaton
-                .transitions
-                .get(&(state_index, symbol.operation_id()))
+                .transition(state_index, symbol.operation_id())
             {
-                for (announcement, annotation) in &transition.announcements {
+                for (announcement, annotation) in transition.announcements() {
                     if check_equivalence_classes(t, &annotation.equivalence_classes)
                         && InnermostRewriter::check_conditions(
                             tp, stack, builder, stats, automaton, annotation, t,
@@ -253,12 +256,12 @@ impl InnermostRewriter {
                 }
 
                 // If there is no pattern match we check if the transition has a destination state
-                if transition.destinations.is_empty() {
+                if transition.destinations().is_empty() {
                     // If there is no destination state there is no pattern match
                     return None;
                 } else {
                     // Continue matching in the next state
-                    state_index = transition.destinations.first().unwrap().1;
+                    state_index = transition.destinations().first().unwrap().1;
                 }
             } else {
                 return None;

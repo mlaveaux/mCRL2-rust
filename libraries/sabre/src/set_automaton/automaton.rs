@@ -38,34 +38,30 @@ use super::MatchGoal;
 // of Computing – ICTAC 2021. ICTAC 2021. Lecture Notes in Computer Science(),
 // vol 12819. Springer, Cham. https://doi.org/10.1007/978-3-030-85315-0_5
 pub struct SetAutomaton<T> {
-    pub(crate) states: Vec<State>,
-    pub(crate) transitions: HashMap<(usize, usize), Transition<T>>,
+    states: Vec<State>,
+
+    /// Stores the from, symbol, to in a hash table.
+    transitions: HashMap<(usize, usize), Transition<T>>,
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(crate) struct MatchAnnouncement {
-    pub rule: Rule,
-    pub position: ExplicitPosition,
-    pub symbols_seen: usize,
+pub struct MatchAnnouncement {
+    rule: Rule,
+    pub (crate) position: ExplicitPosition,
+    symbols_seen: usize,
 }
 
 #[derive(Clone)]
 pub struct Transition<T> {
-    pub(crate) symbol: DataFunctionSymbol,
-    pub(crate) announcements: SmallVec<[(MatchAnnouncement, T); 1]>,
-    pub(crate) destinations: SmallVec<[(ExplicitPosition, usize); 1]>,
-}
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub(crate) struct MatchObligation {
-    pub pattern: DataExpression,
-    pub position: ExplicitPosition,
+    symbol: DataFunctionSymbol,
+    announcements: SmallVec<[(MatchAnnouncement, T); 1]>,
+    destinations: SmallVec<[(ExplicitPosition, usize); 1]>,
 }
 
 #[derive(Debug)]
-enum GoalsOrInitial {
-    InitialState,
-    Goals(Vec<MatchGoal>),
+pub struct State {
+    label: ExplicitPosition,
+    match_goals: Vec<MatchGoal>,
 }
 
 impl<M> SetAutomaton<M> {
@@ -248,6 +244,21 @@ impl<M> SetAutomaton<M> {
         self.transitions.len()
     }
 
+    /// Returns a reference to the given state.
+    pub fn states(&self) -> &Vec<State> {
+        &self.states
+    }
+
+    /// Returns an iterator over all the transitions in the automaton
+    pub fn transitions(&self) -> impl Iterator<Item = (&(usize, usize), &Transition<M>)> {
+        self.transitions.iter()
+    }
+
+    /// Returns the transition with the given state and symbol (if it exists)
+    pub fn transition(&self, state: usize, symbol: usize) -> Option<&Transition<M>> {
+        self.transitions.get(&(state, symbol))
+    }
+
     /// Provides a formatter for the .dot file format
     pub fn to_dot_graph(&self, show_backtransitions: bool, show_final: bool) -> DotFormatter<M> {
         DotFormatter {
@@ -258,6 +269,40 @@ impl<M> SetAutomaton<M> {
     }
 }
 
+impl<T> Transition<T> {
+    pub fn symbol(&self) -> &DataFunctionSymbol {
+        &self.symbol
+    }
+
+    pub fn announcements(&self) -> &SmallVec<[(MatchAnnouncement, T); 1]> {
+        &self.announcements
+    }
+    
+    pub fn destinations(&self) -> &SmallVec<[(ExplicitPosition, usize); 1]> {
+        &self.destinations
+    }
+}
+
+impl MatchAnnouncement {
+    pub fn rule(&self) -> &Rule {
+        &self.rule
+    }
+
+    pub fn position(&self) -> &ExplicitPosition {
+        &self.position
+    }
+
+    pub fn symbols_seen(&self) -> usize {
+        self.symbols_seen
+    }
+}
+
+#[derive(Debug)]
+enum GoalsOrInitial {
+    InitialState,
+    Goals(Vec<MatchGoal>),
+}
+
 #[derive(Debug)]
 pub struct Derivative {
     pub(crate) completed: Vec<MatchGoal>,
@@ -265,13 +310,23 @@ pub struct Derivative {
     pub(crate) reduced: Vec<MatchGoal>,
 }
 
-#[derive(Debug)]
-pub(crate) struct State {
-    pub(crate) label: ExplicitPosition,
-    pub(crate) match_goals: Vec<MatchGoal>,
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) struct MatchObligation {
+    pub pattern: DataExpression,
+    pub position: ExplicitPosition,
 }
 
 impl State {
+    /// Returns the label of the state.
+    pub fn label(&self) -> &ExplicitPosition {
+        &self.label
+    }
+
+    /// Returns the match goals of the state.
+    pub fn match_goals(&self) -> &Vec<MatchGoal> {
+        &self.match_goals
+    }
+
     /// Derive transitions from a state given a head symbol. The resulting transition is returned as a tuple
     /// The tuple consists of a vector of outputs and a set of destinations (which are sets of match goals).
     /// We don't use the struct Transition as it requires that the destination is a full state, with name.
