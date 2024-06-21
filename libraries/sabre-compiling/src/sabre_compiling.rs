@@ -28,7 +28,7 @@ impl RewriteEngine for SabreCompilingRewriter {
     fn rewrite(&mut self, term: DataExpression) -> DataExpression {
         // TODO: This ought to be stored somewhere for repeated calls.
         unsafe {
-            let func: Symbol<extern "C" fn()> = self.library.get(b"rewrite_term").unwrap();
+            let func: Symbol<extern "C" fn()> = self.library.get(b"rewrite").unwrap();
 
             func();
 
@@ -82,11 +82,9 @@ impl SabreCompilingRewriter {
 
         let mut compilation_crate = RuntimeLibrary::new(temp_dir, dependencies)?;
 
-        // Generate the automata used for matching
-        let _apma = SetAutomaton::new(spec, |_| (), true);
 
         // Write the output source file(s).
-        generate(compilation_crate.source_dir())?;
+        generate(spec, compilation_crate.source_dir())?;
 
         let library = compilation_crate.compile()?;
         Ok(SabreCompilingRewriter { library })
@@ -104,6 +102,10 @@ mod tests {
         let spec = RewriteSpecification::default();
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        SabreCompilingRewriter::new(tp, &spec, true, true).unwrap();
+        let mut rewriter = SabreCompilingRewriter::new(tp, &spec, true, true).unwrap();
+
+        let t = DataExpression::default();
+
+        assert_eq!(rewriter.rewrite(t.clone()), t, "The rewritten result does not match the expected result");
     }
 }
