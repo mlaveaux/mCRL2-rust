@@ -1,4 +1,6 @@
-use mcrl2_syntax::{DisplayPair, Mcrl2Parser, Rule};
+use mcrl2_syntax::DisplayPair;
+use mcrl2_syntax::Mcrl2Parser;
+use mcrl2_syntax::Rule;
 use pest::Parser;
 
 fn main() {
