@@ -5,11 +5,11 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-duct = "0.13"
-indoc = "2.0"
-libloading = "0.8"
-temp-dir = "0.1"
-toml = "0.8"
+duct.workspace = true
+indoc.workspace = true
+libloading.workspace = true
+temp-dir.workspace = true
+toml.workspace = true
 env_logger.workspace = true
 log.workspace = true
 mcrl2.workspace = true
@@ -19,4 +19,4 @@ sabre.workspace = true
 test-log.workspace = true
 
 [build-dependencies]
-toml = "0.8"
+toml.workspace = true

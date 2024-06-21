@@ -1,14 +1,17 @@
-use std::{
-    error::Error,
-    fs::{self, File},
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::error::Error;
+use std::fs::File;
+use std::fs::{self};
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 use libloading::Library;
-use toml::{map::Map, Table, Value};
+use toml::map::Map;
+use toml::Table;
+use toml::Value;
 
-use duct::{cmd, Expression};
+use duct::cmd;
+use duct::Expression;
 use indoc::indoc;
 use log::info;
 

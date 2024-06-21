@@ -93,19 +93,23 @@ pub fn rewrite_data_spec(
                 }
             }
             println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
-        },
+        }
         Rewriter::SabreCompiling => {
             let rewrite_spec = RewriteSpecification::from(data_spec.clone());
-            let mut sabre_rewriter = SabreCompilingRewriter::new(tp.clone(), &rewrite_spec, true, false).unwrap();  
-        
+            let mut sabre_rewriter =
+                SabreCompilingRewriter::new(tp.clone(), &rewrite_spec, true, false).unwrap();
+
             let now = Instant::now();
-            for term in &terms {                
+            for term in &terms {
                 let result = sabre_rewriter.rewrite(term.clone());
                 if output {
                     println!("{}", result)
                 }
             }
-            println!("Sabre compiling rewrite took {} ms", now.elapsed().as_millis());
+            println!(
+                "Sabre compiling rewrite took {} ms",
+                now.elapsed().as_millis()
+            );
         }
     }
 
@@ -151,10 +155,10 @@ pub fn rewrite_rec(
                 }
             }
             println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
-        },
+        }
         Rewriter::SabreCompiling => {
-            let mut sa = SabreCompilingRewriter::new(tp.clone(), &spec, true, false).unwrap();        
-        
+            let mut sa = SabreCompilingRewriter::new(tp.clone(), &spec, true, false).unwrap();
+
             let now = Instant::now();
             for term in &syntax_terms {
                 let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
@@ -163,8 +167,11 @@ pub fn rewrite_rec(
                     println!("{}", result)
                 }
             }
-            println!("Sabre compiling rewrite took {} ms", now.elapsed().as_millis());
-        },
+            println!(
+                "Sabre compiling rewrite took {} ms",
+                now.elapsed().as_millis()
+            );
+        }
         Rewriter::Jitty => {
             bail!("Cannot use REC specifications with mCRL2's jitty rewriter");
         }

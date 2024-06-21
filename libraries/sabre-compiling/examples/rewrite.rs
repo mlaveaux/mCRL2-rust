@@ -1,4 +1,8 @@
-use mcrl2::{aterm::{ATerm, TermPool}, data::{DataApplication, DataExpression, DataExpressionRef}};
+use mcrl2::aterm::ATerm;
+use mcrl2::aterm::TermPool;
+use mcrl2::data::DataApplication;
+use mcrl2::data::DataExpression;
+use mcrl2::data::DataExpressionRef;
 
 /// Generic rewrite function
 #[no_mangle]
@@ -15,6 +19,4 @@ pub unsafe extern "C" fn rewrite_term(term: DataExpression) -> DataExpression {
     DataApplication::new(&mut tp, &term.data_function_symbol(), &arguments).into()
 }
 
-fn main() {
-
-}
+fn main() {}

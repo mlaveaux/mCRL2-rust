@@ -1,5 +1,7 @@
+use std::env;
+use std::error::Error;
 use std::fs;
-use std::{env, error::Error, fs::File};
+use std::fs::File;
 
 use std::io::Write;
 
@@ -19,9 +21,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut file = File::create("../../target/Compilation.toml")?;
 
-    // Write the development location.    
+    // Write the development location.
     writeln!(file, "[sabrec]")?;
-    writeln!(file, "path = '{}'", fs::canonicalize(".")?.to_string_lossy())?;
+    writeln!(
+        file,
+        "path = '{}'",
+        fs::canonicalize(".")?.to_string_lossy()
+    )?;
 
     // Write compilation related environment variables to the configuration file.
     writeln!(file, "[env]")?;

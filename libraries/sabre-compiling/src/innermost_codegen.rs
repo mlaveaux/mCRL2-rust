@@ -1,16 +1,18 @@
-use std::{error::Error, fs::File, io::Write, path::{Path, PathBuf}};
+use std::error::Error;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 use indoc::indoc;
 
 pub fn generate(source_dir: &Path) -> Result<(), Box<dyn Error>> {
-    
     {
-        let mut file =
-            File::create(PathBuf::from(source_dir).join("lib.rs"))?;
-            
+        let mut file = File::create(PathBuf::from(source_dir).join("lib.rs"))?;
+
         writeln!(
             &mut file,
-            indoc! {"      
+            indoc! {"
             use mcrl2::{{aterm::{{ATerm, TermPool}}, data::{{DataApplication, DataExpression, DataExpressionRef}}}};
 
             /// Generic rewrite function

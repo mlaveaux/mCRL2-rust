@@ -1,19 +1,23 @@
-use std::{
-    cell::RefCell,
-    error::Error,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use std::cell::RefCell;
+use std::error::Error;
+use std::path::Path;
+use std::path::PathBuf;
+use std::rc::Rc;
 
-use libloading::{Library, Symbol};
+use libloading::Library;
+use libloading::Symbol;
 use log::info;
 use temp_dir::TempDir;
 use toml::Table;
 
-use mcrl2::{aterm::TermPool, data::DataExpression};
-use sabre::{set_automaton::SetAutomaton, RewriteEngine, RewriteSpecification};
+use mcrl2::aterm::TermPool;
+use mcrl2::data::DataExpression;
+use sabre::set_automaton::SetAutomaton;
+use sabre::RewriteEngine;
+use sabre::RewriteSpecification;
 
-use crate::{generate, library::RuntimeLibrary};
+use crate::generate;
+use crate::library::RuntimeLibrary;
 
 pub struct SabreCompilingRewriter {
     library: Library,
