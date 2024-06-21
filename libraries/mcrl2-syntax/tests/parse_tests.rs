@@ -1,6 +1,5 @@
 use mcrl2_syntax::{Mcrl2Parser, Rule};
 use pest::Parser;
-use indoc::indoc;
 use test_case::test_case;
 
 // This command can be used to generate the tests cases, but duplicate names have to be removed
