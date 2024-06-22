@@ -199,11 +199,15 @@ impl fmt::Display for Config {
     }
 }
 
-/// A stack for the right-hand side.
+/// A stack for the right-hand side, consisting of a small innermost stack and
+/// the positions that must be added to stack, and are read from the left-hand
+/// side term.
 pub struct RHSStack {
-    /// The innermost rewrite stack for the right hand side and the positions that must be added to the stack.
+    /// The innermost rewrite stack for the right hand side.
     innermost_stack: Protected<Vec<Config>>,
+/// The variables of the left-hand side that must be placed at certain places in the stack.
     variables: Vec<(ExplicitPosition, usize)>,
+/// The number of elements that must be reserved on the innermost stack.
     stack_size: usize,
 }
 
