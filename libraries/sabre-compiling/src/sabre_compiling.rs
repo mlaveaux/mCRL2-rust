@@ -12,7 +12,6 @@ use toml::Table;
 
 use mcrl2::aterm::TermPool;
 use mcrl2::data::DataExpression;
-use sabre::set_automaton::SetAutomaton;
 use sabre::RewriteEngine;
 use sabre::RewriteSpecification;
 
@@ -28,11 +27,9 @@ impl RewriteEngine for SabreCompilingRewriter {
     fn rewrite(&mut self, term: DataExpression) -> DataExpression {
         // TODO: This ought to be stored somewhere for repeated calls.
         unsafe {
-            let func: Symbol<extern "C" fn()> = self.library.get(b"rewrite").unwrap();
+            let func: Symbol<extern "C" fn(DataExpression) -> DataExpression> = self.library.get(b"rewrite").unwrap();
 
-            func();
-
-            term
+            func(term)
         }
     }
 }

@@ -49,7 +49,7 @@ pub fn generate(spec: &RewriteSpecification, source_dir: &Path) -> Result<(), Bo
                     writeln!(&mut file, "\t\t{symbol} => {{")?;
 
                     // Continue on the outgoing transition.
-                    for (announcement, annotation) in transition.announcements() {
+                    for (_announcement, _annotation) in transition.announcements() {
 
                     }                    
 
@@ -60,9 +60,9 @@ pub fn generate(spec: &RewriteSpecification, source_dir: &Path) -> Result<(), Bo
 
             // No match
             writeln!(&mut file, indoc! {
-            "_ => {{
-                t.protect()
-            }}"})?;
+            "\t\t_ => {{
+             \t\t   t.protect()
+             \t\t}}"})?;
 
             writeln!(&mut file, "\t }}")?;
             writeln!(&mut file, "}}")?;

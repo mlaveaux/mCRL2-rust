@@ -196,9 +196,6 @@ impl InnermostRewriter {
                             .expect("The result should be the last element on the stack")
                             .protect();
                     },
-                    Config::Yield(_, _) => {
-                        unreachable!("");
-                    }
                 }
 
                 let read_configs = stack.configs.read();
@@ -209,7 +206,6 @@ impl InnermostRewriter {
                                 match x {
                                     Config::Construct(_, _, result) => index == *result,
                                     Config::Rewrite(result) => index == *result,
-                                    Config::Yield(_, _) => true,
                                     Config::Return() => true,
                                 }
                             }),
