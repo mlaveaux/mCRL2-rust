@@ -92,16 +92,24 @@ impl SabreCompilingRewriter {
 mod tests {
     use super::*;
 
+    use mcrl2::data::DataSpecification;
     use test_log::test;
 
     #[test]
     fn test_compilation() {
-        let spec = RewriteSpecification::default();
+
+        let spec = DataSpecification::new("
+            map f: Bool # Bool -> Bool;
+
+            eqn f(true, false) = false;
+        ").unwrap();
+
+        let t = spec.parse("f(true, false)").unwrap();
+
+        let spec = RewriteSpecification::from(spec);
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        let mut rewriter = SabreCompilingRewriter::new(tp, &spec, true, true).unwrap();
-
-        let t = DataExpression::default();
+        let mut rewriter = SabreCompilingRewriter::new(tp, &spec).unwrap();
 
         assert_eq!(rewriter.rewrite(t.clone()), t, "The rewritten result does not match the expected result");
     }
