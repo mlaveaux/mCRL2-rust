@@ -27,6 +27,7 @@ use super::global_aterm_pool::GLOBAL_TERM_POOL;
 /// where we look at the argument of a term and want to return it's name, but
 /// this is not allowed since the temporary returned by the argument is dropped.
 #[derive(Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct ATermRef<'a> {
     term: *const ffi::_aterm,
     marker: PhantomData<&'a ()>,
@@ -201,6 +202,7 @@ impl<'a> fmt::Debug for ATermRef<'a> {
 
 /// The protected version of [ATermRef], mostly derived from it.
 #[derive(Default)]
+#[repr(C)]
 pub struct ATerm {
     pub(crate) term: ATermRef<'static>,
     pub(crate) root: usize,

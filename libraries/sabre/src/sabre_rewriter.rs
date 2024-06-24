@@ -108,7 +108,7 @@ impl SabreRewriter {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
                             let pos: DataExpressionRef = leaf_term
-                                .get_position(&automaton.states[leaf.state].label)
+                                .get_position(&automaton.states()[leaf.state].label())
                                 .into();
 
                             let function_symbol = pos.data_function_symbol();
@@ -116,18 +116,17 @@ impl SabreRewriter {
 
                             // Get the transition belonging to the observed symbol
                             if let Some(tr) = automaton
-                                .transitions
-                                .get(&(leaf.state, function_symbol.operation_id()))
+                                .transition(leaf.state, function_symbol.operation_id())
                             {
                                 // Loop over the match announcements of the transition
-                                for (announcement, annotation) in &tr.announcements {
+                                for (announcement, annotation) in tr.announcements() {
                                     if annotation.conditions.is_empty()
                                         && annotation.equivalence_classes.is_empty()
                                     {
                                         if annotation.is_duplicating {
                                             trace!(
                                                 "Delaying duplicating rule {}",
-                                                announcement.rule
+                                                announcement.rule()
                                             );
 
                                             // We do not want to apply duplicating rules straight away
@@ -155,7 +154,7 @@ impl SabreRewriter {
                                         // We delay the condition checks
                                         trace!(
                                             "Delaying condition check for rule {}",
-                                            announcement.rule
+                                            announcement.rule()
                                         );
                                         cs.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
@@ -167,7 +166,7 @@ impl SabreRewriter {
                                     }
                                 }
 
-                                if tr.destinations.is_empty() {
+                                if tr.destinations().is_empty() {
                                     // If there is no destination we are done matching and go back to the previous
                                     // configuration on the stack with information on the side stack.
                                     // Note, it could be that we stay at the same configuration and apply a rewrite
@@ -179,7 +178,7 @@ impl SabreRewriter {
                                     }
                                 } else {
                                     // Grow the bud; if there is more than one destination a SideBranch object will be placed on the side stack
-                                    let tr_slice = tr.destinations.as_slice();
+                                    let tr_slice = tr.destinations().as_slice();
                                     cs.grow(leaf_index, tr_slice);
                                 }
                             } else {
@@ -266,16 +265,16 @@ impl SabreRewriter {
         // Computes the new subterm of the configuration
         let new_subterm = annotation
             .semi_compressed_rhs
-            .evaluate(&leaf_subterm.get_position(&announcement.position), tp)
+            .evaluate(&leaf_subterm.get_position(&announcement.position()), tp)
             .into();
 
         debug!(
             "rewrote {} to {} using rule {}",
-            &leaf_subterm, &new_subterm, announcement.rule
+            &leaf_subterm, &new_subterm, announcement.rule()
         );
 
         // The match announcement tells us how far we need to prune back.
-        let prune_point = leaf_index - announcement.symbols_seen;
+        let prune_point = leaf_index - announcement.symbols_seen();
         cs.prune(tp, automaton, prune_point, new_subterm);
     }
 
@@ -289,7 +288,7 @@ impl SabreRewriter {
         stats: &mut RewritingStatistics,
     ) -> bool {
         for c in &annotation.conditions {
-            let subterm = subterm.get_position(&announcement.position);
+            let subterm = subterm.get_position(&announcement.position());
 
             let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&subterm, tp).into();
             let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&subterm, tp).into();

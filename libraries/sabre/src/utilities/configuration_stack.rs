@@ -235,7 +235,7 @@ impl<'a> ConfigurationStack<'a> {
                 tp,
                 write_terms[depth].deref(),
                 new_subterm.into(),
-                &automaton.states[self.stack[depth].state].label.indices,
+                &automaton.states()[self.stack[depth].state].label().indices,
             )
             .deref(),
         );

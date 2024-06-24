@@ -38,6 +38,7 @@ jobs:
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
+        RUST_LOG: debug
         RUST_MIN_STACK: 104857600
 
     - name: Build Release

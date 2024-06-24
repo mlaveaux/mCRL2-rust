@@ -21,12 +21,14 @@ use sabre::InnermostRewriter;
 use sabre::RewriteEngine;
 use sabre::RewriteSpecification;
 use sabre::SabreRewriter;
+use sabre_compiling::SabreCompilingRewriter;
 
 #[derive(ValueEnum, Debug, Clone)]
 pub enum Rewriter {
     Jitty,
     Innermost,
     Sabre,
+    SabreCompiling,
 }
 
 /// Rewrites the given expressions with the given data specification and optionally prints the result.
@@ -92,6 +94,23 @@ pub fn rewrite_data_spec(
             }
             println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
         }
+        Rewriter::SabreCompiling => {
+            let rewrite_spec = RewriteSpecification::from(data_spec.clone());
+            let mut sabre_rewriter =
+                SabreCompilingRewriter::new(tp.clone(), &rewrite_spec, true, false).unwrap();
+
+            let now = Instant::now();
+            for term in &terms {
+                let result = sabre_rewriter.rewrite(term.clone());
+                if output {
+                    println!("{}", result)
+                }
+            }
+            println!(
+                "Sabre compiling rewrite took {} ms",
+                now.elapsed().as_millis()
+            );
+        }
     }
 
     Ok(())
@@ -136,6 +155,22 @@ pub fn rewrite_rec(
                 }
             }
             println!("Sabre rewrite took {} ms", now.elapsed().as_millis());
+        }
+        Rewriter::SabreCompiling => {
+            let mut sa = SabreCompilingRewriter::new(tp.clone(), &spec, true, false).unwrap();
+
+            let now = Instant::now();
+            for term in &syntax_terms {
+                let term = to_untyped_data_expression(&mut tp.borrow_mut(), term, &AHashSet::new());
+                let result = sa.rewrite(term);
+                if output {
+                    println!("{}", result)
+                }
+            }
+            println!(
+                "Sabre compiling rewrite took {} ms",
+                now.elapsed().as_millis()
+            );
         }
         Rewriter::Jitty => {
             bail!("Cannot use REC specifications with mCRL2's jitty rewriter");

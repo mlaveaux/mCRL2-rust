@@ -55,3 +55,4 @@ jobs:
       env:
         RUST_BACKTRACE: full
         RUSTC_WRAPPER: sccache
+        RUST_LOG: debug
