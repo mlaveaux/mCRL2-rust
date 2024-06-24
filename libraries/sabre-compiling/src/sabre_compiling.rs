@@ -109,7 +109,7 @@ mod tests {
         let spec = RewriteSpecification::from(spec);
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        let mut rewriter = SabreCompilingRewriter::new(tp, &spec).unwrap();
+        let mut rewriter = SabreCompilingRewriter::new(tp, &spec, true, true).unwrap();
 
         assert_eq!(rewriter.rewrite(t.clone()), t, "The rewritten result does not match the expected result");
     }
