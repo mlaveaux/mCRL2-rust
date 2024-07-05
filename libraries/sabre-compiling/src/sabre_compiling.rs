@@ -27,9 +27,12 @@ impl RewriteEngine for SabreCompilingRewriter {
     fn rewrite(&mut self, term: DataExpression) -> DataExpression {
         // TODO: This ought to be stored somewhere for repeated calls.
         unsafe {
-            let func: Symbol<extern "C" fn(DataExpression) -> DataExpression> = self.library.get(b"rewrite").unwrap();
+            let func: Symbol<extern "C" fn(&DataExpression) -> DataExpression> = self.library.get(b"rewrite").unwrap();
 
-            func(term)
+            let result = func(&term);
+            std::mem::forget(result);
+
+            term
         }
     }
 }
@@ -39,6 +42,8 @@ impl SabreCompilingRewriter {
     ///
     /// - use_local_workspace: Use the developement version of the toolset instead of referring to the github one.
     /// - use_local_tmp: Use a relative 'tmp' directory instead of using the system directory. Mostly used for debugging purposes.
+    /// 
+    /// - [`RewriteEngine`]
     pub fn new(
         _tp: Rc<RefCell<TermPool>>,
         spec: &RewriteSpecification,
