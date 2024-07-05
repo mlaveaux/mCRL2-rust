@@ -2489,6 +2489,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "indoc"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
+
+[[package]]
 name = "input"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2958,6 +2964,7 @@ dependencies = [
  "mcrl2",
  "rec-tests",
  "sabre",
+ "sabre-compiling",
 ]
 
 [[package]]
@@ -3968,6 +3975,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sabre-compiling"
+version = "0.1.0"
+dependencies = [
+ "duct",
+ "env_logger",
+ "indoc",
+ "libloading 0.8.3",
+ "log",
+ "mcrl2",
+ "sabre",
+ "temp-dir",
+ "test-log",
+ "toml",
+]
+
+[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4488,6 +4511,12 @@ dependencies = [
  "libc",
  "xattr",
 ]
+
+[[package]]
+name = "temp-dir"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f227968ec00f0e5322f9b8173c7a0cbcff6181a0a5b28e9892491c286277231"
 
 [[package]]
 name = "tempfile"

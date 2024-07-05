@@ -28,17 +28,17 @@ impl MatchGoal {
         }
 
         // Initialise the prefix with the first match goal, can only shrink afterwards
-        let first_match_pos = &goals.first().unwrap().announcement.position;
+        let first_match_pos = goals.first().unwrap().announcement.position();
         let mut gcp_length = first_match_pos.len();
-        let prefix = &first_match_pos.clone();
+        let prefix = first_match_pos.clone();
 
         for g in goals {
             // Compare up to gcp_length or the length of the announcement position
-            let compare_length = min(gcp_length, g.announcement.position.len());
+            let compare_length = min(gcp_length, g.announcement.position().len());
             // gcp_length shrinks if they are not the same up to compare_length
             gcp_length = MatchGoal::common_prefix_length(
                 &prefix.indices[0..compare_length],
-                &g.announcement.position.indices[0..compare_length],
+                &g.announcement.position().indices[0..compare_length],
             );
 
             for mo in &g.obligations {
@@ -63,7 +63,7 @@ impl MatchGoal {
         for goal in &mut goals {
             // update match announcement
             goal.announcement.position = ExplicitPosition {
-                indices: SmallVec::from_slice(&goal.announcement.position.indices[len..]),
+                indices: SmallVec::from_slice(&goal.announcement.position().indices[len..]),
             };
             for mo_index in 0..goal.obligations.len() {
                 let shortened = ExplicitPosition {
