@@ -16,11 +16,6 @@ pub mod ffi {
         #[namespace = "atermpp::detail"]
         type _function_symbol;
 
-        #[namespace = "mcrl2::utilities"]
-        type shared_guard;
-        #[namespace = "mcrl2::utilities"]
-        type lock_guard;
-
         /// Initialises the library.
         fn initialise();
 
