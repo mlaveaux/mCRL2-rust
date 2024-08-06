@@ -13,7 +13,7 @@ cxx-build.workspace = true
 cc.workspace = true
 cargo-emit.workspace = true
 
-[feature]
+[features]
 
 # Enables the compiling rewriter option for mCRL2.
 jittyc = []
