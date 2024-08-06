@@ -25,10 +25,11 @@ version = "0.1.0"
 [workspace.dependencies]
 ahash = "0.8"
 anyhow = { version = "1.0", features = ["backtrace"] }
-bitstream-io = "2.3"
+bitstream-io = "2.5"
 cargo-emit = "0.2"
 cc = "1.0"
 clap = { version = "4.5", features = ["derive"] }
+criterion = { version = "0.5", features = ["html_reports"] }
 cxx = "1.0"
 cxx-build = { version = "1.0", features = ["parallel"] }
 env_logger = "0.11"
@@ -54,11 +55,13 @@ thiserror = "1.0"
 trybuild = "1.0"
 
 # Used for GUI tools
-slint = "1.6"
+cosmic-text = "0.12"
 rfd = { version = "0.14", default-features = false, features = ["xdg-portal", "tokio"] }
+slint = "1.7"
 tiny-skia = "0.11"
-tokio = { version = "1.37", features = ["rt", "macros"] }
+tokio = { version = "1.39", features = ["rt", "macros"] }
 winapi = "0.3"
+glam = "0.28"
 
 # Only used for xtask
 duct = "0.13"

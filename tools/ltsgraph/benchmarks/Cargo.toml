@@ -7,8 +7,8 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-tiny-skia = "0.11"
+criterion.workspace = true
+tiny-skia.workspace = true
 ltsgraph-lib = { path = "../library" }
 rand.workspace = true
 io.workspace = true
