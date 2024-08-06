@@ -34,7 +34,7 @@ impl TextCache {
         let mut buffer = Buffer::new(&mut self.font_system, font_metrics);
 
         // Set a size for the text buffer, in pixels
-        buffer.set_size(&mut self.font_system, 400.0, 100.0);
+        buffer.set_size(&mut self.font_system, None, None);
 
         // Attributes indicate what font to choose.
         let attrs = Attrs::new();
