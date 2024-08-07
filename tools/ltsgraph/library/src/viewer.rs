@@ -5,7 +5,7 @@ use glam::Mat3;
 use glam::Vec2;
 use glam::Vec3;
 use glam::Vec3Swizzles;
-use io::LabelledTransitionSystem;
+use lts::LabelledTransitionSystem;
 use tiny_skia::Shader;
 use tiny_skia::Stroke;
 use tiny_skia::Transform;

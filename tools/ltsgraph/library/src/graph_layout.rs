@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use glam::Vec3;
-use io::index_edge;
-use io::Edge;
-use io::LabelledTransitionSystem;
+use lts::index_edge;
+use lts::Edge;
+use lts::LabelledTransitionSystem;
 use log::debug;
 use rand::Rng;
 
