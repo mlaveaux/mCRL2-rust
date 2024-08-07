@@ -1,0 +1,12 @@
+[package]
+name = "lts"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+[dependencies]
+log.workspace = true
+rand.workspace = true
+
+[dev-dependencies]
+test-log.workspace = true

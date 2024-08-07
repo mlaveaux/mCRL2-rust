@@ -11,6 +11,7 @@ streaming-iterator.workspace = true
 fxhash.workspace = true
 regex.workspace = true
 log.workspace = true
+lts.workspace = true
 
 [dev-dependencies]
 test-log.workspace = true

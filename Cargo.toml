@@ -75,6 +75,7 @@ strum = { version = "0.26", features = ["derive"] }
 
 # The workspace libraries.
 io = { path = "libraries/io" }
+lts = { path = "libraries/lts" }
 mcrl2 = { path = "libraries/mcrl2" }
 mcrl2-macros = { path = "libraries/mcrl2-macros" }
 mcrl2-sys = { path = "libraries/mcrl2-sys" }

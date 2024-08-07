@@ -7,9 +7,9 @@ use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
-use crate::labelled_transition_system::LabelIndex;
-use crate::labelled_transition_system::LabelledTransitionSystem;
-use crate::labelled_transition_system::State;
+use lts::LabelIndex;
+use lts::LabelledTransitionSystem;
+use lts::State;
 use crate::line_iterator::LineIterator;
 
 #[derive(Error, Debug)]
@@ -149,4 +149,14 @@ mod tests {
 
         debug_assert!(read_aut(wrong_transition.as_bytes()).is_err());
     }
+ 
+    #[test]
+    fn test_traversal_lts() {
+        let file = include_str!("../../../examples/lts/abp.aut");
+
+        let lts = read_aut(file.as_bytes()).unwrap();
+
+        // Check the number of outgoing transitions of the initial state
+        assert_eq!(lts.outgoing_transitions(lts.initial_state()).count(), 2);
+    }    
 }

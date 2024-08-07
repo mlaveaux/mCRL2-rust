@@ -1,11 +1,9 @@
 //!
-//! A crate containing IO related functionality.
+//! A crate containing IO related functionality. This includes the reading of
+//! .aut (Aldebaran) lts formats, and reading encoded integers.
 //!
 
-mod labelled_transition_system;
 mod line_iterator;
 
 pub mod io_aut;
 pub mod u64_variablelength;
-
-pub use labelled_transition_system::*;

@@ -73,18 +73,16 @@ impl fmt::Display for LabelledTransitionSystem {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::io_aut::read_aut;
-    use test_log::test;
+impl fmt::Debug for LabelledTransitionSystem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (from, state) in self.states.iter().enumerate() {
+            for (label, to) in &state.outgoing {
+                let label_name = &self.labels[*label];
 
-    #[test]
-    fn test_traversal_lts() {
-        let file = include_str!("../../../examples/lts/abp.aut");
+                writeln!(f, "{from} --[{label_name}]-> {to}")?;
+            }
+        }
 
-        let lts = read_aut(file.as_bytes()).unwrap();
-
-        // Check the number of outgoing transitions of the initial state
-        assert_eq!(lts.outgoing_transitions(lts.initial_state()).count(), 2);
+        Ok(())
     }
 }
