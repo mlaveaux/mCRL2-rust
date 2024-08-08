@@ -18,12 +18,11 @@ use sabre::RewriteSpecification;
 
 use crate::trs_format::TrsFormatter;
 
-mod counting_allocator;
 mod trs_format;
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
-static A: counting_allocator::AllocCounter = counting_allocator::AllocCounter;
+static ALLOC: unsafety::AllocCounter = unsafety::AllocCounter;
 
 #[cfg(not(target_env = "msvc"))]
 #[cfg(not(feature = "measure-allocs"))]

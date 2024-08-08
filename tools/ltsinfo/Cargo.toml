@@ -4,12 +4,16 @@ version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
 
+[features]
+measure-allocs = []
+
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
 env_logger.workspace = true
 io.workspace = true
 lts.workspace = true
+unsafety.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator.workspace = true
