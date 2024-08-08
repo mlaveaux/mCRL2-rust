@@ -1,5 +1,7 @@
-use std::{collections::{HashMap, HashSet}, mem::swap};
+use std::mem::swap;
 
+use ahash::AHashMap;
+use ahash::AHashSet;
 use log::{debug, trace};
 
 use crate::{LabelledTransitionSystem, State};
@@ -9,16 +11,15 @@ use crate::{LabelledTransitionSystem, State};
 type Signature = Vec<(usize, usize)>;
 
 /// Returns the signature for strong bisimulation sig(s) = { (a, pi(t)) | s -a-> t in T }
-fn compute_strong_bisim_signature(state: &State, partition: &Vec<usize>) -> Signature {    
-    // Compute the signature of a single state
-    let mut signature: HashSet::<(usize, usize)> = HashSet::new();
+fn compute_strong_bisim_signature(state: &State, partition: &Vec<usize>, tmp_signature: &mut AHashSet::<(usize, usize)>) -> Signature {  
+    tmp_signature.clear();
 
     for (label, to) in &state.outgoing {
-        signature.insert((*label, partition[*to]));
+        tmp_signature.insert((*label, partition[*to]));
     }
 
     // Compute the flat signature, which has Hash and is more compact.
-    let mut signature_flat: Vec<(usize, usize)> = signature.drain().collect();
+    let mut signature_flat: Vec<(usize, usize)> = tmp_signature.drain().collect();
     signature_flat.sort_unstable();
 
     signature_flat
@@ -29,7 +30,10 @@ fn compute_strong_bisim_signature(state: &State, partition: &Vec<usize>) -> Sign
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) {
 
     // Put all the states in the initial partition { S }.
-    let mut id: HashMap<Signature, usize> = HashMap::new();
+    let mut id: AHashMap<Signature, usize> = AHashMap::new();
+
+    // Avoids reallocations of the signature.
+    let mut tmp_signature: AHashSet::<(usize, usize)> = AHashSet::new();
 
     // Assigns the signature to each state.
     let mut partition: Vec<usize> = vec![0; lts.states.len()];
@@ -50,21 +54,20 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) {
         for (state_index, state) in lts.states.iter().enumerate() {
 
             // Compute the signature of a single state
-            let signature = compute_strong_bisim_signature(state, &partition);
+            let signature = compute_strong_bisim_signature(state, &partition, &mut tmp_signature);
+            trace!("State {state_index} signature {signature:?}");
 
             // Keep track of the index for every state.
             let mut new_id = id.len();
-            id.entry(signature.clone())
+            id.entry(signature)
                 .and_modify(|n| {
-                    next_partition[state_index] = *n;
                     new_id = *n;
                 })
                 .or_insert_with(|| {
-                    next_partition[state_index] = new_id;
                     new_id
                 });
 
-            trace!("State {state_index} signature {new_id}:{signature:?}");
+            next_partition[state_index] = new_id;
         }
 
         iteration += 1;
@@ -85,8 +88,8 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) {
 
         // Check that this block only contains states that are strongly bisimilar to the representative state.
         let representative_index = representative[block];
-        let signature = compute_strong_bisim_signature(state, &partition);
-        let representative_signature = compute_strong_bisim_signature(&lts.states[representative_index], &partition);
+        let signature = compute_strong_bisim_signature(state, &partition, &mut tmp_signature);
+        let representative_signature = compute_strong_bisim_signature(&lts.states[representative_index], &partition, &mut tmp_signature);
 
         debug_assert_eq!(signature, representative_signature, "State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");
     }
