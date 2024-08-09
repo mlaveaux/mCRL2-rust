@@ -217,7 +217,7 @@ impl Viewer {
                     let angle = -1.0
                         * direction
                             .xy()
-                            .angle_between(Vec2::new(0.0, -1.0))
+                            .angle_to(Vec2::new(0.0, -1.0))
                             .to_degrees();
 
                     // Draw the arrow of the transition
