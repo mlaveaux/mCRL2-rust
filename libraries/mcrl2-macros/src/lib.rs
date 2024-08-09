@@ -1,4 +1,9 @@
+//! 
 //! This crate defines several macros to make ATerm data types work.
+//! 
+//! This crate does not use unsafe code.
+
+#![forbid(unsafe_code)]
 
 mod mcrl2_derive_terms;
 

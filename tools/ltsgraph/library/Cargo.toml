@@ -12,3 +12,4 @@ log.workspace = true
 lts.workspace = true
 rand.workspace = true
 tiny-skia.workspace = true
+unsafety.workspace = true
