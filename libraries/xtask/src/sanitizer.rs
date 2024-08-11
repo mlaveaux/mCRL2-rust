@@ -27,6 +27,8 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
         "nextest".to_string(),
         "run".to_string(),
         "-Zbuild-std".to_string(),
+        "--features".to_string(),
+        "unstable".to_string(),
     ];
 
     add_target_flag(&mut arguments);
@@ -48,7 +50,14 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
 /// This only works under Linux and MacOS currently and requires the nightly toolchain.
 ///
 pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Error>> {
-    let mut arguments: Vec<String> = vec!["test".to_string(), "-Zbuild-std".to_string()];
+    let mut arguments: Vec<String> = vec![
+        "nextest".to_string(),
+        "run".to_string(),
+        "-Zbuild-std".to_string(),
+        "--features".to_string(),
+        "unstable".to_string(),
+    ];
+
 
     add_target_flag(&mut arguments);
     arguments.extend(cargo_arguments);
