@@ -9,11 +9,11 @@ use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
+use crate::line_iterator::LineIterator;
+use crate::progress::Progress;
 use lts::LabelIndex;
 use lts::LabelledTransitionSystem;
 use lts::State;
-use crate::line_iterator::LineIterator;
-use crate::progress::Progress;
 
 #[derive(Error, Debug)]
 pub enum IOError {
@@ -70,7 +70,10 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
     let mut labels: Vec<String> = Vec::new();
 
     let mut states: Vec<State> = Vec::with_capacity(num_of_states);
-    let mut progress = Progress::new(num_of_transitions);
+    let mut progress = Progress::new(
+        |value, increment| debug!("Reading transitions {}%...", value / increment),
+        num_of_transitions,
+    );
 
     while let Some(line) = lines.next() {
         trace!("{}", line);
@@ -113,7 +116,7 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
 
         progress.add(1);
     }
-    
+
     debug!("Finished reading LTS");
 
     Ok(LabelledTransitionSystem {
@@ -125,19 +128,26 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
 }
 
 /// Write a labelled transition system in plain text in Aldebaran format to the given writer.
-pub fn write_aut(writer: &mut impl Write, lts: &LabelledTransitionSystem) -> Result<(), Box<dyn Error>> {
-
-    writeln!(writer, "des ({}, {}, {})", lts.initial_state, lts.num_of_transitions, lts.states.len())?;
+pub fn write_aut(
+    writer: &mut impl Write,
+    lts: &LabelledTransitionSystem,
+) -> Result<(), Box<dyn Error>> {
+    writeln!(
+        writer,
+        "des ({}, {}, {})",
+        lts.initial_state,
+        lts.num_of_transitions,
+        lts.states.len()
+    )?;
 
     for (state_index, state) in lts.states.iter().enumerate() {
         for (label, to) in &state.outgoing {
-            writeln!(writer, "({}, {}, {})", state_index, lts.labels[*label], to)?;            
+            writeln!(writer, "({}, {}, {})", state_index, lts.labels[*label], to)?;
         }
     }
 
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -174,7 +184,7 @@ mod tests {
 
         debug_assert!(read_aut(wrong_transition.as_bytes()).is_err());
     }
- 
+
     #[test]
     fn test_traversal_lts() {
         let file = include_str!("../../../examples/lts/abp.aut");
@@ -183,7 +193,7 @@ mod tests {
 
         // Check the number of outgoing transitions of the initial state
         assert_eq!(lts.outgoing_transitions(lts.initial_state()).count(), 2);
-    } 
+    }
 
     #[test]
     fn test_writing_lts() {
@@ -197,5 +207,5 @@ mod tests {
         let lts = read_aut(&buffer[0..]).unwrap();
 
         assert_eq!(lts_original, lts, "The LTS after writing is different");
-    } 
+    }
 }
