@@ -445,3 +445,36 @@ ActionRenameRuleRHS = {
     |   "delta"                                                      // Delta, deadlock, inaction
     |    Action                                                      // Action
 }
+
+/// Boolean equation system
+BesSpec = { BesEqnSpec ~ BesInit }
+
+/// Boolean equation declaration
+BesEqnSpec = { "bes" ~ BesEqnDecl+ }                                 
+
+/// Boolean fixed point equation
+BesEqnDecl = { FixedPointOperator ~ BesVar ~ "=" ~ BesExpr ~ ";" }    
+
+FixedPointOperator = { "mu" | "nu" }
+
+/// BES variable
+BesVar = { Id }                                                     
+
+BesExpr = { BesExprPrimary ~ (BesExprInfix ~ BesExprPrimary)* }
+
+BesExprPrimary = {
+    BesVar                                                       // Boolean variable
+  | "true"                                                       // True
+  | "false"                                                      // False
+  | "!" ~ BesExpr                                                // Negation
+  | "(" ~ BesExpr ~ ")"                                          // Brackets                                  
+}
+
+BesExprInfix = {
+    "=>" // Implication
+  | "||" // Disjunction
+  | "&&" // Conjunction
+}
+
+/// Initial BES variable
+BesInit = { "init" ~ BesVar ~ ";" }
