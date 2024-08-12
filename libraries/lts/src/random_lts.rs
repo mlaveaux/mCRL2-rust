@@ -24,6 +24,7 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32) -> LabelledTransitio
         let to = rng.gen_range(0..num_of_states);
 
         state.outgoing.push((label as usize, to));
+        num_of_transitions += 1;
     }
 
     LabelledTransitionSystem {
