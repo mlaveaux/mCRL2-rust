@@ -50,7 +50,7 @@ impl<C: Markable + Send + 'static> Protected<C> {
     /// outlive the guard, see [Protector].
     pub fn write(&mut self) -> Protector<'_, C> {
         // The lifetime of ATermRef can be derived from self since it is protected by self, so transmute 'static into 'a.
-        unsafe { Protector::new(transmute(self.container.write_exclusive())) }
+        unsafe { Protector::new(self.container.write_exclusive()) }
     }
 
     /// Provides immutable access to the underlying container.
@@ -215,7 +215,7 @@ impl<'a, C: Markable> Protector<'a, C> {
             // Store terms that are marked as protected to check if they are
             // actually in the container when the protection is dropped.
             #[cfg(debug_assertions)]
-            self.protected.borrow_mut().push(transmute(term.copy()));
+            self.protected.borrow_mut().push(transmute::<ATermRef<'_>, ATermRef<'static>>(term.copy()));
 
             transmute(term.copy())
         }
