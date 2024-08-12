@@ -6,12 +6,15 @@ use lts::{quotient_lts, strong_bisim_sigref, IndexedPartition};
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
-static ALLOC: unsafety::AllocCounter = unsafety::AllocCounter;
+static MEASURE_ALLOC: unsafety::AllocCounter = unsafety::AllocCounter;
+
+#[cfg(feature = "measure-allocs")]
+use log::info;
 
 #[cfg(not(target_env = "msvc"))]
 #[cfg(not(feature = "measure-allocs"))]
 #[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[derive(clap::Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A command line rewriting tool")]
@@ -42,7 +45,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     partition.block_number(0);
 
     #[cfg(feature = "measure-allocs")]
-    info!("Allocations: {}", A.number_of_allocations());
+    info!("Allocations: {}", MEASURE_ALLOC.number_of_allocations());
 
     Ok(ExitCode::SUCCESS)
 }

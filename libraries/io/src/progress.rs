@@ -49,6 +49,6 @@ mod tests {
         // Test with extreme values.
         let _min = Progress::new(|_, _| {}, 0);
 
-        let progress = Progress::new(|_, _| {}, 1000);
+        let _progress = Progress::new(|_, _| {}, 1000);
     }
 }

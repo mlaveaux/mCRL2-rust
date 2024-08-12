@@ -11,8 +11,9 @@ measure-allocs = []
 clap.workspace = true
 env_logger.workspace = true
 io.workspace = true
+log.workspace = true
 lts.workspace = true
 unsafety.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-jemallocator.workspace = true
+tikv-jemallocator.workspace = true
