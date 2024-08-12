@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::Read;
+use std::io::Write;
 
+use log::debug;
 use log::trace;
 use regex::Regex;
 use streaming_iterator::StreamingIterator;
@@ -11,6 +13,7 @@ use lts::LabelIndex;
 use lts::LabelledTransitionSystem;
 use lts::State;
 use crate::line_iterator::LineIterator;
+use crate::progress::Progress;
 
 #[derive(Error, Debug)]
 pub enum IOError {
@@ -24,12 +27,14 @@ pub enum IOError {
 /// Loads a labelled transition system in the Aldebaran format from the given reader.
 ///
 /// The Aldebaran format consists of a header:
-///     `des (<initial>: Nat, <num_of_states>: Nat, <num_of_transitions>: Nat)`
+///     `des (<initial>: Nat, <num_of_transitions>: Nat, <num_of_states>: Nat)`
 ///     
 /// And one line for every transition:
 ///     `(<from>: Nat, "<label>": Str, <to>: Nat)`
 ///     `(<from>: Nat, <label>: Str, <to>: Nat)`
 pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn Error>> {
+    debug!("Reading LTS in .aut format...");
+
     let mut lines = LineIterator::new(reader);
     lines.advance();
     let header = lines.get().ok_or(IOError::InvalidHeader(
@@ -65,6 +70,7 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
     let mut labels: Vec<String> = Vec::new();
 
     let mut states: Vec<State> = Vec::with_capacity(num_of_states);
+    let mut progress = Progress::new(num_of_transitions);
 
     while let Some(line) = lines.next() {
         trace!("{}", line);
@@ -104,7 +110,11 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
         if labels[label_index].is_empty() {
             labels[label_index] = label_txt.to_string();
         }
+
+        progress.add(1);
     }
+    
+    debug!("Finished reading LTS");
 
     Ok(LabelledTransitionSystem {
         initial_state,
@@ -113,6 +123,21 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
         num_of_transitions,
     })
 }
+
+/// Write a labelled transition system in plain text in Aldebaran format to the given writer.
+pub fn write_aut(writer: &mut impl Write, lts: &LabelledTransitionSystem) -> Result<(), Box<dyn Error>> {
+
+    writeln!(writer, "des ({}, {}, {})", lts.initial_state, lts.num_of_transitions, lts.states.len())?;
+
+    for (state_index, state) in lts.states.iter().enumerate() {
+        for (label, to) in &state.outgoing {
+            writeln!(writer, "({}, {}, {})", state_index, lts.labels[*label], to)?;            
+        }
+    }
+
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -158,5 +183,19 @@ mod tests {
 
         // Check the number of outgoing transitions of the initial state
         assert_eq!(lts.outgoing_transitions(lts.initial_state()).count(), 2);
-    }    
+    } 
+
+    #[test]
+    fn test_writing_lts() {
+        let file = include_str!("../../../examples/lts/abp.aut");
+        let lts_original = read_aut(file.as_bytes()).unwrap();
+
+        // Check that it can be read after writing, and results in the same LTS.
+        let mut buffer: Vec<u8> = Vec::new();
+        write_aut(&mut buffer, &lts_original).unwrap();
+
+        let lts = read_aut(&buffer[0..]).unwrap();
+
+        assert_eq!(lts_original, lts, "The LTS after writing is different");
+    } 
 }

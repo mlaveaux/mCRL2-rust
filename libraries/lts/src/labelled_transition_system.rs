@@ -8,6 +8,7 @@ pub type StateIndex = usize;
 
 /// Represents a labelled transition system consisting of states with directed
 /// labelled edges.
+#[derive(PartialEq, Eq)]
 pub struct LabelledTransitionSystem {
     pub states: Vec<State>,
 
@@ -34,7 +35,7 @@ impl LabelledTransitionSystem {
 }
 
 /// A single state in the LTS, containing a vector of outgoing edges.
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct State {
     pub outgoing: Vec<(LabelIndex, StateIndex)>,
 }
@@ -50,6 +51,9 @@ impl fmt::Display for LabelledTransitionSystem {
 
 impl fmt::Debug for LabelledTransitionSystem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Initial state: {}", self.initial_state)?;
+        writeln!(f, "Number of transitions: {}", self.num_of_transitions)?;
+
         for (from, state) in self.states.iter().enumerate() {
             for (label, to) in &state.outgoing {
                 let label_name = &self.labels[*label];
