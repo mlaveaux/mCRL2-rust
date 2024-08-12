@@ -9,7 +9,7 @@ pub trait IndexedPartition {
 }
 
 
-pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: impl IndexedPartition) -> LabelledTransitionSystem {
+pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPartition) -> LabelledTransitionSystem {
 
     // Figure out the highest block number for the number of states.
     let mut max_block_number = 0;
@@ -77,6 +77,6 @@ mod tests {
         let lts = random_lts(10, 3);
 
         trace!("{lts:?}");
-        quotient_lts(&lts, strong_bisim_sigref(&lts));
+        quotient_lts(&lts, &strong_bisim_sigref(&lts));
     }
 }

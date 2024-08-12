@@ -3,9 +3,11 @@
 
 slint::include_modules!();
 
+use std::error::Error;
 use std::fs::File;
 use std::ops::Deref;
 use std::path::Path;
+use std::process::ExitCode;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
@@ -77,7 +79,7 @@ impl GuiSettings {
 
 // Initialize a tokio runtime for async calls
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<ExitCode, Box<dyn Error>> {
     // Attach the standard output to the command line.
     let _console = console::init()?;
 
@@ -383,5 +385,5 @@ async fn main() -> anyhow::Result<()> {
     layout_handle.stop();
     render_handle.stop();
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

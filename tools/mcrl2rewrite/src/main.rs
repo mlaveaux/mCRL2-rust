@@ -1,10 +1,11 @@
 use std::cell::RefCell;
+use std::error::Error;
 use std::fs::File;
 use std::fs::{self};
 use std::io::Write;
+use std::process::ExitCode;
 use std::rc::Rc;
 
-use anyhow::Result as AnyResult;
 use clap::Parser;
 
 use log::info;
@@ -64,7 +65,7 @@ struct ConvertArgs {
     output: String,
 }
 
-fn main() -> AnyResult<()> {
+fn main() -> Result<ExitCode, Box<dyn Error>> {
     env_logger::init();
 
     let cli = Cli::parse();
@@ -116,5 +117,5 @@ fn main() -> AnyResult<()> {
     #[cfg(feature = "measure-allocs")]
     info!("Allocations: {}", A.number_of_allocations());
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

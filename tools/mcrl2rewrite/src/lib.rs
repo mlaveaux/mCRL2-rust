@@ -9,7 +9,6 @@ use std::time::Instant;
 
 use ahash::AHashSet;
 use anyhow::bail;
-use anyhow::Result as AnyResult;
 use clap::ValueEnum;
 use mcrl2::aterm::TermPool;
 use mcrl2::data::DataExpression;
@@ -36,7 +35,7 @@ pub fn rewrite_data_spec(
     filename_dataspec: &str,
     filename_terms: &str,
     output: bool,
-) -> AnyResult<()> {
+) -> anyhow::Result<()> {
     // Read the data specification
     let data_spec_text = fs::read_to_string(filename_dataspec)?;
     let data_spec = DataSpecification::new(&data_spec_text)?;
@@ -102,7 +101,7 @@ pub fn rewrite_rec(
     rewriter: Rewriter,
     filename_specification: &str,
     output: bool,
-) -> AnyResult<()> {
+) -> anyhow::Result<()> {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
     let (syntax_spec, syntax_terms) =

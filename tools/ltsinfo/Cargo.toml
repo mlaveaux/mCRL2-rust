@@ -8,7 +8,6 @@ edition.workspace = true
 measure-allocs = []
 
 [dependencies]
-anyhow.workspace = true
 clap.workspace = true
 env_logger.workspace = true
 io.workspace = true
