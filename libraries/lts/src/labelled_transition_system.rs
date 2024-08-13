@@ -10,16 +10,36 @@ pub type StateIndex = usize;
 /// labelled edges.
 #[derive(PartialEq, Eq)]
 pub struct LabelledTransitionSystem {
-    pub states: Vec<State>,
+    states: Vec<State>,
 
-    pub labels: Vec<String>,
+    labels: Vec<String>,
 
-    pub initial_state: StateIndex,
+    initial_state: StateIndex,
 
-    pub num_of_transitions: usize,
+    num_of_transitions: usize,
 }
 
 impl LabelledTransitionSystem {
+    pub fn new(
+        initial_state: StateIndex,
+        states: Vec<State>,
+        labels: Vec<String>,
+        num_of_transitions: usize,
+    ) -> LabelledTransitionSystem {
+        // Check that the number of transitions has been computed correctly.
+
+        LabelledTransitionSystem {
+            initial_state,
+            labels,
+            states,
+            num_of_transitions
+        }
+    }
+
+    pub fn initial_state_index(&self) -> StateIndex {
+        self.initial_state
+    }
+
     /// Returns a borrow of the initial state.
     pub fn initial_state(&self) -> &State {
         &self.states[self.initial_state]
@@ -31,6 +51,31 @@ impl LabelledTransitionSystem {
             .outgoing
             .iter()
             .map(|(label_index, out_index)| (&self.labels[*label_index], &self.states[*out_index]))
+    }
+
+    /// Iterate over all (state_index, state) in the labelled transition system
+    pub fn iter_states(&self) -> impl Iterator<Item = (StateIndex, &State)> + '_ {
+        self.states.iter().enumerate()
+    }
+
+    /// Returns access to the given state.
+    pub fn state(&self, index: StateIndex) -> &State {
+        &self.states[index]
+    }
+
+    /// Returns the number of states.
+    pub fn num_of_states(&self) -> StateIndex {
+        self.states.len()
+    }
+
+    /// Returns the number of transitions.
+    pub fn num_of_transitions(&self) -> usize {
+        self.num_of_transitions
+    }
+
+    /// Returns the list of labels.
+    pub fn labels(&self) -> &[String] {
+        &self.labels[0..]
     }
 }
 

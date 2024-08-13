@@ -33,7 +33,7 @@ struct StateView {
     pub outgoing: Vec<TransitionView>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct TransitionView {
     /// The offset of the handle w.r.t. the 'from' state.
     pub handle_offset: Vec3,
@@ -44,7 +44,7 @@ impl Viewer {
         let mut text_cache = TextCache::new();
         let mut labels_cache = vec![];
 
-        for label in &lts.labels {
+        for label in lts.labels() {
             // Create text elements for all labels that we are going to render.
             let buffer = text_cache.create_buffer(label, Metrics::new(12.0, 12.0));
 
@@ -53,17 +53,13 @@ impl Viewer {
         }
 
         // Initialize the view information for the states.
-        let mut view_states = Vec::with_capacity(lts.states.len());
-        view_states.resize_with(lts.states.len(), StateView::default);
+        let mut view_states = vec![StateView::default; lts.num_of_states()];
 
         // Add the transition view information
         for (index, state_view) in view_states.iter_mut().enumerate() {
-            let state = &lts.states[index];
+            let state = lts.state(index);
 
-            state_view.outgoing = Vec::with_capacity(state.outgoing.len());
-            state_view
-                .outgoing
-                .resize_with(state.outgoing.len(), TransitionView::default);
+            state_view.outgoing = vec![TransitionView::default(); state.outgoing.len()];
 
             // Compute the offsets for self-loops, put them at equal distance around the state.
             let num_selfloops = state.outgoing.iter().filter(|(_, to)| *to == index).count();
@@ -91,9 +87,7 @@ impl Viewer {
                     index_selfloop += 1;
                 } else {
                     // Determine whether any of the outgoing edges from the reached state point back.
-                    let has_backtransition = lts.states[*to]
-                        .outgoing
-                        .iter()
+                    let has_backtransition = lts.outgoing_transitions(*to)
                         .filter(|(_, other_to)| *other_to == index)
                         .count()
                         > 0;
@@ -198,7 +192,7 @@ impl Viewer {
         let mut edge_builder = tiny_skia::PathBuilder::new();
         let mut arrow_builder = tiny_skia::PathBuilder::new();
 
-        for (index, state) in self.lts.states.iter().enumerate() {
+        for (index, state) in self.lts.iter_states() {
             let state_view = &self.view_states[index];
 
             // For now we only draw 2D graphs properly.
@@ -288,7 +282,7 @@ impl Viewer {
         let mut state_path_builder = tiny_skia::PathBuilder::new();
 
         for (index, state_view) in self.view_states.iter().enumerate() {
-            if index != self.lts.initial_state {
+            if index != self.lts.initial_state_index() {
                 state_path_builder.push_circle(
                     state_view.position.x,
                     state_view.position.y,

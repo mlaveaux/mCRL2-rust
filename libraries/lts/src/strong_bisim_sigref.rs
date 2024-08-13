@@ -20,10 +20,10 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
 
     // Assigns the signature to each state.
     let mut partition = SigrefPartition {
-        partition: vec![0; lts.states.len()]
+        partition: vec![0; lts.num_of_states()]
     };
     let mut next_partition = SigrefPartition {
-        partition: vec![0; lts.states.len()]
+        partition: vec![0; lts.num_of_states()]
     };
 
     // Refine partitions until stable.
@@ -38,7 +38,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
         // Clear the current partition to start the next blocks.
         id.clear();
 
-        for (state_index, state) in lts.states.iter().enumerate() {
+        for (state_index, state) in lts.iter_states() {
 
             // Compute the signature of a single state
             let signature = compute_strong_bisim_signature(state, &partition, &mut builder);
@@ -59,7 +59,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
 
         iteration += 1;
 
-        debug_assert!(iteration <= lts.states.len(), "There can never be more splits than number of states");
+        debug_assert!(iteration <= lts.num_of_states(), "There can never be more splits than number of states");
     }
 
     next_partition

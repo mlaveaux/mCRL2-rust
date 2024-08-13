@@ -15,7 +15,7 @@ pub struct GraphLayout {
     pub layout_states: Vec<StateLayout>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct StateLayout {
     pub position: Vec3,
     pub force: Vec3,
@@ -25,12 +25,11 @@ impl GraphLayout {
     /// Construct a new layout for the given LTS.
     pub fn new(lts: &Arc<LabelledTransitionSystem>) -> GraphLayout {
         // Keep track of state layout information.
-        let mut states_simulation = Vec::with_capacity(lts.states.len());
-        states_simulation.resize_with(lts.states.len(), StateLayout::default);
+        let mut states_simulation = vec![StateLayout::default(); lts.num_of_states()];
 
         // Place the states at a random position within some bound based on the number of states.
         let mut rng = rand::thread_rng();
-        let bound = (lts.states.len() as f32).sqrt().ceil();
+        let bound = (lts.num_of_states() as f32).sqrt().ceil();
 
         debug!("Placing states within bound {bound}");
         for layout_state in &mut states_simulation {
@@ -48,7 +47,7 @@ impl GraphLayout {
     ///
     /// Returns true iff the layout is stable.
     pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) -> bool {
-        for (state_index, state) in self.lts.states.iter().enumerate() {
+        for (state_index, state) in self.lts.iter_states() {
             // Ignore the last state since it cannot repulse with any other state.
             if state_index < self.layout_states.len() {
                 // Use split_at_mut to get two mutable slices at every split point.

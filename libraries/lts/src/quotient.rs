@@ -13,25 +13,23 @@ pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPart
 
     // Figure out the highest block number for the number of states.
     let mut max_block_number = 0;
-    for (state_index, _state) in lts.states.iter().enumerate() {
+    for (state_index, _state) in lts.iter_states() {
         max_block_number = max_block_number.max(partition.block_number(state_index));
     }
 
     // Introduce the transitions based on the block numbers
     let num_of_transitions = 0;
     let mut states: Vec<State> = vec![State::default(); max_block_number + 1];
-    for (state_index, state) in lts.states.iter().enumerate() {
+    for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
             states[partition.block_number(state_index)].outgoing.push((*label, partition.block_number(*to)));
         }
     }
 
-    LabelledTransitionSystem {
-        initial_state: 0,
+    LabelledTransitionSystem::new(0,
         states,
-        labels: lts.labels.clone(),
-        num_of_transitions,
-    }
+        lts.labels().into(),
+        num_of_transitions)
 }
 
 /// Returns true iff the given partition is a strong bisimulation partition
@@ -41,7 +39,7 @@ pub fn is_strong_bisim(lts: &LabelledTransitionSystem, partition: &impl IndexedP
 
     // Check that the partition is indeed stable and as such is a quotient of strong bisimulation
     let mut representative: Vec<usize> = Vec::new();
-    for (state_index, state) in lts.states.iter().enumerate() {
+    for (state_index, state) in lts.iter_states() {
         let block = partition.block_number(state_index);
 
         if block + 1 > representative.len() {
@@ -52,7 +50,7 @@ pub fn is_strong_bisim(lts: &LabelledTransitionSystem, partition: &impl IndexedP
         // Check that this block only contains states that are strongly bisimilar to the representative state.
         let representative_index = representative[block];
         let signature = compute_strong_bisim_signature(state, partition, &mut builder);
-        let representative_signature = compute_strong_bisim_signature(&lts.states[representative_index], partition, &mut builder);
+        let representative_signature = compute_strong_bisim_signature(&lts.state(representative_index), partition, &mut builder);
 
         debug_assert_eq!(signature, representative_signature, "State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");
         if signature != representative_signature {

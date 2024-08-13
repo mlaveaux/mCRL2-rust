@@ -119,12 +119,12 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
 
     debug!("Finished reading LTS");
 
-    Ok(LabelledTransitionSystem {
+    Ok(LabelledTransitionSystem::new(
         initial_state,
         states,
         labels,
         num_of_transitions,
-    })
+    ))
 }
 
 /// Write a labelled transition system in plain text in Aldebaran format to the given writer.
@@ -135,14 +135,14 @@ pub fn write_aut(
     writeln!(
         writer,
         "des ({}, {}, {})",
-        lts.initial_state,
-        lts.num_of_transitions,
-        lts.states.len()
+        lts.initial_state_index(),
+        lts.num_of_transitions(),
+        lts.num_of_states()
     )?;
 
-    for (state_index, state) in lts.states.iter().enumerate() {
+    for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
-            writeln!(writer, "({}, {}, {})", state_index, lts.labels[*label], to)?;
+            writeln!(writer, "({}, {}, {})", state_index, lts.labels()[*label], to)?;
         }
     }
 
@@ -161,8 +161,8 @@ mod tests {
 
         let lts = read_aut(file.as_bytes()).unwrap();
 
-        assert_eq!(lts.initial_state, 0);
-        assert_eq!(lts.num_of_transitions, 92);
+        assert_eq!(lts.initial_state_index(), 0);
+        assert_eq!(lts.num_of_transitions(), 92);
         println!("{}", lts);
     }
 
