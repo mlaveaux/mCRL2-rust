@@ -6,12 +6,14 @@
 //#![forbid(unsafe_code)]
 
 mod labelled_transition_system;
+mod incoming_transitions;
 mod partition;
 mod quotient;
 mod random_lts;
 mod strong_bisim_sigref;
 
 pub use labelled_transition_system::*;
+pub use incoming_transitions::*;
 pub use partition::*;
 pub use quotient::*;
 pub use random_lts::*;
