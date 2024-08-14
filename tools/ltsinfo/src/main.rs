@@ -1,8 +1,8 @@
 use std::{error::Error, fs::File, io::stdout, process::ExitCode};
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use io::io_aut::{read_aut, write_aut};
-use lts::{quotient_lts, strong_bisim_sigref, IndexedPartition};
+use lts::{branching_bisim_sigref, quotient_lts, strong_bisim_sigref, IndexedPartition};
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
@@ -16,12 +16,20 @@ use log::info;
 #[global_allocator]
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
+#[derive(Clone, Debug, ValueEnum)]
+enum Equivalence {
+    StrongBisim,
+    BranchingBisim,
+}
+
 #[derive(clap::Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A command line rewriting tool")]
 struct Cli {
     filename: String,
     
     output: Option<String>,
+
+    equivalence: Equivalence,
 }
 
 fn main() -> Result<ExitCode, Box<dyn Error>> {
@@ -32,7 +40,14 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let file = File::open(cli.filename)?;
     let lts = read_aut(&file)?;
 
-    let partition = strong_bisim_sigref(&lts);
+    let partition = match cli.equivalence {
+        Equivalence::StrongBisim => {
+            strong_bisim_sigref(&lts)
+        },
+        Equivalence::BranchingBisim => {
+            branching_bisim_sigref(&lts)
+        }
+    };
     let quotient_lts = quotient_lts(&lts, &partition);
 
     if let Some(file) = cli.output {
