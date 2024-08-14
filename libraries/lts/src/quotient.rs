@@ -31,6 +31,7 @@ pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPart
     LabelledTransitionSystem::new(partition.block_number(0),
         states,
         lts.labels().into(),
+        lts.hidden_labels().into(),
         num_of_transitions)
 }
 

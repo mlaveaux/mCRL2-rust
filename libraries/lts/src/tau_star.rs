@@ -1,13 +1,7 @@
 use log::trace;
 
-use crate::LabelIndex;
 use crate::LabelledTransitionSystem;
 use crate::SigrefPartition;
-
-/// Returns true iff the given label index is a hidden label.
-pub fn is_hidden_label(label_index: LabelIndex) -> bool {
-    label_index == 0
-}
 
 /// Computes the tau-star partition of the given LTS.
 pub fn tau_star_partition(lts: &LabelledTransitionSystem) -> SigrefPartition {
@@ -41,7 +35,7 @@ pub fn tau_star_partition(lts: &LabelledTransitionSystem) -> SigrefPartition {
             let stack_length = stack.len();
 
             for (label_index, to_index) in lts.outgoing_transitions(inner_state_index) {
-                if is_hidden_label(*label_index) {
+                if lts.is_hidden_label(*label_index) {
                     if let Some(previous_index) = stack[0..stack_length].iter().position(|element| element == to_index) {
 
                         // Every state on the stack starting here is reachable in a cycle
@@ -84,7 +78,7 @@ pub fn has_tau_loop(lts: &LabelledTransitionSystem) -> bool {
             let stack_length = stack.len();
 
             for (label_index, to_index) in lts.outgoing_transitions(inner_state_index) {
-                if is_hidden_label(*label_index) {
+                if lts.is_hidden_label(*label_index) {
                     if stack[0..stack_length].contains(&to_index) {
                         // There is state where following tau path leads back
                         // into the stack.

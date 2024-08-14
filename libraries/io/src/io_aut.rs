@@ -123,6 +123,7 @@ pub fn read_aut(reader: impl Read) -> Result<LabelledTransitionSystem, Box<dyn E
         initial_state,
         states,
         labels,
+        vec![String::from("tau")],
         num_of_transitions,
     ))
 }

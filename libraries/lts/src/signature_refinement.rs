@@ -2,6 +2,7 @@ use std::fmt;
 use std::mem::swap;
 
 use ahash::AHashMap;
+use ahash::AHashSet;
 use log::debug;
 use log::trace;
 
@@ -43,14 +44,15 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::new();
     let mut stack: Vec<usize> = Vec::new();
+    let mut visited = AHashSet::new();
 
     let partition = signature_refinement(&simplified_lts, |state_index, partition| {
-        branching_bisim_signature(state_index, lts, partition, &mut builder, &mut stack)
+        branching_bisim_signature(state_index, lts, partition, &mut builder, &mut visited, &mut stack)
     });
 
     debug_assert!(
         is_valid_refinement(&lts, &partition, |state_index, partition| {
-            branching_bisim_signature(state_index, lts, partition, &mut builder, &mut stack)
+            branching_bisim_signature(state_index, lts, partition, &mut builder, &mut visited, &mut stack)
         }),
         "The resulting partition is not a branching bisimulation partition for LTS {:?}",
         lts
@@ -63,6 +65,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition
 fn signature_refinement<F>(lts: &LabelledTransitionSystem, mut signature: F) -> SigrefPartition
     where F: FnMut(usize, &SigrefPartition) -> Signature
 {
+    trace!("{:?}", lts);
+    
     // Put all the states in the initial partition { S }.
     let mut id: AHashMap<Signature, usize> = AHashMap::new();
 
@@ -237,6 +241,10 @@ mod tests {
     #[test]
     fn test_random_branching_bisim_sigref() {
         let lts = random_lts(10, 3, 3);
-        branching_bisim_sigref(&lts);
+
+        let strong_partition = strong_bisim_sigref(&lts);
+        let branching_partition = branching_bisim_sigref(&lts);
+
+        assert!(branching_partition.num_of_blocks() <= strong_partition.num_of_blocks(), "The branching partition should be a refinement of the strong partition");
     }
 }

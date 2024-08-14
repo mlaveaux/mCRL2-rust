@@ -13,6 +13,8 @@ pub struct LabelledTransitionSystem {
     states: Vec<State>,
 
     labels: Vec<String>,
+    hidden_labels: Vec<String>,
+    hidden_indices: Vec<usize>,
 
     initial_state: StateIndex,
 
@@ -24,6 +26,7 @@ impl LabelledTransitionSystem {
         initial_state: StateIndex,
         states: Vec<State>,
         labels: Vec<String>,
+        hidden_labels: Vec<String>,
         num_of_transitions: usize,
     ) -> LabelledTransitionSystem {
         // Check that the number of transitions has been computed correctly.
@@ -35,14 +38,27 @@ impl LabelledTransitionSystem {
             "The number of transitions is not equal to the actual number of transitions."
         );
 
+        let mut hidden_indices: Vec<usize> = Vec::new();
+        for label in &hidden_labels {
+            if let Some(index) = labels.iter().position(|other| {
+                other == label
+            }) {
+                hidden_indices.push(index);             
+            }
+        };
+        hidden_indices.sort();
+
         LabelledTransitionSystem {
             initial_state,
             labels,
+            hidden_labels,
+            hidden_indices,
             states,
             num_of_transitions,
         }
     }
 
+    /// Returns the index of the initial state
     pub fn initial_state_index(&self) -> StateIndex {
         self.initial_state
     }
@@ -85,6 +101,16 @@ impl LabelledTransitionSystem {
     /// Returns the list of labels.
     pub fn labels(&self) -> &[String] {
         &self.labels[0..]
+    }
+
+    /// Returns the list of hidden labels.
+    pub fn hidden_labels(&self) -> &[String] {
+        &self.hidden_labels[0..]
+    }
+
+    /// Returns true iff the given label index is a hidden label.
+    pub fn is_hidden_label(&self, label_index: LabelIndex) -> bool {
+        self.hidden_indices.binary_search(&label_index).is_ok()
     }
 }
 
