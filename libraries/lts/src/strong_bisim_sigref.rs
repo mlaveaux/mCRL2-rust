@@ -5,13 +5,13 @@ use ahash::AHashSet;
 use log::debug;
 use log::trace;
 
+use crate::is_strong_bisim;
+use crate::IndexedPartition;
 use crate::LabelledTransitionSystem;
 use crate::State;
-use crate::IndexedPartition;
 
 /// Computes a strong bisimulation quotient using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
-
     // Put all the states in the initial partition { S }.
     let mut id: AHashMap<Signature, usize> = AHashMap::new();
 
@@ -20,10 +20,10 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
 
     // Assigns the signature to each state.
     let mut partition = SigrefPartition {
-        partition: vec![0; lts.num_of_states()]
+        partition: vec![0; lts.num_of_states()],
     };
     let mut next_partition = SigrefPartition {
-        partition: vec![0; lts.num_of_states()]
+        partition: vec![0; lts.num_of_states()],
     };
 
     // Refine partitions until stable.
@@ -39,7 +39,6 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
         id.clear();
 
         for (state_index, state) in lts.iter_states() {
-
             // Compute the signature of a single state
             let signature = compute_strong_bisim_signature(state, &partition, &mut builder);
             trace!("State {state_index} signature {:?}", signature);
@@ -50,24 +49,30 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
                 .and_modify(|n| {
                     new_id = *n;
                 })
-                .or_insert_with(|| {
-                    new_id
-                });
+                .or_insert_with(|| new_id);
 
             next_partition.partition[state_index] = new_id;
         }
 
         iteration += 1;
 
-        debug_assert!(iteration <= lts.num_of_states(), "There can never be more splits than number of states");
+        debug_assert!(
+            iteration <= lts.num_of_states(),
+            "There can never be more splits than number of states"
+        );
     }
 
+    debug_assert!(
+        is_strong_bisim(&lts, &next_partition),
+        "The resulting partition is not a strong bisimulation partition for LTS {:?}",
+        lts
+    );
     next_partition
 }
 
 /// Stores the partition for the signature refinement.
 pub struct SigrefPartition {
-    partition: Vec<usize>
+    partition: Vec<usize>,
 }
 
 impl IndexedPartition for SigrefPartition {
@@ -81,11 +86,14 @@ impl IndexedPartition for SigrefPartition {
 type Signature = Vec<(usize, usize)>;
 
 /// The builder used to construct the signature.
-pub type SignatureBuilder = AHashSet::<(usize, usize)>;
+pub type SignatureBuilder = AHashSet<(usize, usize)>;
 
 /// Returns the signature for strong bisimulation sig(s) = { (a, pi(t)) | s -a-> t in T }
-pub fn compute_strong_bisim_signature(state: &State, partition: &impl IndexedPartition, builder: &mut SignatureBuilder) -> Signature { 
-
+pub fn compute_strong_bisim_signature(
+    state: &State,
+    partition: &impl IndexedPartition,
+    builder: &mut SignatureBuilder,
+) -> Signature {
     for (label, to) in &state.outgoing {
         builder.insert((*label, partition.block_number(*to)));
     }
@@ -99,18 +107,15 @@ pub fn compute_strong_bisim_signature(state: &State, partition: &impl IndexedPar
 
 #[cfg(test)]
 mod tests {
-    use log::trace;
     use test_log::test;
-    
-    use crate::{is_strong_bisim, random_lts};
+
+    use crate::random_lts;
 
     use super::*;
 
     #[test]
     fn test_random_bisim_sigref() {
-        let lts = random_lts(10, 3);
-
-        trace!("{lts:?}");
-        assert!(is_strong_bisim(&lts, &strong_bisim_sigref(&lts)), "The resulting partition is not a strong bisimulation partition");
+        let lts = random_lts(10, 3, 3);
+        strong_bisim_sigref(&lts);
     }
 }

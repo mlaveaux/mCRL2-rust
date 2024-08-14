@@ -2864,7 +2864,6 @@ name = "lts"
 version = "0.1.0"
 dependencies = [
  "ahash",
- "bumpalo",
  "log",
  "rand",
  "test-log",

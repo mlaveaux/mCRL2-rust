@@ -27,7 +27,7 @@ pub struct Viewer {
     view_states: Vec<StateView>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct StateView {
     pub position: Vec3,
     pub outgoing: Vec<TransitionView>,
@@ -53,7 +53,7 @@ impl Viewer {
         }
 
         // Initialize the view information for the states.
-        let mut view_states = vec![StateView::default; lts.num_of_states()];
+        let mut view_states = vec![StateView::default(); lts.num_of_states()];
 
         // Add the transition view information
         for (index, state_view) in view_states.iter_mut().enumerate() {

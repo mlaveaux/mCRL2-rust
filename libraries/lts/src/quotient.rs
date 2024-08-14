@@ -8,7 +8,9 @@ pub trait IndexedPartition {
     fn block_number(&self, state_index: usize) -> usize;
 }
 
-
+/// Returns a new LTS based on the given partition.
+/// 
+/// All states in a single block are replaced by a single representative state.
 pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPartition) -> LabelledTransitionSystem {
 
     // Figure out the highest block number for the number of states.
@@ -18,15 +20,16 @@ pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPart
     }
 
     // Introduce the transitions based on the block numbers
-    let num_of_transitions = 0;
+    let mut num_of_transitions = 0;
     let mut states: Vec<State> = vec![State::default(); max_block_number + 1];
     for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
             states[partition.block_number(state_index)].outgoing.push((*label, partition.block_number(*to)));
+            num_of_transitions += 1;
         }
     }
 
-    LabelledTransitionSystem::new(0,
+    LabelledTransitionSystem::new(partition.block_number(0),
         states,
         lts.labels().into(),
         num_of_transitions)
@@ -63,18 +66,16 @@ pub fn is_strong_bisim(lts: &LabelledTransitionSystem, partition: &impl IndexedP
 
 #[cfg(test)]
 mod tests {
-    use log::trace;
     use test_log::test;
 
-    use crate::{random_lts, strong_bisim_sigref};
+    use crate::random_lts;
+    use crate::strong_bisim_sigref;
 
     use super::*;
 
     #[test]
     fn test_random_quotient() {
-        let lts = random_lts(10, 3);
-
-        trace!("{lts:?}");
+        let lts = random_lts(10, 3, 3);
         quotient_lts(&lts, &strong_bisim_sigref(&lts));
     }
 }

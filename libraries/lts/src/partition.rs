@@ -10,6 +10,8 @@
 
 use std::fmt;
 
+use crate::IndexedPartition;
+
 pub struct Partition {
     elements: Vec<usize>,
     blocks: Vec<Block>,
@@ -18,6 +20,8 @@ pub struct Partition {
 impl Partition {
     /// Create an initial partition where all the states are in a single block.
     pub fn new(num_of_entries: usize) -> Partition {
+        debug_assert!(num_of_entries > 0, "Cannot partition the empty set");
+
         let blocks = vec![Block {
             begin: 0,
             end: num_of_entries,
@@ -34,13 +38,20 @@ impl Partition {
         Partition { elements, blocks }
     }
 
-    /// Split the given block into two separate block based on the splitter predicate.
-    pub fn split(&mut self, block_index: usize, splitter: impl Fn(usize) -> bool) {
+    /// Split the given block into two separate block based on the splitter
+    /// predicate.
+    ///
+    /// Note that this function can create empty blocks when splitter holds for
+    /// all elements in the block. This does not break the partition, but is
+    /// inefficient.
+    pub fn split(&mut self, block_index: usize, mut splitter: impl FnMut(usize) -> bool) {
         let mut updated_block = self.blocks[block_index];
         let mut new_block: Option<usize> = None;
 
-        // Loop over all elements
-        for element_index in updated_block.begin..(updated_block.begin + updated_block.end) {
+        // Loop over all elements, we use a while loop since the index stays the
+        // same when a swap takes place.
+        let mut element_index = updated_block.begin;
+        while element_index < updated_block.end {
             if splitter(self.elements[element_index]) {
                 match new_block {
                     None => {
@@ -51,20 +62,23 @@ impl Partition {
                         });
 
                         // Swap the current element to the last place
-                        self.elements.swap(element_index, updated_block.end);
+                        self.elements.swap(element_index, updated_block.end - 1);
 
                         updated_block.end -= 1;
-                        new_block = Some(self.blocks.len());
+                        new_block = Some(self.blocks.len() - 1);
                     }
-                    Some(other_block_index) => {
-
+                    Some(new_block_index) => {
                         // Swap the current element to the beginning of the new block.
-                        self.blocks[other_block_index].begin -= 1;
+                        self.blocks[new_block_index].begin -= 1;
                         updated_block.end -= 1;
 
-                        self.elements.swap(element_index, self.blocks[other_block_index].begin);
+                        self.elements
+                            .swap(element_index, self.blocks[new_block_index].begin);
                     }
                 }
+            } else {
+                // If no swap takes place consider the next index.
+                element_index += 1;
             }
         }
 
@@ -73,7 +87,8 @@ impl Partition {
 
         debug_assert!(
             self.is_consistent(),
-            "After splitting the partition became inconsistent"
+            "After splitting the partition {:?} is inconsistent",
+            self
         );
     }
 
@@ -83,7 +98,7 @@ impl Partition {
     }
 
     /// Returns the number of blocks in the partition.
-    pub fn number_of_blocks(&self) -> usize {
+    pub fn num_of_blocks(&self) -> usize {
         self.blocks.len()
     }
 
@@ -116,30 +131,50 @@ impl Partition {
     }
 }
 
+impl IndexedPartition for Partition {
+    fn block_number(&self, state_index: usize) -> usize {
+        for block_index in 0..self.num_of_blocks() {
+            for element in self.iter_block(block_index) {
+                if element == state_index {
+                    return block_index;
+                }
+            }
+        }
+
+        unreachable!("This state is not is any block");
+    }
+}
+
 impl fmt::Debug for Partition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{")?;
+
+        let mut first_block = true;
         for block in &self.blocks {
+            if !first_block {
+                write!(f, ", ")?;
+            }
             write!(f, "{{")?;
 
             let mut first = true;
 
-            for element_index in block.iter(self) {
+            for element in block.iter(self) {
                 if !first {
                     write!(f, ", ")?;
                 }
-                write!(f, "{}", self.elements[element_index])?;
+                write!(f, "{}", element)?;
                 first = false;
             }
 
             write!(f, "}}")?;
+            first_block = false;
         }
 
         write!(f, "}}")
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Block {
     begin: usize,
     end: usize,
@@ -190,10 +225,33 @@ impl<'a> Iterator for BlockIter<'a> {
 mod tests {
     use super::*;
 
+    use test_log::test;
+
     #[test]
     fn test_partition() {
         let mut partition = Partition::new(10);
 
         partition.split(0, |element| element < 3);
+
+        // The new block only has elements that satisfy the predicate.
+        for element in partition.iter_block(1) {
+            assert!(element < 3);
+        }
+
+        for element in partition.iter_block(0) {
+            assert!(element >= 3);
+        }
+
+        partition.split(0, |element| element < 7);
+        for element in partition.iter_block(2) {
+            assert!(element >= 3 && element < 7);
+        }
+
+        for element in partition.iter_block(0) {
+            assert!(element >= 7);
+        }
+
+        // Create an empty block, this should be fine but inefficient.
+        partition.split(1, |element| element < 7);
     }
 }
