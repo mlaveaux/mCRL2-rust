@@ -25,11 +25,11 @@ enum Equivalence {
 #[derive(clap::Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A command line rewriting tool")]
 struct Cli {
+    equivalence: Equivalence,
+
     filename: String,
     
     output: Option<String>,
-
-    equivalence: Equivalence,
 }
 
 fn main() -> Result<ExitCode, Box<dyn Error>> {
