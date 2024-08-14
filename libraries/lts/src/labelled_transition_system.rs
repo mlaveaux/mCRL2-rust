@@ -56,11 +56,10 @@ impl LabelledTransitionSystem {
     pub fn outgoing_transitions<'a>(
         &'a self,
         state_index: usize,
-    ) -> impl Iterator<Item = (LabelIndex, StateIndex)> + 'a {
+    ) -> impl Iterator<Item = &(LabelIndex, StateIndex)> + 'a {
         self.state(state_index)
             .outgoing
             .iter()
-            .map(|(label_index, out_index)| (*label_index, *out_index))
     }
 
     /// Iterate over all (state_index, state) in the labelled transition system

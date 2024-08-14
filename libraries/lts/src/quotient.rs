@@ -1,4 +1,5 @@
-use crate::{compute_strong_bisim_signature, LabelledTransitionSystem, SignatureBuilder, State};
+use crate::LabelledTransitionSystem;
+use crate::State;
 
 /// A trait for partition refinment algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.
@@ -6,6 +7,9 @@ pub trait IndexedPartition {
 
     /// Returns the block number for the given state.
     fn block_number(&self, state_index: usize) -> usize;
+
+    /// Returns the number of blocks in the partition.
+    fn num_of_blocks(&self) -> usize;
 }
 
 /// Returns a new LTS based on the given partition.
@@ -13,17 +17,12 @@ pub trait IndexedPartition {
 /// All states in a single block are replaced by a single representative state.
 pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPartition) -> LabelledTransitionSystem {
 
-    // Figure out the highest block number for the number of states.
-    let mut max_block_number = 0;
-    for (state_index, _state) in lts.iter_states() {
-        max_block_number = max_block_number.max(partition.block_number(state_index));
-    }
-
     // Introduce the transitions based on the block numbers
     let mut num_of_transitions = 0;
-    let mut states: Vec<State> = vec![State::default(); max_block_number + 1];
+    let mut states: Vec<State> = vec![State::default(); partition.num_of_blocks()];
     for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
+            debug_assert!(partition.block_number(state_index) < partition.num_of_blocks(), "Quotienting assumes that the block numbers do not exceed the number of blocks");
             states[partition.block_number(state_index)].outgoing.push((*label, partition.block_number(*to)));
             num_of_transitions += 1;
         }
@@ -33,35 +32,6 @@ pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPart
         states,
         lts.labels().into(),
         num_of_transitions)
-}
-
-/// Returns true iff the given partition is a strong bisimulation partition
-pub fn is_strong_bisim(lts: &LabelledTransitionSystem, partition: &impl IndexedPartition) -> bool {
-    // Avoids reallocations of the signature.
-    let mut builder = SignatureBuilder::new();
-
-    // Check that the partition is indeed stable and as such is a quotient of strong bisimulation
-    let mut representative: Vec<usize> = Vec::new();
-    for (state_index, state) in lts.iter_states() {
-        let block = partition.block_number(state_index);
-
-        if block + 1 > representative.len() {
-            representative.resize(block + 1, 0);
-            representative[block] = state_index;
-        }
-
-        // Check that this block only contains states that are strongly bisimilar to the representative state.
-        let representative_index = representative[block];
-        let signature = compute_strong_bisim_signature(state, partition, &mut builder);
-        let representative_signature = compute_strong_bisim_signature(&lts.state(representative_index), partition, &mut builder);
-
-        debug_assert_eq!(signature, representative_signature, "State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");
-        if signature != representative_signature {
-            return false;
-        }
-    }
-
-    true
 }
 
 #[cfg(test)]

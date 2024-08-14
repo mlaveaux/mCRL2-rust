@@ -143,6 +143,10 @@ impl IndexedPartition for Partition {
 
         unreachable!("This state is not is any block");
     }
+
+    fn num_of_blocks(&self) -> usize {
+        self.blocks.len()
+    }
 }
 
 impl fmt::Debug for Partition {
