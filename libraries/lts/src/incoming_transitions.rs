@@ -10,7 +10,7 @@ pub struct IncomingTransitions {
 
 impl IncomingTransitions {
     pub fn new(lts: &LabelledTransitionSystem) -> IncomingTransitions {
-        let mut incoming_transitions: Vec<Vec<(LabelIndex, StateIndex)>> = Vec::new();
+        let mut incoming_transitions: Vec<Vec<(LabelIndex, StateIndex)>> = vec![Vec::default(); lts.num_of_states()];
 
         // Compute incoming transitions for all states.
         // let mut incoming_transitions: Vec<Vec<(usize, usize)>> = vec![Vec::new(); lts.states.len()];
