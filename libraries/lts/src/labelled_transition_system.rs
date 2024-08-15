@@ -125,14 +125,15 @@ impl fmt::Display for LabelledTransitionSystem {
         // Print some information about the LTS.
         writeln!(f, "Number of states: {}", self.states.len())?;
         writeln!(f, "Number of action labels: {}", self.labels.len())?;
-        writeln!(f, "Number of transitions: {}", self.num_of_transitions)
+        write!(f, "Number of transitions: {}", self.num_of_transitions)
     }
 }
 
 impl fmt::Debug for LabelledTransitionSystem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self)?;
         writeln!(f, "Initial state: {}", self.initial_state)?;
-        writeln!(f, "Number of transitions: {}", self.num_of_transitions)?;
+        writeln!(f, "Hidden labels: {:?}", self.hidden_labels)?;
 
         for (from, state) in self.states.iter().enumerate() {
             for (label, to) in &state.outgoing {

@@ -1,6 +1,6 @@
 use ahash::AHashSet;
 
-use crate::IndexedPartition;
+use crate::Partition;
 use crate::LabelledTransitionSystem;
 use crate::StateIndex;
 
@@ -15,7 +15,7 @@ pub type Signature = Vec<(usize, usize)>;
 pub fn strong_bisim_signature(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
-    partition: &impl IndexedPartition,
+    partition: &impl Partition,
     builder: &mut SignatureBuilder,
 ) -> Signature {
     for (label, to) in lts.outgoing_transitions(state_index) {
@@ -33,7 +33,7 @@ pub fn strong_bisim_signature(
 pub fn branching_bisim_signature(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
-    partition: &impl IndexedPartition,
+    partition: &impl Partition,
     builder: &mut SignatureBuilder,
     visited: &mut AHashSet<usize>,
     stack: &mut Vec<usize>,

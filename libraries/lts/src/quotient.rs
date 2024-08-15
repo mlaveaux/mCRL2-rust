@@ -3,7 +3,10 @@ use crate::State;
 
 /// A trait for partition refinment algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.
-pub trait IndexedPartition {
+///
+/// The invariants are that the union of all blocks is the original set, and
+/// that each block contains distinct elements
+pub trait Partition {
 
     /// Returns the block number for the given state.
     fn block_number(&self, state_index: usize) -> usize;
@@ -15,7 +18,7 @@ pub trait IndexedPartition {
 /// Returns a new LTS based on the given partition.
 /// 
 /// All states in a single block are replaced by a single representative state.
-pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl IndexedPartition) -> LabelledTransitionSystem {
+pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl Partition) -> LabelledTransitionSystem {
 
     // Introduce the transitions based on the block numbers
     let mut num_of_transitions = 0;

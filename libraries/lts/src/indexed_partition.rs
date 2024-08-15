@@ -4,6 +4,7 @@ use crate::Partition;
 
 /// Defines a partition based on an explicit indexing of elements to their block
 /// number.
+#[derive(Debug)]
 pub struct IndexedPartition {
     partition: Vec<usize>,
 }
@@ -28,11 +29,12 @@ impl IndexedPartition {
     }
 }
 
-impl fmt::Debug for IndexedPartition {
+impl fmt::Display for IndexedPartition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{ ")?;
 
         let mut first = true;
+        let mut last_empty = true;
 
         for block_index in 0..self.partition.len() {
 
@@ -44,7 +46,7 @@ impl fmt::Debug for IndexedPartition {
                 if !first_block {
                     write!(f, ", ")?;
                 } else {
-                    if !first {
+                    if !first && last_empty {
                         write!(f, ", ")?;
                     }
 
@@ -60,6 +62,7 @@ impl fmt::Debug for IndexedPartition {
             }
 
             first = false;
+            last_empty = !first_block;
         }
 
         write!(f, " }}")

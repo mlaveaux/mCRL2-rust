@@ -2,7 +2,7 @@ use std::{error::Error, fs::File, io::stdout, process::ExitCode};
 
 use clap::{Parser, ValueEnum};
 use io::io_aut::{read_aut, write_aut};
-use lts::{branching_bisim_sigref, quotient_lts, strong_bisim_sigref, IndexedPartition};
+use lts::{branching_bisim_sigref, quotient_lts, strong_bisim_sigref, Partition};
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
