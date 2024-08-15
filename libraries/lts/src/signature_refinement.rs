@@ -1,4 +1,3 @@
-use std::fmt;
 use std::mem::swap;
 
 use ahash::AHashMap;
@@ -9,14 +8,16 @@ use log::trace;
 use crate::branching_bisim_signature;
 use crate::quotient_lts;
 use crate::strong_bisim_signature;
-use crate::tau_star_partition;
+use crate::tau_scc_decomposition;
+use crate::IncomingTransitions;
 use crate::IndexedPartition;
 use crate::LabelledTransitionSystem;
+use crate::Partition;
 use crate::Signature;
 use crate::SignatureBuilder;
 
 /// Computes a strong bisimulation partitioning using signature refinement
-pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
+pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::new();
 
@@ -36,10 +37,9 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement
-pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition {
-    
+pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
     // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
-    let simplified_lts = quotient_lts(lts, &tau_star_partition(lts));
+    let simplified_lts = quotient_lts(lts, &tau_scc_decomposition(lts));
 
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::new();
@@ -47,12 +47,26 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition
     let mut visited = AHashSet::new();
 
     let partition = signature_refinement(&simplified_lts, |state_index, partition| {
-        branching_bisim_signature(state_index, lts, partition, &mut builder, &mut visited, &mut stack)
+        branching_bisim_signature(
+            state_index,
+            lts,
+            partition,
+            &mut builder,
+            &mut visited,
+            &mut stack,
+        )
     });
 
     debug_assert!(
         is_valid_refinement(&lts, &partition, |state_index, partition| {
-            branching_bisim_signature(state_index, lts, partition, &mut builder, &mut visited, &mut stack)
+            branching_bisim_signature(
+                state_index,
+                lts,
+                partition,
+                &mut builder,
+                &mut visited,
+                &mut stack,
+            )
         }),
         "The resulting partition is not a branching bisimulation partition for LTS {:?}",
         lts
@@ -62,8 +76,9 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> SigrefPartition
 }
 
 /// General signature refinement algorithm that accepts an arbitrary signature
-fn signature_refinement<F>(lts: &LabelledTransitionSystem, mut signature: F) -> SigrefPartition
-    where F: FnMut(usize, &SigrefPartition) -> Signature
+fn signature_refinement<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
+where
+    F: FnMut(usize, &IndexedPartition) -> Signature,
 {
     trace!("{:?}", lts);
     
@@ -110,14 +125,20 @@ fn signature_refinement<F>(lts: &LabelledTransitionSystem, mut signature: F) -> 
         );
     }
 
-    next_partition
+    trace!("Final partition {partition}");
+    partition
 }
 
 
 /// Returns true iff the given partition is a strong bisimulation partition
-pub fn is_valid_refinement<F, P>(lts: &LabelledTransitionSystem, partition: &P, mut compute_signature: F) -> bool
-    where F: FnMut(usize, &P) -> Signature,
-          P: IndexedPartition
+pub fn is_valid_refinement<F, P>(
+    lts: &LabelledTransitionSystem,
+    partition: &P,
+    mut compute_signature: F,
+) -> bool
+where
+    F: FnMut(usize, &P) -> Signature,
+    P: Partition,
 {
     // Check that the partition is indeed stable and as such is a quotient of strong bisimulation
     let mut representative: Vec<usize> = Vec::new();
@@ -143,87 +164,6 @@ pub fn is_valid_refinement<F, P>(lts: &LabelledTransitionSystem, partition: &P, 
     true
 }
 
-/// Stores the partition for the signature refinement.
-pub struct SigrefPartition {
-    partition: Vec<usize>,
-}
-
-impl SigrefPartition {
-
-    /// Create a new partition where all elements are in a single block.
-    pub fn new(num_of_elements: usize) -> SigrefPartition {
-        SigrefPartition {
-            partition: vec![0; num_of_elements]
-        }
-    }
-
-    /// Returns a mutable iterator over all elements in the partition.
-    pub fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = &mut usize> + 'a {
-        self.partition.iter_mut()
-    }
-
-    /// Sets the block number of the given element
-    pub fn set_block(&mut self, element_index: usize, block_number: usize) {
-        self.partition[element_index] = block_number;
-    }
-}
-
-impl fmt::Debug for SigrefPartition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{{")?;
-
-        let mut first = true;
-
-        for block_index in 0..self.partition.len() {
-            if !first {
-                write!(f, ", ")?;
-            }
-
-            // Print all elements with the same block number.
-            let mut first_block = true;          
-            for (element_index, _) in self.partition.iter().enumerate().filter(|(_, value)| {
-                **value == block_index
-            }) {
-                if !first_block {
-                    write!(f, ", ")?;
-                } else {
-                    write!(f, "{{")?;
-                }
-
-                write!(f, "{}", element_index)?;
-                first_block = false;
-            }
-
-            if !first_block {
-                write!(f, "}}")?;
-            }
-
-            first = false;
-        }
-
-        write!(f, "}}")
-    }
-}
-
-impl IndexedPartition for SigrefPartition {
-    fn block_number(&self, state_index: usize) -> usize {
-        self.partition[state_index]
-    }
-
-    fn num_of_blocks(&self) -> usize {
-        // Figure out the highest block number for the number of states.
-        // TODO: This assumes that the blocks are dense, otherwise it overestimates the number of blocks.
-        match self.partition.iter().max() {
-            None => {
-                1
-            },
-            Some(max_block_number) => {
-                max_block_number + 1
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use test_log::test;
@@ -233,7 +173,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_random_bisim_sigref() {
+    fn test_random_strong_bisim_sigref() {
         let lts = random_lts(10, 3, 3);
         strong_bisim_sigref(&lts);
     }
@@ -245,6 +185,9 @@ mod tests {
         let strong_partition = strong_bisim_sigref(&lts);
         let branching_partition = branching_bisim_sigref(&lts);
 
-        assert!(branching_partition.num_of_blocks() <= strong_partition.num_of_blocks(), "The branching partition should be a refinement of the strong partition");
+        assert!(
+            branching_partition.num_of_blocks() <= strong_partition.num_of_blocks(),
+            "The branching partition should be a refinement of the strong partition"
+        );
     }
 }
