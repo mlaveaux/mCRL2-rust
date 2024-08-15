@@ -1,25 +1,17 @@
-//!
-//! Utility functions to define partitions of a set, and the corresponding
-//! splitters.
-//!
-
-//! A partition keeps track of a number of blocks within a fixed set.
-//!
-//! The invariants are that the union of all blocks is the original set, and
-//! that each block contains distinct elements.
-
 use std::fmt;
 
-use crate::IndexedPartition;
+use crate::Partition;
 
-pub struct Partition {
+/// A partition that explicitly stores a list of blocks and their indexing into
+/// the list of elements.
+pub struct BlockPartition {
     elements: Vec<usize>,
     blocks: Vec<Block>,
 }
 
-impl Partition {
+impl BlockPartition {
     /// Create an initial partition where all the states are in a single block.
-    pub fn new(num_of_entries: usize) -> Partition {
+    pub fn new(num_of_entries: usize) -> BlockPartition {
         debug_assert!(num_of_entries > 0, "Cannot partition the empty set");
 
         let blocks = vec![Block {
@@ -35,7 +27,7 @@ impl Partition {
             counter += 1;
         }
 
-        Partition { elements, blocks }
+        BlockPartition { elements, blocks }
     }
 
     /// Split the given block into two separate block based on the splitter
@@ -131,7 +123,7 @@ impl Partition {
     }
 }
 
-impl IndexedPartition for Partition {
+impl Partition for BlockPartition {
     fn block_number(&self, state_index: usize) -> usize {
         for block_index in 0..self.num_of_blocks() {
             for element in self.iter_block(block_index) {
@@ -149,7 +141,7 @@ impl IndexedPartition for Partition {
     }
 }
 
-impl fmt::Debug for Partition {
+impl fmt::Debug for BlockPartition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{")?;
 
@@ -186,7 +178,7 @@ pub struct Block {
 
 impl Block {
     /// Returns an iterator over the elements in this block.
-    fn iter<'a>(&self, partition: &'a Partition) -> BlockIter<'a> {
+    fn iter<'a>(&self, partition: &'a BlockPartition) -> BlockIter<'a> {
         BlockIter {
             elements: &partition.elements,
             index: self.begin,
@@ -233,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_partition() {
-        let mut partition = Partition::new(10);
+        let mut partition = BlockPartition::new(10);
 
         partition.split(0, |element| element < 3);
 

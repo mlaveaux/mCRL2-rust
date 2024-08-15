@@ -13,7 +13,6 @@ impl IncomingTransitions {
         let mut incoming_transitions: Vec<Vec<(LabelIndex, StateIndex)>> = vec![Vec::default(); lts.num_of_states()];
 
         // Compute incoming transitions for all states.
-        // let mut incoming_transitions: Vec<Vec<(usize, usize)>> = vec![Vec::new(); lts.states.len()];
         for (state_index, state) in lts.iter_states() {
             for (label_index, to) in &state.outgoing {
                 incoming_transitions[*to].push((*label_index, state_index));
