@@ -9,7 +9,6 @@ use crate::branching_bisim_signature;
 use crate::quotient_lts;
 use crate::strong_bisim_signature;
 use crate::tau_scc_decomposition;
-use crate::IncomingTransitions;
 use crate::IndexedPartition;
 use crate::LabelledTransitionSystem;
 use crate::Partition;
@@ -49,7 +48,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     let partition = signature_refinement(&simplified_lts, |state_index, partition| {
         branching_bisim_signature(
             state_index,
-            lts,
+            &simplified_lts,
             partition,
             &mut builder,
             &mut visited,
@@ -58,7 +57,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     });
 
     debug_assert!(
-        is_valid_refinement(&lts, &partition, |state_index, partition| {
+        is_valid_refinement(&simplified_lts, &partition, |state_index, partition| {
             branching_bisim_signature(
                 state_index,
                 lts,
@@ -86,8 +85,8 @@ where
     let mut id: AHashMap<Signature, usize> = AHashMap::new();
 
     // Assigns the signature to each state.
-    let mut partition = SigrefPartition::new(lts.num_of_states());
-    let mut next_partition = SigrefPartition::new(lts.num_of_states());
+    let mut partition = IndexedPartition::new(lts.num_of_states());
+    let mut next_partition = IndexedPartition::new(lts.num_of_states());
 
     // Refine partitions until stable.
     let mut old_count = 1;
@@ -114,14 +113,14 @@ where
                 })
                 .or_insert_with(|| new_id);
 
-            next_partition.partition[state_index] = new_id;
+            next_partition.set_block(state_index, new_id);
         }
 
         iteration += 1;
 
         debug_assert!(
-            iteration <= lts.num_of_states(),
-            "There can never be more splits than number of states"
+            iteration <= lts.num_of_states().max(2),
+            "There can never be more splits than number of states, but at least two iterations for stability"
         );
     }
 
