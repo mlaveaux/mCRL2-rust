@@ -38,7 +38,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
 /// Computes a branching bisimulation partitioning using signature refinement
 pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
     // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
-    let simplified_lts = quotient_lts(lts, &tau_scc_decomposition(lts));
+    let simplified_lts = quotient_lts(lts, &tau_scc_decomposition(lts), true);
 
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::new();

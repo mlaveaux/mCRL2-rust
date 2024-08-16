@@ -10,7 +10,9 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
     let mut states: Vec<State> = vec![State::default(); num_of_states];
 
     // Introduce lower case letters for the labels.
-    let mut labels: Vec<String> = Vec::new();
+    let tau_label = "tau".to_string();
+
+    let mut labels: Vec<String> = vec![tau_label.clone()];
     for i in 0..num_of_labels {
         labels.push(char::from_digit(i + 10, 36).unwrap().to_string());
     }
@@ -32,7 +34,7 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
         }
     }
 
-    LabelledTransitionSystem::new(0, states, labels, Vec::new(), num_of_transitions)
+    LabelledTransitionSystem::new(0, states, labels, vec![tau_label], num_of_transitions)
 }
 
 #[cfg(test)]

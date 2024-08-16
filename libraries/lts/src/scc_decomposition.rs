@@ -1,3 +1,4 @@
+use log::debug;
 use log::trace;
 
 use crate::IndexedPartition;
@@ -25,6 +26,7 @@ where
     let mut indices: Vec<Option<StateInfo>> = vec![None; lts.num_of_states()];
 
     let mut smallest_index = 0;
+    let mut next_block_number = 0;
 
     // The outer depth first search used to traverse all the states.
     for (state_index, _) in lts.iter_states() {
@@ -36,6 +38,7 @@ where
                 filter,
                 &mut partition,
                 &mut smallest_index,
+                &mut next_block_number,
                 &mut stack,
                 &mut indices,
             )
@@ -43,6 +46,7 @@ where
     }
 
     trace!("Final partition {partition}");
+    debug!("Found {} strongly connected components", partition.num_of_blocks());
     partition
 }
 
@@ -71,6 +75,7 @@ fn strongly_connect<F>(
     filter: &F,
     partition: &mut IndexedPartition,
     smallest_index: &mut usize,
+    next_block_number: &mut usize,
     stack: &mut Vec<usize>,
     indices: &mut Vec<Option<StateInfo>>,
 ) where
@@ -110,6 +115,7 @@ fn strongly_connect<F>(
                     filter,
                     partition,
                     smallest_index,
+                    next_block_number,
                     stack,
                     indices,
                 );
@@ -129,7 +135,7 @@ fn strongly_connect<F>(
     if info.lowlink == info.index {
         // Start a new strongly connected component.
         // NOTE: We start with a single block, but since we override all the indices anyway its safe to start with zero.
-        let new_block = partition.num_of_blocks() - 1;
+        let new_block = *next_block_number;
         trace!("Introduced new SCC {new_block}");
         partition.set_block(state_index, new_block);
 
@@ -138,6 +144,8 @@ fn strongly_connect<F>(
             info.on_stack = false;
             partition.set_block(index, new_block);
         }
+
+        *next_block_number += 1;
     }
 }
 
@@ -160,6 +168,12 @@ pub fn has_tau_loop(lts: &LabelledTransitionSystem) -> bool {
 
             for (label_index, to_index) in lts.outgoing_transitions(inner_state_index) {
                 if lts.is_hidden_label(*label_index) {
+                    if state_index == *to_index {
+                        // There is a tau selfloop;
+                        trace!("tau self-loop for {to_index}");
+                        return true;
+                    }
+
                     if stack[0..stack_length].contains(&to_index) {
                         // There is state where following tau path leads back
                         // into the stack.
@@ -193,7 +207,8 @@ mod tests {
     #[test]
     fn test_random_scc_decomposition() {
         let lts = random_lts(10, 3, 3);
-        let reduction = quotient_lts(&lts, &tau_scc_decomposition(&lts));
+        let reduction = quotient_lts(&lts, &tau_scc_decomposition(&lts), true);
+        trace!("{:?}", reduction);
 
         assert!(
             !has_tau_loop(&reduction),

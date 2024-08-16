@@ -18,16 +18,18 @@ pub trait Partition {
 /// Returns a new LTS based on the given partition.
 /// 
 /// All states in a single block are replaced by a single representative state.
-pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl Partition) -> LabelledTransitionSystem {
+pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl Partition, eliminate_tau_loops: bool) -> LabelledTransitionSystem {
 
     // Introduce the transitions based on the block numbers
     let mut num_of_transitions = 0;
     let mut states: Vec<State> = vec![State::default(); partition.num_of_blocks()];
     for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
-            debug_assert!(partition.block_number(state_index) < partition.num_of_blocks(), "Quotienting assumes that the block numbers do not exceed the number of blocks");
-            states[partition.block_number(state_index)].outgoing.push((*label, partition.block_number(*to)));
-            num_of_transitions += 1;
+            if !eliminate_tau_loops || (!lts.is_hidden_label(*label) && state_index != *to) {
+                debug_assert!(partition.block_number(state_index) < partition.num_of_blocks(), "Quotienting assumes that the block numbers do not exceed the number of blocks");
+                states[partition.block_number(state_index)].outgoing.push((*label, partition.block_number(*to)));
+                num_of_transitions += 1;
+            }
         }
     }
 
@@ -50,6 +52,6 @@ mod tests {
     #[test]
     fn test_random_quotient() {
         let lts = random_lts(10, 3, 3);
-        quotient_lts(&lts, &strong_bisim_sigref(&lts));
+        quotient_lts(&lts, &strong_bisim_sigref(&lts), false);
     }
 }
