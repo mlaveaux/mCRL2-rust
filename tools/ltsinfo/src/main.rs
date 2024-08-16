@@ -28,7 +28,7 @@ struct Cli {
     equivalence: Equivalence,
 
     filename: String,
-    
+
     output: Option<String>,
 }
 
@@ -41,14 +41,10 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let lts = read_aut(&file)?;
 
     let partition = match cli.equivalence {
-        Equivalence::StrongBisim => {
-            strong_bisim_sigref(&lts)
-        },
-        Equivalence::BranchingBisim => {
-            branching_bisim_sigref(&lts)
-        }
+        Equivalence::StrongBisim => strong_bisim_sigref(&lts),
+        Equivalence::BranchingBisim => branching_bisim_sigref(&lts),
     };
-    let quotient_lts = quotient_lts(&lts, &partition);
+    let quotient_lts = quotient_lts(&lts, &partition, false);
 
     if let Some(file) = cli.output {
         let mut writer = File::create(file)?;
