@@ -37,4 +37,5 @@ jobs:
       run: cargo nextest run -- --include-ignored
       env:
         RUST_BACKTRACE: full
+        RUST_LOG: trace
         RUSTC_WRAPPER: sccache
