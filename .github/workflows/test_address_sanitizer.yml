@@ -54,5 +54,5 @@ jobs:
       run: cargo +nightly xtask address-sanitizer
       env:
         RUST_BACKTRACE: full
-        RUST_LOG: trace
+        RUST_LOG: debug
         RUSTC_WRAPPER: sccache
