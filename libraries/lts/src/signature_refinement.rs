@@ -154,8 +154,8 @@ where
         let signature = compute_signature(state_index, &partition);
         let representative_signature = compute_signature(representative_index, &partition);
 
-        debug_assert_eq!(signature, representative_signature, "State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");
         if signature != representative_signature {
+            trace!("State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");
             return false;
         }
     }
