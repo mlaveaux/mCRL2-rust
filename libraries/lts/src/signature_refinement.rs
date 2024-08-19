@@ -60,7 +60,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
         is_valid_refinement(&simplified_lts, &partition, |state_index, partition| {
             branching_bisim_signature(
                 state_index,
-                lts,
+                &simplified_lts,
                 partition,
                 &mut builder,
                 &mut visited,
