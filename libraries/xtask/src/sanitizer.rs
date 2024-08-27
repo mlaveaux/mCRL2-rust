@@ -27,6 +27,7 @@ pub fn address_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Err
         "nextest".to_string(),
         "run".to_string(),
         "-Zbuild-std".to_string(),
+        "--no-fail-fast".to_string(),
         "--features".to_string(),
         "unstable".to_string(),
     ];
@@ -54,6 +55,7 @@ pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Erro
         "nextest".to_string(),
         "run".to_string(),
         "-Zbuild-std".to_string(),
+        "--no-fail-fast".to_string(),
         "--features".to_string(),
         "unstable".to_string(),
     ];

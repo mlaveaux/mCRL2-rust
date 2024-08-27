@@ -34,7 +34,7 @@ jobs:
         submodules: true
 
     - name: Run tests
-      run: cargo nextest run --release -- --include-ignored
+      run: cargo nextest run --release --no-fail-fast -- --include-ignored
       env:
         RUST_BACKTRACE: full
         RUST_LOG: debug
