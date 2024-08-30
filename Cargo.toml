@@ -27,7 +27,7 @@ ahash = "0.8"
 anyhow = { version = "1.0", features = ["backtrace"] }
 bitstream-io = "2.5"
 cargo-emit = "0.2"
-cc = "1.0"
+cc = "1.1"
 clap = { version = "4.5", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 cxx = "1.0"
@@ -60,7 +60,7 @@ cosmic-text = "0.12"
 rfd = { version = "0.14", default-features = false, features = ["xdg-portal", "tokio"] }
 slint = "1.7"
 tiny-skia = "0.11"
-tokio = { version = "1.39", features = ["rt", "macros"] }
+tokio = { version = "1.40", features = ["rt", "macros"] }
 winapi = "0.3"
 glam = "0.29"
 
