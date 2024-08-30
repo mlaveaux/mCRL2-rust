@@ -31,7 +31,8 @@ where
     // The outer depth first search used to traverse all the states.
     for (state_index, _) in lts.iter_states() {
         if indices[state_index].is_none() {
-            trace!("Current partition {partition}");
+            trace!("State {state_index}");
+    
             strongly_connect(
                 state_index,
                 lts,
@@ -80,7 +81,9 @@ fn strongly_connect<F>(
     indices: &mut Vec<Option<StateInfo>>,
 ) where
     F: Fn(usize, usize, usize) -> bool,
-{
+{    
+    trace!("Visiting state {state_index}");
+
     indices[state_index] = Some(StateInfo {
         index: *smallest_index,
         lowlink: *smallest_index,
@@ -134,18 +137,14 @@ fn strongly_connect<F>(
     let info = indices[state_index].as_ref().expect("This state was added before");
     if info.lowlink == info.index {
         // Start a new strongly connected component.
-        // NOTE: We start with a single block, but since we override all the indices anyway its safe to start with zero.
-        let new_block = *next_block_number;
-        trace!("Introduced new SCC {new_block}");
-        partition.set_block(state_index, new_block);
-
+        let scc_index = info.lowlink;
         while let Some(index) = stack.pop() {
             let info = indices[index].as_mut().expect("This state was on the stack");
             info.on_stack = false;
-            partition.set_block(index, new_block);
-        }
 
-        *next_block_number += 1;
+            trace!("Added state {index} to block {}", info.lowlink);
+            partition.set_block(index, scc_index);
+        }
     }
 }
 
