@@ -19,7 +19,7 @@ authors = ["Maurice Laveaux"]
 edition = "2021"
 license = "BSL-1.0"
 repository = "https://github.com/mlaveaux/mCRL2-rust.git"
-rust-version = "1.75.0"
+rust-version = "1.79.0"
 version = "0.1.0"
 
 [workspace.dependencies]
