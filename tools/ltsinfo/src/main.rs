@@ -1,4 +1,4 @@
-use std::{error::Error, fs::File, io::stdout, process::ExitCode};
+use std::{error::Error, fs::File, io::{stdout, BufWriter}, process::ExitCode};
 
 use clap::{Parser, ValueEnum};
 use io::io_aut::{read_aut, write_aut};
@@ -30,6 +30,9 @@ struct Cli {
     filename: String,
 
     output: Option<String>,
+
+    #[arg(long)]
+    time: bool,
 }
 
 fn main() -> Result<ExitCode, Box<dyn Error>> {
@@ -40,14 +43,19 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let file = File::open(cli.filename)?;
     let lts = read_aut(&file)?;
 
+    let start = std::time::Instant::now();
     let partition = match cli.equivalence {
         Equivalence::StrongBisim => strong_bisim_sigref(&lts),
         Equivalence::BranchingBisim => branching_bisim_sigref(&lts),
     };
-    let quotient_lts = quotient_lts(&lts, &partition, false);
 
+    if cli.time {
+        println!("Time: {:?}", start.elapsed());
+
+    }
+    let quotient_lts = quotient_lts(&lts, &partition, false);
     if let Some(file) = cli.output {
-        let mut writer = File::create(file)?;
+        let mut writer = BufWriter::new(File::create(file)?);
         write_aut(&mut writer, &quotient_lts)?;
     } else {
         write_aut(&mut stdout(), &quotient_lts)?;
