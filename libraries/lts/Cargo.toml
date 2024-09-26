@@ -5,7 +5,8 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-ahash.workspace = true
+fxhash.workspace = true
+bumpalo.workspace = true
 log.workspace = true
 rand.workspace = true
 

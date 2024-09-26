@@ -1,6 +1,8 @@
 use std::mem::swap;
 
 use bumpalo::Bump;
+use fxhash::FxHashMap;
+use fxhash::FxHashSet;
 use log::debug;
 use log::trace;
 
@@ -82,7 +84,7 @@ where
     let mut signature_flat: Vec<(usize, usize)> = Vec::new();
     
     // Put all the states in the initial partition { S }.
-    let mut id: AHashMap<Signature, usize> = AHashMap::new();
+    let mut id: FxHashMap<Signature, usize> = FxHashMap::default();
 
     // Assigns the signature to each state.
     let mut partition = IndexedPartition::new(lts.num_of_states());

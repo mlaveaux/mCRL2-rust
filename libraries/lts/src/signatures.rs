@@ -1,13 +1,14 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use fxhash::FxHashSet;
 
 use crate::Partition;
 use crate::LabelledTransitionSystem;
 use crate::StateIndex;
 
 /// The builder used to construct the signature.
-pub type SignatureBuilder = AHashSet<(usize, usize)>;
+pub type SignatureBuilder = FxHashSet<(usize, usize)>;
 
 /// The type of a signature. We use sorted vectors to avoid the overhead of hash
 /// sets that might have unused values.
