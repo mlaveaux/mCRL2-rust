@@ -1,7 +1,6 @@
 use std::mem::swap;
 
-use ahash::AHashMap;
-use ahash::AHashSet;
+use bumpalo::Bump;
 use log::debug;
 use log::trace;
 
@@ -17,16 +16,14 @@ use crate::SignatureBuilder;
 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    // Avoids reallocations when computing the signature.
-    let mut builder = SignatureBuilder::new();
 
-    let partition = signature_refinement(lts, |state_index, partition| {
-        strong_bisim_signature(state_index, lts, partition, &mut builder)
+    let partition = signature_refinement(lts, |state_index, partition, builder| {
+        strong_bisim_signature(state_index, lts, partition, builder);
     });
 
     debug_assert!(
-        is_valid_refinement(&lts, &partition, |state_index, partition| {
-            strong_bisim_signature(state_index, lts, partition, &mut builder)
+        is_valid_refinement(&lts, &partition, |state_index, partition, builder| {
+            strong_bisim_signature(state_index, lts, partition, builder);
         }),
         "The resulting partition is not a strong bisimulation partition for LTS {:?}",
         lts
@@ -40,32 +37,30 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
     let simplified_lts = quotient_lts(lts, &tau_scc_decomposition(lts), true);
 
-    // Avoids reallocations when computing the signature.
-    let mut builder = SignatureBuilder::new();
     let mut stack: Vec<usize> = Vec::new();
-    let mut visited = AHashSet::new();
+    let mut visited = FxHashSet::default();
 
-    let partition = signature_refinement(&simplified_lts, |state_index, partition| {
+    let partition = signature_refinement(&simplified_lts, |state_index, partition, builder| {
         branching_bisim_signature(
             state_index,
             &simplified_lts,
             partition,
-            &mut builder,
+            builder,
             &mut visited,
             &mut stack,
-        )
+        );
     });
 
     debug_assert!(
-        is_valid_refinement(&simplified_lts, &partition, |state_index, partition| {
+        is_valid_refinement(&simplified_lts, &partition, |state_index, partition, builder| {
             branching_bisim_signature(
                 state_index,
                 &simplified_lts,
                 partition,
-                &mut builder,
+                builder,
                 &mut visited,
                 &mut stack,
-            )
+            );
         }),
         "The resulting partition is not a branching bisimulation partition for LTS {:?}",
         lts
@@ -77,9 +72,14 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
 /// General signature refinement algorithm that accepts an arbitrary signature
 fn signature_refinement<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
 where
-    F: FnMut(usize, &IndexedPartition) -> Signature,
+    F: FnMut(usize, &IndexedPartition, &mut SignatureBuilder),
 {
     trace!("{:?}", lts);
+
+    // Avoids reallocations when computing the signature.
+    let mut arena = Bump::new();
+    let mut builder = SignatureBuilder::default();
+    let mut signature_flat: Vec<(usize, usize)> = Vec::new();
     
     // Put all the states in the initial partition { S }.
     let mut id: AHashMap<Signature, usize> = AHashMap::new();
@@ -100,18 +100,28 @@ where
         // Clear the current partition to start the next blocks.
         id.clear();
 
+        // Remove the current signatures.
+        arena.reset();
+
         for (state_index, _) in lts.iter_states() {
             // Compute the signature of a single state
-            let signature = signature(state_index, &partition);
-            trace!("State {state_index} signature {:?}", signature);
+            signature(state_index, &partition, &mut builder);            
 
-            // Keep track of the index for every state.
+            // Compute the flat signature, which has Hash and is more compact.
+            signature_flat.clear();
+            signature_flat.extend(builder.drain());
+            signature_flat.sort_unstable();
+
+            trace!("State {state_index} signature {:?}", signature_flat);
+
+            // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
             let mut new_id = id.len();
-            id.entry(signature)
-                .and_modify(|n| {
-                    new_id = *n;
-                })
-                .or_insert_with(|| new_id);
+            if let Some(index) = id.get(&Signature::new(&signature_flat)) {
+                new_id = *index;                
+            } else {
+                let new_signature  = Signature::new(arena.alloc_slice_copy(&signature_flat));
+                id.insert(new_signature, new_id);
+            }
 
             next_partition.set_block(state_index, new_id);
         }
@@ -136,11 +146,15 @@ pub fn is_valid_refinement<F, P>(
     mut compute_signature: F,
 ) -> bool
 where
-    F: FnMut(usize, &P) -> Signature,
+    F: FnMut(usize, &P, &mut SignatureBuilder),
     P: Partition,
 {
     // Check that the partition is indeed stable and as such is a quotient of strong bisimulation
     let mut representative: Vec<usize> = Vec::new();
+
+    // Avoids reallocations when computing the signature.
+    let mut builder = SignatureBuilder::default();
+
     for (state_index, _) in lts.iter_states() {
         let block = partition.block_number(state_index);
 
@@ -151,8 +165,17 @@ where
 
         // Check that this block only contains states that are strongly bisimilar to the representative state.
         let representative_index = representative[block];
-        let signature = compute_signature(state_index, &partition);
-        let representative_signature = compute_signature(representative_index, &partition);
+        compute_signature(state_index, &partition, &mut builder);
+
+        // Compute the flat signature, which has Hash and is more compact.
+        let mut signature: Vec<(usize, usize)> = builder.drain().collect();
+        signature.sort_unstable();
+
+        compute_signature(representative_index, &partition, &mut builder);
+
+        // Compute the flat signature, which has Hash and is more compact.
+        let mut representative_signature: Vec<(usize, usize)> = builder.drain().collect();
+        representative_signature.sort_unstable();
 
         if signature != representative_signature {
             trace!("State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");

@@ -1,4 +1,6 @@
-use ahash::AHashSet;
+use std::fmt::Debug;
+use std::hash::Hash;
+
 
 use crate::Partition;
 use crate::LabelledTransitionSystem;
@@ -9,7 +11,38 @@ pub type SignatureBuilder = AHashSet<(usize, usize)>;
 
 /// The type of a signature. We use sorted vectors to avoid the overhead of hash
 /// sets that might have unused values.
-pub type Signature = Vec<(usize, usize)>;
+#[derive(Eq)]
+pub struct Signature(*const [(usize, usize)]);
+
+impl Signature  {
+    pub fn new(slice: &[(usize, usize)]) -> Signature {
+        Signature(slice)
+    }
+
+    pub fn as_slice(&self) -> &[(usize, usize)] {
+        unsafe { &*self.0 }
+    }
+}
+
+impl PartialEq for Signature {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl Hash for Signature {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe { (*self.0).hash(state) }
+    }
+}
+
+impl Debug for Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list()
+            .entries(self.as_slice().iter())
+            .finish()
+    }
+}
 
 /// Returns the signature for strong bisimulation sig(s, pi) = { (a, pi(t)) | s -a-> t in T }
 pub fn strong_bisim_signature(
@@ -17,16 +50,10 @@ pub fn strong_bisim_signature(
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
     builder: &mut SignatureBuilder,
-) -> Signature {
+) {
     for (label, to) in lts.outgoing_transitions(state_index) {
         builder.insert((*label, partition.block_number(*to)));
     }
-
-    // Compute the flat signature, which has Hash and is more compact.
-    let mut signature_flat: Signature = builder.drain().collect();
-    signature_flat.sort_unstable();
-
-    signature_flat
 }
 
 /// Returns the pre-signature for branching bisimulation sig(s, pi) = { (a, pi(t)) | s -[tau]-> s1 -> ... s_n -[a]-> t in T && pi(s) = pi(i) && (a != tau) && pi(s) != pi(t) }
@@ -35,9 +62,9 @@ pub fn branching_bisim_signature(
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
     builder: &mut SignatureBuilder,
-    visited: &mut AHashSet<usize>,
+    visited: &mut FxHashSet<usize>,
     stack: &mut Vec<usize>,
-) -> Signature {
+) {
 
     // Clear the builders and the list of visited states.
     builder.clear();
@@ -67,10 +94,4 @@ pub fn branching_bisim_signature(
             }
         }
     }
-
-    // Compute the flat signature, which has Hash and is more compact.
-    let mut signature_flat: Signature = builder.drain().collect();
-    signature_flat.sort_unstable();
-
-    signature_flat
 }

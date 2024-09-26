@@ -2,7 +2,6 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
 use streaming_iterator::StreamingIterator;
-use std::io::Cursor;
 
 /// A lending iterator over the lines of a type implementing Read.
 pub struct LineIterator<T: Read> {
@@ -61,6 +60,8 @@ impl<T: Read> StreamingIterator for LineIterator<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    
+    use std::io::Cursor;
 
     #[test]
     fn test_line_iterator_basic() {
