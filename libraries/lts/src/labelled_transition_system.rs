@@ -24,12 +24,12 @@ pub struct LabelledTransitionSystem {
 impl LabelledTransitionSystem {
     pub fn new(
         initial_state: StateIndex,
-        states: Vec<State>,
+        mut states: Vec<State>,
         labels: Vec<String>,
         hidden_labels: Vec<String>,
         num_of_transitions: usize,
     ) -> LabelledTransitionSystem {
-        // Check that the number of transitions has been computed correctly.
+        // Check that the number of transitions has been provided correctly.
         debug_assert!(
             states
                 .iter()
@@ -38,6 +38,22 @@ impl LabelledTransitionSystem {
             "The number of transitions is not equal to the actual number of transitions."
         );
 
+        // Check that the outgoing transitions are a function.
+        for state in &mut states {
+            let old_len = state.outgoing.len();
+            state.outgoing.sort();
+            state.outgoing.dedup();
+
+            debug_assert_eq!(
+                state.outgoing.len(),
+                old_len,
+                "There are states with duplicated outgoing transitions"
+            );
+
+        }
+
+        // Keep track of which label indexes are hidden label for log(n) search.
+        // TODO: We could remap all labels to group them into hidden | visible, and keep track of the maximum index.
         let mut hidden_indices: Vec<usize> = Vec::new();
         for label in &hidden_labels {
             if let Some(index) = labels.iter().position(|other| {

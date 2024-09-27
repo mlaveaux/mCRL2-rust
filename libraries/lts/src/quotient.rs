@@ -25,10 +25,23 @@ pub fn quotient_lts(lts: &LabelledTransitionSystem, partition: &impl Partition, 
     let mut states: Vec<State> = vec![State::default(); partition.num_of_blocks()];
     for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
+
+            // If we eliminate tau loops then check if the to and from end up in the same block
             if !eliminate_tau_loops || !(lts.is_hidden_label(*label) && partition.block_number(state_index) == partition.block_number(*to)) {
                 debug_assert!(partition.block_number(state_index) < partition.num_of_blocks(), "Quotienting assumes that the block numbers do not exceed the number of blocks");
-                states[partition.block_number(state_index)].outgoing.push((*label, partition.block_number(*to)));
-                num_of_transitions += 1;
+
+                let outgoing = &mut states[partition.block_number(state_index)].outgoing;
+                let to_block = partition.block_number(*to);
+
+                // Make sure to keep the outgoing transitions sorted.
+                match outgoing.binary_search(&(*label, to_block)) {
+                    Ok(_) => {} // element already in vector
+                    Err(pos) => {
+                        outgoing.insert(pos, (*label, to_block));
+                        num_of_transitions += 1;
+                    },
+                }
+
             }
         }
     }
