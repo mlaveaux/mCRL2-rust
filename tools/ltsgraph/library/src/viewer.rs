@@ -339,7 +339,7 @@ mod tests {
     fn test_viewer() {
         // Render a single from the alternating bit protocol with some settings.
         let file = include_str!("../../../../examples/lts/abp.aut");
-        let lts = Arc::new(read_aut(file.as_bytes()).unwrap());
+        let lts = Arc::new(read_aut(file.as_bytes(), vec![]).unwrap());
 
         let mut viewer = Viewer::new(&lts);
 

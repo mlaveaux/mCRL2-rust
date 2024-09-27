@@ -31,6 +31,7 @@ struct Cli {
 
     output: Option<String>,
 
+    #[arg(short, long)]
     tau: Option<Vec<String>>,
 
     #[arg(long)]
