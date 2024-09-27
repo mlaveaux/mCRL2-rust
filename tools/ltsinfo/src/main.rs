@@ -50,7 +50,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     };
 
     if cli.time {
-        println!("Time: {:?}", start.elapsed());
+        eprintln!("reduction: {:.3}s", start.elapsed().as_secs_f64());
 
     }
     let quotient_lts = quotient_lts(&lts, &partition, false);
@@ -64,7 +64,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     partition.block_number(0);
 
     #[cfg(feature = "measure-allocs")]
-    info!("Allocations: {}", MEASURE_ALLOC.number_of_allocations());
+    eprintln!("allocations: {}", MEASURE_ALLOC.number_of_allocations());
 
     Ok(ExitCode::SUCCESS)
 }
