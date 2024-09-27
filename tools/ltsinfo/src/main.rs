@@ -31,6 +31,8 @@ struct Cli {
 
     output: Option<String>,
 
+    tau: Option<Vec<String>>,
+
     #[arg(long)]
     time: bool,
 }
@@ -41,7 +43,8 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let cli = Cli::parse();
 
     let file = File::open(cli.filename)?;
-    let lts = read_aut(&file)?;
+
+    let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
 
     let start = std::time::Instant::now();
     let partition = match cli.equivalence {

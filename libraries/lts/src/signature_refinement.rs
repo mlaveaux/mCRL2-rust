@@ -36,15 +36,16 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
 /// Computes a branching bisimulation partitioning using signature refinement
 pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
     // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
-    let simplified_lts = quotient_lts(lts, &tau_scc_decomposition(lts), true);
+    let scc_partition = tau_scc_decomposition(lts);
+    let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
 
     let mut stack: Vec<usize> = Vec::new();
     let mut visited = FxHashSet::default();
 
-    let partition = signature_refinement(&simplified_lts, |state_index, partition, builder| {
+    let partition = signature_refinement(&tau_loop_free_lts, |state_index, partition, builder| {
         branching_bisim_signature(
             state_index,
-            &simplified_lts,
+            &tau_loop_free_lts,
             partition,
             builder,
             &mut visited,
@@ -54,12 +55,12 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
 
     debug_assert!(
         is_valid_refinement(
-            &simplified_lts,
+            &tau_loop_free_lts,
             &partition,
             |state_index, partition, builder| {
                 branching_bisim_signature(
                     state_index,
-                    &simplified_lts,
+                    &tau_loop_free_lts,
                     partition,
                     builder,
                     &mut visited,
@@ -71,7 +72,17 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
         lts
     );
 
-    partition
+    // Combine the SCC partition with the branching bisimulation partition.
+    let mut combined_partition = IndexedPartition::new(lts.num_of_states());
+
+    for (state_index, _) in lts.iter_states() {
+        let scc_block = scc_partition.block_number(state_index);
+        let branching_block = partition.block_number(scc_block);
+
+        combined_partition.set_block(state_index, branching_block);
+    }
+
+    combined_partition
 }
 
 /// General signature refinement algorithm that accepts an arbitrary signature
