@@ -28,8 +28,6 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
             // Pick a random label and state.
             let label = rng.gen_range(0..num_of_labels);
             let to = rng.gen_range(0..num_of_states);
-
-            state.outgoing.push((label as usize, to));
             
             match state.outgoing.binary_search(&(label as usize, to)) {
                 Ok(_) => {} // element already in vector

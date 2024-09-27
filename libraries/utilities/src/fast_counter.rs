@@ -19,7 +19,7 @@ impl fmt::Debug for ConcurrentCounter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ConcurrentCounter")
             .field("sum", &self.sum())
-            .field("cells", &self.cells.len())
+            .field("shards", &self.cells.len())
             .finish()
     }
 }
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn basic_test() {
-        let counter = ConcurrentCounter::new(01, 1);
+        let counter = ConcurrentCounter::new(0, 1);
         counter.add(1);
         assert_eq!(counter.sum(), 1);
     }
@@ -121,7 +121,7 @@ mod tests {
         
         assert_eq!(
             format!("Counter is: {counter:?}"),
-            "Counter is: ConcurrentCounter { sum: 1000000, cells: 8 }"
+            "Counter is: ConcurrentCounter { sum: 8000000, shards: 8 }"
         )
     }
 }
