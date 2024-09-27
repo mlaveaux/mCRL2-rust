@@ -18,7 +18,6 @@ use crate::SignatureBuilder;
 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
-
     let partition = signature_refinement(lts, |state_index, partition, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
@@ -54,16 +53,20 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     });
 
     debug_assert!(
-        is_valid_refinement(&simplified_lts, &partition, |state_index, partition, builder| {
-            branching_bisim_signature(
-                state_index,
-                &simplified_lts,
-                partition,
-                builder,
-                &mut visited,
-                &mut stack,
-            );
-        }),
+        is_valid_refinement(
+            &simplified_lts,
+            &partition,
+            |state_index, partition, builder| {
+                branching_bisim_signature(
+                    state_index,
+                    &simplified_lts,
+                    partition,
+                    builder,
+                    &mut visited,
+                    &mut stack,
+                );
+            }
+        ),
         "The resulting partition is not a branching bisimulation partition for LTS {:?}",
         lts
     );
@@ -82,7 +85,7 @@ where
     let mut arena = Bump::new();
     let mut builder = SignatureBuilder::default();
     let mut signature_flat: Vec<(usize, usize)> = Vec::new();
-    
+
     // Put all the states in the initial partition { S }.
     let mut id: FxHashMap<Signature, usize> = FxHashMap::default();
 
@@ -107,7 +110,7 @@ where
 
         for (state_index, _) in lts.iter_states() {
             // Compute the signature of a single state
-            signature(state_index, &partition, &mut builder);            
+            signature(state_index, &partition, &mut builder);
 
             // Compute the flat signature, which has Hash and is more compact.
             signature_flat.clear();
@@ -119,9 +122,9 @@ where
             // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
             let mut new_id = id.len();
             if let Some(index) = id.get(&Signature::new(&signature_flat)) {
-                new_id = *index;                
+                new_id = *index;
             } else {
-                let new_signature  = Signature::new(arena.alloc_slice_copy(&signature_flat));
+                let new_signature = Signature::new(arena.alloc_slice_copy(&signature_flat));
                 id.insert(new_signature, new_id);
             }
 
@@ -139,7 +142,6 @@ where
     trace!("Final partition {partition}");
     partition
 }
-
 
 /// Returns true iff the given partition is a strong bisimulation partition
 pub fn is_valid_refinement<F, P>(
@@ -209,9 +211,16 @@ mod tests {
         let strong_partition = strong_bisim_sigref(&lts);
         let branching_partition = branching_bisim_sigref(&lts);
 
-        assert!(
-            branching_partition.num_of_blocks() <= strong_partition.num_of_blocks(),
-            "The branching partition should be a refinement of the strong partition"
-        );
+        for (state_index, _) in lts.iter_states() {
+            for (other_state_index, _) in lts.iter_states() {
+                if strong_partition.block_number(state_index)
+                    == strong_partition.block_number(other_state_index)
+                {
+                    // If the states are together according to branching bisimilarity, then they should also be together according to strong bisimilarity.
+                    assert_eq!( branching_partition.block_number(state_index), branching_partition.block_number(other_state_index), "The branching partition should be a refinement of the strong partition, 
+                        but states {state_index} and {other_state_index} are in different blocks");
+                }
+            }
+        }
     }
 }

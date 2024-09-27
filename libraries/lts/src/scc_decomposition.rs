@@ -142,8 +142,12 @@ fn strongly_connect<F>(
             let info = indices[index].as_mut().expect("This state was on the stack");
             info.on_stack = false;
 
-            trace!("Added state {index} to block {}", info.lowlink);
+            trace!("Added state {index} to block {}", scc_index);
             partition.set_block(index, scc_index);
+
+            if index == state_index {
+                break;
+            }
         }
     }
 }
@@ -203,10 +207,38 @@ mod tests {
 
     use super::*;
 
+    /// Returns the reachable states from the given state index.
+    fn reachable_states(
+        lts: &LabelledTransitionSystem,
+        state_index: usize,
+        filter: &impl Fn(usize, usize, usize) -> bool,
+    ) -> Vec<usize> {
+        let mut stack = vec![state_index];
+        let mut visited = vec![false; lts.num_of_states()];
+
+        // Depth first search to find all reachable states.
+        while let Some(inner_state_index) = stack.pop() {
+            for (_, to_index) in lts.outgoing_transitions(inner_state_index) {
+                if filter(inner_state_index, 0, *to_index) && !visited[*to_index] {
+                    visited[*to_index] = true;
+                    stack.push(*to_index);
+                }
+            }
+        }
+
+        // All the states that were visited are reachable.
+        visited
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, visited)| if visited { Some(index) } else { None })
+            .collect()
+    }
+
     #[test]
     fn test_random_scc_decomposition() {
         let lts = random_lts(10, 3, 3);
-        let reduction = quotient_lts(&lts, &tau_scc_decomposition(&lts), true);
+        let partitioning = tau_scc_decomposition(&lts);
+        let reduction = quotient_lts(&lts, &partitioning, true);
         trace!("{:?}", reduction);
 
         assert!(
@@ -214,9 +246,24 @@ mod tests {
             "The tau-SCC decomposition still contains tau loops"
         );
 
+        // Check that states in a strongly connected component are reachable from each other.
+        for (state_index, _) in lts.iter_states() {
+            let reachable = reachable_states(&reduction, state_index, &|_, label, _| lts.is_hidden_label(label));
+
+            // All other states in the same block should be reachable.
+            let block = partitioning.block_number(state_index);
+
+            for (other_state_index, _) in lts.iter_states().filter(|(index, _)| state_index != *index && partitioning.block_number(*index) == block) {
+                assert!(
+                    reachable.contains(&other_state_index),
+                    "State {state_index} and {other_state_index} should be reachable"
+                );
+            }
+        }   
+
         assert!(
             reduction.num_of_states() == tau_scc_decomposition(&reduction).num_of_blocks(),
-            "Applying SCC decomposition should yield the same number of SCC after second application"
+            "Applying SCC decomposition again should yield the same number of SCC after second application"
         );
     }
 }
