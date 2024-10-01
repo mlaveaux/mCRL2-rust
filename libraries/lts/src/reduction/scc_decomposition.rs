@@ -15,6 +15,7 @@ pub fn scc_decomposition<F>(lts: &LabelledTransitionSystem, filter: &F) -> Index
 where
     F: Fn(usize, usize, usize) -> bool,
 {
+    let start = std::time::Instant::now();
     trace!("{:?}", lts);
 
     let mut partition = IndexedPartition::new(lts.num_of_states());
@@ -48,6 +49,7 @@ where
 
     trace!("Final partition {partition}");
     debug!("Found {} strongly connected components", partition.num_of_blocks());
+    debug!("Time scc_decomposition: {:.3}s", start.elapsed().as_secs_f64());
     partition
 }
 

@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use log::debug;
+
 use crate::{LabelledTransitionSystem, State};
 
 /// Returns a topological ordering of the states of the given LTS.
@@ -8,6 +10,8 @@ use crate::{LabelledTransitionSystem, State};
 pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<Vec<usize>, Box<dyn Error>>
     where F: Fn(usize, usize) -> bool
 {
+    let start = std::time::Instant::now();
+
     // The resulting order of states.
     let mut stack = Vec::new();
 
@@ -33,6 +37,8 @@ pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<
 
     stack.reverse();
     debug_assert!(is_topologically_sorted(lts, filter, |i| stack[i]));
+    debug!("Time sort_topological: {:.3}s", start.elapsed().as_secs_f64());
+
     Ok(stack)
 }
 
@@ -41,6 +47,7 @@ pub fn reorder_states<P>(lts: &LabelledTransitionSystem, permutation: P) -> Labe
 where
     P: Fn(usize) -> usize,
 {
+    let start = std::time::Instant::now();
     let mut states = vec![State::default(); lts.num_of_states()];
 
     for (state_index, state) in lts.iter_states() {
@@ -52,6 +59,7 @@ where
         }
     }
 
+    debug!("Time reorder_states: {:.3}s", start.elapsed().as_secs_f64());
     LabelledTransitionSystem::new(
         permutation(lts.initial_state_index()),
         states,

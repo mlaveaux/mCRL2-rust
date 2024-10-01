@@ -1,3 +1,5 @@
+use log::debug;
+
 use crate::LabelledTransitionSystem;
 use crate::State;
 
@@ -22,6 +24,8 @@ pub fn quotient_lts(
     partition: &impl Partition,
     eliminate_tau_loops: bool,
 ) -> LabelledTransitionSystem {
+    let start = std::time::Instant::now();
+
     // Introduce the transitions based on the block numbers
     let mut num_of_transitions = 0;
     let mut states: Vec<State> = vec![State::default(); partition.num_of_blocks()];
@@ -52,6 +56,7 @@ pub fn quotient_lts(
         }
     }
 
+    debug!("Time quotient_lts: {:.3}s", start.elapsed().as_secs_f64());
     LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),
         states,
