@@ -143,7 +143,11 @@ pub fn write_aut(
 
     for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
-            writeln!(writer, "({}, {}, {})", state_index, lts.labels()[*label], to)?;
+            writeln!(writer, "({}, \"{}\", {})", state_index, if lts.is_hidden_label(*label) {
+                "tau"
+            } else {
+                &lts.labels()[*label]
+            }, to)?;
         }
     }
 
