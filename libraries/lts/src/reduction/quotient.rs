@@ -81,7 +81,7 @@ mod tests {
         let lts = random_lts(10, 3, 3);
         let reduced_lts = quotient_lts(&lts, &strong_bisim_sigref(&lts), true);
 
-        debug_assert!(sort_topological(&reduced_lts, |label_index, _| lts.is_hidden_label(label_index)).is_ok(), 
+        debug_assert!(sort_topological(&reduced_lts, |label_index, _| lts.is_hidden_label(label_index), true).is_ok(), 
             "The LTS should not contain tau-cycles, but the following quotient does: {reduced_lts:?}");
     }
 }

@@ -8,6 +8,8 @@ use log::trace;
 
 use crate::branching_bisim_signature;
 use crate::quotient_lts;
+use crate::reorder_states;
+use crate::sort_topological;
 use crate::strong_bisim_signature;
 use crate::tau_scc_decomposition;
 use crate::IndexedPartition;
@@ -18,7 +20,7 @@ use crate::SignatureBuilder;
 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    let partition = signature_refinement(lts, |state_index, partition, builder| {
+    let partition = signature_refinement(lts, |state_index, partition, _, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
@@ -36,13 +38,22 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
 /// Computes a branching bisimulation partitioning using signature refinement
 pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
     // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
+    let start = std::time::Instant::now();
     let scc_partition = tau_scc_decomposition(lts);
+
     let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
 
+    // Sort the states according to the topological order of the tau transitions.
+    let order = sort_topological(&tau_loop_free_lts, |label_index, _| {
+        tau_loop_free_lts.is_hidden_label(label_index)
+    }, true)
+    .expect("After quotienting, the LTS should not contain cycles");
+
+    let permuted_lts = reorder_states(&tau_loop_free_lts, |i| order[i]);
     let mut stack: Vec<usize> = Vec::new();
     let mut visited = FxHashSet::default();
 
-    let partition = signature_refinement(&tau_loop_free_lts, |state_index, partition, builder| {
+    let partition = signature_refinement(&permuted_lts, |state_index, partition, _, _, builder| {
         branching_bisim_signature(
             state_index,
             &tau_loop_free_lts,
@@ -82,13 +93,19 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
         lts
     );
 
+    
+    debug!("Time branching_bisim_sigref: {:.3}s", start.elapsed().as_secs_f64());
     combined_partition
 }
 
 /// General signature refinement algorithm that accepts an arbitrary signature
+/// 
+/// The signature function is called for each state and should fill the
+/// signature builder with the signature of the state. It consists of the
+/// current partition, the signatures per state for the next partition.
 fn signature_refinement<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
 where
-    F: FnMut(usize, &IndexedPartition, &mut SignatureBuilder),
+    F: FnMut(usize, &IndexedPartition, &IndexedPartition, &Vec<Signature>, &mut SignatureBuilder),
 {
     trace!("{:?}", lts);
 
@@ -102,6 +119,8 @@ where
     // Assigns the signature to each state.
     let mut partition = IndexedPartition::new(lts.num_of_states());
     let mut next_partition = IndexedPartition::new(lts.num_of_states());
+    let mut block_to_signature: Vec<Signature> = Vec::new();
+    block_to_signature.resize_with(lts.num_of_states(), Signature::default);
 
     // Refine partitions until stable.
     let mut old_count = 1;
@@ -120,11 +139,7 @@ where
 
         for (state_index, _) in lts.iter_states() {
             // Compute the signature of a single state
-            signature(state_index, &partition, &mut builder);
-
-            // Compute the flat signature, which has Hash and is more compact.
-            builder.sort_unstable();
-            builder.dedup();
+            signature(state_index, &partition, &next_partition, &block_to_signature, &mut builder);
 
             trace!("State {state_index} signature {:?}", builder);
 
@@ -133,8 +148,11 @@ where
             if let Some(index) = id.get(&Signature::new(&builder)) {
                 new_id = *index;
             } else {
-                let new_signature = Signature::new(arena.alloc_slice_copy(&builder));
-                id.insert(new_signature, new_id);
+                let slice = arena.alloc_slice_copy(&builder);
+                id.insert(Signature::new(slice), new_id);
+
+                // Keep track of the signature for every block in the next partition.
+                block_to_signature[new_id] = Signature::new(slice);
             }
 
             next_partition.set_block(state_index, new_id);
@@ -205,7 +223,7 @@ where
 mod tests {
     use test_log::test;
 
-    use crate::random_lts;
+    use crate::{branching_bisim_signature_sorted, random_lts};
 
     use super::*;
 
@@ -237,5 +255,52 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_sorted_branching_bisim_sigref() {
+        
+        let lts = random_lts(10, 3, 3);
+
+        // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
+        let scc_partition = tau_scc_decomposition(&lts);
+        let tau_loop_free_lts = quotient_lts(&lts, &scc_partition, true);
+    
+        let mut stack: Vec<usize> = Vec::new();
+        let mut visited = FxHashSet::default();
+    
+        // Sort the states according to the topological order of the tau transitions.
+        let order = sort_topological(&tau_loop_free_lts, |label_index, _| {
+            tau_loop_free_lts.is_hidden_label(label_index)
+        }, true)
+            .expect("After quotienting, the LTS should not contain cycles");
+    
+        let permuted_lts = reorder_states(&tau_loop_free_lts, |i| order[i]);
+
+        let _ = signature_refinement(&permuted_lts, |state_index, partition, next_partition, block_to_signature, builder| {
+            // Compute the expected signature
+            branching_bisim_signature(
+                state_index,
+                &permuted_lts,
+                partition,
+                builder,
+                &mut visited,
+                &mut stack,
+            );
+
+            let result = builder.clone();
+
+            branching_bisim_signature_sorted(
+                state_index,
+                &permuted_lts,
+                partition,
+                next_partition,
+                block_to_signature,
+                builder,
+            );
+
+            let signature = Signature::new(&builder);
+            assert_eq!(signature.as_slice(), result, "The sorted and expected signature should be the same");
+        });
     }
 }

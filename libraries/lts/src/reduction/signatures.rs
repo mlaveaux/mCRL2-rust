@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use bumpalo::Bump;
 use fxhash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
@@ -22,6 +23,12 @@ impl Signature {
 
     pub fn as_slice(&self) -> &[(usize, usize)] {
         unsafe { &*self.0 }
+    }
+}
+
+impl Default for Signature {
+    fn default() -> Self {
+        Signature(&[])
     }
 }
 
@@ -55,6 +62,10 @@ pub fn strong_bisim_signature(
     for (label, to) in lts.outgoing_transitions(state_index) {
         builder.push((*label, partition.block_number(*to)));
     }
+
+    // Compute the flat signature, which has Hash and is more compact.
+    builder.sort_unstable();
+    builder.dedup();
 }
 
 /// Returns the branching bisimulation signature for branching bisimulation
@@ -67,7 +78,6 @@ pub fn branching_bisim_signature(
     visited: &mut FxHashSet<usize>,
     stack: &mut Vec<usize>,
 ) {
-
     // Clear the builders and the list of visited states.
     builder.clear();
     visited.clear();
@@ -98,4 +108,49 @@ pub fn branching_bisim_signature(
             }
         }
     }
+
+    // Compute the flat signature, which has Hash and is more compact.
+    builder.sort_unstable();
+    builder.dedup();
+}
+
+/// The input lts must contain no tau-cycles.
+pub fn branching_bisim_signature_sorted(
+    state_index: StateIndex,
+    lts: &LabelledTransitionSystem,
+    partition: &impl Partition,
+    next_partition: &impl Partition,
+    block_to_signature: &Vec<Signature>,
+    builder: &mut SignatureBuilder,
+) {
+    for (label_index, to) in lts.outgoing_transitions(state_index) {
+        let to_block = partition.block_number(*to);
+
+        if partition.block_number(state_index) == to_block {
+            if lts.is_hidden_label(*label_index) {
+                // Inert tau transition, take signature from the outgoing.
+                builder.extend(block_to_signature[next_partition.block_number(*to)].as_slice());
+            }
+        } else {
+            // Visible action, add to the signature.
+            builder.push((*label_index, partition.block_number(*to)));
+        }
+    }
+    
+    // Compute the flat signature, which has Hash and is more compact.
+    builder.sort_unstable();
+    builder.dedup();
+}
+
+/// Returns true iff the given state is a bottom state, i.e., has no tau transition into the same block
+fn is_bottom_state(
+    state_index: StateIndex,
+    lts: &LabelledTransitionSystem,
+    partition: &impl Partition,
+) -> bool {
+    lts.outgoing_transitions(state_index)
+        .any(|(label_index, to)| {
+            lts.is_hidden_label(*label_index)
+                && partition.block_number(*to) == partition.block_number(state_index)
+        })
 }

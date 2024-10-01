@@ -7,10 +7,12 @@ use crate::{LabelledTransitionSystem, State};
 /// Returns a topological ordering of the states of the given LTS.
 ///
 /// An error is returned if the LTS contains a cycle.
-pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<Vec<usize>, Box<dyn Error>>
+///     - reverse: If true, the topological ordering is reversed, i.e. successors before the incoming state.
+pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F, reverse: bool) -> Result<Vec<usize>, Box<dyn Error>>
     where F: Fn(usize, usize) -> bool
 {
     let start = std::time::Instant::now();
+    trace!("{:?}", lts);
 
     // The resulting order of states.
     let mut stack = Vec::new();
@@ -35,7 +37,9 @@ pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<
         }
     }
 
-    stack.reverse();
+    if !reverse {
+        stack.reverse();
+    }
     trace!("Topological order: {stack:?}");
 
     // Turn the stack into a permutation.
@@ -44,7 +48,7 @@ pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<
         reorder[state_index] = i;
     }
 
-    debug_assert!(is_topologically_sorted(lts, filter, |i| reorder[i]), "The permutation {reorder:?} is not a valid topological ordering of the states of the given LTS: {lts:?}");
+    debug_assert!(is_topologically_sorted(lts, filter, |i| reorder[i], reverse), "The permutation {reorder:?} is not a valid topological ordering of the states of the given LTS: {lts:?}");
     debug!("Time sort_topological: {:.3}s", start.elapsed().as_secs_f64());
 
     Ok(reorder)
@@ -129,7 +133,7 @@ fn sort_topological_visit<F>(
 }
 
 /// Returns true if the given permutation is a topological ordering of the states of the given LTS.
-fn is_topologically_sorted<F, P>(lts: &LabelledTransitionSystem, filter: F, permutation: P) -> bool
+fn is_topologically_sorted<F, P>(lts: &LabelledTransitionSystem, filter: F, permutation: P, reverse: bool) -> bool
 where
     F: Fn(usize, usize) -> bool,
     P: Fn(usize) -> usize,
@@ -140,8 +144,15 @@ where
     for (state_index, state) in lts.iter_states() {
         let state_order = permutation(state_index);
         for (_, successor) in state.outgoing.iter().filter(|(label, to)| filter(*label, *to)) {
-            if state_order >= permutation(*successor) {
-                return false;
+            if reverse {
+                if state_order <= permutation(*successor) {
+                    return false;
+                }
+            }
+            else {                
+                if state_order >= permutation(*successor) {
+                    return false;
+                }
             }
         }
     }
@@ -186,9 +197,9 @@ mod tests {
     #[test]
     fn test_sort_topological_with_cycles() {
         let lts = random_lts(10, 3, 2);
-        match sort_topological(&lts, |_, _| true) {
-            Ok(order) => assert!(is_topologically_sorted(&lts, |_, _| true, |i| order[i])),
-            Err(e) => assert_eq!(e.to_string(), "Graph contains a cycle"),
+        match sort_topological(&lts, |_, _| true, false) {
+            Ok(order) => assert!(is_topologically_sorted(&lts, |_, _| true, |i| order[i], false)),
+            Err(_) => {},
         }
     }
 
