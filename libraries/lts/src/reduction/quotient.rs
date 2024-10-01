@@ -58,6 +58,7 @@ mod tests {
     use test_log::test;
 
     use crate::random_lts;
+    use crate::sort_topological;
     use crate::strong_bisim_sigref;
 
     use super::*;
@@ -66,5 +67,7 @@ mod tests {
     fn test_random_quotient() {
         let lts = random_lts(10, 3, 3);
         quotient_lts(&lts, &strong_bisim_sigref(&lts), false);
+
+        debug_assert!(sort_topological(&lts, |_, _| true).is_ok(), "The LTS should not contain tau-cycles");        
     }
 }

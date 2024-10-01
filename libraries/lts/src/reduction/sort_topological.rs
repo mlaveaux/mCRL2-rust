@@ -5,7 +5,9 @@ use crate::{LabelledTransitionSystem, State};
 /// Returns a topological ordering of the states of the given LTS.
 ///
 /// An error is returned if the LTS contains a cycle.
-pub fn sort_topological(lts: &LabelledTransitionSystem) -> Result<Vec<usize>, Box<dyn Error>> {
+pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<Vec<usize>, Box<dyn Error>>
+    where F: Fn(usize, usize) -> bool
+{
     // The resulting order of states.
     let mut stack = Vec::new();
 
@@ -17,6 +19,7 @@ pub fn sort_topological(lts: &LabelledTransitionSystem) -> Result<Vec<usize>, Bo
         if marks[state_index].is_none() {
             if !sort_topological_visit(
                 lts,
+                &filter,
                 state_index,
                 &mut depth_stack,
                 &mut marks,
@@ -68,14 +71,17 @@ enum Mark {
 /// Visits the given state in a depth first search.
 ///
 /// Returns false if a cycle is detected.
-fn sort_topological_visit(
+fn sort_topological_visit<F>(
     lts: &LabelledTransitionSystem,
+    filter: &F,
     state_index: usize,
     depth_stack: &mut Vec<usize>,
     marks: &mut Vec<Option<Mark>>,
     visited: &mut Vec<bool>,
     stack: &mut Vec<usize>,
-) -> bool {
+) -> bool 
+    where F: Fn(usize, usize) -> bool
+{
     // Perform a depth first search.
     depth_stack.push(state_index);
 
@@ -84,7 +90,7 @@ fn sort_topological_visit(
             None => {
                 marks[state] = Some(Mark::Temporary);
                 depth_stack.push(state); // Re-add to stack to mark as permanent later
-                for (_, next_state) in lts.outgoing_transitions(state) {
+                for (_, next_state) in lts.outgoing_transitions(state).filter(|(label, to)| filter(*label, *to)) {
                     // If it was marked temporary, then a cycle is detected.
                     if marks[*next_state] == Some(Mark::Temporary) {
                         return false;
@@ -163,7 +169,7 @@ mod tests {
     #[test]
     fn test_sort_topological_with_cycles() {
         let lts = random_lts(10, 15, 2);
-        match sort_topological(&lts) {
+        match sort_topological(&lts, |_, _| true) {
             Ok(order) => assert!(is_topologically_sorted(&lts, |i| order[i])),
             Err(e) => assert_eq!(e.to_string(), "Graph contains a cycle"),
         }
