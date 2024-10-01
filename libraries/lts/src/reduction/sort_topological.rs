@@ -32,7 +32,7 @@ pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<
     }
 
     stack.reverse();
-    debug_assert!(is_topologically_sorted(lts, |i| stack[i]));
+    debug_assert!(is_topologically_sorted(lts, filter, |i| stack[i]));
     Ok(stack)
 }
 
@@ -113,8 +113,9 @@ fn sort_topological_visit<F>(
 }
 
 /// Returns true if the given permutation is a topological ordering of the states of the given LTS.
-fn is_topologically_sorted<P>(lts: &LabelledTransitionSystem, permutation: P) -> bool
+fn is_topologically_sorted<F, P>(lts: &LabelledTransitionSystem, filter: F, permutation: P) -> bool
 where
+    F: Fn(usize, usize) -> bool,
     P: Fn(usize) -> usize,
 {
     debug_assert!(is_valid_permutation(&permutation, lts.num_of_states()));
@@ -123,7 +124,7 @@ where
     for state_index in (0..lts.num_of_states()).map(permutation) {
 
         visited[state_index] = true;
-        for (_, next_state) in lts.outgoing_transitions(state_index) {
+        for (_, next_state) in lts.outgoing_transitions(state_index).filter(|(label, to)| filter(*label, *to)) {
             if visited[*next_state] {
                 return false;
             }
@@ -170,7 +171,7 @@ mod tests {
     fn test_sort_topological_with_cycles() {
         let lts = random_lts(10, 15, 2);
         match sort_topological(&lts, |_, _| true) {
-            Ok(order) => assert!(is_topologically_sorted(&lts, |i| order[i])),
+            Ok(order) => assert!(is_topologically_sorted(&lts, |_, _| true, |i| order[i])),
             Err(e) => assert_eq!(e.to_string(), "Graph contains a cycle"),
         }
     }
