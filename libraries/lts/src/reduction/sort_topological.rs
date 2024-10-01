@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use log::debug;
+use log::{debug, trace};
 
 use crate::{LabelledTransitionSystem, State};
 
@@ -36,10 +36,18 @@ pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F) -> Result<
     }
 
     stack.reverse();
-    debug_assert!(is_topologically_sorted(lts, filter, |i| stack[i]));
+    trace!("Topological order: {stack:?}");
+
+    // Turn the stack into a permutation.
+    let mut reorder = vec![0; lts.num_of_states()];
+    for (i, &state_index) in stack.iter().enumerate() {
+        reorder[state_index] = i;
+    }
+
+    debug_assert!(is_topologically_sorted(lts, filter, |i| reorder[i]), "The permutation {reorder:?} is not a valid topological ordering of the states of the given LTS: {lts:?}");
     debug!("Time sort_topological: {:.3}s", start.elapsed().as_secs_f64());
 
-    Ok(stack)
+    Ok(reorder)
 }
 
 /// Reorders the states of the given LTS according to the given permutation.
@@ -128,12 +136,11 @@ where
 {
     debug_assert!(is_valid_permutation(&permutation, lts.num_of_states()));
 
-    let mut visited = vec![false; lts.num_of_states()];
-    for state_index in (0..lts.num_of_states()).map(permutation) {
-
-        visited[state_index] = true;
-        for (_, next_state) in lts.outgoing_transitions(state_index).filter(|(label, to)| filter(*label, *to)) {
-            if visited[*next_state] {
+    // Check that each vertex appears before its successors.
+    for (state_index, state) in lts.iter_states() {
+        let state_order = permutation(state_index);
+        for (_, successor) in state.outgoing.iter().filter(|(label, to)| filter(*label, *to)) {
+            if state_order >= permutation(*successor) {
                 return false;
             }
         }
@@ -169,6 +176,7 @@ where
 #[cfg(test)]
 mod tests {
 
+    use test_log::test;
     use rand::seq::SliceRandom;
 
     use crate::random_lts;
@@ -177,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_sort_topological_with_cycles() {
-        let lts = random_lts(10, 15, 2);
+        let lts = random_lts(10, 3, 2);
         match sort_topological(&lts, |_, _| true) {
             Ok(order) => assert!(is_topologically_sorted(&lts, |_, _| true, |i| order[i])),
             Err(e) => assert_eq!(e.to_string(), "Graph contains a cycle"),
@@ -186,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_reorder_states() {
-        let lts = random_lts(10, 15, 2);
+        let lts = random_lts(10, 3, 2);
 
         // Generate a random permutation.
         let mut rng = rand::thread_rng();
