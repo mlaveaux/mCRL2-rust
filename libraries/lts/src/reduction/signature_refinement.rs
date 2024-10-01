@@ -53,25 +53,6 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
         );
     });
 
-    debug_assert!(
-        is_valid_refinement(
-            &tau_loop_free_lts,
-            &partition,
-            |state_index, partition, builder| {
-                branching_bisim_signature(
-                    state_index,
-                    &tau_loop_free_lts,
-                    partition,
-                    builder,
-                    &mut visited,
-                    &mut stack,
-                );
-            }
-        ),
-        "The resulting partition is not a branching bisimulation partition for LTS {:?}",
-        lts
-    );
-
     // Combine the SCC partition with the branching bisimulation partition.
     let mut combined_partition = IndexedPartition::new(lts.num_of_states());
 
@@ -81,6 +62,25 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
 
         combined_partition.set_block(state_index, branching_block);
     }
+
+    debug_assert!(
+        is_valid_refinement(
+            &lts,
+            &combined_partition,
+            |state_index, partition, builder| {
+                branching_bisim_signature(
+                    state_index,
+                    &lts,
+                    partition,
+                    builder,
+                    &mut visited,
+                    &mut stack,
+                );
+            }
+        ),
+        "The resulting partition is not a branching bisimulation partition for LTS: \n {:?}",
+        lts
+    );
 
     combined_partition
 }
