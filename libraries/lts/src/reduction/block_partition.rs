@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::Partition;
+use super::Partition;
 
 /// A partition that explicitly stores a list of blocks and their indexing into
 /// the list of elements.

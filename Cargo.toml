@@ -2,7 +2,7 @@
 lto = "thin"
 
 [profile.bench]
-debug = 1
+debug = "line-tables-only"
 
 [workspace]
 resolver = "2"
