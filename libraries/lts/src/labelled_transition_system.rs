@@ -109,6 +109,11 @@ impl LabelledTransitionSystem {
         self.states.len()
     }
 
+    /// Returns the number of labels.
+    pub fn num_of_labels(&self) -> LabelIndex {
+        self.labels.len()
+    }
+
     /// Returns the number of transitions.
     pub fn num_of_transitions(&self) -> usize {
         self.num_of_transitions
