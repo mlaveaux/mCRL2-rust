@@ -95,7 +95,6 @@ where
     // Avoids reallocations when computing the signature.
     let mut arena = Bump::new();
     let mut builder = SignatureBuilder::default();
-    let mut signature_flat: Vec<(usize, usize)> = Vec::new();
 
     // Put all the states in the initial partition { S }.
     let mut id: FxHashMap<Signature, usize> = FxHashMap::default();
@@ -124,18 +123,17 @@ where
             signature(state_index, &partition, &mut builder);
 
             // Compute the flat signature, which has Hash and is more compact.
-            signature_flat.clear();
-            signature_flat.extend(builder.drain());
-            signature_flat.sort_unstable();
+            builder.sort_unstable();
+            builder.dedup();
 
-            trace!("State {state_index} signature {:?}", signature_flat);
+            trace!("State {state_index} signature {:?}", builder);
 
             // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
             let mut new_id = id.len();
-            if let Some(index) = id.get(&Signature::new(&signature_flat)) {
+            if let Some(index) = id.get(&Signature::new(&builder)) {
                 new_id = *index;
             } else {
-                let new_signature = Signature::new(arena.alloc_slice_copy(&signature_flat));
+                let new_signature = Signature::new(arena.alloc_slice_copy(&builder));
                 id.insert(new_signature, new_id);
             }
 
@@ -183,14 +181,16 @@ where
         compute_signature(state_index, &partition, &mut builder);
 
         // Compute the flat signature, which has Hash and is more compact.
-        let mut signature: Vec<(usize, usize)> = builder.drain().collect();
+        let mut signature: Vec<(usize, usize)> = builder.clone();
         signature.sort_unstable();
+        signature.dedup();
 
         compute_signature(representative_index, &partition, &mut builder);
 
         // Compute the flat signature, which has Hash and is more compact.
-        let mut representative_signature: Vec<(usize, usize)> = builder.drain().collect();
+        let mut representative_signature: Vec<(usize, usize)> = builder.clone();
         representative_signature.sort_unstable();
+        representative_signature.dedup();
 
         if signature != representative_signature {
             trace!("State {state_index} has a different signature then representative state {representative_index}, but are in the same block {block}");
@@ -228,8 +228,12 @@ mod tests {
                     == strong_partition.block_number(other_state_index)
                 {
                     // If the states are together according to branching bisimilarity, then they should also be together according to strong bisimilarity.
-                    assert_eq!( branching_partition.block_number(state_index), branching_partition.block_number(other_state_index), "The branching partition should be a refinement of the strong partition, 
-                        but states {state_index} and {other_state_index} are in different blocks");
+                    assert_eq!(
+                        branching_partition.block_number(state_index),
+                        branching_partition.block_number(other_state_index),
+                        "The branching partition should be a refinement of the strong partition, 
+                        but states {state_index} and {other_state_index} are in different blocks"
+                    );
                 }
             }
         }

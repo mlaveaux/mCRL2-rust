@@ -3,19 +3,19 @@ use std::hash::Hash;
 
 use fxhash::FxHashSet;
 
-use crate::Partition;
 use crate::LabelledTransitionSystem;
+use crate::Partition;
 use crate::StateIndex;
 
 /// The builder used to construct the signature.
-pub type SignatureBuilder = FxHashSet<(usize, usize)>;
+pub type SignatureBuilder = Vec<(usize, usize)>;
 
 /// The type of a signature. We use sorted vectors to avoid the overhead of hash
 /// sets that might have unused values.
 #[derive(Eq)]
 pub struct Signature(*const [(usize, usize)]);
 
-impl Signature  {
+impl Signature {
     pub fn new(slice: &[(usize, usize)]) -> Signature {
         Signature(slice)
     }
@@ -39,9 +39,7 @@ impl Hash for Signature {
 
 impl Debug for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_list()
-            .entries(self.as_slice().iter())
-            .finish()
+        f.debug_list().entries(self.as_slice().iter()).finish()
     }
 }
 
@@ -52,12 +50,15 @@ pub fn strong_bisim_signature(
     partition: &impl Partition,
     builder: &mut SignatureBuilder,
 ) {
+    builder.clear();
+    
     for (label, to) in lts.outgoing_transitions(state_index) {
-        builder.insert((*label, partition.block_number(*to)));
+        builder.push((*label, partition.block_number(*to)));
     }
 }
 
-/// Returns the pre-signature for branching bisimulation sig(s, pi) = { (a, pi(t)) | s -[tau]-> s1 -> ... s_n -[a]-> t in T && pi(s) = pi(i) && (a != tau) && pi(s) != pi(t) }
+/// Returns the branching bisimulation signature for branching bisimulation
+/// sig(s, pi) = { (a, pi(t)) | s -[tau]-> s1 -> ... s_n -[a]-> t in T && pi(s) = pi(s_i) && (a != tau) && pi(s) != pi(t) }
 pub fn branching_bisim_signature(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
@@ -86,12 +87,10 @@ pub fn branching_bisim_signature(
                         visited.insert(*to_index);
                         stack.push(*to_index);
                     }
-                } else {
-                    builder.insert((*label_index, partition.block_number(*to_index)));                    
                 }
             } else {
                 // This is a visible action only reachable from tau paths with equal signatures.
-                builder.insert((*label_index, partition.block_number(*to_index)));
+                builder.push((*label_index, partition.block_number(*to_index)));
             }
         }
     }

@@ -5,7 +5,11 @@ use crate::State;
 
 /// Generates a monolithic LTS with the desired number of states, labels, out
 /// degree and in degree for all the states.
-pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) -> LabelledTransitionSystem {
+pub fn random_lts(
+    num_of_states: usize,
+    num_of_labels: u32,
+    outdegree: usize,
+) -> LabelledTransitionSystem {
     // Introduce num_of_states states.
     let mut states: Vec<State> = vec![State::default(); num_of_states];
 
