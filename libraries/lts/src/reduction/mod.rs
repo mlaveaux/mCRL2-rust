@@ -13,6 +13,7 @@ mod quotient;
 mod scc_decomposition;
 mod signature_refinement;
 mod signatures;
+mod sort_topological;
 
 //pub use strong_bisim_partition::*;
 pub use block_partition::*;
@@ -21,3 +22,4 @@ pub use quotient::*;
 pub use scc_decomposition::*;
 pub use signature_refinement::*;
 pub use signatures::*;
+pub use sort_topological::*;
