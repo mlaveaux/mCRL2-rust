@@ -58,7 +58,7 @@ pub fn strong_bisim_signature(
 }
 
 /// Returns the branching bisimulation signature for branching bisimulation
-/// sig(s, pi) = { (a, pi(t)) | s -[tau]-> s1 -> ... s_n -[a]-> t in T && pi(s) = pi(s_i) && (a != tau) && pi(s) != pi(t) }
+/// sig(s, pi) = { (a, pi(t)) | s -[tau]-> s1 -> ... s_n -[a]-> t in T && pi(s) = pi(s_i) && ((a != tau) || pi(s) != pi(t)) }
 pub fn branching_bisim_signature(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
@@ -82,14 +82,18 @@ pub fn branching_bisim_signature(
         for (label_index, to_index) in lts.outgoing_transitions(inner_state_index) {
             if lts.is_hidden_label(*label_index) {
                 if partition.block_number(state_index) == partition.block_number(*to_index) {
-                    // Explore the outgoing state as well.
+                    // Explore the outgoing state as well, still tau path in same block
                     if !visited.contains(to_index) {
                         visited.insert(*to_index);
                         stack.push(*to_index);
                     }
                 }
+                else {
+                    //  pi(s) != pi(t)
+                    builder.push((*label_index, partition.block_number(*to_index)));
+                }
             } else {
-                // This is a visible action only reachable from tau paths with equal signatures.
+                // (a != tau) This is a visible action only reachable from tau paths with equal signatures.
                 builder.push((*label_index, partition.block_number(*to_index)));
             }
         }
