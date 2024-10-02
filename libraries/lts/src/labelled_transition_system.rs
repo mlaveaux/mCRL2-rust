@@ -24,7 +24,7 @@ pub struct LabelledTransitionSystem {
 impl LabelledTransitionSystem {
     pub fn new(
         initial_state: StateIndex,
-        mut states: Vec<State>,
+        states: Vec<State>,
         labels: Vec<String>,
         hidden_labels: Vec<String>,
         num_of_transitions: usize,
@@ -40,18 +40,19 @@ impl LabelledTransitionSystem {
 
         // Check that the outgoing transitions are a function.
         let num_of_states = states.len();
-        for state in &mut states {
-            let old_len = state.outgoing.len();
-            state.outgoing.sort();
-            state.outgoing.dedup();
+        for (state_index, state) in states.iter().enumerate() {
+            let mut outgoing_dedup = state.outgoing.clone();
+            outgoing_dedup.sort();
+            outgoing_dedup.dedup();
 
             debug_assert_eq!(
+                outgoing_dedup.len(),
                 state.outgoing.len(),
-                old_len,
-                "There are states with duplicated outgoing transitions"
+                "State {state_index} has duplicated outgoing transitions {:?}", 
+                state.outgoing
             );
 
-            debug_assert!(state.outgoing.iter().all(|(label, to)| *label < labels.len() && *to < num_of_states), "A state has invalid outgoing transitions.");
+            debug_assert!(state.outgoing.iter().all(|(label, to)| *label < labels.len() && *to < num_of_states), "State {state_index} has invalid outgoing transitions {:?}.", state.outgoing);
         }
 
         // Keep track of which label indexes are hidden label for log(n) search.
