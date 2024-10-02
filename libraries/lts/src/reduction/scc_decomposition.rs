@@ -11,7 +11,7 @@ use crate::Partition;
 pub fn tau_scc_decomposition(lts: &LabelledTransitionSystem) -> IndexedPartition {
     let partition = scc_decomposition(lts, &|_, label_index, _| lts.is_hidden_label(label_index));
     let quotient_lts = quotient_lts(lts, &partition, true);
-    debug_assert!(sort_topological(&quotient_lts, |label_index, _| lts.is_hidden_label(label_index), false).is_ok(), "The SCC decomposition contains tau-loops");
+    debug_assert!(!has_tau_loop(&quotient_lts), "The SCC decomposition contains tau-loops");
     partition
 }
 
@@ -29,14 +29,14 @@ where
     let mut stack = Vec::new();
 
     // Keep track of already visited states.
-    let mut indices: Vec<Option<StateInfo>> = vec![None; lts.num_of_states()];
+    let mut state_info: Vec<Option<StateInfo>> = vec![None; lts.num_of_states()];
 
     let mut smallest_index = 0;
     let mut next_block_number = 0;
 
     // The outer depth first search used to traverse all the states.
     for (state_index, _) in lts.iter_states() {
-        if indices[state_index].is_none() {
+        if state_info[state_index].is_none() {
             trace!("State {state_index}");
     
             strongly_connect(
@@ -47,7 +47,7 @@ where
                 &mut smallest_index,
                 &mut next_block_number,
                 &mut stack,
-                &mut indices,
+                &mut state_info,
             )
         }
     }
@@ -85,13 +85,13 @@ fn strongly_connect<F>(
     smallest_index: &mut usize,
     next_block_number: &mut usize,
     stack: &mut Vec<usize>,
-    indices: &mut Vec<Option<StateInfo>>,
+    state_info: &mut Vec<Option<StateInfo>>,
 ) where
     F: Fn(usize, usize, usize) -> bool,
 {    
     trace!("Visiting state {state_index}");
 
-    indices[state_index] = Some(StateInfo {
+    state_info[state_index] = Some(StateInfo {
         index: *smallest_index,
         lowlink: *smallest_index,
         on_stack: true,
@@ -105,17 +105,17 @@ fn strongly_connect<F>(
     // Consider successors of the current state.
     for (label_index, to_index) in lts.outgoing_transitions(state_index) {
         if filter(state_index, *label_index, *to_index) {
-            if let Some(meta) = &mut indices[*to_index] {
+            if let Some(meta) = &mut state_info[*to_index] {
                 if meta.on_stack { 
                     // Successor w is in stack S and hence in the current SCC
                     // If w is not on stack, then (v, w) is an edge pointing to an SCC already found and must be ignored
                     // v.lowlink := min(v.lowlink, w.lowlink);
-                    let w_lowlink = indices[*to_index]
+                    let w_index = state_info[*to_index]
                         .as_ref()
                         .expect("The state must be visited in the recursive call")
                         .index;
-                    let info = indices[state_index].as_mut().expect("This state was added before");
-                    info.lowlink = info.lowlink.min(w_lowlink);
+                    let info = state_info[state_index].as_mut().expect("This state was added before");
+                    info.lowlink = info.lowlink.min(w_index);
                 }
             } else {
                 // Successor w has not yet been visited; recurse on it
@@ -127,25 +127,25 @@ fn strongly_connect<F>(
                     smallest_index,
                     next_block_number,
                     stack,
-                    indices,
+                    state_info,
                 );
 
                 // v.lowlink := min(v.lowlink, w.lowlink);
-                let w_lowlink = indices[*to_index]
+                let w_lowlink = state_info[*to_index]
                     .as_ref()
                     .expect("The state must be visited in the recursive call")
-                    .index;
-                let info = indices[state_index].as_mut().expect("This state was added before");
+                    .lowlink;
+                let info = state_info[state_index].as_mut().expect("This state was added before");
                 info.lowlink = info.lowlink.min(w_lowlink);
             }
         }
     }
 
-    let info = indices[state_index].as_ref().expect("This state was added before");
+    let info = state_info[state_index].as_ref().expect("This state was added before");
     if info.lowlink == info.index {
         // Start a new strongly connected component.
         while let Some(index) = stack.pop() {
-            let info = indices[index].as_mut().expect("This state was on the stack");
+            let info = state_info[index].as_mut().expect("This state was on the stack");
             info.on_stack = false;
 
             trace!("Added state {index} to block {}", next_block_number);
@@ -161,47 +161,7 @@ fn strongly_connect<F>(
 
 /// Returns true iff the labelled transition system has tau-loops.
 pub fn has_tau_loop(lts: &LabelledTransitionSystem) -> bool {
-    // The inner stack for the depth first search of tau actions.
-    let mut stack = Vec::new();
-
-    // Keep track of already visited states.
-    let mut visited = vec![false; lts.num_of_states()];
-
-    for (state_index, _) in lts.iter_states() {
-        // Start a depth first search from the current state.
-        stack.push(state_index);
-        visited[state_index] = true;
-
-        while let Some(inner_state_index) = stack.pop() {
-            // We should only search up the stack, ignoring added entries.
-            let stack_length = stack.len();
-
-            for (label_index, to_index) in lts.outgoing_transitions(inner_state_index) {
-                if lts.is_hidden_label(*label_index) {
-                    if state_index == *to_index {
-                        // There is a tau selfloop;
-                        trace!("tau self-loop for {to_index}");
-                        return true;
-                    }
-
-                    if stack[0..stack_length].contains(&to_index) {
-                        // There is state where following tau path leads back
-                        // into the stack.
-                        trace!("tau-loop {:?} to {to_index}", stack);
-                        return true;
-                    }
-
-                    // Explore all the states reachable with hidden actions.
-                    if !visited[*to_index] {
-                        visited[*to_index] = true;
-                        stack.push(*to_index);
-                    }
-                }
-            }
-        }
-    }
-
-    false
+    sort_topological(&lts, |label_index, _| lts.is_hidden_label(label_index), false).is_err()
 }
 
 #[cfg(test)]
@@ -247,12 +207,6 @@ mod tests {
         let lts = random_lts(10, 3, 3);
         let partitioning = tau_scc_decomposition(&lts);
         let reduction = quotient_lts(&lts, &partitioning, true);
-        trace!("{:?}", reduction);
-
-        assert!(
-            !has_tau_loop(&reduction),
-            "The tau-SCC decomposition still contains tau loops"
-        );
 
         // Check that states in a strongly connected component are reachable from each other.
         for (state_index, _) in lts.iter_states() {

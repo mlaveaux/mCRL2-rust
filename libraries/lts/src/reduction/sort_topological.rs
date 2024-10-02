@@ -32,7 +32,8 @@ pub fn sort_topological<F>(lts: &LabelledTransitionSystem, filter: F, reverse: b
                 &mut visited,
                 &mut stack,
             ) {
-                return Err("Graph contains a cycle".into());
+                trace!("There is a cycle from state {state_index} on path {stack:?}");
+                return Err("Labelled transition system contains a cycle".into());
             }
         }
     }
