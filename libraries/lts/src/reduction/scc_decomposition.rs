@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use log::debug;
 use log::trace;
 
@@ -22,7 +24,7 @@ pub fn scc_decomposition<F>(lts: &LabelledTransitionSystem, filter: &F) -> Index
 where
     F: Fn(usize, usize, usize) -> bool,
 {
-    let start = std::time::Instant::now();
+    let start = Instant::now();
     trace!("{:?}", lts);
 
     let mut partition = IndexedPartition::new(lts.num_of_states());

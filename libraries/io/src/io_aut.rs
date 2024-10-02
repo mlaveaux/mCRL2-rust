@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io::Read;
 use std::io::Write;
+use std::time::Instant;
 
 use log::debug;
 use log::trace;
@@ -33,6 +34,7 @@ pub enum IOError {
 ///     `(<from>: Nat, "<label>": Str, <to>: Nat)`
 ///     `(<from>: Nat, <label>: Str, <to>: Nat)`
 pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<LabelledTransitionSystem, Box<dyn Error>> {
+    let start = Instant::now();
     debug!("Reading LTS in .aut format...");
 
     let mut lines = LineIterator::new(reader);
@@ -45,14 +47,11 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
-    // Regex for (<from>: Nat, "<label>": str, <to>: Nat)
-    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"(.*)"\s*,\s*([0-9]*)\s*\)\s*"#)
+    // Regex for (<from>: Nat, "<label>": str, <to>: Nat) or (<from>: Nat,
+    // label: str, <to>: Nat). Note that the quotes are optional, and even one
+    // side can be forgotten.
+    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"?(.*)"?\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
-
-    // Regex for (<from>: Nat, label: str, <to>: Nat), used in the VLTS benchmarks
-    let unquoted_transition_regex =
-        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(.*)\s*,\s*([0-9]*)\s*\)\s*"#)
-            .expect("Regex compilation should not fail");
 
     let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
         .captures(header)
@@ -75,15 +74,22 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
         num_of_transitions,
     );
 
+    // Only used to avoid allocations when reading the transitions.
+    let mut capture_locations = transition_regex.capture_locations();
+
     while let Some(line) = lines.next() {
         trace!("{}", line);
 
-        // Try either of the transition regexes and otherwise return an error.
-        let (_, [from_txt, label_txt, to_txt]) = transition_regex
-            .captures(line)
-            .or(unquoted_transition_regex.captures(line))
-            .ok_or(IOError::InvalidTransition())?
-            .extract();
+        // Try either of the transition regexes and otherwise return an error.transition_regex.
+        // This is essentially a low level version of captures().extract() that does not allocate.
+        transition_regex.captures_read(&mut capture_locations, line)
+            .ok_or(IOError::InvalidTransition())?;
+
+        let (from_txt, label_txt, to_txt) = (
+            &line[capture_locations.get(1).unwrap().0..capture_locations.get(1).unwrap().1],
+            &line[capture_locations.get(2).unwrap().0..capture_locations.get(2).unwrap().1],
+            &line[capture_locations.get(3).unwrap().0..capture_locations.get(3).unwrap().1],
+        );
 
         // Parse the from and to states, with the given label.
         let from: usize = from_txt.parse()?;
@@ -128,6 +134,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     debug!("Finished reading LTS");
 
     hidden_labels.push("tau".to_string());
+    debug!("Time read_aut: {:.3}s", start.elapsed().as_secs_f64());
     Ok(LabelledTransitionSystem::new(
         initial_state,
         states,
