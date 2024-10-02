@@ -39,6 +39,7 @@ impl LabelledTransitionSystem {
         );
 
         // Check that the outgoing transitions are a function.
+        let num_of_states = states.len();
         for state in &mut states {
             let old_len = state.outgoing.len();
             state.outgoing.sort();
@@ -50,6 +51,7 @@ impl LabelledTransitionSystem {
                 "There are states with duplicated outgoing transitions"
             );
 
+            debug_assert!(state.outgoing.iter().all(|(label, to)| *label < labels.len() && *to < num_of_states), "A state has invalid outgoing transitions.");
         }
 
         // Keep track of which label indexes are hidden label for log(n) search.
@@ -139,6 +141,15 @@ impl LabelledTransitionSystem {
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct State {
     pub outgoing: Vec<(LabelIndex, StateIndex)>,
+}
+
+impl State {
+    /// Creates a new state with no outgoing transitions.
+    pub fn new(outgoing: Vec<(LabelIndex, StateIndex)>) -> State {
+        State {
+            outgoing,
+        }
+    }
 }
 
 impl fmt::Display for LabelledTransitionSystem {

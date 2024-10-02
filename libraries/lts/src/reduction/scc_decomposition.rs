@@ -1,13 +1,18 @@
 use log::debug;
 use log::trace;
 
+use crate::quotient_lts;
+use crate::reduction::sort_topological;
 use crate::IndexedPartition;
 use crate::LabelledTransitionSystem;
 use crate::Partition;
 
 /// Computes the strongly connected tau component partitioning of the given LTS.
 pub fn tau_scc_decomposition(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    scc_decomposition(lts, &|_, label_index, _| lts.is_hidden_label(label_index))
+    let partition = scc_decomposition(lts, &|_, label_index, _| lts.is_hidden_label(label_index));
+    let quotient_lts = quotient_lts(lts, &partition, true);
+    debug_assert!(sort_topological(&quotient_lts, |label_index, _| lts.is_hidden_label(label_index), false).is_ok(), "The SCC decomposition contains tau-loops");
+    partition
 }
 
 /// Computes the strongly connected component partitioning of the given LTS.
@@ -101,7 +106,7 @@ fn strongly_connect<F>(
     for (label_index, to_index) in lts.outgoing_transitions(state_index) {
         if filter(state_index, *label_index, *to_index) {
             if let Some(meta) = &mut indices[*to_index] {
-                if meta.on_stack {
+                if meta.on_stack { 
                     // Successor w is in stack S and hence in the current SCC
                     // If w is not on stack, then (v, w) is an edge pointing to an SCC already found and must be ignored
                     // v.lowlink := min(v.lowlink, w.lowlink);
@@ -139,15 +144,15 @@ fn strongly_connect<F>(
     let info = indices[state_index].as_ref().expect("This state was added before");
     if info.lowlink == info.index {
         // Start a new strongly connected component.
-        let scc_index = info.lowlink;
         while let Some(index) = stack.pop() {
             let info = indices[index].as_mut().expect("This state was on the stack");
             info.on_stack = false;
 
-            trace!("Added state {index} to block {}", scc_index);
-            partition.set_block(index, scc_index);
+            trace!("Added state {index} to block {}", next_block_number);
+            partition.set_block(index, *next_block_number);
 
-            if index == state_index {
+            if index == state_index || stack.is_empty() {
+                *next_block_number += 1;
                 break;
             }
         }
@@ -206,6 +211,7 @@ mod tests {
     use crate::quotient_lts;
     use crate::random_lts;
     use crate::Partition;
+    use crate::State;
 
     use super::*;
 
@@ -237,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn test_random_scc_decomposition() {
+    fn test_random_tau_scc_decomposition() {
         let lts = random_lts(10, 3, 3);
         let partitioning = tau_scc_decomposition(&lts);
         let reduction = quotient_lts(&lts, &partitioning, true);
@@ -267,5 +273,20 @@ mod tests {
             reduction.num_of_states() == tau_scc_decomposition(&reduction).num_of_blocks(),
             "Applying SCC decomposition again should yield the same number of SCC after second application"
         );
+    }
+
+    #[test]
+    fn test_cycles() {
+        let states = vec![
+            State::new(vec![(0, 2), (0, 4)]),
+            State::new(vec![(0, 0)]),
+            State::new(vec![(0, 1),(1, 0)]),
+            State::new(vec![]),
+            State::new(vec![]),
+        ];
+
+        let lts = LabelledTransitionSystem::new(0, states, vec!["tau".into(), "a".into()], vec!["tau".into()], 5);
+
+        let _ = tau_scc_decomposition(&lts);
     }
 }
