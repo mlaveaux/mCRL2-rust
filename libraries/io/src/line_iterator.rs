@@ -59,21 +59,7 @@ mod tests {
     fn test_line_iterator_basic() {
         let data = "line1\nline2\nline3";
         let cursor = Cursor::new(data);
-        let mut line_iterator = LineIterator::new(cursor, false);
-
-        let mut lines = Vec::new();
-        while let Some(line) = line_iterator.next() {
-            lines.push(line.clone());
-        }
-
-        assert_eq!(lines, vec!["line1", "line2", "line3"]);
-    }
-
-    #[test]
-    fn test_line_iterator_remove_whitespace() {
-        let data = "line 1\nline 2\nline 3";
-        let cursor = Cursor::new(data);
-        let mut line_iterator = LineIterator::new(cursor, true);
+        let mut line_iterator = LineIterator::new(cursor);
 
         let mut lines = Vec::new();
         while let Some(line) = line_iterator.next() {
@@ -87,7 +73,7 @@ mod tests {
     fn test_line_iterator_empty() {
         let data = "";
         let cursor = Cursor::new(data);
-        let mut line_iterator = LineIterator::new(cursor, false);
+        let mut line_iterator = LineIterator::new(cursor);
 
         let mut lines = Vec::new();
         while let Some(line) = line_iterator.next() {
@@ -101,7 +87,7 @@ mod tests {
     fn test_line_iterator_single_line() {
         let data = "single line";
         let cursor = Cursor::new(data);
-        let mut line_iterator = LineIterator::new(cursor,);
+        let mut line_iterator = LineIterator::new(cursor);
 
         let mut lines = Vec::new();
         while let Some(line) = line_iterator.next() {
