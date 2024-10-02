@@ -144,16 +144,3 @@ pub fn branching_bisim_signature_sorted(
     builder.sort_unstable();
     builder.dedup();
 }
-
-/// Returns true iff the given state is a bottom state, i.e., has no tau transition into the same block
-fn is_bottom_state(
-    state_index: StateIndex,
-    lts: &LabelledTransitionSystem,
-    partition: &impl Partition,
-) -> bool {
-    lts.outgoing_transitions(state_index)
-        .any(|(label_index, to)| {
-            lts.is_hidden_label(*label_index)
-                && partition.block_number(*to) == partition.block_number(state_index)
-        })
-}
