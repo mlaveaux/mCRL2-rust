@@ -2639,6 +2639,7 @@ dependencies = [
  "lts",
  "regex",
  "streaming-iterator",
+ "test-case",
  "test-log",
  "thiserror",
 ]
@@ -5318,6 +5319,7 @@ dependencies = [
  "crossbeam-utils",
  "once_cell",
  "rand",
+ "test-log",
 ]
 
 [[package]]
