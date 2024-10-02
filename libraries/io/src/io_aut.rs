@@ -116,6 +116,14 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
         progress.add(1);
     }
 
+    // Remove duplicated outgoing transitions.
+    let mut num_of_transitions = 0;
+    for state in &mut states {
+        state.outgoing.sort();
+        state.outgoing.dedup();
+        num_of_transitions += state.outgoing.len();
+    }
+
     debug!("Finished reading LTS");
 
     hidden_labels.push("tau".to_string());
