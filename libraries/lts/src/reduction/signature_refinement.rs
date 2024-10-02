@@ -53,23 +53,13 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     .expect("After quotienting, the LTS should not contain cycles");
 
     let permuted_lts = reorder_states(&tau_loop_free_lts, |i| order[i]);
+    let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
 
     let partition = signature_refinement(
         &permuted_lts,
-        |state_index, partition, next_partition, block_to_signature, builder| {            
-            // Compute the expected signature, only used in debugging.
-            branching_bisim_signature(
-                state_index,
-                &permuted_lts,
-                partition,
-                builder,
-                &mut visited,
-                &mut stack,
-            );
-            let expected_result = builder.clone();
-
+        |state_index, partition, next_partition, block_to_signature, builder| {
             branching_bisim_signature_sorted(
                 state_index,
                 &permuted_lts,
@@ -79,12 +69,25 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
                 builder,
             );            
 
-            let signature = Signature::new(&builder);
-            assert_eq!(
-                signature.as_slice(),
-                expected_result,
-                "The sorted and expected signature should be the same"
-            );
+            // Compute the expected signature, only used in debugging.
+            if cfg!(debug_assertions) {
+                branching_bisim_signature(
+                    state_index,
+                    &permuted_lts,
+                    partition,
+                    &mut expected_builder,
+                    &mut visited,
+                    &mut stack,
+                );
+                let expected_result = builder.clone();
+
+                let signature = Signature::new(&builder);
+                debug_assert_eq!(
+                    signature.as_slice(),
+                    expected_result,
+                    "The sorted and expected signature should be the same"
+                );
+            }
         },
     );
 
