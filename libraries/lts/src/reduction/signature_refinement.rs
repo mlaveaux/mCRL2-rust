@@ -220,7 +220,7 @@ where
     P: Partition,
 {
     // Check that the partition is indeed stable and as such is a quotient of strong bisimulation
-    let mut representative: Vec<usize> = Vec::new();
+    let mut block_to_signature: Vec<Option<SignatureBuilder>> = vec![None; partition.num_of_blocks()];
 
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::default();
@@ -228,27 +228,18 @@ where
     for (state_index, _) in lts.iter_states() {
         let block = partition.block_number(state_index);
 
-        if block + 1 > representative.len() {
-            representative.resize(block + 1, 0);
-            representative[block] = state_index;
-        }
-
-        // Check that this block only contains states that are strongly bisimilar to the representative state.
-        let representative_index = representative[block];
+        // Compute the flat signature, which has Hash and is more compact.
         compute_signature(state_index, &partition, &mut builder);
+        let signature: Vec<(usize, usize)> = builder.clone();    
 
-        // Compute the flat signature, which has Hash and is more compact.
-        let signature: Vec<(usize, usize)> = builder.clone();
-
-        compute_signature(representative_index, &partition, &mut builder);
-
-        // Compute the flat signature, which has Hash and is more compact.
-        let representative_signature: Vec<(usize, usize)> = builder.clone();
-
-        if signature != representative_signature {
-            trace!("State {state_index} has a different signature {signature:?} then representative state {representative_index} with signature {representative_signature:?}, but are in the same block {block}");
-            return false;
-        }
+        if let Some(block_signature) = &block_to_signature[block] { 
+            if signature != *block_signature {
+                trace!("State {state_index} has a different signature {signature:?} then the block {block} which has signature {block_signature:?}");
+                return false;
+            }
+        } else {
+            block_to_signature[block] = Some(signature);
+        };
     }
 
     true
