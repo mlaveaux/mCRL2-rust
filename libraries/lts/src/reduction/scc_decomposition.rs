@@ -10,8 +10,10 @@ use crate::Partition;
 /// Computes the strongly connected tau component partitioning of the given LTS.
 pub fn tau_scc_decomposition(lts: &LabelledTransitionSystem) -> IndexedPartition {
     let partition = scc_decomposition(lts, &|_, label_index, _| lts.is_hidden_label(label_index));
-    let quotient_lts = quotient_lts(lts, &partition, true);
-    debug_assert!(!has_tau_loop(&quotient_lts), "The SCC decomposition contains tau-loops");
+    if cfg!(debug_assertions) {
+        let quotient_lts = quotient_lts(lts, &partition, true);
+        debug_assert!(!has_tau_loop(&quotient_lts), "The SCC decomposition contains tau-loops");
+    }
     partition
 }
 
