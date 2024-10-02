@@ -50,7 +50,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     // Regex for (<from>: Nat, "<label>": str, <to>: Nat) or (<from>: Nat,
     // label: str, <to>: Nat). Note that the quotes are optional, and even one
     // side can be forgotten.
-    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"?(.*)"?\s*,\s*([0-9]*)\s*\)\s*"#)
+    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"?([^"]*)"?\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
     let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
