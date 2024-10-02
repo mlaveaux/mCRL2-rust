@@ -2921,6 +2921,7 @@ dependencies = [
  "log",
  "rand",
  "test-log",
+ "utilities",
 ]
 
 [[package]]

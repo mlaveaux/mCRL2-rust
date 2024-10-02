@@ -5,10 +5,11 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-fxhash.workspace = true
 bumpalo.workspace = true
+fxhash.workspace = true
 log.workspace = true
 rand.workspace = true
+utilities.workspace = true
 
 [dev-dependencies]
 test-log.workspace = true

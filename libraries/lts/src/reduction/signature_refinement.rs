@@ -53,6 +53,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     .expect("After quotienting, the LTS should not contain cycles");
 
     let permuted_lts = reorder_states(&tau_loop_free_lts, |i| topological_permutation[i]);
+    drop(tau_loop_free_lts);
+
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
@@ -103,9 +105,6 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     }
 
     trace!("Final partition {combined_partition}");
-
-    let mut stack: Vec<usize> = Vec::new();
-    let mut visited = FxHashSet::default();
     debug_assert!(
         is_valid_refinement(
             &lts,
