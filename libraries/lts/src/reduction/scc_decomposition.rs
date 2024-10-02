@@ -52,7 +52,7 @@ where
         }
     }
 
-    trace!("Final partition {partition}");
+    trace!("SCC partition {partition}");
     debug!("Found {} strongly connected components", partition.num_of_blocks());
     debug!("Time scc_decomposition: {:.3}s", start.elapsed().as_secs_f64());
     partition

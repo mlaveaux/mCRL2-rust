@@ -45,14 +45,14 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
 
     // Sort the states according to the topological order of the tau transitions.
-    let order = sort_topological(
+    let topological_permutation = sort_topological(
         &tau_loop_free_lts,
         |label_index, _| tau_loop_free_lts.is_hidden_label(label_index),
         true,
     )
     .expect("After quotienting, the LTS should not contain cycles");
 
-    let permuted_lts = reorder_states(&tau_loop_free_lts, |i| order[i]);
+    let permuted_lts = reorder_states(&tau_loop_free_lts, |i| topological_permutation[i]);
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
@@ -96,11 +96,13 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
 
     for (state_index, _) in lts.iter_states() {
         let scc_block = scc_partition.block_number(state_index);
-        let reorder = order[scc_block];
+        let reorder = topological_permutation[scc_block];
         let branching_block = partition.block_number(reorder);
 
         combined_partition.set_block(state_index, branching_block);
     }
+
+    trace!("Final partition {combined_partition}");
 
     let mut stack: Vec<usize> = Vec::new();
     let mut visited = FxHashSet::default();
@@ -203,7 +205,7 @@ where
         );
     }
 
-    trace!("Final partition {partition}");
+    trace!("Refinement partition {partition}");
     partition
 }
 
