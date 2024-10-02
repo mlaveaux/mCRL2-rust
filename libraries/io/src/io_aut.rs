@@ -35,23 +35,24 @@ pub enum IOError {
 pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<LabelledTransitionSystem, Box<dyn Error>> {
     debug!("Reading LTS in .aut format...");
 
-    let mut lines = LineIterator::new(reader, true);
+    let mut lines = LineIterator::new(reader);
     lines.advance();
     let header = lines.get().ok_or(IOError::InvalidHeader(
         "The first line should be the header",
     ))?;
 
     // Regex for des (<initial>: Nat, <num_of_states>: Nat, <num_of_transitions>: Nat)
-    let header_regex = Regex::new(r"des\((\d+),(\d+),(\d+)\)")
+    let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
     // Regex for (<from>: Nat, "<label>": str, <to>: Nat)
-    let transition_regex = Regex::new(r#"\((\d+),"(.*?)",(\d+)\)"#)
+    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"(.*)"\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
     // Regex for (<from>: Nat, label: str, <to>: Nat), used in the VLTS benchmarks
-    let unquoted_transition_regex = Regex::new(r"\((\d+),(.*?),(\d+)\)")
-        .expect("Regex compilation should not fail");
+    let unquoted_transition_regex =
+        Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*(.*)\s*,\s*([0-9]*)\s*\)\s*"#)
+            .expect("Regex compilation should not fail");
 
     let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
         .captures(header)
