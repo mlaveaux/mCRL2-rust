@@ -7,6 +7,13 @@ use crate::LabelledTransitionSystem;
 use crate::Partition;
 use crate::StateIndex;
 
+use super::quotient_lts;
+use super::reorder_partition;
+use super::reorder_states;
+use super::sort_topological;
+use super::tau_scc_decomposition;
+use super::IndexedPartition;
+
 /// The builder used to construct the signature.
 pub type SignatureBuilder = Vec<(usize, usize)>;
 
@@ -118,7 +125,6 @@ pub fn branching_bisim_signature_sorted(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
-    next_partition: &impl Partition,
     block_to_signature: &Vec<Signature>,
     builder: &mut SignatureBuilder,
 ) {
@@ -130,7 +136,7 @@ pub fn branching_bisim_signature_sorted(
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(*label_index) {
                 // Inert tau transition, take signature from the outgoing.
-                builder.extend(block_to_signature[next_partition.block_number(*to)].as_slice());
+                builder.extend(block_to_signature[partition.block_number(*to)].as_slice());
             } else {
                 builder.push((*label_index, to_block));
             }
@@ -143,4 +149,27 @@ pub fn branching_bisim_signature_sorted(
     // Compute the flat signature, which has Hash and is more compact.
     builder.sort_unstable();
     builder.dedup();
+}
+
+/// Perform the preprocessing necessary for branching bisimulation with the
+/// sorted signature see `branching_bisim_signature_sorted`.
+pub fn preprocess_branching(
+    lts: &LabelledTransitionSystem,
+) -> (LabelledTransitionSystem, IndexedPartition) {
+    let scc_partition = tau_scc_decomposition(lts);
+
+    let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
+
+    // Sort the states according to the topological order of the tau transitions.
+    let topological_permutation = sort_topological(
+        &tau_loop_free_lts,
+        |label_index, _| tau_loop_free_lts.is_hidden_label(label_index),
+        true,
+    )
+    .expect("After quotienting, the LTS should not contain cycles");
+
+    (
+        reorder_states(&tau_loop_free_lts, |i| topological_permutation[i]),
+        reorder_partition(scc_partition, |i| topological_permutation[i]),
+    )
 }
