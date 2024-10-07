@@ -30,6 +30,33 @@ impl IndexedPartition {
     }
 }
 
+/// Combines two partitions into a new partition.
+pub fn combine_partition(left: IndexedPartition, right: &impl Partition) -> IndexedPartition {
+    let mut combined_partition = IndexedPartition::new(left.partition.len());
+
+    for (element_index, block) in left.partition.iter().enumerate() {
+        let new_block = right.block_number(*block);
+
+        combined_partition.set_block(element_index, new_block);
+    }
+
+    combined_partition
+}
+
+/// Reorders the blocks of the given partition according to the given permutation.
+pub fn reorder_partition<P>(partition: IndexedPartition, permutation: P) -> IndexedPartition
+where
+    P: Fn(usize) -> usize
+{
+    let mut new_partition = IndexedPartition::new(partition.partition.len());
+
+    for (element_index, block) in partition.partition.iter().enumerate() {
+        new_partition.set_block(permutation(element_index), *block);
+    }
+
+    new_partition
+}
+
 impl fmt::Display for IndexedPartition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{ ")?;
