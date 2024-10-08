@@ -64,42 +64,48 @@ impl BlockPartition {
         builder.block_sizes.clear();
         builder.old_elements.clear();
 
-        builder.index_to_block.resize(block.len(), 0);
+        builder.index_to_block.resize(block.len_marked(), 0);
         
-        // O(n) Loop over marked elements to determine the index of the new block each element is in.
+        // O(n) Loop over marked elements to determine the number of the new block each element is in.
         for (element_index, element) in block.iter_marked(&self.elements).enumerate() {
-            // Offset by one to take remaining unmarked elements into account.
-            let new_block = if block.has_unmarked() {
-                partitioner(element, self) + 1
-            } else {
-                partitioner(element, self)
-            };
+            let number = partitioner(element, self);
 
-            builder.index_to_block[element_index] = new_block;
-            if new_block + 1 > builder.block_sizes.len() {
-                builder.block_sizes.resize(new_block + 1, 0);
+            builder.index_to_block[element_index] = number;
+            if number + 1 > builder.block_sizes.len() {
+                builder.block_sizes.resize(number + 1, 0);
             }
 
-            builder.block_sizes[new_block] += 1;
-        }
-
-        // Count the unmarked elements for the first block.
-        if block.has_unmarked() {
-            builder.block_sizes[0] = block.len() - block.len_marked();
+            builder.block_sizes[number] += 1;
         }
 
         // Convert block sizes into block offsets.
-        let last_block_index = self.blocks.len() - 1;
+        let end_of_blocks = self.blocks.len();
+        let new_block_index = if block.has_unmarked() {
+            self.blocks.len()
+        } else {
+            self.blocks.len() - 1
+        };
+
         let _ = builder.block_sizes.iter_mut().fold(0usize, |current, size| {
             debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
 
             let current = if current == 0 {
-                // Adapt the offsets of the current block.
-                self.blocks[block_index] =
-                    Block::new_unmarked(block.begin, block.begin + *size);
-                block.begin
+                if block.has_unmarked() {
+                    // Adapt the offsets of the current block to only include the unmarked elements.
+                    self.blocks[block_index] =
+                        Block::new_unmarked(block.begin, block.marked_split);
+
+                    // Introduce a new block for the zero block.
+                    self.blocks.push(Block::new_unmarked(block.marked_split,  block.marked_split + *size));
+                    block.marked_split
+                } else {
+                    // Use this as the zero block.
+                    self.blocks[block_index] =
+                        Block::new_unmarked(block.begin, block.begin + *size);
+                    block.begin
+                }
             } else {
-                // Introduce a new block for every non-empty block.
+                // Introduce a new block for every other non-empty block.
                 self.blocks.push(Block::new_unmarked(current,  current + *size));
                 current
             };
@@ -111,9 +117,8 @@ impl BlockPartition {
         let block_offsets = &mut builder.block_sizes;
 
         //  Move the elements to the correct block. TODO: is this the most efficient way?
-        builder.old_elements.resize(block.len(), 0);
-        builder.old_elements.copy_from_slice(&self.elements[block.begin..block.end]);
-
+        builder.old_elements.resize(block.len_marked(), 0);
+        builder.old_elements.copy_from_slice(&self.elements[block.marked_split..block.end]);
 
         for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
             // Swap the element to the correct position.
@@ -123,7 +128,7 @@ impl BlockPartition {
             self.element_to_block[element] = if *offset_block_index == 0 && !block.has_unmarked() {
                 block_index
             } else {
-                last_block_index + *offset_block_index
+                new_block_index + *offset_block_index
             };
 
             // Update the offset for this block.
@@ -135,7 +140,19 @@ impl BlockPartition {
             "After splitting the partition is inconsistent",
         );
 
-        (block_index..=block_index).chain(last_block_index..self.blocks.len())
+        // This is a fucking mess
+        let first_index = if block.has_unmarked() {
+            end_of_blocks
+        } else {
+            block_index
+        };
+        let rest_index = if block.has_unmarked() {
+            end_of_blocks + 1
+        } else {
+            end_of_blocks
+        };
+
+        (first_index..=first_index).chain(rest_index..self.blocks.len())
     }
 
     /// Split the given block into two separate block based on the splitter
@@ -191,10 +208,10 @@ impl BlockPartition {
             self.blocks[block_index] = updated_block;
         }
 
+        trace!("{self:?}");
         debug_assert!(
             self.is_consistent(),
-            "After splitting the partition {:?} is inconsistent",
-            self
+            "After splitting the partition is inconsistent",
         );
     }
 
@@ -257,6 +274,7 @@ impl BlockPartition {
             for element in block.iter(&self.elements) {
                 if marked[element] {
                     // This element belongs to another block
+                    trace!("Partition {self:?}");
                     trace!("Element {element} belongs to multiple blocks");
                     return false;
                 }
@@ -269,6 +287,7 @@ impl BlockPartition {
 
         // Check that every element belongs to a block.
         if marked.contains(&false) {
+            trace!("Partition {self:?}");
             trace!("Not all elements belong to a block");
             return false;
         }
@@ -279,12 +298,14 @@ impl BlockPartition {
                 .iter(&self.elements)
                 .any(|element| element == current_element)
             {
-                trace!("Element {current_element} does not belong to the block indicated by element_to_block");
+                trace!("Partition {self:?}");
+                trace!("Element {current_element} does not belong to block {block_index} as indicated by element_to_block");
                 return false;
             }
 
             let index = self.element_offset[current_element];
             if self.elements[index] != current_element {
+                trace!("Partition {self:?}");
                 trace!("Element {current_element} does not have the correct offset in the block");
                 return false;
             }
@@ -453,7 +474,7 @@ impl Block {
     pub fn len_marked(&self) -> usize {
         self.is_consistent();
 
-        self.marked_split - self.begin
+        self.end - self.marked_split
     }
 
     /// Unmark all elements in the block.
@@ -465,17 +486,17 @@ impl Block {
     fn is_consistent(self) {
         debug_assert!(
             self.begin < self.end,
-            "The range of this block is incorrect"
+            "The range of block {self:?} is incorrect",
         );
 
         debug_assert!(
             self.begin <= self.marked_split,
-            "The marked_split lies before the beginning of the block"
+            "The marked_split lies before the beginning of the block {self:?}"
         );
 
         debug_assert!(
             self.marked_split <= self.end,
-            "The marked_split lies after the beginning of the block"
+            "The marked_split lies after the beginning of the block {self:?}"
         );
     }
 }

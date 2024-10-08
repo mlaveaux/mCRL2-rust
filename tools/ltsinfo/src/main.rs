@@ -2,7 +2,7 @@ use std::{error::Error, fs::File, io::{stdout, BufWriter}, process::ExitCode};
 
 use clap::{Parser, ValueEnum};
 use io::io_aut::{read_aut, write_aut};
-use lts::{branching_bisim_sigref, quotient_lts, strong_bisim_sigref, Partition};
+use lts::{branching_bisim_sigref, quotient_lts, strong_bisim_sigref, IndexedPartition, Partition};
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
@@ -48,7 +48,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
 
     let start = std::time::Instant::now();
-    let partition = match cli.equivalence {
+    let partition: IndexedPartition = match cli.equivalence {
         Equivalence::StrongBisim => strong_bisim_sigref(&lts),
         Equivalence::BranchingBisim => branching_bisim_sigref(&lts),
     };

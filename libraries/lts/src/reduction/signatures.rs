@@ -125,7 +125,6 @@ pub fn branching_bisim_signature_sorted(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
-    next_partition: &impl Partition,
     block_to_signature: &[Signature],
     builder: &mut SignatureBuilder,
 ) {
@@ -137,7 +136,7 @@ pub fn branching_bisim_signature_sorted(
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(*label_index) {
                 // Inert tau transition, take signature from the outgoing.
-                builder.extend(block_to_signature[next_partition.block_number(*to)].as_slice());
+                builder.extend(block_to_signature[partition.block_number(*to)].as_slice());
             } else {
                 builder.push((*label_index, to_block));
             }
