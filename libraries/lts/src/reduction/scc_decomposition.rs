@@ -214,7 +214,7 @@ mod tests {
 
         // Check that states in a strongly connected component are reachable from each other.
         for (state_index, _) in lts.iter_states() {
-            let reachable = reachable_states(&reduction, state_index, &|_, label, _| lts.is_hidden_label(label));
+            let reachable = reachable_states(&lts, state_index, &|_, label, _| lts.is_hidden_label(label));
 
             // All other states in the same block should be reachable.
             let block = partitioning.block_number(state_index);
@@ -222,7 +222,7 @@ mod tests {
             for (other_state_index, _) in lts.iter_states().filter(|(index, _)| state_index != *index && partitioning.block_number(*index) == block) {
                 assert!(
                     reachable.contains(&other_state_index),
-                    "State {state_index} and {other_state_index} should be reachable"
+                    "State {state_index} and {other_state_index} should be connected"
                 );
             }
         }   

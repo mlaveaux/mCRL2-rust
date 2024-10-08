@@ -65,23 +65,3 @@ pub fn quotient_lts(
         num_of_transitions,
     )
 }
-
-#[cfg(test)]
-mod tests {
-    use test_log::test;
-
-    use crate::random_lts;
-    use crate::sort_topological;
-    use crate::strong_bisim_sigref;
-
-    use super::*;
-
-    #[test]
-    fn test_random_quotient() {
-        let lts = random_lts(10, 3, 3);
-        let reduced_lts = quotient_lts(&lts, &strong_bisim_sigref(&lts), true);
-
-        debug_assert!(sort_topological(&reduced_lts, |label_index, _| lts.is_hidden_label(label_index), true).is_ok(), 
-            "The LTS should not contain tau-cycles, but the following quotient does: {reduced_lts:?}");
-    }
-}

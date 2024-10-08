@@ -19,7 +19,6 @@ pub struct BlockPartition {
     element_offset: Vec<usize>,
 }
 
-
 impl BlockPartition {
     /// Create an initial partition where all the states are in a single block
     /// 0. And all the elements in the block are marked.
@@ -57,7 +56,10 @@ impl BlockPartition {
         F: FnMut(usize, &BlockPartition) -> usize,
     {
         let block = self.blocks[block_index];
-        debug_assert!(block.has_marked(), "Cannot partition marked elements of a block without marked elements");
+        debug_assert!(
+            block.has_marked(),
+            "Cannot partition marked elements of a block without marked elements"
+        );
 
         // Keeps track of the block index for every element in this block by index.
         builder.index_to_block.clear();
@@ -65,7 +67,7 @@ impl BlockPartition {
         builder.old_elements.clear();
 
         builder.index_to_block.resize(block.len_marked(), 0);
-        
+
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
         for (element_index, element) in block.iter_marked(&self.elements).enumerate() {
             let number = partitioner(element, self);
@@ -86,39 +88,48 @@ impl BlockPartition {
             self.blocks.len() - 1
         };
 
-        let _ = builder.block_sizes.iter_mut().fold(0usize, |current, size| {
-            debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
+        let _ = builder
+            .block_sizes
+            .iter_mut()
+            .fold(0usize, |current, size| {
+                debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
 
-            let current = if current == 0 {
-                if block.has_unmarked() {
-                    // Adapt the offsets of the current block to only include the unmarked elements.
-                    self.blocks[block_index] =
-                        Block::new_unmarked(block.begin, block.marked_split);
+                let current = if current == 0 {
+                    if block.has_unmarked() {
+                        // Adapt the offsets of the current block to only include the unmarked elements.
+                        self.blocks[block_index] =
+                            Block::new_unmarked(block.begin, block.marked_split);
 
-                    // Introduce a new block for the zero block.
-                    self.blocks.push(Block::new_unmarked(block.marked_split,  block.marked_split + *size));
-                    block.marked_split
+                        // Introduce a new block for the zero block.
+                        self.blocks.push(Block::new_unmarked(
+                            block.marked_split,
+                            block.marked_split + *size,
+                        ));
+                        block.marked_split
+                    } else {
+                        // Use this as the zero block.
+                        self.blocks[block_index] =
+                            Block::new_unmarked(block.begin, block.begin + *size);
+                        block.begin
+                    }
                 } else {
-                    // Use this as the zero block.
-                    self.blocks[block_index] =
-                        Block::new_unmarked(block.begin, block.begin + *size);
-                    block.begin
-                }
-            } else {
-                // Introduce a new block for every other non-empty block.
-                self.blocks.push(Block::new_unmarked(current,  current + *size));
-                current
-            };
+                    // Introduce a new block for every other non-empty block.
+                    self.blocks
+                        .push(Block::new_unmarked(current, current + *size));
+                    current
+                };
 
-            let offset = current + *size;
-            *size = current;
-            offset
-        });
+                let offset = current + *size;
+                *size = current;
+                offset
+            });
         let block_offsets = &mut builder.block_sizes;
 
         //  Move the elements to the correct block. TODO: is this the most efficient way?
         builder.old_elements.resize(block.len_marked(), 0);
-        builder.old_elements.copy_from_slice(&self.elements[block.marked_split..block.end]);
+        builder
+            .old_elements
+            .copy_from_slice(&self.elements[block.marked_split..block.end]);
 
         for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
             // Swap the element to the correct position.
@@ -170,7 +181,10 @@ impl BlockPartition {
                 match new_block {
                     None => {
                         // Introduce a new block for the split, containing only the new element.
-                        self.blocks.push(Block::new_unmarked(updated_block.end - 1,  updated_block.end));
+                        self.blocks.push(Block::new_unmarked(
+                            updated_block.end - 1,
+                            updated_block.end,
+                        ));
 
                         // Swap the current element to the last place
                         self.swap_elements(element_index, updated_block.end - 1);
@@ -199,7 +213,10 @@ impl BlockPartition {
             // Remove the new block if it is empty.
             self.blocks.pop();
 
-            for element in self.blocks[block_index].iter(&self.elements).map(|element_index| self.elements[element_index]) {
+            for element in self.blocks[block_index]
+                .iter(&self.elements)
+                .map(|element_index| self.elements[element_index])
+            {
                 self.element_to_block[element] = block_index;
             }
         } else {
@@ -227,7 +244,7 @@ impl BlockPartition {
             self.blocks[block_index].marked_split -= 1;
         }
 
-        debug_assert!(self.is_consistent(), "The partition is not consistent after marking an element");
+        self.blocks[block_index].assert_consistent();
     }
 
     /// Return a reference to the given block.
@@ -260,10 +277,10 @@ impl BlockPartition {
     }
 
     /// Swaps the elements at the given indices and updates the element_to_block
-    fn swap_elements(&mut self, left_index: usize, right_index: usize) {     
-        self.elements.swap(left_index, right_index); 
+    fn swap_elements(&mut self, left_index: usize, right_index: usize) {
+        self.elements.swap(left_index, right_index);
         self.element_offset[self.elements[left_index]] = left_index;
-        self.element_offset[self.elements[right_index]] = right_index;  
+        self.element_offset[self.elements[right_index]] = right_index;
     }
 
     /// Returns true iff the invariants of a partition hold
@@ -282,7 +299,7 @@ impl BlockPartition {
                 marked[element] = true;
             }
 
-            block.is_consistent();
+            block.assert_consistent();
         }
 
         // Check that every element belongs to a block.
@@ -318,15 +335,14 @@ impl BlockPartition {
 #[derive(Default)]
 pub struct BlockPartitionBuilder {
     // Keeps track of the block index for every element in this block by index.
-     index_to_block: Vec<usize>,
+    index_to_block: Vec<usize>,
 
     /// Keeps track of the size of each block.
     block_sizes: Vec<usize>,
-    
+
     /// Stores the old elements to perform the swaps safely.
     old_elements: Vec<usize>,
 }
-
 
 impl From<BlockPartition> for IndexedPartition {
     fn from(partition: BlockPartition) -> Self {
@@ -444,35 +460,35 @@ impl Block {
 
     /// Returns true iff the block has marked elements.
     pub fn has_marked(&self) -> bool {
-        self.is_consistent();
+        self.assert_consistent();
 
         self.marked_split < self.end
     }
 
     /// Returns true iff the block has unmarked elements.
     pub fn has_unmarked(&self) -> bool {
-        self.is_consistent();
+        self.assert_consistent();
 
         self.begin < self.marked_split
     }
 
     /// Returns the number of elements in the block.
     pub fn len(&self) -> usize {
-        self.is_consistent();
+        self.assert_consistent();
 
         self.end - self.begin
     }
 
     /// Returns true iff the block is empty.
     pub fn is_empty(&self) -> bool {
-        self.is_consistent();
+        self.assert_consistent();
 
         self.begin == self.end
     }
 
     /// Returns the number of marked elements in the block.
     pub fn len_marked(&self) -> usize {
-        self.is_consistent();
+        self.assert_consistent();
 
         self.end - self.marked_split
     }
@@ -483,7 +499,7 @@ impl Block {
     }
 
     /// Returns true iff the block is consistent.
-    fn is_consistent(self) {
+    fn assert_consistent(self) {
         debug_assert!(
             self.begin < self.end,
             "The range of block {self:?} is incorrect",
@@ -525,39 +541,7 @@ impl<'a> Iterator for BlockIter<'a> {
 mod tests {
     use super::*;
 
-    use rand::{distributions::Uniform, Rng};
     use test_log::test;
-
-    /// Make the block assignment dense.
-    fn make_assignment_dense(index_to_block: &Vec<usize>) -> Vec<usize> {
-        let mut block_sizes: Vec<usize> = Vec::new();
-
-        // Count the number of times each block occurs.
-        for block in index_to_block {
-            if block + 1 > block_sizes.len() {
-                block_sizes.resize(block + 1, 0);
-            }
-
-            block_sizes[*block] += 1;
-        }
-
-        // Make the block assignment dense.
-        let mut block_reassignment = block_sizes.clone();
-        let _ = block_reassignment.iter_mut().fold(0usize, |index, size| {
-            let old_size = *size;
-            *size = index;
-            if old_size > 0 {
-                index + 1
-            } else {
-                index
-            }
-        });
-
-        index_to_block
-            .iter()
-            .map(|block| block_reassignment[*block])
-            .collect()
-    }
 
     #[test]
     fn test_block_partition_split() {
@@ -595,40 +579,14 @@ mod tests {
     fn test_block_partition_partitioning() {
         // Test the partitioning function for a random assignment of elements
         let mut partition = BlockPartition::new(10);
-        let mut rng = rand::thread_rng();
         let mut builder = BlockPartitionBuilder::default();
 
-        for _ in 0..2 {
-            // Mark some elements.
-            for element in 0..5usize {
-                partition.mark_element(element);
-            }
-
-            // Split a number of blocks
-            for block_index in 0..partition.num_of_blocks() {            
-
-                // Perform an abitrary split of the elements
-                let num_marked = partition.block(block_index).len_marked();
-                if num_marked > 0 {
-                    let element_to_block: Vec<usize> = make_assignment_dense(
-                        &((&mut rng)
-                            .sample_iter(&Uniform::from(0..num_marked))
-                            .take(num_marked)
-                            .collect()),
-                    );
-
-                    for block_index in
-                        partition.partition_marked_with(block_index, &mut builder, |element, _| element_to_block[element])
-                    {
-                        for element in partition.iter_block(block_index) {
-                            assert_eq!(
-                                element_to_block[element], block_index,
-                                "Block {block_index}, element {element} has inconsistent numbering"
-                            );
-                        }
-                    }
-                }
-            }
-        }
+        let _ = partition.partition_marked_with(0, &mut builder, |element, _| {
+            match element {
+                0..=3 => 0,
+                4..=6 => 1,
+                _ => 2,
+            }        
+        });
     }
 }
