@@ -207,7 +207,7 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
                     settings.delta,
                 );
                 if is_stable {
-                    debug!("Layout is stable!");
+                    info!("Layout is stable!");
                 }
 
                 // Copy layout into the view.
@@ -242,7 +242,7 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
                     match read_aut(file, vec![]) {
                         Ok(lts) => {
                             let lts = Arc::new(lts);
-                            info!("{}", lts);
+                            info!("Loaded lts {}", lts);
 
                             // Create the layout and viewer separately to make the initial state sensible.
                             let layout = GraphLayout::new(&lts);

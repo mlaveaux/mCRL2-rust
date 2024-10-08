@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use log::debug;
 use log::info;
 use log::trace;
 use mcrl2::aterm::ATermRef;
@@ -269,7 +268,7 @@ impl SabreRewriter {
             .evaluate(&leaf_subterm.get_position(&announcement.position), tp)
             .into();
 
-        debug!(
+        trace!(
             "rewrote {} to {} using rule {}",
             &leaf_subterm, &new_subterm, announcement.rule
         );

@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use log::debug;
 use log::info;
 use log::trace;
 use mcrl2::aterm::ATermRef;
@@ -31,7 +30,7 @@ impl RewriteEngine for InnermostRewriter {
     fn rewrite(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
 
-        debug!("input: {}", t);
+        trace!("input: {}", t);
 
         let result = InnermostRewriter::rewrite_aux(
             &mut self.tp.borrow_mut(),
@@ -161,7 +160,7 @@ impl InnermostRewriter {
                             tp, stack, builder, stats, automaton, &term,
                         ) {
                             Some((announcement, annotation)) => {
-                                debug!(
+                                trace!(
                                     "rewrite {} => {} using rule {}",
                                     term,
                                     annotation.rhs_stack.evaluate(tp, &term),

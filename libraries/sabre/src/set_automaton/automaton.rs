@@ -207,7 +207,7 @@ impl<M> SetAutomaton<M> {
                 );
             }
 
-            info!(
+            debug!(
                 "Queue size {}, currently {} states and {} transitions",
                 queue.len(),
                 states.len(),
