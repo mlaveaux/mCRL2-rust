@@ -227,7 +227,7 @@ impl BlockPartition {
             self.blocks[block_index].marked_split -= 1;
         }
 
-        self.is_consistent();
+        debug_assert!(self.is_consistent(), "The partition is not consistent after marking an element");
     }
 
     /// Return a reference to the given block.

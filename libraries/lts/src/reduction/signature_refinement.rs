@@ -132,6 +132,7 @@ where
 
     // Refine partitions until stable.
     let mut iteration = 0;
+    let mut states = Vec::new();
 
     // Used to keep track of dirty blocks.
     let incoming = IncomingTransitions::new(lts);
@@ -191,7 +192,8 @@ where
 
             if block_index != new_block_index {
                 // If this is a new block, mark the incoming states as dirty
-                let states: Vec<usize> = partition.iter_block(new_block_index).collect();
+                states.clear();
+                states.extend(partition.iter_block(new_block_index));
 
                 for state_index in &states {
                     for (_, incoming_state) in incoming.incoming_transitions(*state_index) {
