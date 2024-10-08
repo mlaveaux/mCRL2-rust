@@ -2,7 +2,7 @@ use std::fmt;
 
 use log::trace;
 
-use super::Partition;
+use super::{IndexedPartition, Partition};
 
 /// A partition that explicitly stores a list of blocks and their indexing into
 /// the list of elements.
@@ -56,7 +56,6 @@ impl BlockPartition {
     where
         F: FnMut(usize, &BlockPartition) -> usize,
     {
-        trace!("Splitting block {block_index} of partition: {self}");
         let block = self.blocks[block_index];
         debug_assert!(block.has_marked(), "Cannot partition marked elements of a block without marked elements");
 
@@ -88,62 +87,55 @@ impl BlockPartition {
         if block.has_unmarked() {
             builder.block_sizes[0] = block.len() - block.len_marked();
         }
-        trace!("index_to_block: {:?}", builder.index_to_block);
-        trace!("Block sizes: {:?}", builder.block_sizes);
 
         // Convert block sizes into block offsets.
-        let last_block_index = self.blocks.len();
+        let last_block_index = self.blocks.len() - 1;
         let _ = builder.block_sizes.iter_mut().fold(0usize, |current, size| {
-            let offset = current + *size;
             debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
 
-            if current == 0 {
-                if block.has_unmarked() {
-                    // Adapt the offsets of the current block, which we make the current block.
-                    self.blocks[block_index] =
-                        Block::new_unmarked(block.begin, block.begin + *size);
-                } else {
-                    self.blocks[block_index] =
-                        Block::new_unmarked(block.begin, block.begin + *size);
-                }
+            let current = if current == 0 {
+                // Adapt the offsets of the current block.
+                self.blocks[block_index] =
+                    Block::new_unmarked(block.begin, block.begin + *size);
+                block.begin
             } else {
                 // Introduce a new block for every non-empty block.
-                self.blocks.push(Block::new_unmarked(current, offset));
-            }
+                self.blocks.push(Block::new_unmarked(current,  current + *size));
+                current
+            };
+
+            let offset = current + *size;
             *size = current;
             offset
         });
         let block_offsets = &mut builder.block_sizes;
-        trace!("Block offsets: {:?}", block_offsets);
 
         //  Move the elements to the correct block. TODO: is this the most efficient way?
+        builder.old_elements.resize(block.len(), 0);
         builder.old_elements.copy_from_slice(&self.elements[block.begin..block.end]);
 
 
-        for (index, block_index) in builder.index_to_block.iter().enumerate() {
+        for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
             // Swap the element to the correct position.
             let element = builder.old_elements[index];
-            trace!(
-                "Index: {index}, block_index: {block_index} for element {element}, offset: {}",
-                block_offsets[*block_index]
-            );
-            self.elements[block.begin + block_offsets[*block_index]] = builder.old_elements[index];
-            self.element_offset[element] = block.begin + block_offsets[*block_index];
-            self.element_to_block[element] = *block_index;
+            self.elements[block_offsets[*offset_block_index]] = builder.old_elements[index];
+            self.element_offset[element] = block_offsets[*offset_block_index];
+            self.element_to_block[element] = if *offset_block_index == 0 && !block.has_unmarked() {
+                block_index
+            } else {
+                last_block_index + *offset_block_index
+            };
 
             // Update the offset for this block.
-            block_offsets[*block_index] += 1;
+            block_offsets[*offset_block_index] += 1;
         }
-
-        trace!("{:?}", self);
 
         debug_assert!(
             self.is_consistent(),
             "After splitting the partition is inconsistent",
         );
 
-        //if block.has_unmarked() {
-        (block_index..block_index).chain(last_block_index..self.blocks.len())
+        (block_index..=block_index).chain(last_block_index..self.blocks.len())
     }
 
     /// Split the given block into two separate block based on the splitter
@@ -212,7 +204,6 @@ impl BlockPartition {
         let offset = self.element_offset[element];
         let marked_split = self.blocks[block_index].marked_split;
 
-        println!("{:?}", self);
         if offset < marked_split {
             // Element was not already marked.
             self.swap_elements(offset, marked_split - 1);
@@ -237,6 +228,11 @@ impl BlockPartition {
         self.elements.len()
     }
 
+    /// Returns true iff the partition is empty.
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
+
     /// Returns an iterator over the elements of a given block.
     pub fn iter_block(&self, block_index: usize) -> BlockIter<'_> {
         BlockIter {
@@ -255,7 +251,6 @@ impl BlockPartition {
 
     /// Returns true iff the invariants of a partition hold
     fn is_consistent(&self) -> bool {
-        trace!("Partition {self}");
         let mut marked = vec![false; self.elements.len()];
 
         for block in &self.blocks {
@@ -295,7 +290,7 @@ impl BlockPartition {
             }
         }
 
-        return true;
+        true
     }
 }
 
@@ -309,6 +304,14 @@ pub struct BlockPartitionBuilder {
     
     /// Stores the old elements to perform the swaps safely.
     old_elements: Vec<usize>,
+}
+
+
+impl From<BlockPartition> for IndexedPartition {
+    fn from(partition: BlockPartition) -> Self {
+        let num_of_blocks = partition.num_of_blocks();
+        IndexedPartition::with_partition(partition.element_to_block, num_of_blocks)
+    }
 }
 
 impl Partition for BlockPartition {
@@ -395,7 +398,7 @@ impl Block {
     /// Returns an iterator over the elements in this block.
     pub fn iter<'a>(&self, elements: &'a Vec<usize>) -> BlockIter<'a> {
         BlockIter {
-            elements: &elements,
+            elements,
             index: self.begin,
             end: self.end,
         }
@@ -404,7 +407,7 @@ impl Block {
     /// Returns an iterator over the marked elements in this block.
     pub fn iter_marked<'a>(&self, elements: &'a Vec<usize>) -> BlockIter<'a> {
         BlockIter {
-            elements: &elements,
+            elements,
             index: self.marked_split,
             end: self.end,
         }
@@ -412,7 +415,7 @@ impl Block {
 
     pub fn iter_unmarked<'a>(&self, elements: &'a Vec<usize>) -> BlockIter<'a> {
         BlockIter {
-            elements: &elements,
+            elements,
             index: self.begin,
             end: self.marked_split,
         }
@@ -437,6 +440,13 @@ impl Block {
         self.is_consistent();
 
         self.end - self.begin
+    }
+
+    /// Returns true iff the block is empty.
+    pub fn is_empty(&self) -> bool {
+        self.is_consistent();
+
+        self.begin == self.end
     }
 
     /// Returns the number of marked elements in the block.
