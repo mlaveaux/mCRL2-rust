@@ -58,7 +58,7 @@ where
     let mut new_partition = IndexedPartition::new(partition.partition.len());
 
     for (element_index, block) in partition.partition.iter().enumerate() {
-        new_partition.set_block(permutation(element_index), *block);
+        new_partition.set_block(element_index, permutation(*block));
     }
 
     new_partition
