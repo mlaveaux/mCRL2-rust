@@ -199,7 +199,7 @@ pub struct Protector<'a, C: Markable> {
 }
 
 impl<'a, C: Markable> Protector<'a, C> {
-    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> Protector<'_, C> {
+    fn new(reference: BfTermPoolThreadWrite<'a, C>) -> Protector<'a, C> {
         #[cfg(debug_assertions)]
         return Protector {
             reference,

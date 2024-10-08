@@ -492,7 +492,7 @@ pub struct ATermArgs<'a> {
 }
 
 impl<'a> ATermArgs<'a> {
-    fn new(term: ATermRef<'a>) -> ATermArgs {
+    fn new(term: ATermRef<'a>) -> ATermArgs<'a> {
         let arity = term.get_head_symbol().arity();
         ATermArgs {
             term,

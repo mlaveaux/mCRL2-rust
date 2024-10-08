@@ -93,7 +93,7 @@ pub struct PositionIterator<'a> {
 }
 
 impl<'a> PositionIterator<'a> {
-    pub fn new(t: ATermRef<'a>) -> PositionIterator {
+    pub fn new(t: ATermRef<'a>) -> PositionIterator<'a> {
         PositionIterator {
             queue: VecDeque::from([(t, ExplicitPosition::empty_pos())]),
         }

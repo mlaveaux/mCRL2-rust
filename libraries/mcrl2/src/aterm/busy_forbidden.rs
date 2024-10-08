@@ -49,7 +49,7 @@ impl<'a, T: ?Sized> BfTermPool<T> {
     /// # Safety
     ///
     /// Assumes that we are in an exclusive section.
-    pub unsafe fn get(&'a self) -> &T {
+    pub unsafe fn get(&'a self) -> &'a T {
         unsafe { &*self.object.get() }
     }
 
