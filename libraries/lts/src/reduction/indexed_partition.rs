@@ -21,6 +21,13 @@ impl IndexedPartition {
         }
     }
 
+    pub fn with_partition(partition: Vec<usize>, num_of_blocks: usize) -> IndexedPartition {
+        IndexedPartition {
+            partition,
+            num_of_blocks,
+        }
+    }
+
     /// Sets the block number of the given element
     pub fn set_block(&mut self, element_index: usize, block_number: usize) {
         // TODO: This assumes that the blocks are dense, otherwise it overestimates the number of blocks.

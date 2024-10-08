@@ -13,6 +13,8 @@ use io::io_aut::read_aut;
 #[test_case(include_str!("../../../examples/lts/vasy_8_24.aut") ; "vasy_8_24.aut")]
 #[test_case(include_str!("../../../examples/lts/vasy_25_25.aut") ; "vasy_25_25.aut")]
 fn test_strong_bisimilation_reduction(input: &str) {
+    let _ = env_logger::builder().is_test(true).try_init();
+
     let lts = read_aut(input.as_bytes(), vec!["tau".into()]).unwrap();
 
     let _reduced_lts = quotient_lts(&lts, &strong_bisim_sigref(&lts), true);
@@ -28,6 +30,8 @@ fn test_strong_bisimilation_reduction(input: &str) {
 #[test_case(include_str!("../../../examples/lts/vasy_8_24.aut") ; "vasy_8_24.aut")]
 #[test_case(include_str!("../../../examples/lts/vasy_25_25.aut") ; "vasy_25_25.aut")]
 fn test_branching_bisimilation_reduction(input: &str) {
+    let _ = env_logger::builder().is_test(true).try_init();
+    
     let lts = read_aut(input.as_bytes(), vec!["tau".into()]).unwrap();
 
     let _reduced_lts = quotient_lts(&lts, &branching_bisim_sigref(&lts), true);

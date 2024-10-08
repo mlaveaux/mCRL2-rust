@@ -165,7 +165,7 @@ fn strongly_connect<F>(
 
 /// Returns true iff the labelled transition system has tau-loops.
 pub fn has_tau_loop(lts: &LabelledTransitionSystem) -> bool {
-    sort_topological(&lts, |label_index, _| lts.is_hidden_label(label_index), false).is_err()
+    sort_topological(lts, |label_index, _| lts.is_hidden_label(label_index), false).is_err()
 }
 
 #[cfg(test)]

@@ -125,7 +125,7 @@ pub fn branching_bisim_signature_sorted(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
-    block_to_signature: &Vec<Signature>,
+    block_to_signature: &[Signature],
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();

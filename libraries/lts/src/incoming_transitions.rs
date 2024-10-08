@@ -25,10 +25,10 @@ impl IncomingTransitions {
     }
 
     /// Returns an iterator over the incoming transitions for the given state.
-    pub fn incoming_transitions<'a>(
-        &'a self,
+    pub fn incoming_transitions(
+        &self,
         state_index: usize,
-    ) -> impl Iterator<Item = &(LabelIndex, StateIndex)> + 'a {
+    ) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
         self.incoming_transitions[state_index].iter()
     }
 }

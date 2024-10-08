@@ -48,23 +48,28 @@ impl LabelledTransitionSystem {
             debug_assert_eq!(
                 outgoing_dedup.len(),
                 state.outgoing.len(),
-                "State {state_index} has duplicated outgoing transitions {:?}", 
+                "State {state_index} has duplicated outgoing transitions {:?}",
                 state.outgoing
             );
 
-            debug_assert!(state.outgoing.iter().all(|(label, to)| *label < labels.len() && *to < num_of_states), "State {state_index} has invalid outgoing transitions {:?}.", state.outgoing);
+            debug_assert!(
+                state
+                    .outgoing
+                    .iter()
+                    .all(|(label, to)| *label < labels.len() && *to < num_of_states),
+                "State {state_index} has invalid outgoing transitions {:?}.",
+                state.outgoing
+            );
         }
 
         // Keep track of which label indexes are hidden label for log(n) search.
         // TODO: We could remap all labels to group them into hidden | visible, and keep track of the maximum index.
         let mut hidden_indices: Vec<usize> = Vec::new();
         for label in &hidden_labels {
-            if let Some(index) = labels.iter().position(|other| {
-                other == label
-            }) {
-                hidden_indices.push(index);             
+            if let Some(index) = labels.iter().position(|other| other == label) {
+                hidden_indices.push(index);
             }
-        };
+        }
         hidden_indices.sort();
 
         LabelledTransitionSystem {
@@ -88,13 +93,11 @@ impl LabelledTransitionSystem {
     }
 
     /// Returns the set of outgoing transitions for the given state.
-    pub fn outgoing_transitions<'a>(
-        &'a self,
+    pub fn outgoing_transitions(
+        &self,
         state_index: usize,
-    ) -> impl Iterator<Item = &(LabelIndex, StateIndex)> + 'a {
-        self.state(state_index)
-            .outgoing
-            .iter()
+    ) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
+        self.state(state_index).outgoing.iter()
     }
 
     /// Iterate over all (state_index, state) in the labelled transition system
@@ -147,9 +150,7 @@ pub struct State {
 impl State {
     /// Creates a new state with no outgoing transitions.
     pub fn new(outgoing: Vec<(LabelIndex, StateIndex)>) -> State {
-        State {
-            outgoing,
-        }
+        State { outgoing }
     }
 }
 
