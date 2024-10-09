@@ -1,7 +1,5 @@
 use std::fmt;
 
-use log::trace;
-
 use super::{IndexedPartition, Partition};
 
 /// A partition that explicitly stores a list of blocks and their indexing into
@@ -146,21 +144,14 @@ impl BlockPartition {
             block_offsets[*offset_block_index] += 1;
         }
 
-        debug_assert!(
-            self.is_consistent(),
-            "After splitting the partition is inconsistent",
-        );
+        self.assert_consistent();
 
-        // This is a fucking mess
-        let first_index = if block.has_unmarked() {
-            end_of_blocks
+        // If we have unmarked elements skip the current block, otherwise take
+        // the current block as first block.
+        let (first_index, rest_index) = if block.has_unmarked() {
+            (end_of_blocks, end_of_blocks + 1)
         } else {
-            block_index
-        };
-        let rest_index = if block.has_unmarked() {
-            end_of_blocks + 1
-        } else {
-            end_of_blocks
+            (block_index, end_of_blocks)
         };
 
         (first_index..=first_index).chain(rest_index..self.blocks.len())
@@ -225,11 +216,7 @@ impl BlockPartition {
             self.blocks[block_index] = updated_block;
         }
 
-        trace!("{self:?}");
-        debug_assert!(
-            self.is_consistent(),
-            "After splitting the partition is inconsistent",
-        );
+        self.assert_consistent();
     }
 
     /// Marks the given element, such that it is returned by iter_marked.
@@ -284,18 +271,15 @@ impl BlockPartition {
     }
 
     /// Returns true iff the invariants of a partition hold
-    fn is_consistent(&self) -> bool {
+    fn assert_consistent(&self) -> bool {
         let mut marked = vec![false; self.elements.len()];
 
         for block in &self.blocks {
             for element in block.iter(&self.elements) {
-                if marked[element] {
-                    // This element belongs to another block
-                    trace!("Partition {self:?}");
-                    trace!("Element {element} belongs to multiple blocks");
-                    return false;
-                }
-
+                debug_assert!(
+                    !marked[element],
+                    "Partition {self}, element {element} belongs to multiple blocks"
+                );
                 marked[element] = true;
             }
 
@@ -303,29 +287,20 @@ impl BlockPartition {
         }
 
         // Check that every element belongs to a block.
-        if marked.contains(&false) {
-            trace!("Partition {self:?}");
-            trace!("Not all elements belong to a block");
-            return false;
-        }
+        debug_assert!(
+            !marked.contains(&false),
+            "Partition {self} contains elements that do not belong to a block"
+        );
 
         // Check that it belongs to the block indicated by element_to_block
         for (current_element, block_index) in self.element_to_block.iter().enumerate() {
-            if !self.blocks[*block_index]
+            debug_assert!(self.blocks[*block_index]
                 .iter(&self.elements)
-                .any(|element| element == current_element)
-            {
-                trace!("Partition {self:?}");
-                trace!("Element {current_element} does not belong to block {block_index} as indicated by element_to_block");
-                return false;
-            }
+                .any(|element| element == current_element),
+                "Partition {self:?}, element {current_element} does not belong to block {block_index} as indicated by element_to_block");
 
             let index = self.element_offset[current_element];
-            if self.elements[index] != current_element {
-                trace!("Partition {self:?}");
-                trace!("Element {current_element} does not have the correct offset in the block");
-                return false;
-            }
+            debug_assert_eq!(self.elements[index], current_element, "Partition {self:?}, element {current_element} does not have the correct offset in the block");
         }
 
         true
@@ -571,8 +546,9 @@ mod tests {
             assert!(element >= 7);
         }
 
-        // Test the case where all elements belong to the split block. TODO: Fix this last case.
-        //partition.split_marked(1, |element| element < 7);
+        // Test the case where all elements belong to the split block.
+        print!("{partition}");
+        partition.split_marked(1, |element| element < 7);
     }
 
     #[test]
@@ -581,12 +557,10 @@ mod tests {
         let mut partition = BlockPartition::new(10);
         let mut builder = BlockPartitionBuilder::default();
 
-        let _ = partition.partition_marked_with(0, &mut builder, |element, _| {
-            match element {
-                0..=3 => 0,
-                4..=6 => 1,
-                _ => 2,
-            }        
+        let _ = partition.partition_marked_with(0, &mut builder, |element, _| match element {
+            0..=3 => 0,
+            4..=6 => 1,
+            _ => 2,
         });
     }
 }
