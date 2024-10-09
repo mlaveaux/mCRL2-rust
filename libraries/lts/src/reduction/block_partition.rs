@@ -161,7 +161,7 @@ impl BlockPartition {
     /// predicate.
     pub fn split_marked(&mut self, block_index: usize, mut splitter: impl FnMut(usize) -> bool) {
         let mut updated_block = self.blocks[block_index];
-        let mut new_block: Option<usize> = None;
+        let mut new_block: Option<Block> = None;
 
         // Loop over all elements, we use a while loop since the index stays the
         // same when a swap takes place.
@@ -169,29 +169,23 @@ impl BlockPartition {
         while element_index < updated_block.end {
             let element = self.elements[element_index];
             if splitter(element) {
-                match new_block {
+                match &mut new_block {
                     None => {
-                        // Introduce a new block for the split, containing only the new element.
-                        self.blocks.push(Block::new_unmarked(
+                        new_block = Some(Block::new_unmarked(
                             updated_block.end - 1,
                             updated_block.end,
                         ));
 
                         // Swap the current element to the last place
                         self.swap_elements(element_index, updated_block.end - 1);
-                        let new_block_index = self.blocks.len() - 1;
-
                         updated_block.end -= 1;
-                        new_block = Some(new_block_index);
-                        self.element_to_block[element] = new_block_index;
                     }
                     Some(new_block_index) => {
                         // Swap the current element to the beginning of the new block.
-                        self.blocks[new_block_index].begin -= 1;
+                        new_block_index.begin -= 1;
                         updated_block.end -= 1;
 
-                        self.swap_elements(element_index, self.blocks[new_block_index].begin);
-                        self.element_to_block[element] = new_block_index;
+                        self.swap_elements(element_index, new_block_index.begin);
                     }
                 }
             } else {
@@ -200,22 +194,25 @@ impl BlockPartition {
             }
         }
 
-        if updated_block.begin == updated_block.end {
-            // Remove the new block if it is empty.
-            self.blocks.pop();
+        if let Some(new_block) = new_block {
+            if (updated_block.end - updated_block.begin) != 0 {
+                // A new block was introduced, so we need to update the current
+                // block. Unless the current block is empty in which case
+                // nothing changes.
+                updated_block.unmark_all();
+                self.blocks[block_index] = updated_block;
 
-            for element in self.blocks[block_index]
-                .iter(&self.elements)
-                .map(|element_index| self.elements[element_index])
-            {
-                self.element_to_block[element] = block_index;
+                // Introduce a new block for the split, containing only the new element.
+                self.blocks.push(new_block);
+
+                // Update the elements for the new block
+                for element in new_block.iter(&self.elements) {
+                    self.element_to_block[element] = self.blocks.len() - 1;
+                }
             }
-        } else {
-            // Update the original block.
-            updated_block.unmark_all();
-            self.blocks[block_index] = updated_block;
         }
 
+        println!("{self:?}");
         self.assert_consistent();
     }
 
