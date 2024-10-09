@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use fxhash::FxHashSet;
+use rustc_hash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
 use crate::Partition;

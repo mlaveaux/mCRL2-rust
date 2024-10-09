@@ -1,6 +1,6 @@
 use bumpalo::Bump;
-use fxhash::FxHashMap;
-use fxhash::FxHashSet;
+use rustc_hash::FxHashMap;
+use rustc_hash::FxHashSet;
 use log::debug;
 use log::trace;
 
