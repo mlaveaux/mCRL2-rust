@@ -2,7 +2,7 @@ use std::{error::Error, fs::File, io::{stdout, BufWriter}, process::ExitCode};
 
 use clap::{Parser, ValueEnum};
 use io::io_aut::{read_aut, write_aut};
-use lts::{branching_bisim_sigref, quotient_lts, strong_bisim_sigref, IndexedPartition, Partition};
+use lts::{branching_bisim_sigref, branching_bisim_sigref_naive, quotient_lts, strong_bisim_sigref, strong_bisim_sigref_naive, IndexedPartition, Partition};
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
@@ -19,7 +19,9 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[derive(Clone, Debug, ValueEnum)]
 enum Equivalence {
     StrongBisim,
+    StrongBisimNaive,
     BranchingBisim,
+    BranchingBisimNaive,
 }
 
 #[derive(clap::Parser, Debug)]
@@ -50,7 +52,9 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let start = std::time::Instant::now();
     let partition: IndexedPartition = match cli.equivalence {
         Equivalence::StrongBisim => strong_bisim_sigref(&lts),
+        Equivalence::StrongBisimNaive => strong_bisim_sigref_naive(&lts),
         Equivalence::BranchingBisim => branching_bisim_sigref(&lts),
+        Equivalence::BranchingBisimNaive => branching_bisim_sigref_naive(&lts),
     };
 
     if cli.time {
