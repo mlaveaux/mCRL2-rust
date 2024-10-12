@@ -1,4 +1,3 @@
-use core::num;
 use std::mem::swap;
 
 use bumpalo::Bump;
@@ -11,7 +10,6 @@ use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_sorted;
 use crate::combine_partition;
 use crate::preprocess_branching;
-use crate::reduction::indexed_partition;
 use crate::strong_bisim_signature;
 use crate::BlockPartition;
 use crate::BlockPartitionBuilder;
@@ -252,7 +250,7 @@ where
 
     // Refine partitions until stable.
     let mut iteration = 0usize;
-    let mut num_of_blocks = 0usize;
+    let mut num_of_blocks;
     let mut states = Vec::new();
 
     // Used to keep track of dirty blocks.
