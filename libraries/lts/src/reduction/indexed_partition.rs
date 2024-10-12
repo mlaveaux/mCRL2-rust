@@ -12,7 +12,6 @@ pub struct IndexedPartition {
 }
 
 impl IndexedPartition {
-
     /// Create a new partition where all elements are in a single block.
     pub fn new(num_of_elements: usize) -> IndexedPartition {
         IndexedPartition {
@@ -21,11 +20,17 @@ impl IndexedPartition {
         }
     }
 
+    /// Create a new partition with the given partitioning.
     pub fn with_partition(partition: Vec<usize>, num_of_blocks: usize) -> IndexedPartition {
         IndexedPartition {
             partition,
             num_of_blocks,
         }
+    }
+
+    /// Iterates over the elements in the partition.
+    pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
+        self.partition.iter().copied()
     }
 
     /// Sets the block number of the given element
@@ -53,12 +58,12 @@ pub fn combine_partition(left: IndexedPartition, right: &impl Partition) -> Inde
 /// Reorders the blocks of the given partition according to the given permutation.
 pub fn reorder_partition<P>(partition: IndexedPartition, permutation: P) -> IndexedPartition
 where
-    P: Fn(usize) -> usize
+    P: Fn(usize) -> usize,
 {
-    let mut new_partition = IndexedPartition::new(partition.partition.len());
+    let mut new_partition = IndexedPartition::new(partition.len());
 
-    for (element_index, block) in partition.partition.iter().enumerate() {
-        new_partition.set_block(element_index, permutation(*block));
+    for (element_index, block) in partition.iter().enumerate() {
+        new_partition.set_block(element_index, permutation(block));
     }
 
     new_partition
@@ -71,12 +76,13 @@ impl fmt::Display for IndexedPartition {
         let mut first = true;
 
         for block_index in 0..self.partition.len() {
-
             // Print all elements with the same block number.
-            let mut first_block = true;          
-            for (element_index, _) in self.partition.iter().enumerate().filter(|(_, value)| {
-                **value == block_index
-            }) {
+            let mut first_block = true;
+            for (element_index, _) in self
+                .iter()
+                .enumerate()
+                .filter(|(_, value)| *value == block_index)
+            {
                 if !first_block {
                     write!(f, ", ")?;
                 } else {
@@ -108,5 +114,9 @@ impl Partition for IndexedPartition {
 
     fn num_of_blocks(&self) -> usize {
         self.num_of_blocks
+    }
+
+    fn len(&self) -> usize {
+        self.partition.len()
     }
 }

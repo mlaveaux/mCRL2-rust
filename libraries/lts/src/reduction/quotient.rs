@@ -3,7 +3,7 @@ use log::debug;
 use crate::LabelledTransitionSystem;
 use crate::State;
 
-/// A trait for partition refinment algorithms that expose the block number for
+/// A trait for partition refinement algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.
 ///
 /// The invariants are that the union of all blocks is the original set, and
@@ -14,6 +14,52 @@ pub trait Partition {
 
     /// Returns the number of blocks in the partition.
     fn num_of_blocks(&self) -> usize;
+
+    /// Returns the number of elements in the partition.
+    fn len(&self) -> usize;
+
+    /// Returns whether the partition is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns true iff the partitions are equal, runs in O(n^2)
+    fn equal(&self, other: &impl Partition) -> bool {
+
+        // Check that states in the same block, have a single (unique) number in
+        // the other partition.
+        for block_index in 0..self.num_of_blocks() {
+            let mut other_block_index = None;
+
+            for state_index in (0..self.len()).filter(|&state_index| self.block_number(state_index) == block_index) {
+                match other_block_index {
+                    None => other_block_index = Some(other.block_number(state_index)),
+                    Some(other_block_index) => {
+                        if other.block_number(state_index) != other_block_index {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        
+        for block_index in 0..other.num_of_blocks() {
+            let mut other_block_index = None;
+
+            for state_index in (0..self.len()).filter(|&state_index| other.block_number(state_index) == block_index) {
+                match other_block_index {
+                    None => other_block_index = Some(self.block_number(state_index)),
+                    Some(other_block_index) => {
+                        if self.block_number(state_index) != other_block_index {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        true
+    }
 }
 
 /// Returns a new LTS based on the given partition.

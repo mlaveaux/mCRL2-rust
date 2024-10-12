@@ -241,16 +241,6 @@ impl BlockPartition {
         self.blocks.len()
     }
 
-    /// Returns the number of elements in the partition.
-    pub fn len(&self) -> usize {
-        self.elements.len()
-    }
-
-    /// Returns true iff the partition is empty.
-    pub fn is_empty(&self) -> bool {
-        self.elements.is_empty()
-    }
-
     /// Returns an iterator over the elements of a given block.
     pub fn iter_block(&self, block_index: usize) -> BlockIter<'_> {
         BlockIter {
@@ -330,6 +320,16 @@ impl Partition for BlockPartition {
 
     fn num_of_blocks(&self) -> usize {
         self.blocks.len()
+    }
+
+    fn len(&self) -> usize {
+        self.elements.len()
+    }
+}
+
+impl PartialEq<IndexedPartition> for BlockPartition {
+    fn eq(&self, other: &IndexedPartition) -> bool {
+        self.equal(other)
     }
 }
 
