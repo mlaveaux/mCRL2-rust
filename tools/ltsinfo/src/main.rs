@@ -61,7 +61,8 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
         eprintln!("reduction: {:.3}s", start.elapsed().as_secs_f64());
     }
 
-    let quotient_lts = quotient_lts(&lts, &partition, matches!(cli.equivalence, Equivalence::BranchingBisim));
+    let quotient_lts = quotient_lts(&lts, &partition, matches!(cli.equivalence, Equivalence::BranchingBisim) 
+        || matches!(cli.equivalence, Equivalence::BranchingBisimNaive));
     if let Some(file) = cli.output {
         let mut writer = BufWriter::new(File::create(file)?);
         write_aut(&mut writer, &quotient_lts)?;

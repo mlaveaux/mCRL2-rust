@@ -23,7 +23,7 @@ use crate::SignatureBuilder;
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
     let start = std::time::Instant::now();
-    let partition = signature_refinement(lts, false, |state_index, partition, _, builder| {
+    let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
@@ -33,8 +33,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
         "The resulting partition is not a valid strong bisimulation partition."
     );
 
-    debug!(combined_partition = partition.num_of_blocks();
-        "Time strong_bisim_sigref: {:.3}s",
+    debug!("Time strong_bisim_sigref: {:.3}s",
         start.elapsed().as_secs_f64()
     );
     partition.into()
@@ -47,8 +46,7 @@ pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedParti
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
-    debug!(combined_partition = partition.num_of_blocks();
-        "Time strong_bisim_sigref_naive: {:.3}s",
+    debug!("Time strong_bisim_sigref_naive: {:.3}s",
         start.elapsed().as_secs_f64()
     );
     partition
@@ -56,17 +54,15 @@ pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedParti
 
 /// Computes a branching bisimulation partitioning using signature refinement
 pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
-    let start = std::time::Instant::now();
     let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
 
+    let start = std::time::Instant::now();
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
 
-    let partition = signature_refinement(
+    let partition = signature_refinement::<_, true>(
         &preprocessed_lts,
-        true,
         |state_index, partition, state_to_signature, builder| {
             branching_bisim_signature_sorted(
                 state_index,
@@ -117,8 +113,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
     let combined_partition = combine_partition(preprocess_partition, &partition);
     trace!("Final partition {combined_partition}");
 
-    debug!(combined_partition = combined_partition.num_of_blocks();
-        "Time branching_bisim_sigref: {:.3}s",
+    debug!("Time branching_bisim_sigref: {:.3}s",
         start.elapsed().as_secs_f64()
     );
     combined_partition
@@ -126,10 +121,9 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
 
 /// Computes a branching bisimulation partitioning using signature refinement without dirty blocks.
 pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    // Remove tau-loops since that is a prerequisite for the branching bisimulation signature.
-    let start = std::time::Instant::now();
     let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
 
+    let start = std::time::Instant::now();
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
@@ -171,7 +165,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedPa
     let combined_partition = combine_partition(preprocess_partition, &partition);
     trace!("Final partition {combined_partition}");
 
-    debug!(combined_partition = combined_partition.num_of_blocks();
+    debug!("number_of_states" = combined_partition.num_of_blocks();
         "Time branching_bisim_sigref_naive: {:.3}s",
         start.elapsed().as_secs_f64()
     );
@@ -183,9 +177,8 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedPa
 /// The signature function is called for each state and should fill the
 /// signature builder with the signature of the state. It consists of the
 /// current partition, the signatures per state for the next partition.
-fn signature_refinement<F>(
+fn signature_refinement<F, const BRANCHING: bool>(
     lts: &LabelledTransitionSystem,
-    branching: bool,
     mut signature: F,
 ) -> BlockPartition
 where
@@ -264,7 +257,7 @@ where
                 for &state_index in &states {
                     for &(label_index, incoming_state) in incoming.incoming_transitions(state_index)
                     {
-                        if !(branching
+                        if !(BRANCHING
                             && lts.is_hidden_label(label_index)
                             && partition.block_number(incoming_state)
                                 == partition.block_number(state_index))
@@ -280,7 +273,7 @@ where
                         }
                     }
 
-                    if branching {
+                    if BRANCHING {
                         // If we have a tau transition that becomes visible (to the original block) then mark the state as dirty.
                         for &(label_index, to) in lts.outgoing_transitions(state_index) {
                             if lts.is_hidden_label(label_index)
@@ -322,6 +315,7 @@ where
     partition
 }
 
+/// Marks the given state and all incoming (inert) tau transitions.
 fn mark_inert_tau(
     lts: &LabelledTransitionSystem,
     partition: &mut BlockPartition,
@@ -429,6 +423,10 @@ where
     }
 
     trace!("Refinement partition {partition}");
+    debug_assert!(
+        is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(state_index, partition, &state_to_signature, builder)),
+        "The resulting partition is not a valid partition."
+    );
     partition
 }
 
