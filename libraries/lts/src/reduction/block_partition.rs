@@ -59,6 +59,12 @@ impl BlockPartition {
             "Cannot partition marked elements of a block without marked elements"
         );
 
+        if block.len() == 1 {
+            // Block only has one element, so trivially partitioned.
+            self.blocks[block_index].unmark_all();
+            return (block_index..=block_index).chain(0..0);
+        }
+
         // Keeps track of the block index for every element in this block by index.
         builder.index_to_block.clear();
         builder.block_sizes.clear();
@@ -66,8 +72,12 @@ impl BlockPartition {
 
         builder.index_to_block.resize(block.len_marked(), 0);
 
+        // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
+        builder.old_elements.extend(block.iter_marked(&self.elements));
+        builder.old_elements.sort_unstable();
+
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
-        for (element_index, element) in block.iter_marked(&self.elements).enumerate() {
+        for (element_index, &element) in builder.old_elements.iter().enumerate() {
             let number = partitioner(element, self);
 
             builder.index_to_block[element_index] = number;
@@ -123,12 +133,6 @@ impl BlockPartition {
             });
         let block_offsets = &mut builder.block_sizes;
 
-        //  Move the elements to the correct block. TODO: is this the most efficient way?
-        builder.old_elements.resize(block.len_marked(), 0);
-        builder
-            .old_elements
-            .copy_from_slice(&self.elements[block.marked_split..block.end]);
-
         for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
             // Swap the element to the correct position.
             let element = builder.old_elements[index];
@@ -143,6 +147,19 @@ impl BlockPartition {
             // Update the offset for this block.
             block_offsets[*offset_block_index] += 1;
         }
+
+        // TODO: Check if the elements have gone to the correct block...
+        for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
+            let element = builder.old_elements[index];
+            let block_index = if *offset_block_index == 0 && !block.has_unmarked() {
+                block_index
+            } else {
+                new_block_index + *offset_block_index
+            };
+
+            debug_assert!(self.iter_block(block_index).any(|i| i == element), "Element in the wrong block");
+        }
+
 
         self.assert_consistent();
 
@@ -229,6 +246,15 @@ impl BlockPartition {
         }
 
         self.blocks[block_index].assert_consistent();
+    }
+
+    /// Returns true iff the given element has already been marked.
+    pub fn is_element_marked(&self, element: usize) -> bool {
+        let block_index = self.element_to_block[element];
+        let offset = self.element_offset[element];
+        let marked_split = self.blocks[block_index].marked_split;
+
+        offset >= marked_split
     }
 
     /// Return a reference to the given block.
@@ -558,6 +584,14 @@ mod tests {
             0..=3 => 0,
             4..=6 => 1,
             _ => 2,
+        });
+
+        partition.mark_element(4);
+        partition.mark_element(5);
+        partition.mark_element(6);
+        let _ = partition.partition_marked_with(1, &mut builder, |element, _| match element {
+            4..=5 => 0,
+            _ => 1,
         });
     }
 }
