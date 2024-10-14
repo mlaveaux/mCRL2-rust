@@ -42,7 +42,7 @@ impl LabelledTransitionSystem {
         let num_of_states = states.len();
         for (state_index, state) in states.iter().enumerate() {
             let mut outgoing_dedup = state.outgoing.clone();
-            outgoing_dedup.sort();
+            outgoing_dedup.sort_unstable();
             outgoing_dedup.dedup();
 
             debug_assert_eq!(
