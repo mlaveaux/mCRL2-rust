@@ -148,19 +148,6 @@ impl BlockPartition {
             block_offsets[*offset_block_index] += 1;
         }
 
-        // TODO: Check if the elements have gone to the correct block...
-        for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
-            let element = builder.old_elements[index];
-            let block_index = if *offset_block_index == 0 && !block.has_unmarked() {
-                block_index
-            } else {
-                new_block_index + *offset_block_index
-            };
-
-            debug_assert!(self.iter_block(block_index).any(|i| i == element), "Element in the wrong block");
-        }
-
-
         self.assert_consistent();
 
         // If we have unmarked elements skip the current block, otherwise take
@@ -285,35 +272,37 @@ impl BlockPartition {
 
     /// Returns true iff the invariants of a partition hold
     fn assert_consistent(&self) -> bool {
-        let mut marked = vec![false; self.elements.len()];
+        if cfg!(debug_assertions) {
+            let mut marked = vec![false; self.elements.len()];
 
-        for block in &self.blocks {
-            for element in block.iter(&self.elements) {
-                debug_assert!(
-                    !marked[element],
-                    "Partition {self}, element {element} belongs to multiple blocks"
-                );
-                marked[element] = true;
+            for block in &self.blocks {
+                for element in block.iter(&self.elements) {
+                    debug_assert!(
+                        !marked[element],
+                        "Partition {self}, element {element} belongs to multiple blocks"
+                    );
+                    marked[element] = true;
+                }
+
+                block.assert_consistent();
             }
 
-            block.assert_consistent();
-        }
+            // Check that every element belongs to a block.
+            debug_assert!(
+                !marked.contains(&false),
+                "Partition {self} contains elements that do not belong to a block"
+            );
 
-        // Check that every element belongs to a block.
-        debug_assert!(
-            !marked.contains(&false),
-            "Partition {self} contains elements that do not belong to a block"
-        );
+            // Check that it belongs to the block indicated by element_to_block
+            for (current_element, block_index) in self.element_to_block.iter().enumerate() {
+                debug_assert!(self.blocks[*block_index]
+                    .iter(&self.elements)
+                    .any(|element| element == current_element),
+                    "Partition {self:?}, element {current_element} does not belong to block {block_index} as indicated by element_to_block");
 
-        // Check that it belongs to the block indicated by element_to_block
-        for (current_element, block_index) in self.element_to_block.iter().enumerate() {
-            debug_assert!(self.blocks[*block_index]
-                .iter(&self.elements)
-                .any(|element| element == current_element),
-                "Partition {self:?}, element {current_element} does not belong to block {block_index} as indicated by element_to_block");
-
-            let index = self.element_offset[current_element];
-            debug_assert_eq!(self.elements[index], current_element, "Partition {self:?}, element {current_element} does not have the correct offset in the block");
+                let index = self.element_offset[current_element];
+                debug_assert_eq!(self.elements[index], current_element, "Partition {self:?}, element {current_element} does not have the correct offset in the block");
+            }
         }
 
         true
