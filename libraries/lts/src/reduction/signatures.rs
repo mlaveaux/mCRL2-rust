@@ -125,25 +125,24 @@ pub fn branching_bisim_signature_sorted(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
-    next_partition: &impl Partition,
-    block_to_signature: &[Signature],
+    state_to_signature: &[Signature],
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();
 
-    for (label_index, to) in lts.outgoing_transitions(state_index) {
-        let to_block = partition.block_number(*to);
+    for &(label_index, to) in lts.outgoing_transitions(state_index) {
+        let to_block = partition.block_number(to);
 
         if partition.block_number(state_index) == to_block {
-            if lts.is_hidden_label(*label_index) {
-                // Inert tau transition, take signature from the outgoing.
-                builder.extend(block_to_signature[next_partition.block_number(*to)].as_slice());
+            if lts.is_hidden_label(label_index) {
+                // Inert tau transition, take signature from the outgoing tau-transition.
+                builder.extend(state_to_signature[to].as_slice());
             } else {
-                builder.push((*label_index, to_block));
+                builder.push((label_index, to_block));
             }
         } else {
             // Visible action, add to the signature.
-            builder.push((*label_index, to_block));
+            builder.push((label_index, to_block));
         }
     }
     
