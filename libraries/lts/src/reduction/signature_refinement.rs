@@ -5,6 +5,7 @@ use log::debug;
 use log::trace;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
+use utilities::Timing;
 
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_sorted;
@@ -21,42 +22,38 @@ use crate::Signature;
 use crate::SignatureBuilder;
 
 /// Computes a strong bisimulation partitioning using signature refinement
-pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    let start = std::time::Instant::now();
+pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let mut time = timing.start("reduction");
     let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
     debug_assert_eq!(
         partition,
-        strong_bisim_sigref_naive(lts),
+        strong_bisim_sigref_naive(lts, timing),
         "The resulting partition is not a valid strong bisimulation partition."
     );
 
-    debug!("Time strong_bisim_sigref: {:.3}s",
-        start.elapsed().as_secs_f64()
-    );
+    time.finish();
     partition.into()
 }
 
 /// Computes a strong bisimulation partitioning using signature refinement
-pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    let start = std::time::Instant::now();
+pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let mut time = timing.start("reduction");
     let partition = signature_refinement_naive(lts, |state_index, partition, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
-    debug!("Time strong_bisim_sigref_naive: {:.3}s",
-        start.elapsed().as_secs_f64()
-    );
+    time.finish();
     partition
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement
-pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts, timing);
 
-    let start = std::time::Instant::now();
+    let mut time = timing.start("reduction");
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
@@ -111,19 +108,17 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem) -> IndexedPartitio
 
     // Combine the SCC partition with the branching bisimulation partition.
     let combined_partition = combine_partition(preprocess_partition, &partition);
+    time.finish();
+    
     trace!("Final partition {combined_partition}");
-
-    debug!("Time branching_bisim_sigref: {:.3}s",
-        start.elapsed().as_secs_f64()
-    );
     combined_partition
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement without dirty blocks.
-pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedPartition {
-    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts, timing);
 
-    let start = std::time::Instant::now();
+    let mut time = timing.start("reduction");
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
@@ -162,13 +157,10 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem) -> IndexedPa
     );
 
     // Combine the SCC partition with the branching bisimulation partition.
-    let combined_partition = combine_partition(preprocess_partition, &partition);
-    trace!("Final partition {combined_partition}");
+    let combined_partition = combine_partition(preprocess_partition, &partition);    
+    time.finish();
 
-    debug!("number_of_states" = combined_partition.num_of_blocks();
-        "Time branching_bisim_sigref_naive: {:.3}s",
-        start.elapsed().as_secs_f64()
-    );
+    trace!("Final partition {combined_partition}");
     combined_partition
 }
 
@@ -257,19 +249,31 @@ where
                 for &state_index in &states {
                     for &(label_index, incoming_state) in incoming.incoming_transitions(state_index)
                     {
-                        if !(BRANCHING
-                            && lts.is_hidden_label(label_index)
-                            && partition.block_number(incoming_state)
-                                == partition.block_number(state_index))
-                        {
-                            mark_inert_tau(
-                                lts,
-                                &mut partition,
-                                &mut worklist,
-                                &mut stack,
-                                &incoming,
-                                incoming_state,
-                            );
+                        if BRANCHING {
+                            // Mark incoming states in other blocks, or visible actions.
+                            if !partition.is_element_marked(state_index)
+                                && (!lts.is_hidden_label(label_index)
+                                || partition.block_number(incoming_state)
+                                    != partition.block_number(state_index)) {
+                                mark_inert_tau(
+                                    lts,
+                                    &mut partition,
+                                    &mut worklist,
+                                    &mut stack,
+                                    &incoming,
+                                    incoming_state,
+                                );
+                            }
+                        } else {   
+                            // In this case mark all incoming states.                      
+                            let other_block = partition.block_number(incoming_state);
+
+                            if !partition.block(other_block).has_marked() {
+                                // If block was not already marked then add it to the worklist.
+                                worklist.push(other_block);
+                            }
+
+                            partition.mark_element(incoming_state);
                         }
                     }
 
@@ -298,7 +302,7 @@ where
         trace!("Iteration {iteration} partition {partition}");
 
         iteration += 1;
-        if partition.num_of_blocks() % 1000 == 0 && num_of_blocks != partition.num_of_blocks() {
+        if num_of_blocks != partition.num_of_blocks() {
             // Only print a message when new blocks have been found.
             debug!(
                 "Iteration {iteration}, found {} blocks",
@@ -488,6 +492,7 @@ where
 #[cfg(test)]
 mod tests {
     use test_log::test;
+    use utilities::Timing;
 
     use crate::random_lts;
 
@@ -496,15 +501,18 @@ mod tests {
     #[test]
     fn test_random_strong_bisim_sigref() {
         let lts = random_lts(10, 3, 3);
-        strong_bisim_sigref(&lts);
+        let mut timing = Timing::new();
+
+        strong_bisim_sigref(&lts, &mut timing);
     }
 
     #[test]
     fn test_random_branching_bisim_sigref() {
         let lts = random_lts(10, 3, 3);
+        let mut timing = Timing::new();
 
-        let strong_partition = strong_bisim_sigref(&lts);
-        let branching_partition = branching_bisim_sigref(&lts);
+        let strong_partition = strong_bisim_sigref(&lts, &mut timing);
+        let branching_partition = branching_bisim_sigref(&lts, &mut timing);
 
         for (state_index, _) in lts.iter_states() {
             for (other_state_index, _) in lts.iter_states() {

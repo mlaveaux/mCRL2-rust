@@ -2,7 +2,7 @@ use std::{error::Error, fs::File, io::{stdout, BufWriter}, process::ExitCode};
 
 use clap::{Parser, ValueEnum};
 use io::io_aut::{read_aut, write_aut};
-use lts::{branching_bisim_sigref, branching_bisim_sigref_naive, quotient_lts, strong_bisim_sigref, strong_bisim_sigref_naive, IndexedPartition, Partition};
+use lts::{branching_bisim_sigref, branching_bisim_sigref_naive, quotient_lts, strong_bisim_sigref, strong_bisim_sigref_naive, IndexedPartition};
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
@@ -10,6 +10,7 @@ static MEASURE_ALLOC: unsafety::AllocCounter = unsafety::AllocCounter;
 
 #[cfg(feature = "measure-allocs")]
 use log::info;
+use utilities::Timing;
 
 #[cfg(not(target_env = "msvc"))]
 #[cfg(not(feature = "measure-allocs"))]
@@ -47,20 +48,17 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
 
     let file = File::open(cli.filename)?;
 
+    let mut timing = Timing::new();
     let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
 
-    let start = std::time::Instant::now();
     let partition: IndexedPartition = match cli.equivalence {
-        Equivalence::StrongBisim => strong_bisim_sigref(&lts),
-        Equivalence::StrongBisimNaive => strong_bisim_sigref_naive(&lts),
-        Equivalence::BranchingBisim => branching_bisim_sigref(&lts),
-        Equivalence::BranchingBisimNaive => branching_bisim_sigref_naive(&lts),
+        Equivalence::StrongBisim => strong_bisim_sigref(&lts, &mut timing),
+        Equivalence::StrongBisimNaive => strong_bisim_sigref_naive(&lts, &mut timing),
+        Equivalence::BranchingBisim => branching_bisim_sigref(&lts, &mut timing),
+        Equivalence::BranchingBisimNaive => branching_bisim_sigref_naive(&lts, &mut timing),
     };
 
-    if cli.time {
-        eprintln!("reduction: {:.3}s", start.elapsed().as_secs_f64());
-    }
-
+    let mut quotient_time = timing.start("quotient");
     let quotient_lts = quotient_lts(&lts, &partition, matches!(cli.equivalence, Equivalence::BranchingBisim) 
         || matches!(cli.equivalence, Equivalence::BranchingBisimNaive));
     if let Some(file) = cli.output {
@@ -69,8 +67,11 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     } else {
         write_aut(&mut stdout(), &quotient_lts)?;
     }
+    quotient_time.finish();
 
-    partition.block_number(0);
+    if cli.time {
+        timing.print();
+    }
 
     #[cfg(feature = "measure-allocs")]
     eprintln!("allocations: {}", MEASURE_ALLOC.number_of_allocations());

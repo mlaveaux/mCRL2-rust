@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 use rustc_hash::FxHashSet;
+use utilities::Timing;
 
 use crate::LabelledTransitionSystem;
 use crate::Partition;
@@ -155,8 +156,15 @@ pub fn branching_bisim_signature_sorted(
 /// sorted signature see `branching_bisim_signature_sorted`.
 pub fn preprocess_branching(
     lts: &LabelledTransitionSystem,
+    timing: &mut Timing,
 ) -> (LabelledTransitionSystem, IndexedPartition) {
-    let scc_partition = tau_scc_decomposition(lts);
+    
+    let scc_partition = {
+let mut time = timing.start("scc_partition");
+        let partition = tau_scc_decomposition(lts);        
+        time.finish();
+        partition
+    };
 
     let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
 

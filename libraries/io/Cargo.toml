@@ -6,12 +6,13 @@ edition.workspace = true
 
 [dependencies]
 bitstream-io.workspace = true
-thiserror.workspace = true
-streaming-iterator.workspace = true
-rustc-hash.workspace = true
-regex.workspace = true
 log.workspace = true
 lts.workspace = true
+regex.workspace = true
+rustc-hash.workspace = true
+streaming-iterator.workspace = true
+thiserror.workspace = true
+utilities.workspace = true
 
 [dev-dependencies]
 test-log.workspace = true

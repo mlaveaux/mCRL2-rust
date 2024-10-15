@@ -14,6 +14,7 @@ io.workspace = true
 log.workspace = true
 lts.workspace = true
 unsafety.workspace = true
+utilities.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator.workspace = true
