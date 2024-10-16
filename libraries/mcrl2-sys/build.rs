@@ -48,10 +48,6 @@ fn add_cpp_flags(build: &mut Build) {
     #[cfg(unix)]
     {
         build.flag_if_supported("-std=c++17");
-        // build.flag_if_supported("-flto=auto");
-        // build.flag_if_supported("-fno-fat-lto-objects");
-        // build.flag_if_supported("-fuse-linker-plugin");
-        // build.flag_if_supported("-fuse-ld=lld");
     }
 }
 
