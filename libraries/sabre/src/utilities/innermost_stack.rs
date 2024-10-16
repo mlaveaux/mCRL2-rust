@@ -2,25 +2,15 @@ use std::fmt;
 
 use itertools::Itertools;
 use mcrl2::aterm::ATermRef;
-use mcrl2::aterm::Markable;
 use mcrl2::aterm::Protected;
 use mcrl2::aterm::Protector;
-use mcrl2::aterm::TermPool;
-use mcrl2::aterm::Todo;
-use mcrl2::data::is_data_expression;
-use mcrl2::data::is_data_machine_number;
-use mcrl2::data::is_data_variable;
-use mcrl2::data::DataApplication;
-use mcrl2::data::DataExpression;
 use mcrl2::data::DataExpressionRef;
 use mcrl2::data::DataFunctionSymbolRef;
 
 use crate::utilities::PositionIndexed;
-use crate::Rule;
 
-use super::create_var_map;
-use super::ExplicitPosition;
-use super::PositionIterator;
+use super::Config;
+use super::TermStack;
 
 use log::trace;
 
@@ -38,8 +28,8 @@ impl InnermostStack {
     pub fn integrate(
         write_configs: &mut Protector<Vec<Config>>,
         write_terms: &mut Protector<Vec<DataExpressionRef<'static>>>,
-        rhs_stack: &RHSStack,
-        term: &DataExpression,
+        rhs_stack: &TermStack,
+        term: &DataExpressionRef,
         result_index: usize,
     ) {
         // TODO: This ignores the first element of the stack, but that is kind of difficult to deal with.
@@ -60,6 +50,10 @@ impl InnermostStack {
                         // Otherwise, we put it on the end of the stack.
                         InnermostStack::add_result(write_configs, symbol.copy(), *arity, top_of_stack + offset - 1);
                     }
+                }
+                Config::Term(term, index) => {
+                    let term = write_configs.protect(term);
+                    write_configs.push(Config::Term(term.into(), *index));
                 }
                 Config::Rewrite(_) => {
                     unreachable!("This case should not happen");
@@ -121,41 +115,6 @@ impl InnermostStack {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub enum Config {
-    /// Rewrite the top of the stack and put result at the given index.
-    Rewrite(usize),
-    /// Constructs function symbol with given arity at the given index.
-    Construct(DataFunctionSymbolRef<'static>, usize, usize),
-    /// Yields the given index as returned term.
-    Return(),
-}
-
-impl Markable for Config {
-    fn mark(&self, todo: Todo<'_>) {
-        if let Config::Construct(t, _, _) = self {
-            let t: ATermRef<'_> = t.copy().into();
-            t.mark(todo);
-        }
-    }
-
-    fn contains_term(&self, term: &ATermRef<'_>) -> bool {
-        if let Config::Construct(t, _, _) = self {
-            term == &<DataFunctionSymbolRef as Into<ATermRef>>::into(t.copy())
-        } else {
-            false
-        }
-    }
-
-    fn len(&self) -> usize {
-        if let Config::Construct(_, _, _) = self {
-            1
-        } else {
-            0
-        }
-    }
-}
-
 impl fmt::Display for InnermostStack {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Terms: [")?;
@@ -174,6 +133,7 @@ impl fmt::Display for InnermostStack {
         }
         write!(f, "]")
     }
+<<<<<<< HEAD
 }
 
 impl fmt::Display for Config {
@@ -393,3 +353,6 @@ mod tests {
         assert_eq!(rhs.stack_size, 1, "The stack size does not match");
     }
 }
+=======
+}
+>>>>>>> c86ebbb (Used the term stack in the innermost rewriter.)
