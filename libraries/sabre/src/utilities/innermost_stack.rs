@@ -55,20 +55,10 @@ impl InnermostStack {
                 Config::Construct(symbol, arity, offset) => {
                     if first {
                         // The first result must be placed on the original result index.
-                        InnermostStack::add_result(
-                            write_configs,
-                            symbol.copy(),
-                            *arity,
-                            result_index,
-                        );
+                        InnermostStack::add_result(write_configs, symbol.copy(), *arity, result_index);
                     } else {
                         // Otherwise, we put it on the end of the stack.
-                        InnermostStack::add_result(
-                            write_configs,
-                            symbol.copy(),
-                            *arity,
-                            top_of_stack + offset - 1,
-                        );
+                        InnermostStack::add_result(write_configs, symbol.copy(), *arity, top_of_stack + offset - 1);
                     }
                 }
                 Config::Rewrite(_) => {
@@ -96,8 +86,7 @@ impl InnermostStack {
         if rhs_stack.stack_size == 1 && rhs_stack.variables.len() == 1 {
             // This is a special case where we place the result on the correct position immediately.
             // The right hand side is only a variable
-            let t: ATermRef<'_> =
-                write_terms.protect(&term.get_position(&rhs_stack.variables[0].0));
+            let t: ATermRef<'_> = write_terms.protect(&term.get_position(&rhs_stack.variables[0].0));
             write_terms[result_index] = t.into();
         } else {
             for (position, index) in &rhs_stack.variables {
@@ -228,9 +217,7 @@ impl RHSStack {
                 variables.push((
                     var_map
                         .get(&term.protect())
-                        .expect(
-                            "All variables in the right hand side must occur in the left hand side",
-                        )
+                        .expect("All variables in the right hand side must occur in the left hand side")
                         .clone(),
                     stack_size,
                 ));
@@ -261,13 +248,7 @@ impl RHSStack {
         let mut stack = InnermostStack::default();
         stack.terms.write().push(DataExpressionRef::default());
 
-        InnermostStack::integrate(
-            &mut stack.configs.write(),
-            &mut stack.terms.write(),
-            self,
-            term,
-            0,
-        );
+        InnermostStack::integrate(&mut stack.configs.write(), &mut stack.terms.write(), self, term, 0);
         loop {
             trace!("{}", stack);
 
@@ -360,9 +341,8 @@ mod tests {
     fn test_rhs_stack() {
         let mut tp = TermPool::new();
 
-        let rhs_stack = RHSStack::new(
-            &create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]).unwrap(),
-        );
+        let rhs_stack =
+            RHSStack::new(&create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]).unwrap());
         let mut expected = Protected::new(vec![]);
 
         let mut write = expected.write();

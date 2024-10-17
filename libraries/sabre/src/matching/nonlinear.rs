@@ -61,11 +61,7 @@ where
 }
 
 /// Adds the position of a variable to the equivalence classes
-fn update_equivalences(
-    ve: &mut Vec<EquivalenceClass>,
-    variable: &DataVariableRef<'_>,
-    pos: ExplicitPosition,
-) {
+fn update_equivalences(ve: &mut Vec<EquivalenceClass>, variable: &DataVariableRef<'_>, pos: ExplicitPosition) {
     // Check if the variable was seen before
     if ve.iter().any(|ec| ec.variable.copy() == *variable) {
         for ec in ve.iter_mut() {
@@ -86,12 +82,7 @@ fn update_equivalences(
 
 impl fmt::Display for EquivalenceClass {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}{{ {} }}",
-            self.variable,
-            self.positions.iter().format(", ")
-        )
+        write!(f, "{}{{ {} }}", self.variable, self.positions.iter().format(", "))
     }
 }
 
@@ -110,9 +101,8 @@ mod tests {
     #[test]
     fn test_derive_equivalence_classes() {
         let mut tp = TermPool::new();
-        let eq: Vec<EquivalenceClass> = derive_equivalence_classes(
-            &create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]).unwrap(),
-        );
+        let eq: Vec<EquivalenceClass> =
+            derive_equivalence_classes(&create_rewrite_rule(&mut tp, "f(x, h(x))", "result", &["x"]).unwrap());
 
         assert_eq!(
             eq,

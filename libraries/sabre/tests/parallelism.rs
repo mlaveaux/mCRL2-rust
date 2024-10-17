@@ -24,10 +24,7 @@ fn test_parallelism() {
 
             let tp = Rc::new(RefCell::new(TermPool::new()));
             let spec = DataSpecification::new(data_spec).unwrap();
-            let terms: Vec<DataExpression> = expressions
-                .lines()
-                .map(|text| spec.parse(text).unwrap())
-                .collect();
+            let terms: Vec<DataExpression> = expressions.lines().map(|text| spec.parse(text).unwrap()).collect();
             let mut expected = expected_result.split('\n');
 
             let mut inner = InnermostRewriter::new(tp.clone(), &spec.clone().into());

@@ -130,15 +130,9 @@ impl<I: fmt::Debug, C: fmt::Debug> TermBuilder<I, C> {
             trace!("{:?}", self);
         }
 
-        debug_assert!(
-            self.terms.len() == 1,
-            "Expect exactly one term on the result stack"
-        );
+        debug_assert!(self.terms.len() == 1, "Expect exactly one term on the result stack");
 
-        Ok(self
-            .terms
-            .pop()
-            .expect("There should be at last one result"))
+        Ok(self.terms.pop().expect("There should be at last one result"))
     }
 }
 
@@ -220,10 +214,7 @@ pub fn random_term(
 ) -> ATerm {
     use rand::prelude::IteratorRandom;
 
-    debug_assert!(
-        !constants.is_empty(),
-        "We need constants to be able to create a term"
-    );
+    debug_assert!(!constants.is_empty(), "We need constants to be able to create a term");
 
     let mut subterms = AHashSet::<ATerm>::from_iter(constants.iter().map(|name| {
         let symbol = tp.create_symbol(name, 0);

@@ -1,6 +1,7 @@
 use std::fmt;
 
-use super::{IndexedPartition, Partition};
+use super::IndexedPartition;
+use super::Partition;
 
 /// A partition that explicitly stores a list of blocks and their indexing into
 /// the list of elements.
@@ -96,41 +97,33 @@ impl BlockPartition {
             self.blocks.len() - 1
         };
 
-        let _ = builder
-            .block_sizes
-            .iter_mut()
-            .fold(0usize, |current, size| {
-                debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
+        let _ = builder.block_sizes.iter_mut().fold(0usize, |current, size| {
+            debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
 
-                let current = if current == 0 {
-                    if block.has_unmarked() {
-                        // Adapt the offsets of the current block to only include the unmarked elements.
-                        self.blocks[block_index] =
-                            Block::new_unmarked(block.begin, block.marked_split);
+            let current = if current == 0 {
+                if block.has_unmarked() {
+                    // Adapt the offsets of the current block to only include the unmarked elements.
+                    self.blocks[block_index] = Block::new_unmarked(block.begin, block.marked_split);
 
-                        // Introduce a new block for the zero block.
-                        self.blocks.push(Block::new_unmarked(
-                            block.marked_split,
-                            block.marked_split + *size,
-                        ));
-                        block.marked_split
-                    } else {
-                        // Use this as the zero block.
-                        self.blocks[block_index] =
-                            Block::new_unmarked(block.begin, block.begin + *size);
-                        block.begin
-                    }
-                } else {
-                    // Introduce a new block for every other non-empty block.
+                    // Introduce a new block for the zero block.
                     self.blocks
-                        .push(Block::new_unmarked(current, current + *size));
-                    current
-                };
+                        .push(Block::new_unmarked(block.marked_split, block.marked_split + *size));
+                    block.marked_split
+                } else {
+                    // Use this as the zero block.
+                    self.blocks[block_index] = Block::new_unmarked(block.begin, block.begin + *size);
+                    block.begin
+                }
+            } else {
+                // Introduce a new block for every other non-empty block.
+                self.blocks.push(Block::new_unmarked(current, current + *size));
+                current
+            };
 
-                let offset = current + *size;
-                *size = current;
-                offset
-            });
+            let offset = current + *size;
+            *size = current;
+            offset
+        });
         let block_offsets = &mut builder.block_sizes;
 
         for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
@@ -175,10 +168,7 @@ impl BlockPartition {
             if splitter(element) {
                 match &mut new_block {
                     None => {
-                        new_block = Some(Block::new_unmarked(
-                            updated_block.end - 1,
-                            updated_block.end,
-                        ));
+                        new_block = Some(Block::new_unmarked(updated_block.end - 1, updated_block.end));
 
                         // Swap the current element to the last place
                         self.swap_elements(element_index, updated_block.end - 1);
@@ -301,7 +291,10 @@ impl BlockPartition {
                     "Partition {self:?}, element {current_element} does not belong to block {block_index} as indicated by element_to_block");
 
                 let index = self.element_offset[current_element];
-                debug_assert_eq!(self.elements[index], current_element, "Partition {self:?}, element {current_element} does not have the correct offset in the block");
+                debug_assert_eq!(
+                    self.elements[index], current_element,
+                    "Partition {self:?}, element {current_element} does not have the correct offset in the block"
+                );
             }
         }
 
@@ -487,10 +480,7 @@ impl Block {
 
     /// Returns true iff the block is consistent.
     fn assert_consistent(self) {
-        debug_assert!(
-            self.begin < self.end,
-            "The range of block {self:?} is incorrect",
-        );
+        debug_assert!(self.begin < self.end, "The range of block {self:?} is incorrect",);
 
         debug_assert!(
             self.begin <= self.marked_split,

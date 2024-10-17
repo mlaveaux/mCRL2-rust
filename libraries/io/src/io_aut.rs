@@ -39,9 +39,9 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
     let mut lines = LineIterator::new(reader);
     lines.advance();
-    let header = lines.get().ok_or(IOError::InvalidHeader(
-        "The first line should be the header",
-    ))?;
+    let header = lines
+        .get()
+        .ok_or(IOError::InvalidHeader("The first line should be the header"))?;
 
     // Regex for des (<initial>: Nat, <num_of_states>: Nat, <num_of_transitions>: Nat)
     let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#)
@@ -82,7 +82,8 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
         // Try either of the transition regexes and otherwise return an error.transition_regex.
         // This is essentially a low level version of captures().extract() that does not allocate.
-        transition_regex.captures_read(&mut capture_locations, line)
+        transition_regex
+            .captures_read(&mut capture_locations, line)
             .ok_or(IOError::InvalidTransition())?;
 
         let (from_txt, label_txt, to_txt) = (
@@ -95,9 +96,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
         let from: usize = from_txt.parse()?;
         let to: usize = to_txt.parse()?;
 
-        let label_index = *labels_index
-            .entry(label_txt.to_string())
-            .or_insert(labels.len());
+        let label_index = *labels_index.entry(label_txt.to_string()).or_insert(labels.len());
 
         // Insert state when it does not exist, and then add the transition.
         if from >= states.len() {
@@ -145,10 +144,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 }
 
 /// Write a labelled transition system in plain text in Aldebaran format to the given writer.
-pub fn write_aut(
-    writer: &mut impl Write,
-    lts: &LabelledTransitionSystem,
-) -> Result<(), Box<dyn Error>> {
+pub fn write_aut(writer: &mut impl Write, lts: &LabelledTransitionSystem) -> Result<(), Box<dyn Error>> {
     writeln!(
         writer,
         "des ({}, {}, {})",
@@ -159,11 +155,17 @@ pub fn write_aut(
 
     for (state_index, state) in lts.iter_states() {
         for (label, to) in &state.outgoing {
-            writeln!(writer, "({}, \"{}\", {})", state_index, if lts.is_hidden_label(*label) {
-                "tau"
-            } else {
-                &lts.labels()[*label]
-            }, to)?;
+            writeln!(
+                writer,
+                "({}, \"{}\", {})",
+                state_index,
+                if lts.is_hidden_label(*label) {
+                    "tau"
+                } else {
+                    &lts.labels()[*label]
+                },
+                to
+            )?;
         }
     }
 

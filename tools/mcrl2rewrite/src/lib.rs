@@ -97,15 +97,10 @@ pub fn rewrite_data_spec(
 }
 
 /// Rewrites the given REC specification.
-pub fn rewrite_rec(
-    rewriter: Rewriter,
-    filename_specification: &str,
-    output: bool,
-) -> anyhow::Result<()> {
+pub fn rewrite_rec(rewriter: Rewriter, filename_specification: &str, output: bool) -> anyhow::Result<()> {
     let tp = Rc::new(RefCell::new(TermPool::new()));
 
-    let (syntax_spec, syntax_terms) =
-        load_REC_from_file(&mut tp.borrow_mut(), filename_specification.into()).unwrap();
+    let (syntax_spec, syntax_terms) = load_REC_from_file(&mut tp.borrow_mut(), filename_specification.into()).unwrap();
 
     let spec = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
 

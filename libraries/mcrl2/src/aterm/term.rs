@@ -410,9 +410,7 @@ impl<T> ATermList<T> {
 
     /// Returns an iterator over all elements in the list.
     pub fn iter(&self) -> ATermListIter<T> {
-        ATermListIter {
-            current: self.clone(),
-        }
+        ATermListIter { current: self.clone() }
     }
 }
 
@@ -494,11 +492,7 @@ pub struct ATermArgs<'a> {
 impl<'a> ATermArgs<'a> {
     fn new(term: ATermRef<'a>) -> ATermArgs<'a> {
         let arity = term.get_head_symbol().arity();
-        ATermArgs {
-            term,
-            arity,
-            index: 0,
-        }
+        ATermArgs { term, arity, index: 0 }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -610,14 +604,8 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         let mut result = t.iter();
-        assert_eq!(
-            result.next().unwrap(),
-            tp.from_string("f(g(a),b)").unwrap().copy()
-        );
-        assert_eq!(
-            result.next().unwrap(),
-            tp.from_string("g(a)").unwrap().copy()
-        );
+        assert_eq!(result.next().unwrap(), tp.from_string("f(g(a),b)").unwrap().copy());
+        assert_eq!(result.next().unwrap(), tp.from_string("g(a)").unwrap().copy());
         assert_eq!(result.next().unwrap(), tp.from_string("a").unwrap().copy());
         assert_eq!(result.next().unwrap(), tp.from_string("b").unwrap().copy());
     }

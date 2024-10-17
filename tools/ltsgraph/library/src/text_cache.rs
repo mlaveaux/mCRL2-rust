@@ -99,12 +99,9 @@ impl TextCache {
                             &path,
                             &paint,
                             tiny_skia::FillRule::Winding,
-                            Transform::from_translate(
-                                physical_glyph.x as f32,
-                                physical_glyph.y as f32,
-                            )
-                            .pre_scale(1.0, -1.0)
-                            .post_concat(transform),
+                            Transform::from_translate(physical_glyph.x as f32, physical_glyph.y as f32)
+                                .pre_scale(1.0, -1.0)
+                                .post_concat(transform),
                             None,
                         );
                     }
@@ -115,11 +112,8 @@ impl TextCache {
                         .get_image(&mut self.font_system, physical_glyph.cache_key)
                     {
                         let mut data = image.data.clone();
-                        let pixmap_image = PixmapMut::from_bytes(
-                            &mut data,
-                            image.placement.width,
-                            image.placement.height,
-                        );
+                        let pixmap_image =
+                            PixmapMut::from_bytes(&mut data, image.placement.width, image.placement.height);
 
                         pixmap.draw_pixmap(
                             0,

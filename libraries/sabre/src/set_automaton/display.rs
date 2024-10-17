@@ -91,10 +91,7 @@ impl<'a, M> fmt::Display for DotFormatter<'a, M> {
 
         for (i, s) in self.automaton.states.iter().enumerate() {
             let match_goals = s.match_goals.iter().format_with("\\n", |goal, f| {
-                f(&format_args!(
-                    "{}",
-                    html_escape::encode_safe(&format!("{}", goal))
-                ))
+                f(&format_args!("{}", html_escape::encode_safe(&format!("{}", goal))))
             });
 
             writeln!(
@@ -105,23 +102,13 @@ impl<'a, M> fmt::Display for DotFormatter<'a, M> {
         }
 
         for ((i, _), tr) in &self.automaton.transitions {
-            let announcements =
-                tr.announcements
-                    .iter()
-                    .format_with(", ", |(announcement, _), f| {
-                        f(&format_args!(
-                            "{}@{}",
-                            announcement.rule.rhs, announcement.position
-                        ))
-                    });
+            let announcements = tr.announcements.iter().format_with(", ", |(announcement, _), f| {
+                f(&format_args!("{}@{}", announcement.rule.rhs, announcement.position))
+            });
 
             if tr.destinations.is_empty() {
                 if self.show_final {
-                    writeln!(
-                        f,
-                        "  s{} -> final [label=\"{} \\[{}\\]\"]",
-                        i, tr.symbol, announcements
-                    )?;
+                    writeln!(f, "  s{} -> final [label=\"{} \\[{}\\]\"]", i, tr.symbol, announcements)?;
                 }
             } else {
                 writeln!(f, "  \"s{}{}\" [shape=point]", i, tr.symbol,).unwrap();
@@ -134,11 +121,7 @@ impl<'a, M> fmt::Display for DotFormatter<'a, M> {
                 for (pos, des) in &tr.destinations {
                     if self.show_backtransitions || *des != 0 {
                         // Hide backpointers to the initial state.
-                        writeln!(
-                            f,
-                            "  \"s{}{}\" -> s{} [label = \"{}\"]",
-                            i, tr.symbol, des, pos
-                        )?;
+                        writeln!(f, "  \"s{}{}\" -> s{} [label = \"{}\"]", i, tr.symbol, des, pos)?;
                     }
                 }
             }

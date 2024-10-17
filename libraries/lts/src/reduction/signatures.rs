@@ -65,7 +65,7 @@ pub fn strong_bisim_signature(
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();
-    
+
     for (label, to) in lts.outgoing_transitions(state_index) {
         builder.push((*label, partition.block_number(*to)));
     }
@@ -104,8 +104,7 @@ pub fn branching_bisim_signature(
                         visited.insert(*to_index);
                         stack.push(*to_index);
                     }
-                }
-                else {
+                } else {
                     //  pi(s) != pi(t)
                     builder.push((*label_index, partition.block_number(*to_index)));
                 }
@@ -146,7 +145,7 @@ pub fn branching_bisim_signature_sorted(
             builder.push((label_index, to_block));
         }
     }
-    
+
     // Compute the flat signature, which has Hash and is more compact.
     builder.sort_unstable();
     builder.dedup();
@@ -158,10 +157,9 @@ pub fn preprocess_branching(
     lts: &LabelledTransitionSystem,
     timing: &mut Timing,
 ) -> (LabelledTransitionSystem, IndexedPartition) {
-    
     let scc_partition = {
-let mut time = timing.start("scc_partition");
-        let partition = tau_scc_decomposition(lts);        
+        let mut time = timing.start("scc_partition");
+        let partition = tau_scc_decomposition(lts);
         time.finish();
         partition
     };

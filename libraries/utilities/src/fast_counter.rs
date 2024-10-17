@@ -32,32 +32,26 @@ impl ConcurrentCounter {
     #[inline]
     pub fn new(value: usize, number_of_threads: usize) -> Self {
         let number_of_threads = number_of_threads.next_power_of_two();
-        let cells: Vec<CachePadded<AtomicUsize>> = repeat_with(|| {
-            CachePadded::new(AtomicUsize::new(0))
-        }).take(number_of_threads).collect();
+        let cells: Vec<CachePadded<AtomicUsize>> = repeat_with(|| CachePadded::new(AtomicUsize::new(0)))
+            .take(number_of_threads)
+            .collect();
 
         // Make sure the initial value is correct.
         cells[0].store(value, Ordering::Relaxed);
 
-        Self {
-            cells
-        }
+        Self { cells }
     }
 
     /// Adds `value` to the counter.
     pub fn add(&self, value: usize) {
-        let c = self
-            .cells
-            .get(thread_id() & (self.cells.len() - 1)).unwrap();
+        let c = self.cells.get(thread_id() & (self.cells.len() - 1)).unwrap();
         c.fetch_add(value, Ordering::Relaxed);
     }
-    
+
     /// Computes the max of `value` and the counter.
     #[inline]
     pub fn max(&self, value: usize) {
-        let c = self
-            .cells
-            .get(thread_id() & (self.cells.len() - 1)).unwrap();
+        let c = self.cells.get(thread_id() & (self.cells.len() - 1)).unwrap();
         c.fetch_max(value, Ordering::Relaxed);
     }
 
@@ -118,7 +112,7 @@ mod tests {
         });
 
         assert_eq!(counter.sum(), THREAD_COUNT * WRITE_COUNT);
-        
+
         assert_eq!(
             format!("Counter is: {counter:?}"),
             "Counter is: ConcurrentCounter { sum: 8000000, shards: 8 }"

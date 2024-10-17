@@ -42,7 +42,7 @@ where
     for (state_index, _) in lts.iter_states() {
         if state_info[state_index].is_none() {
             trace!("State {state_index}");
-    
+
             strongly_connect(
                 state_index,
                 lts,
@@ -92,7 +92,7 @@ fn strongly_connect<F>(
     state_info: &mut Vec<Option<StateInfo>>,
 ) where
     F: Fn(usize, usize, usize) -> bool,
-{    
+{
     trace!("Visiting state {state_index}");
 
     state_info[state_index] = Some(StateInfo {
@@ -110,7 +110,7 @@ fn strongly_connect<F>(
     for (label_index, to_index) in lts.outgoing_transitions(state_index) {
         if filter(state_index, *label_index, *to_index) {
             if let Some(meta) = &mut state_info[*to_index] {
-                if meta.on_stack { 
+                if meta.on_stack {
                     // Successor w is in stack S and hence in the current SCC
                     // If w is not on stack, then (v, w) is an edge pointing to an SCC already found and must be ignored
                     // v.lowlink := min(v.lowlink, w.lowlink);
@@ -219,13 +219,16 @@ mod tests {
             // All other states in the same block should be reachable.
             let block = partitioning.block_number(state_index);
 
-            for (other_state_index, _) in lts.iter_states().filter(|(index, _)| state_index != *index && partitioning.block_number(*index) == block) {
+            for (other_state_index, _) in lts
+                .iter_states()
+                .filter(|(index, _)| state_index != *index && partitioning.block_number(*index) == block)
+            {
                 assert!(
                     reachable.contains(&other_state_index),
                     "State {state_index} and {other_state_index} should be connected"
                 );
             }
-        }   
+        }
 
         assert!(
             reduction.num_of_states() == tau_scc_decomposition(&reduction).num_of_blocks(),
@@ -238,7 +241,7 @@ mod tests {
         let states = vec![
             State::new(vec![(0, 2), (0, 4)]),
             State::new(vec![(0, 0)]),
-            State::new(vec![(0, 1),(1, 0)]),
+            State::new(vec![(0, 1), (1, 0)]),
             State::new(vec![]),
             State::new(vec![]),
         ];

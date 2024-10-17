@@ -23,7 +23,6 @@ pub trait Partition {
 
     /// Returns true iff the partitions are equal, runs in O(n^2)
     fn equal(&self, other: &impl Partition) -> bool {
-
         // Check that states in the same block, have a single (unique) number in
         // the other partition.
         for block_index in 0..self.num_of_blocks() {
@@ -40,7 +39,7 @@ pub trait Partition {
                 }
             }
         }
-        
+
         for block_index in 0..other.num_of_blocks() {
             let mut other_block_index = None;
 
@@ -75,8 +74,7 @@ pub fn quotient_lts(
         for (label, to) in &state.outgoing {
             // If we eliminate tau loops then check if the to and from end up in the same block
             if !eliminate_tau_loops
-                || !(lts.is_hidden_label(*label)
-                    && partition.block_number(state_index) == partition.block_number(*to))
+                || !(lts.is_hidden_label(*label) && partition.block_number(state_index) == partition.block_number(*to))
             {
                 debug_assert!(
                     partition.block_number(state_index) < partition.num_of_blocks(),

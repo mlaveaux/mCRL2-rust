@@ -64,10 +64,7 @@ pub mod ffi {
         /// # Safety
         /// The function symbol and arguments will not be modified unless
         /// garbage collection marks the terms, which is done atomically.
-        unsafe fn create_aterm(
-            function: *const _function_symbol,
-            arguments: &[*const _aterm],
-        ) -> *const _aterm;
+        unsafe fn create_aterm(function: *const _function_symbol, arguments: &[*const _aterm]) -> *const _aterm;
 
         /// Parses the given string and returns an aterm
         fn aterm_from_string(text: String) -> Result<UniquePtr<aterm>>;

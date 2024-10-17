@@ -9,8 +9,7 @@ use syn::ItemMod;
 
 pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
-    let mut ast: ItemMod =
-        syn::parse2(input.clone()).expect("mcrl2_term can only be applied to a module");
+    let mut ast: ItemMod = syn::parse2(input.clone()).expect("mcrl2_term can only be applied to a module");
 
     if let Some((_, content)) = &mut ast.content {
         // Generated code blocks are added to this list.
@@ -20,11 +19,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
             match item {
                 Item::Struct(object) => {
                     // If the struct is annotated with term we process it as a term.
-                    if let Some(attr) = object
-                        .attrs
-                        .iter()
-                        .find(|attr| attr.meta.path().is_ident("mcrl2_term"))
-                    {
+                    if let Some(attr) = object.attrs.iter().find(|attr| attr.meta.path().is_ident("mcrl2_term")) {
                         // The #term(assertion) annotation must contain an assertion
                         let assertion = match attr.parse_args::<syn::Ident>() {
                             Ok(assertion) => {
@@ -39,7 +34,9 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                         };
 
                         // Add the expected derive macros to the input struct.
-                        object.attrs.push(parse_quote!(#[derive(Clone, Default, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]));
+                        object
+                            .attrs
+                            .push(parse_quote!(#[derive(Clone, Default, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]));
 
                         // ALL structs in this module must contain the term.
                         assert!(
@@ -190,10 +187,9 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
 
                         // Remove ignore functions
                         ref_implementation.items.retain(|item| match item {
-                            syn::ImplItem::Fn(func) => !func
-                                .attrs
-                                .iter()
-                                .any(|attr| attr.meta.path().is_ident("mcrl2_ignore")),
+                            syn::ImplItem::Fn(func) => {
+                                !func.attrs.iter().any(|attr| attr.meta.path().is_ident("mcrl2_ignore"))
+                            }
                             _ => true,
                         });
 
@@ -202,8 +198,7 @@ pub(crate) fn mcrl2_derive_terms_impl(_attributes: TokenStream, input: TokenStre
                             let name_ref = format_ident!("{}Ref", path.path.get_ident().unwrap());
                             let path = parse_quote!(#name_ref <'_>);
 
-                            ref_implementation.self_ty =
-                                Box::new(syn::Type::Path(syn::TypePath { qself: None, path }));
+                            ref_implementation.self_ty = Box::new(syn::Type::Path(syn::TypePath { qself: None, path }));
 
                             added.push(Item::Verbatim(ref_implementation.into_token_stream()));
                         }

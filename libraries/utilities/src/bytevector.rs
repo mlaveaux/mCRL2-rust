@@ -1,4 +1,5 @@
-use std::{fmt, marker::PhantomData};
+use std::fmt;
+use std::marker::PhantomData;
 
 /// A vector data structure that stores objects in a byte compressed format
 #[derive(Debug, Default)]
@@ -150,7 +151,8 @@ impl Entry for usize {
 #[cfg(test)]
 mod tests {
     use crate::bytevec;
-    use rand::{distributions::Uniform, Rng};
+    use rand::distributions::Uniform;
+    use rand::Rng;
     use test_log::test;
 
     use super::*;

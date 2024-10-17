@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use glam::Vec3;
+use log::debug;
+use lts::LabelledTransitionSystem;
+use rand::Rng;
 use unsafety::index_edge;
 use unsafety::Edge;
-use lts::LabelledTransitionSystem;
-use log::debug;
-use rand::Rng;
 
 pub struct GraphLayout {
     // Store the underlying LTS to get the edges.
@@ -75,11 +75,7 @@ impl GraphLayout {
                         // Handle self loop, but we apply no forces in this case.
                     }
                     Edge::Regular(from_layout, to_layout) => {
-                        let force = compute_spring_force(
-                            &from_layout.position,
-                            &to_layout.position,
-                            handle_length,
-                        );
+                        let force = compute_spring_force(&from_layout.position, &to_layout.position, handle_length);
 
                         from_layout.force += force;
                         to_layout.force -= force;

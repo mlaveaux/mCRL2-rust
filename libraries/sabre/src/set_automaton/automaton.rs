@@ -69,11 +69,7 @@ enum GoalsOrInitial {
 }
 
 impl<M> SetAutomaton<M> {
-    pub fn new(
-        spec: &RewriteSpecification,
-        annotate: impl Fn(&Rule) -> M,
-        apma: bool,
-    ) -> SetAutomaton<M> {
+    pub fn new(spec: &RewriteSpecification, annotate: impl Fn(&Rule) -> M, apma: bool) -> SetAutomaton<M> {
         let start = Instant::now();
 
         // States are labelled s0, s1, s2, etcetera. state_counter keeps track of count.
@@ -150,10 +146,11 @@ impl<M> SetAutomaton<M> {
         // Pick a state to explore
         while let Some(s_index) = queue.pop_front() {
             for (symbol, arity) in &symbols {
-                let (mut announcements, pos_to_goals) = states
-                    .get(s_index)
-                    .unwrap()
-                    .derive_transition(symbol, *arity, &supported_rules, apma);
+                let (mut announcements, pos_to_goals) =
+                    states
+                        .get(s_index)
+                        .unwrap()
+                        .derive_transition(symbol, *arity, &supported_rules, apma);
 
                 announcements.sort_by(|ma1, ma2| ma1.position.cmp(&ma2.position));
 
@@ -229,10 +226,7 @@ impl<M> SetAutomaton<M> {
             (Instant::now() - start).as_millis()
         );
 
-        let result = SetAutomaton {
-            states,
-            transitions,
-        };
+        let result = SetAutomaton { states, transitions };
         debug!("{}", result);
 
         result
@@ -284,19 +278,12 @@ impl State {
         arity: usize,
         rewrite_rules: &Vec<Rule>,
         apma: bool,
-    ) -> (
-        Vec<MatchAnnouncement>,
-        Vec<(ExplicitPosition, GoalsOrInitial)>,
-    ) {
+    ) -> (Vec<MatchAnnouncement>, Vec<(ExplicitPosition, GoalsOrInitial)>) {
         // Computes the derivative containing the goals that are completed, unchanged and reduced
         let mut derivative = self.compute_derivative(symbol, arity);
 
         // The outputs/matching patterns of the transitions are those who are completed
-        let outputs = derivative
-            .completed
-            .into_iter()
-            .map(|x| x.announcement)
-            .collect();
+        let outputs = derivative.completed.into_iter().map(|x| x.announcement).collect();
 
         // The new match goals are the unchanged and reduced match goals.
         let mut new_match_goals = derivative.unchanged;
@@ -307,10 +294,7 @@ impl State {
         // with multiple endpoints
         if apma {
             if !new_match_goals.is_empty() {
-                destinations.push((
-                    ExplicitPosition::empty_pos(),
-                    GoalsOrInitial::Goals(new_match_goals),
-                ));
+                destinations.push((ExplicitPosition::empty_pos(), GoalsOrInitial::Goals(new_match_goals)));
             }
         } else {
             // In case we are building a set automaton we partition the match goals
@@ -408,9 +392,11 @@ impl State {
                 })
             {
                 result.completed.push(mg.clone());
-            } else if mg.obligations.iter().any(|mo| {
-                mo.position == self.label && mo.pattern.data_function_symbol() != symbol.copy()
-            }) {
+            } else if mg
+                .obligations
+                .iter()
+                .any(|mo| mo.position == self.label && mo.pattern.data_function_symbol() != symbol.copy())
+            {
                 // Match goal is discarded since head symbol does not match.
             } else if mg.obligations.iter().all(|mo| mo.position != self.label) {
                 // Unchanged match goals
@@ -426,12 +412,16 @@ impl State {
                 let mut new_obligations = vec![];
 
                 for mo in mg.obligations {
-                    if mo.pattern.data_function_symbol() == symbol.copy()
-                        && mo.position == self.label
-                    {
+                    if mo.pattern.data_function_symbol() == symbol.copy() && mo.position == self.label {
                         // Reduced match obligation
                         for (index, t) in mo.pattern.data_arguments().enumerate() {
-                            assert!(index < arity, "This pattern associates function symbol {:?} with different arities {} and {}", symbol, index+1, arity);
+                            assert!(
+                                index < arity,
+                                "This pattern associates function symbol {:?} with different arities {} and {}",
+                                symbol,
+                                index + 1,
+                                arity
+                            );
 
                             if !is_data_variable(&t) {
                                 let mut new_pos = mo.position.clone();
@@ -448,8 +438,7 @@ impl State {
                     }
                 }
 
-                new_obligations
-                    .sort_unstable_by(|mo1, mo2| mo1.position.len().cmp(&mo2.position.len()));
+                new_obligations.sort_unstable_by(|mo1, mo2| mo1.position.len().cmp(&mo2.position.len()));
                 mg.obligations = new_obligations;
                 mg.announcement.symbols_seen += 1;
 
@@ -524,11 +513,7 @@ impl State {
 
 /// Adds the given function symbol to the indexed symbols. Errors when a
 /// function symbol is overloaded with different arities.
-fn add_symbol(
-    function_symbol: DataFunctionSymbol,
-    arity: usize,
-    symbols: &mut HashMap<DataFunctionSymbol, usize>,
-) {
+fn add_symbol(function_symbol: DataFunctionSymbol, arity: usize, symbols: &mut HashMap<DataFunctionSymbol, usize>) {
     if let Some(x) = symbols.get(&function_symbol) {
         assert_eq!(
             *x, arity,
@@ -587,11 +572,7 @@ fn find_symbols(t: &DataExpressionRef<'_>, symbols: &mut HashMap<DataFunctionSym
             t
         );
 
-        add_symbol(
-            t.data_function_symbol().protect(),
-            t.data_arguments().len(),
-            symbols,
-        );
+        add_symbol(t.data_function_symbol().protect(), t.data_arguments().len(), symbols);
         for arg in t.data_arguments() {
             find_symbols(&arg.into(), symbols);
         }

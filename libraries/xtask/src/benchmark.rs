@@ -46,15 +46,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
 
     let mcrl2_rewrite_path = if rewriter == Rewriter::Innermost || rewriter == Rewriter::Sabre {
         // Build the tool with the correct settings
-        cmd!(
-            "cargo",
-            "build",
-            "--profile",
-            "bench",
-            "--bin",
-            "mcrl2rewrite"
-        )
-        .run()?;
+        cmd!("cargo", "build", "--profile", "bench", "--bin", "mcrl2rewrite").run()?;
 
         // Using which is a bit unnecessary, but it deals nicely with .exe on Windows and can also be used to do other searching.
         which::which_in("mcrl2rewrite", Some("target/release/"), cwd)?
@@ -65,9 +57,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
     let mcrl2_rewrite_timing = match rewriter {
         Rewriter::Innermost => Regex::new(r#"Innermost rewrite took ([0-9]*) ms"#)?,
         Rewriter::Sabre => Regex::new(r#"Sabre rewrite took ([0-9]*) ms"#)?,
-        Rewriter::Jitty | Rewriter::JittyCompiling => {
-            Regex::new(r#"rewriting: ([0-9]*) milliseconds."#)?
-        }
+        Rewriter::Jitty | Rewriter::JittyCompiling => Regex::new(r#"rewriting: ([0-9]*) milliseconds."#)?,
     };
 
     // Create the output directory before creating the file.
@@ -89,10 +79,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
             let benchmark_name = path.file_stem().unwrap().to_string_lossy();
             println!("Benchmarking {}", benchmark_name);
 
-            let mut arguments = vec![
-                "600".to_string(),
-                mcrl2_rewrite_path.to_string_lossy().to_string(),
-            ];
+            let mut arguments = vec!["600".to_string(), mcrl2_rewrite_path.to_string_lossy().to_string()];
 
             match rewriter {
                 Rewriter::Innermost => {
@@ -124,11 +111,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
 
             // Run the benchmarks several times until one of them fails
             for _ in 0..5 {
-                match cmd("timeout", &arguments)
-                    .stdout_capture()
-                    .stderr_capture()
-                    .run()
-                {
+                match cmd("timeout", &arguments).stdout_capture().stderr_capture().run() {
                     Ok(result) => {
                         // Parse the standard output to read the rewriting time and insert it into results.
                         for line in result.stdout.lines().chain(result.stderr.lines()) {
@@ -138,10 +121,7 @@ pub fn benchmark(output_path: impl AsRef<Path>, rewriter: Rewriter) -> Result<()
                                 let (_, [grp1]) = result.extract();
                                 let timing: f32 = grp1.parse()?;
 
-                                println!(
-                                    "Benchmark {} timing {} milliseconds",
-                                    benchmark_name, timing
-                                );
+                                println!("Benchmark {} timing {} milliseconds", benchmark_name, timing);
 
                                 // Write the output to the file and include a newline.
                                 measurements.timings.push(timing / 1000.0);

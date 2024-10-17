@@ -78,11 +78,7 @@ impl fmt::Display for IndexedPartition {
         for block_index in 0..self.partition.len() {
             // Print all elements with the same block number.
             let mut first_block = true;
-            for (element_index, _) in self
-                .iter()
-                .enumerate()
-                .filter(|(_, value)| *value == block_index)
-            {
+            for (element_index, _) in self.iter().enumerate().filter(|(_, value)| *value == block_index) {
                 if !first_block {
                     write!(f, ", ")?;
                 } else {

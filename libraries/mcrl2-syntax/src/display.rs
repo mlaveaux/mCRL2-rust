@@ -20,7 +20,15 @@ impl<'i, R: pest::RuleType> DisplayPair<'i, R> {
             true
         };
 
-        write!(f, "{}{:?}({}, {}, \"{}\"", indent, rule, span.start_pos().pos(), span.end_pos().pos(), span.as_str())?;
+        write!(
+            f,
+            "{}{:?}({}, {}, \"{}\"",
+            indent,
+            rule,
+            span.start_pos().pos(),
+            span.end_pos().pos(),
+            span.as_str()
+        )?;
         if children_possible {
             writeln!(f, ", [")?;
             for pair in self.0.clone().into_inner() {

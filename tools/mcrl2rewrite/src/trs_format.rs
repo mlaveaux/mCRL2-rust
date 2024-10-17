@@ -130,10 +130,7 @@ impl<'a> fmt::Display for TrsFormatter<'a> {
                 writeln!(
                     f,
                     "{}",
-                    output
-                        .replace('|', "bar")
-                        .replace('=', "eq")
-                        .replace("COND", "|")
+                    output.replace('|', "bar").replace('=', "eq").replace("COND", "|")
                 )?;
             }
         }
@@ -152,10 +149,7 @@ mod tests {
     #[test]
     fn test_convert_trs_format() {
         // Although we do not check the output simply convert a concrete term rewrite system as test.
-        let spec = DataSpecification::new(include_str!(
-            "../../../examples/REC/mcrl2/benchsym20.dataspec"
-        ))
-        .unwrap();
+        let spec = DataSpecification::new(include_str!("../../../examples/REC/mcrl2/benchsym20.dataspec")).unwrap();
         let trs = RewriteSpecification::from(spec);
 
         println!("{}", TrsFormatter::new(&trs));

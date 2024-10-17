@@ -40,9 +40,7 @@ pub fn write_u64_variablelength<W: Write>(
 
 ///  Decodes an unsigned variable-length integer using the MSB algorithm.
 #[allow(unused)]
-pub fn read_u64_variablelength<R: Read>(
-    stream: &mut BitReader<R, LittleEndian>,
-) -> Result<u64, Box<dyn Error>> {
+pub fn read_u64_variablelength<R: Read>(stream: &mut BitReader<R, LittleEndian>) -> Result<u64, Box<dyn Error>> {
     let mut value: u64 = 0;
     for i in 0..encoding_size::<u64>() {
         let byte = stream.read::<u8>(8)?;

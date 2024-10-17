@@ -48,11 +48,10 @@ impl<T: Read> StreamingIterator for LineIterator<T> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use std::io::Cursor;
 
     #[test]

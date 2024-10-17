@@ -1,6 +1,6 @@
-//! 
+//!
 //! This crate defines several macros to make ATerm data types work.
-//! 
+//!
 //! This crate does not use unsafe code.
 
 #![forbid(unsafe_code)]
@@ -34,18 +34,12 @@ pub fn mcrl2_derive_terms(
 
 /// Marks a struct as a term.
 #[proc_macro_attribute]
-pub fn mcrl2_term(
-    _attributes: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
+pub fn mcrl2_term(_attributes: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     input
 }
 
 /// Marks a function to be ignored, meaning the Ref term will not have this function
 #[proc_macro_attribute]
-pub fn mcrl2_ignore(
-    _attributes: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
+pub fn mcrl2_ignore(_attributes: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     input
 }

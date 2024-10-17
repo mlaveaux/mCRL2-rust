@@ -23,18 +23,13 @@ pub mod ffi {
         fn parse_data_specification(text: &str) -> Result<UniquePtr<data_specification>>;
 
         /// Parses the given text and typechecks it using the given data specification
-        fn parse_data_expression(
-            text: &str,
-            data_spec: &data_specification,
-        ) -> Result<UniquePtr<aterm>>;
+        fn parse_data_expression(text: &str, data_spec: &data_specification) -> Result<UniquePtr<aterm>>;
 
         /// Parses the given text v: Sort as a variable and typechecks it using the given data specification
         fn parse_variable(text: &str, data_spec: &data_specification) -> Result<UniquePtr<aterm>>;
 
         /// Returns the data equations for the given specification.
-        fn get_data_specification_equations(
-            data_spec: &data_specification,
-        ) -> UniquePtr<CxxVector<aterm>>;
+        fn get_data_specification_equations(data_spec: &data_specification) -> UniquePtr<CxxVector<aterm>>;
 
         /// Returns the data constructors for the given sort.
         unsafe fn get_data_specification_constructors(
@@ -46,20 +41,13 @@ pub mod ffi {
         fn create_jitty_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterJitty>;
 
         /// Creates an instance of the compiling jitty rewriter.
-        fn create_jitty_compiling_rewriter(
-            data_spec: &data_specification,
-        ) -> UniquePtr<RewriterCompilingJitty>;
+        fn create_jitty_compiling_rewriter(data_spec: &data_specification) -> UniquePtr<RewriterCompilingJitty>;
 
         /// Rewrites the given term to normal form.
-        unsafe fn rewrite(
-            rewriter: Pin<&mut RewriterJitty>,
-            term: *const _aterm,
-        ) -> UniquePtr<aterm>;
+        unsafe fn rewrite(rewriter: Pin<&mut RewriterJitty>, term: *const _aterm) -> UniquePtr<aterm>;
 
         /// Clone the data specification
-        fn data_specification_clone(
-            data_spec: &data_specification,
-        ) -> UniquePtr<data_specification>;
+        fn data_specification_clone(data_spec: &data_specification) -> UniquePtr<data_specification>;
 
         /// Obtain the index assigned internally to every data function symbol.
         unsafe fn get_data_function_symbol_index(term: *const _aterm) -> usize;

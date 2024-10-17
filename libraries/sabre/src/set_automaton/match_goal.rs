@@ -67,9 +67,7 @@ impl MatchGoal {
             };
             for mo_index in 0..goal.obligations.len() {
                 let shortened = ExplicitPosition {
-                    indices: SmallVec::from_slice(
-                        &goal.obligations.get(mo_index).unwrap().position.indices[len..],
-                    ),
+                    indices: SmallVec::from_slice(&goal.obligations.get(mo_index).unwrap().position.indices[len..]),
                 };
                 goal.obligations.get_mut(mo_index).unwrap().position = shortened;
             }
@@ -114,8 +112,7 @@ impl MatchGoal {
             }
 
             // Sort the positions. They are now in depth first order.
-            let mut all_positions: Vec<ExplicitPosition> =
-                position_to_goals.keys().cloned().collect();
+            let mut all_positions: Vec<ExplicitPosition> = position_to_goals.keys().cloned().collect();
             all_positions.sort_unstable();
 
             // Compute the partitions, finished when all positions are processed
@@ -137,9 +134,7 @@ impl MatchGoal {
                 // all subsequent positions will also not be comparable.
                 // Moreover, all positions in the partition are related to p. p is the highest in the partition.
                 p_index += 1;
-                while p_index < all_positions.len()
-                    && MatchGoal::pos_comparable(p, &all_positions[p_index])
-                {
+                while p_index < all_positions.len() && MatchGoal::pos_comparable(p, &all_positions[p_index]) {
                     pos_in_partition.push(all_positions[p_index].clone());
                     // Put the goals with position all_positions[p_index] in the partition
                     let g = position_to_goals.get(&all_positions[p_index]).unwrap();
@@ -172,11 +167,7 @@ impl MatchGoal {
 
     // Assumes two slices are of the same length and computes to what length they are equal
     fn common_prefix_length(pos1: &[usize], pos2: &[usize]) -> usize {
-        debug_assert_eq!(
-            pos1.len(),
-            pos2.len(),
-            "Given arrays should be of the same length."
-        );
+        debug_assert_eq!(pos1.len(), pos2.len(), "Given arrays should be of the same length.");
 
         let mut common_length = 0;
         for i in 0..pos1.len() {

@@ -94,12 +94,7 @@ impl InnermostRewriter {
             let top_of_stack = write_terms.len();
             write_configs.push(Config::Return());
             write_terms.push(DataExpressionRef::default());
-            InnermostStack::add_rewrite(
-                &mut write_configs,
-                &mut write_terms,
-                input_term.copy(),
-                top_of_stack,
-            );
+            InnermostStack::add_rewrite(&mut write_configs, &mut write_terms, input_term.copy(), top_of_stack);
         }
 
         loop {
@@ -122,12 +117,7 @@ impl InnermostRewriter {
                         }
 
                         let symbol = write_configs.protect(&symbol.into());
-                        InnermostStack::add_result(
-                            &mut write_configs,
-                            symbol.into(),
-                            arguments.len(),
-                            result,
-                        );
+                        InnermostStack::add_result(&mut write_configs, symbol.into(), arguments.len(), result);
                         for (offset, arg) in arguments.into_iter().enumerate() {
                             InnermostStack::add_rewrite(
                                 &mut write_configs,
@@ -156,9 +146,7 @@ impl InnermostRewriter {
                         drop(write_terms);
                         drop(write_configs);
 
-                        match InnermostRewriter::find_match(
-                            tp, stack, builder, stats, automaton, &term,
-                        ) {
+                        match InnermostRewriter::find_match(tp, stack, builder, stats, automaton, &term) {
                             Some((announcement, annotation)) => {
                                 trace!(
                                     "rewrite {} => {} using rule {}",
@@ -236,15 +224,10 @@ impl InnermostRewriter {
             let symbol = pos.data_function_symbol();
 
             // Get the transition for the label and check if there is a pattern match
-            if let Some(transition) = automaton
-                .transitions
-                .get(&(state_index, symbol.operation_id()))
-            {
+            if let Some(transition) = automaton.transitions.get(&(state_index, symbol.operation_id())) {
                 for (announcement, annotation) in &transition.announcements {
                     if check_equivalence_classes(t, &annotation.equivalence_classes)
-                        && InnermostRewriter::check_conditions(
-                            tp, stack, builder, stats, automaton, annotation, t,
-                        )
+                        && InnermostRewriter::check_conditions(tp, stack, builder, stats, automaton, annotation, t)
                     {
                         // We found a matching pattern
                         return Some((announcement, annotation));
@@ -279,8 +262,7 @@ impl InnermostRewriter {
             let rhs: DataExpression = c.semi_compressed_rhs.evaluate_with(builder, t, tp).into();
             let lhs: DataExpression = c.semi_compressed_lhs.evaluate_with(builder, t, tp).into();
 
-            let rhs_normal =
-                InnermostRewriter::rewrite_aux(tp, stack, builder, stats, automaton, rhs);
+            let rhs_normal = InnermostRewriter::rewrite_aux(tp, stack, builder, stats, automaton, rhs);
             let lhs_normal = if &lhs == tp.true_term() {
                 // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
                 lhs
@@ -349,9 +331,7 @@ mod tests {
     fn test_innermost_simple() {
         let tp = Rc::new(RefCell::new(TermPool::new()));
 
-        let spec = RewriteSpecification {
-            rewrite_rules: vec![],
-        };
+        let spec = RewriteSpecification { rewrite_rules: vec![] };
         let mut inner = InnermostRewriter::new(tp.clone(), &spec);
 
         let seed: u64 = rand::thread_rng().gen();

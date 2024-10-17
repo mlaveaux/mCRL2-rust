@@ -65,9 +65,5 @@ pub fn criterion_benchmark_layout(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    criterion_benchmark_viewer,
-    criterion_benchmark_layout,
-);
+criterion_group!(benches, criterion_benchmark_viewer, criterion_benchmark_layout,);
 criterion_main!(benches);

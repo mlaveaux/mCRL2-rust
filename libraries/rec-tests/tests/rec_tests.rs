@@ -46,8 +46,7 @@ use sabre::SabreRewriter;
 fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
     let tp = Rc::new(RefCell::new(TermPool::new()));
     let (spec, terms): (RewriteSpecification, Vec<DataExpression>) = {
-        let (syntax_spec, syntax_terms) =
-            load_REC_from_strings(&mut tp.borrow_mut(), &rec_files).unwrap();
+        let (syntax_spec, syntax_terms) = load_REC_from_strings(&mut tp.borrow_mut(), &rec_files).unwrap();
         let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
         (
             result,
@@ -65,12 +64,8 @@ fn rec_test(rec_files: Vec<&str>, expected_result: &str) {
     let mut expected = expected_result.split('\n');
 
     for term in &terms {
-        let expected_term = tp
-            .borrow_mut()
-            .from_string(expected.next().unwrap())
-            .unwrap();
-        let expected_result =
-            to_untyped_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
+        let expected_term = tp.borrow_mut().from_string(expected.next().unwrap()).unwrap();
+        let expected_result = to_untyped_data_expression(&mut tp.borrow_mut(), &expected_term, &AHashSet::new());
 
         let result = inner.rewrite(term.clone());
         assert_eq!(

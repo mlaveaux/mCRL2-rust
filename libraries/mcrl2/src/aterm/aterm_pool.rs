@@ -67,12 +67,7 @@ fn protect_with(
     let root = guard.protect(aterm.clone());
 
     let term = ATermRef::new(term);
-    trace!(
-        "Protected term {:?}, index {}, protection set {}",
-        term,
-        root,
-        index,
-    );
+    trace!("Protected term {:?}, index {}, protection set {}", term, root, index,);
 
     let result = ATerm::new(term, root);
 
@@ -90,8 +85,7 @@ fn protect_with(
 impl ThreadTermPool {
     pub fn new() -> ThreadTermPool {
         // Register a protection set into the global set.
-        let (protection_set, container_protection_set, index) =
-            GLOBAL_TERM_POOL.lock().register_thread_term_pool();
+        let (protection_set, container_protection_set, index) = GLOBAL_TERM_POOL.lock().register_thread_term_pool();
 
         ThreadTermPool {
             protection_set,
@@ -99,10 +93,7 @@ impl ThreadTermPool {
             index,
             gc_counter: TEST_GC_INTERVAL,
             data_appl: vec![],
-            _callback: ManuallyDrop::new(ffi::register_mark_callback(
-                mark_protection_sets,
-                protection_set_size,
-            )),
+            _callback: ManuallyDrop::new(ffi::register_mark_callback(mark_protection_sets, protection_set_size)),
         }
     }
 
@@ -120,17 +111,9 @@ impl ThreadTermPool {
 
     /// Protects the given aterm address and returns the term.
     pub fn protect_container(&mut self, container: Arc<dyn Markable + Send + Sync>) -> usize {
-        let root = unsafe {
-            self.container_protection_set
-                .write_exclusive()
-                .protect(container)
-        };
+        let root = unsafe { self.container_protection_set.write_exclusive().protect(container) };
 
-        trace!(
-            "Protected container index {}, protection set {}",
-            root,
-            self.index,
-        );
+        trace!("Protected container index {}, protection set {}", root, self.index,);
 
         root
     }
@@ -258,8 +241,7 @@ impl TermPool {
             unsafe {
                 // ThreadPool is not Sync, so only one has access.
                 let protection_set = tp.protection_set.write_exclusive();
-                let term: *const ffi::_aterm =
-                    ffi::create_aterm(symbol.borrow().address(), &self.arguments);
+                let term: *const ffi::_aterm = ffi::create_aterm(symbol.borrow().address(), &self.arguments);
                 protect_with(protection_set, &mut tp.gc_counter, tp.index, term)
             }
         });

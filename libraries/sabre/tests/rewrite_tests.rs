@@ -31,10 +31,7 @@ fn rewriter_test(data_spec: &str, expressions: &str, expected_result: &str) {
 
     let tp = Rc::new(RefCell::new(TermPool::new()));
     let spec = DataSpecification::new(data_spec).unwrap();
-    let terms: Vec<DataExpression> = expressions
-        .lines()
-        .map(|text| spec.parse(text).unwrap())
-        .collect();
+    let terms: Vec<DataExpression> = expressions.lines().map(|text| spec.parse(text).unwrap()).collect();
 
     // let mut sa = SabreRewriter::new(tp.clone(), &spec.clone().into());
     let mut inner = InnermostRewriter::new(tp.clone(), &spec.clone().into());

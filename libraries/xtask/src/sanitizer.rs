@@ -60,7 +60,6 @@ pub fn thread_sanitizer(cargo_arguments: Vec<String>) -> Result<(), Box<dyn Erro
         "unstable".to_string(),
     ];
 
-
     add_target_flag(&mut arguments);
     arguments.extend(cargo_arguments);
 

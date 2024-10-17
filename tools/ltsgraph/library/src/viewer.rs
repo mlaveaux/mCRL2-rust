@@ -81,20 +81,19 @@ impl Viewer {
                         0.0,
                         (index_selfloop as f32 / num_selfloops as f32) * 2.0 * std::f32::consts::PI,
                     );
-                    transition_view.handle_offset =
-                        rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));
+                    transition_view.handle_offset = rotation_mat.mul_vec3(Vec3::new(0.0, -40.0, 0.0));
 
                     index_selfloop += 1;
                 } else {
                     // Determine whether any of the outgoing edges from the reached state point back.
-                    let has_backtransition = lts.outgoing_transitions(*to)
+                    let has_backtransition = lts
+                        .outgoing_transitions(*to)
                         .filter(|(_, other_to)| *other_to == index)
                         .count()
                         > 0;
 
                     // Compute the number of transitions going to the same state.
-                    let num_transitions =
-                        state.outgoing.iter().filter(|(_, to)| *to == index).count();
+                    let num_transitions = state.outgoing.iter().filter(|(_, to)| *to == index).count();
 
                     if has_backtransition {
                         // Offset the outgoing transitions towards that state to the right.
@@ -208,11 +207,7 @@ impl Viewer {
                     edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
 
                     let direction = (state_view.position - to_state_view.position).normalize();
-                    let angle = -1.0
-                        * direction
-                            .xy()
-                            .angle_to(Vec2::new(0.0, -1.0))
-                            .to_degrees();
+                    let angle = -1.0 * direction.xy().angle_to(Vec2::new(0.0, -1.0)).to_degrees();
 
                     // Draw the arrow of the transition
                     if let Some(path) = arrow.clone().transform(
@@ -235,11 +230,7 @@ impl Viewer {
                 } else {
                     // This is a self loop so draw a circle around the middle of the position and the handle.
                     let middle = (2.0 * state_view.position + transition_view.handle_offset) / 2.0;
-                    edge_builder.push_circle(
-                        middle.x,
-                        middle.y,
-                        transition_view.handle_offset.length() / 2.0,
-                    );
+                    edge_builder.push_circle(middle.x, middle.y, transition_view.handle_offset.length() / 2.0);
 
                     // Draw the edge handle
                     edge_builder.push_circle(
@@ -256,21 +247,14 @@ impl Viewer {
                     self.text_cache.draw(
                         buffer,
                         pixmap,
-                        Transform::from_translate(label_position.x, label_position.y)
-                            .post_concat(view_transform),
+                        Transform::from_translate(label_position.x, label_position.y).post_concat(view_transform),
                     );
                 }
             }
         }
 
         if let Some(path) = arrow_builder.finish() {
-            pixmap.fill_path(
-                &path,
-                &edge_paint,
-                tiny_skia::FillRule::Winding,
-                view_transform,
-                None,
-            );
+            pixmap.fill_path(&path, &edge_paint, tiny_skia::FillRule::Winding, view_transform, None);
         }
 
         // Draw the path for edges.
@@ -283,16 +267,11 @@ impl Viewer {
 
         for (index, state_view) in self.view_states.iter().enumerate() {
             if index != self.lts.initial_state_index() {
-                state_path_builder.push_circle(
-                    state_view.position.x,
-                    state_view.position.y,
-                    state_radius,
-                );
+                state_path_builder.push_circle(state_view.position.x, state_view.position.y, state_radius);
             } else {
                 // Draw the colored states individually
                 let transform =
-                    Transform::from_translate(state_view.position.x, state_view.position.y)
-                        .post_concat(view_transform);
+                    Transform::from_translate(state_view.position.x, state_view.position.y).post_concat(view_transform);
 
                 pixmap.fill_path(
                     &circle,
@@ -316,13 +295,7 @@ impl Viewer {
                 None,
             );
 
-            pixmap.stroke_path(
-                &path,
-                &state_outer,
-                &Stroke::default(),
-                view_transform,
-                None,
-            );
+            pixmap.stroke_path(&path, &state_outer, &Stroke::default(), view_transform, None);
         }
     }
 }

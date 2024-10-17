@@ -154,10 +154,7 @@ impl<'a> ConfigurationStack<'a> {
             oldest_reliable_subterm: 0,
             substitution_builder: SubstitutionBuilder::default(),
         };
-        conf_list.stack.push(Configuration {
-            state,
-            position: None,
-        });
+        conf_list.stack.push(Configuration { state, position: None });
 
         let mut write_conf_list = conf_list.terms.write();
         let term = write_conf_list.protect(&term.copy().into());
@@ -174,9 +171,7 @@ impl<'a> ConfigurationStack<'a> {
 
     /// Returns the lowest configuration in the tree with SideInfo
     pub(crate) fn get_prev_with_side_info(&self) -> Option<usize> {
-        self.side_branch_stack
-            .last()
-            .map(|si| si.corresponding_configuration)
+        self.side_branch_stack.last().map(|si| si.corresponding_configuration)
     }
 
     /// Grow a Configuration with index c. tr_slice contains the hypertransition to possibly multiple states
@@ -253,9 +248,7 @@ impl<'a> ConfigurationStack<'a> {
                     break;
                 }
                 Some(sbi) => {
-                    if sbi.corresponding_configuration < end
-                        || (sbi.corresponding_configuration <= end && !including)
-                    {
+                    if sbi.corresponding_configuration < end || (sbi.corresponding_configuration <= end && !including) {
                         break;
                     } else {
                         self.side_branch_stack.pop();
@@ -280,12 +273,7 @@ impl<'a> ConfigurationStack<'a> {
     /// When going back up the configuration tree the subterms stored in the configuration tree must be updated
     /// This function ensures that the Configuration at depth 'end' is made up to date.
     /// If store_intermediate is true, all configurations below 'end' are also up to date.
-    pub fn integrate_updated_subterms(
-        &mut self,
-        end: usize,
-        tp: &mut TermPool,
-        store_intermediate: bool,
-    ) {
+    pub fn integrate_updated_subterms(&mut self, end: usize, tp: &mut TermPool, store_intermediate: bool) {
         // Check if there is anything to do. Start updating from self.oldest_reliable_subterm
         let mut up_to_date = self.oldest_reliable_subterm;
         if up_to_date == 0 || end >= up_to_date {
@@ -332,10 +320,7 @@ impl<'a> ConfigurationStack<'a> {
     }
 
     /// Returns a SideInfoType object if there is side info for the configuration with index 'leaf_index'
-    pub fn pop_side_branch_leaf(
-        stack: &mut Vec<SideInfo<'a>>,
-        leaf_index: usize,
-    ) -> Option<SideInfoType<'a>> {
+    pub fn pop_side_branch_leaf(stack: &mut Vec<SideInfo<'a>>, leaf_index: usize) -> Option<SideInfoType<'a>> {
         let should_pop = match stack.last() {
             None => false,
             Some(si) => si.corresponding_configuration == leaf_index,

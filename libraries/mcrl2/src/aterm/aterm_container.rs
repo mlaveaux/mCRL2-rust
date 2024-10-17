@@ -215,7 +215,9 @@ impl<'a, C: Markable> Protector<'a, C> {
             // Store terms that are marked as protected to check if they are
             // actually in the container when the protection is dropped.
             #[cfg(debug_assertions)]
-            self.protected.borrow_mut().push(transmute::<ATermRef<'_>, ATermRef<'static>>(term.copy()));
+            self.protected
+                .borrow_mut()
+                .push(transmute::<ATermRef<'_>, ATermRef<'static>>(term.copy()));
 
             transmute(term.copy())
         }

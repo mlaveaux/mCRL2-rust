@@ -62,10 +62,7 @@ pub fn criterion_benchmark_jitty(c: &mut Criterion) {
 }
 
 pub fn criterion_benchmark_set_automaton(c: &mut Criterion) {
-    for (name, rec_files) in [(
-        "hanoi8",
-        [include_str!("../../../../examples/REC/rec/fibfree.rec")],
-    )] {
+    for (name, rec_files) in [("hanoi8", [include_str!("../../../../examples/REC/rec/fibfree.rec")])] {
         let tp = Rc::new(RefCell::new(TermPool::new()));
         let (syntax_spec, _) = load_REC_from_strings(&mut tp.borrow_mut(), &rec_files).unwrap();
         let result = syntax_spec.to_rewrite_spec(&mut tp.borrow_mut());
@@ -84,9 +81,5 @@ pub fn criterion_benchmark_set_automaton(c: &mut Criterion) {
     }
 }
 
-criterion_group!(
-    benches,
-    criterion_benchmark_jitty,
-    criterion_benchmark_set_automaton,
-);
+criterion_group!(benches, criterion_benchmark_jitty, criterion_benchmark_set_automaton,);
 criterion_main!(benches);

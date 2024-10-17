@@ -31,10 +31,7 @@ impl LabelledTransitionSystem {
     ) -> LabelledTransitionSystem {
         // Check that the number of transitions has been provided correctly.
         debug_assert!(
-            states
-                .iter()
-                .fold(0, |previous, state| previous + state.outgoing.len())
-                == num_of_transitions,
+            states.iter().fold(0, |previous, state| previous + state.outgoing.len()) == num_of_transitions,
             "The number of transitions is not equal to the actual number of transitions."
         );
 
@@ -93,10 +90,7 @@ impl LabelledTransitionSystem {
     }
 
     /// Returns the set of outgoing transitions for the given state.
-    pub fn outgoing_transitions(
-        &self,
-        state_index: usize,
-    ) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
+    pub fn outgoing_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
         self.state(state_index).outgoing.iter()
     }
 

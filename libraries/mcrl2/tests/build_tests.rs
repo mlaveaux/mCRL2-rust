@@ -1,4 +1,3 @@
-
 #![cfg(not(feature = "unstable"))]
 mod tests {
     #[test]

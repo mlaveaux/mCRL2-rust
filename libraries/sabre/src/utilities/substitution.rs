@@ -58,8 +58,7 @@ fn substitute_rec(
     } else {
         // else recurse deeper into 't'
         let new_child_index = p[depth] - 1;
-        let new_child =
-            substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, args, depth + 1);
+        let new_child = substitute_rec(tp, &t.arg(new_child_index), new_subterm, p, args, depth + 1);
 
         let mut write_args = args.write();
         for (index, arg) in t.arguments().enumerate() {
@@ -82,11 +81,7 @@ fn substitute_rec(
 }
 
 /// Converts an [ATerm] to an untyped data expression.
-pub fn to_untyped_data_expression(
-    tp: &mut TermPool,
-    t: &ATerm,
-    variables: &AHashSet<String>,
-) -> DataExpression {
+pub fn to_untyped_data_expression(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> DataExpression {
     let mut builder = TermBuilder::<ATerm, ATerm>::new();
 
     builder
@@ -94,16 +89,11 @@ pub fn to_untyped_data_expression(
             tp,
             t.clone(),
             |tp, args, t| {
-                debug_assert!(
-                    !t.is_int(),
-                    "Term cannot be an aterm_int, although not sure why"
-                );
+                debug_assert!(!t.is_int(), "Term cannot be an aterm_int, although not sure why");
 
                 if variables.contains(t.get_head_symbol().name()) {
                     // Convert a constant variable, for example 'x', into an untyped variable.
-                    Ok(Yield::Term(
-                        DataVariable::new(tp, t.get_head_symbol().name()).into(),
-                    ))
+                    Ok(Yield::Term(DataVariable::new(tp, t.get_head_symbol().name()).into()))
                 } else if t.get_head_symbol().arity() == 0 {
                     Ok(Yield::Term(
                         DataFunctionSymbol::new(tp, t.get_head_symbol().name()).into(),
@@ -143,12 +133,7 @@ mod tests {
         let result = substitute(&mut term_pool, &t, t0.clone(), &vec![1, 1]);
 
         // Check that indeed the new term as a 0 at position 1.1.
-        assert_eq!(
-            t0,
-            result
-                .get_position(&ExplicitPosition::new(&vec![1, 1]))
-                .protect()
-        );
+        assert_eq!(t0, result.get_position(&ExplicitPosition::new(&vec![1, 1])).protect());
     }
 
     #[test]
@@ -157,7 +142,6 @@ mod tests {
 
         let t = term_pool.from_string("s(s(a))").unwrap();
 
-        let _expression =
-            to_untyped_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
+        let _expression = to_untyped_data_expression(&mut term_pool, &t, &AHashSet::from_iter(["a".to_string()]));
     }
 }

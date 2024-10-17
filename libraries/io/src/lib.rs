@@ -6,8 +6,8 @@
 
 #![forbid(unsafe_code)]
 
-mod progress;
 mod line_iterator;
+mod progress;
 
 pub mod io_aut;
 pub mod u64_variablelength;

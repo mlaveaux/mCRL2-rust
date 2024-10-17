@@ -58,13 +58,7 @@ impl<'a> fmt::Display for SymbolRef<'a> {
 
 impl<'a> fmt::Debug for SymbolRef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}:{} [{}]",
-            self.name(),
-            self.arity(),
-            self.address() as usize,
-        )
+        write!(f, "{}:{} [{}]", self.name(), self.arity(), self.address() as usize,)
     }
 }
 

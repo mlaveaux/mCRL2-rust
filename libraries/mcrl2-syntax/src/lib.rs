@@ -1,5 +1,7 @@
+use pest::pratt_parser::Assoc::*;
+use pest::pratt_parser::Op;
+use pest::pratt_parser::PrattParser;
 use pest_derive::Parser;
-use pest::pratt_parser::{Assoc::*, Op, PrattParser};
 
 mod display;
 
@@ -15,23 +17,22 @@ pub fn mcrl2_pratt_parser() -> PrattParser<Rule> {
         // Sort operators
         .op(Op::infix(Rule::SortExprProduct, Right))
         .op(Op::infix(Rule::SortExprFunction, Left))
-
         // DataExpression operators
         .op(Op::infix(Rule::DataExprAdd, Right))
 }
 
-
 #[cfg(test)]
 mod tests {
-    use pest::Parser;
     use indoc::indoc;
+    use pest::Parser;
 
-    use crate::{Mcrl2Parser, Rule};
+    use crate::Mcrl2Parser;
+    use crate::Rule;
 
     #[test]
     fn test_parse_term() {
         let term = "f(a, b)";
-        
+
         let result = Mcrl2Parser::parse(Rule::TermSpec, term).unwrap();
         print!("{}", result);
     }
@@ -39,7 +40,7 @@ mod tests {
     #[test]
     fn test_parse_ifthen() {
         let expr = "init a -> b -> c <> delta;";
-        
+
         let result = Mcrl2Parser::parse(Rule::MCRL2Spec, expr).unwrap();
         print!("{}", result);
     }
@@ -47,14 +48,14 @@ mod tests {
     #[test]
     fn test_parse_keywords() {
         let expr = "map or : Boolean # Boolean -> Boolean ;";
-        
+
         let result = Mcrl2Parser::parse(Rule::MCRL2Spec, expr).unwrap();
         print!("{}", result);
     }
-    
+
     #[test]
     fn test_parse_sort_spec() {
-        let sort_spec = indoc!{"
+        let sort_spec = indoc! {"
             sort D = Bool -> Int -> Bool;
             
 
@@ -78,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_parse_abp() {
-        let abp_spec = indoc!{"
+        let abp_spec = indoc! {"
             % This file contains the alternating bit protocol, as described 
             % J.F. Groote and M.R. Mousavi. Modeling and analysis of communicating
             % systems. The MIT Press, 2014.
@@ -119,10 +120,11 @@ mod tests {
             );
         "};
 
-       match Mcrl2Parser::parse(Rule::MCRL2Spec, abp_spec) {
+        match Mcrl2Parser::parse(Rule::MCRL2Spec, abp_spec) {
             Ok(x) => {
                 print!("{}", x);
-            }, Err(y) => {
+            }
+            Err(y) => {
                 panic!("{}", y);
             }
         }

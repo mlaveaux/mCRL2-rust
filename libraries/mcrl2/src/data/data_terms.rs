@@ -120,9 +120,7 @@ mod inner {
         ///     - application       f(t_0, ..., t_n) -> [t_0, ..., t_n]
         pub fn data_sort(&self) -> SortExpression {
             if is_data_function_symbol(&self.term) {
-                DataFunctionSymbolRef::from(self.term.copy())
-                    .sort()
-                    .protect()
+                DataFunctionSymbolRef::from(self.term.copy()).sort().protect()
             } else if is_data_variable(&self.term) {
                 DataVariableRef::from(self.term.copy()).sort().protect()
             } else {
@@ -156,9 +154,7 @@ mod inner {
         #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataFunctionSymbol {
             DataFunctionSymbol {
-                term: tp.create_with(|| {
-                    mcrl2_sys::data::ffi::create_data_function_symbol(name.to_string())
-                }),
+                term: tp.create_with(|| mcrl2_sys::data::ffi::create_data_function_symbol(name.to_string())),
             }
         }
 
@@ -204,23 +200,15 @@ mod inner {
         #[mcrl2_ignore]
         pub fn new(tp: &mut TermPool, name: &str) -> DataVariable {
             DataVariable {
-                term: tp
-                    .create_with(|| mcrl2_sys::data::ffi::create_data_variable(name.to_string())),
+                term: tp.create_with(|| mcrl2_sys::data::ffi::create_data_variable(name.to_string())),
             }
         }
 
         /// Create a variable with the given sort and name.
-        pub fn with_sort(
-            tp: &mut TermPool,
-            name: &str,
-            sort: &SortExpressionRef<'_>,
-        ) -> DataVariable {
+        pub fn with_sort(tp: &mut TermPool, name: &str, sort: &SortExpressionRef<'_>) -> DataVariable {
             DataVariable {
                 term: tp.create_with(|| unsafe {
-                    mcrl2_sys::data::ffi::create_sorted_data_variable(
-                        name.to_string(),
-                        sort.term.get(),
-                    )
+                    mcrl2_sys::data::ffi::create_sorted_data_variable(name.to_string(), sort.term.get())
                 }),
             }
         }

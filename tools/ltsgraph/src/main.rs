@@ -136,13 +136,8 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
 
                 // Resize the canvas when necessary
                 let settings_clone = settings.lock().unwrap().clone();
-                if pixel_buffer.width() != settings_clone.width
-                    || pixel_buffer.height() != settings_clone.height
-                {
-                    *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(
-                        settings_clone.width,
-                        settings_clone.height,
-                    );
+                if pixel_buffer.width() != settings_clone.width || pixel_buffer.height() != settings_clone.height {
+                    *pixel_buffer = SharedPixelBuffer::<Rgba8Pixel>::new(settings_clone.width, settings_clone.height);
                 }
 
                 viewer.render(
@@ -201,11 +196,7 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
                 let settings = settings.lock().unwrap().clone();
                 let mut layout = state.graph_layout.lock().unwrap();
 
-                is_stable = layout.update(
-                    settings.handle_length,
-                    settings.repulsion_strength,
-                    settings.delta,
-                );
+                is_stable = layout.update(settings.handle_length, settings.repulsion_strength, settings.delta);
                 if is_stable {
                     info!("Layout is stable!");
                 }
@@ -260,10 +251,7 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
                             render_handle.resume();
                         }
                         Err(x) => {
-                            error_dialog::show_error_dialog(
-                                "Failed to load LTS!",
-                                &format!("{}", x),
-                            );
+                            error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
                         }
                     }
                 }
@@ -329,11 +317,7 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
 
             invoke_from_event_loop(move || {
                 slint::spawn_local(async move {
-                    if let Some(handle) = rfd::AsyncFileDialog::new()
-                        .add_filter("", &["aut"])
-                        .pick_file()
-                        .await
-                    {
+                    if let Some(handle) = rfd::AsyncFileDialog::new().add_filter("", &["aut"]).pick_file().await {
                         load_lts(handle.path());
                     }
                 })

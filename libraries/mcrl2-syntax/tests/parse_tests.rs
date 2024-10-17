@@ -1,4 +1,5 @@
-use mcrl2_syntax::{Mcrl2Parser, Rule};
+use mcrl2_syntax::Mcrl2Parser;
+use mcrl2_syntax::Rule;
 use pest::Parser;
 use test_case::test_case;
 
@@ -169,13 +170,11 @@ use test_case::test_case;
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/timed/clock/clock_hasty.mcrl2") ; "clock_hasty.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/timed/clock/clock_exact.mcrl2") ; "clock_exact.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/timed/simple/simple.mcrl2") ; "simple.mcrl2")]
-fn test_parse_mcrl2_spec(input: &str)
-{       
+fn test_parse_mcrl2_spec(input: &str) {
     if let Err(y) = Mcrl2Parser::parse(Rule::MCRL2Spec, input) {
         panic!("{}", y);
     }
 }
-
 
 #[test_case(include_str!("../../../3rd-party/mCRL2/./examples/academic/abp/infinitely_often_enabled_then_infinitely_often_taken.mcf") ; "infinitely_often_enabled_then_infinitely_often_taken.mcf")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/./examples/academic/abp/infinitely_often_lost.mcf") ; "infinitely_often_lost.mcf")]
@@ -287,11 +286,10 @@ fn test_parse_mcrl2_spec(input: &str)
 #[test_case(include_str!("../../../3rd-party/mCRL2/./examples/software_models/Petersons_mutex/Petersons_F_F/properties/Bounded overtaking.mcf") ; "Bounded overtaking.mcf")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/./examples/software_models/Treiber_stack/Treiber_CAS/properties/Correct release implies correct retrieve.mcf") ; "Correct release implies correct retrieve.mcf")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/./examples/software_models/Treiber_stack/Treiber_CAS/properties/Inevitably retrieve when stacksize is 2.mcf") ; "Inevitably retrieve when stacksize is 2.mcf")]
-fn test_parse_mcrl2_modal_formula(input: &str)
-{
+fn test_parse_mcrl2_modal_formula(input: &str) {
     if let Err(y) = Mcrl2Parser::parse(Rule::StateFrmSpec, input) {
         panic!("{}", y);
-    }        
+    }
 }
 
 #[test_case(include_str!("../../../examples/REC/mcrl2/add8.dataspec") ; "add8")]
@@ -327,8 +325,7 @@ fn test_parse_mcrl2_modal_formula(input: &str)
 #[test_case(include_str!("../../../examples/REC/mcrl2/natlist.dataspec") ; "natlist")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/oddeven.dataspec") ; "oddeven")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/omul8.dataspec") ; "omul8")]
-fn test_parse_mcrl2_dataspec(input: &str)
-{        
+fn test_parse_mcrl2_dataspec(input: &str) {
     if let Err(y) = Mcrl2Parser::parse(Rule::MCRL2Spec, input) {
         panic!("{}", y);
     }

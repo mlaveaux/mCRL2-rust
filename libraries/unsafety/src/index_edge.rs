@@ -1,4 +1,3 @@
-
 /// An enum used to indicate an edge or a self loop.
 pub enum Edge<T> {
     Regular(T, T),

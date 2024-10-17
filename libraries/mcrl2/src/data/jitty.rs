@@ -38,20 +38,15 @@ mod tests {
 
     #[test]
     fn test_jitty() {
-        let spec = DataSpecification::new(&include_str!(
-            "../../../../examples/REC/mcrl2/revelt.dataspec"
-        ))
-        .unwrap();
-        let terms: Vec<DataExpression> =
-            include_str!("../../../../examples/REC/mcrl2/revelt.expressions")
-                .lines()
-                .map(|text| spec.parse(text).unwrap())
-                .collect();
+        let spec = DataSpecification::new(&include_str!("../../../../examples/REC/mcrl2/revelt.dataspec")).unwrap();
+        let terms: Vec<DataExpression> = include_str!("../../../../examples/REC/mcrl2/revelt.expressions")
+            .lines()
+            .map(|text| spec.parse(text).unwrap())
+            .collect();
 
         // let mut sa = SabreRewriter::new(tp.clone(), &spec.clone().into());
         let mut inner = JittyRewriter::new(&spec);
-        let mut expected =
-            include_str!("../../../sabre/tests/snapshot/result_revelt.txt").split('\n');
+        let mut expected = include_str!("../../../sabre/tests/snapshot/result_revelt.txt").split('\n');
 
         for term in &terms {
             let expected_result = spec.parse(expected.next().unwrap()).unwrap();

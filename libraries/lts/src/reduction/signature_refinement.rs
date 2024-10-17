@@ -61,13 +61,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     let partition = signature_refinement::<_, true>(
         &preprocessed_lts,
         |state_index, partition, state_to_signature, builder| {
-            branching_bisim_signature_sorted(
-                state_index,
-                &preprocessed_lts,
-                partition,
-                state_to_signature,
-                builder,
-            );
+            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -109,7 +103,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     // Combine the SCC partition with the branching bisimulation partition.
     let combined_partition = combine_partition(preprocess_partition, &partition);
     time.finish();
-    
+
     trace!("Final partition {combined_partition}");
     combined_partition
 }
@@ -126,13 +120,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
     let partition = signature_refinement_naive(
         &preprocessed_lts,
         |state_index, partition, state_to_signature, builder| {
-            branching_bisim_signature_sorted(
-                state_index,
-                &preprocessed_lts,
-                partition,
-                state_to_signature,
-                builder,
-            );
+            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -157,7 +145,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
     );
 
     // Combine the SCC partition with the branching bisimulation partition.
-    let combined_partition = combine_partition(preprocess_partition, &partition);    
+    let combined_partition = combine_partition(preprocess_partition, &partition);
     time.finish();
 
     trace!("Final partition {combined_partition}");
@@ -169,10 +157,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 /// The signature function is called for each state and should fill the
 /// signature builder with the signature of the state. It consists of the
 /// current partition, the signatures per state for the next partition.
-fn signature_refinement<F, const BRANCHING: bool>(
-    lts: &LabelledTransitionSystem,
-    mut signature: F,
-) -> BlockPartition
+fn signature_refinement<F, const BRANCHING: bool>(lts: &LabelledTransitionSystem, mut signature: F) -> BlockPartition
 where
     F: FnMut(usize, &BlockPartition, &Vec<Signature>, &mut SignatureBuilder),
 {
@@ -213,48 +198,43 @@ where
         );
 
         let mut new_id = 0;
-        for new_block_index in partition.partition_marked_with(
-            block_index,
-            &mut split_builder,
-            |state_index, partition| {
+        for new_block_index in
+            partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
                 // Compute the signature of a single state
                 signature(state_index, partition, &state_to_signature, &mut builder);
 
                 // Keep track of the index for every signature, either use the arena to allocate space or simply borrow the value.
-                let index =
-                    if let Some((signature, index)) = id.get_key_value(&Signature::new(&builder)) {
-                        state_to_signature[state_index] = Signature::new(signature.as_slice());
-                        *index
-                    } else {
-                        let slice = arena.alloc_slice_copy(&builder);
-                        id.insert(Signature::new(slice), new_id);
+                let index = if let Some((signature, index)) = id.get_key_value(&Signature::new(&builder)) {
+                    state_to_signature[state_index] = Signature::new(signature.as_slice());
+                    *index
+                } else {
+                    let slice = arena.alloc_slice_copy(&builder);
+                    id.insert(Signature::new(slice), new_id);
 
-                        // (branching)  Keep track of the signature for every block in the next partition.
-                        state_to_signature[state_index] = Signature::new(slice);
+                    // (branching)  Keep track of the signature for every block in the next partition.
+                    state_to_signature[state_index] = Signature::new(slice);
 
-                        let result = new_id;
-                        new_id += 1;
-                        result
-                    };
+                    let result = new_id;
+                    new_id += 1;
+                    result
+                };
 
                 trace!("State {state_index} signature {:?} index {index}", builder);
                 index
-            },
-        ) {
+            })
+        {
             if block_index != new_block_index {
                 // If this is a new block, mark the incoming states as dirty
                 states.clear();
                 states.extend(partition.iter_block(new_block_index));
 
                 for &state_index in &states {
-                    for &(label_index, incoming_state) in incoming.incoming_transitions(state_index)
-                    {
+                    for &(label_index, incoming_state) in incoming.incoming_transitions(state_index) {
                         if BRANCHING {
                             // Mark incoming states in other blocks, or visible actions.
-                            if !partition.is_element_marked(state_index)
-                                && (!lts.is_hidden_label(label_index)
-                                || partition.block_number(incoming_state)
-                                    != partition.block_number(state_index)) {
+                            if !lts.is_hidden_label(label_index)
+                                || partition.block_number(incoming_state) != partition.block_number(state_index)
+                            {
                                 mark_inert_tau(
                                     lts,
                                     &mut partition,
@@ -264,8 +244,8 @@ where
                                     incoming_state,
                                 );
                             }
-                        } else {   
-                            // In this case mark all incoming states.                      
+                        } else {
+                            // In this case mark all incoming states.
                             let other_block = partition.block_number(incoming_state);
 
                             if !partition.block(other_block).has_marked() {
@@ -280,22 +260,12 @@ where
                     if BRANCHING {
                         // If we have a tau transition that becomes visible (to the original block) then mark the state as dirty.
                         for &(label_index, to) in lts.outgoing_transitions(state_index) {
-                            if lts.is_hidden_label(label_index)
-                                && partition.block_number(to) == block_index
-                            {
-                                mark_inert_tau(
-                                    lts,
-                                    &mut partition,
-                                    &mut worklist,
-                                    &mut stack,
-                                    &incoming,
-                                    state_index,
-                                );
+                            if lts.is_hidden_label(label_index) && partition.block_number(to) == block_index {
+                                mark_inert_tau(lts, &mut partition, &mut worklist, &mut stack, &incoming, state_index);
                             }
                         }
                     }
                 }
-
             }
         }
 
@@ -304,16 +274,18 @@ where
         iteration += 1;
         if num_of_blocks != partition.num_of_blocks() {
             // Only print a message when new blocks have been found.
-            debug!(
-                "Iteration {iteration}, found {} blocks",
-                partition.num_of_blocks()
-            );
+            debug!("Iteration {iteration}, found {} blocks", partition.num_of_blocks());
         }
     }
 
     trace!("Refinement partition {partition}");
     debug_assert!(
-        is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(state_index, partition, &state_to_signature, builder)),
+        is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(
+            state_index,
+            partition,
+            &state_to_signature,
+            builder
+        )),
         "The resulting partition is not a valid partition."
     );
     partition
@@ -359,10 +331,7 @@ fn mark_inert_tau(
 /// The signature function is called for each state and should fill the
 /// signature builder with the signature of the state. It consists of the
 /// current partition, the signatures per state for the next partition.
-fn signature_refinement_naive<F>(
-    lts: &LabelledTransitionSystem,
-    mut signature: F,
-) -> IndexedPartition
+fn signature_refinement_naive<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
 where
     F: FnMut(usize, &IndexedPartition, &Vec<Signature>, &mut SignatureBuilder),
 {
@@ -428,25 +397,25 @@ where
 
     trace!("Refinement partition {partition}");
     debug_assert!(
-        is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(state_index, partition, &state_to_signature, builder)),
+        is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(
+            state_index,
+            partition,
+            &state_to_signature,
+            builder
+        )),
         "The resulting partition is not a valid partition."
     );
     partition
 }
 
 /// Returns true iff the given partition is a strong bisimulation partition
-pub fn is_valid_refinement<F, P>(
-    lts: &LabelledTransitionSystem,
-    partition: &P,
-    mut compute_signature: F,
-) -> bool
+pub fn is_valid_refinement<F, P>(lts: &LabelledTransitionSystem, partition: &P, mut compute_signature: F) -> bool
 where
     F: FnMut(usize, &P, &mut SignatureBuilder),
     P: Partition,
 {
     // Check that the partition is indeed stable and as such is a quotient of strong bisimulation
-    let mut block_to_signature: Vec<Option<SignatureBuilder>> =
-        vec![None; partition.num_of_blocks()];
+    let mut block_to_signature: Vec<Option<SignatureBuilder>> = vec![None; partition.num_of_blocks()];
 
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::default();
@@ -476,9 +445,7 @@ where
 
         if let Some(other_block_index) = signature_to_block.get(&Signature::new(signature)) {
             if block_index != *other_block_index {
-                trace!(
-                    "Block {block_index} and {other_block_index} have the same signature {signature:?}"
-                );
+                trace!("Block {block_index} and {other_block_index} have the same signature {signature:?}");
                 return false;
             }
         } else {
@@ -516,9 +483,7 @@ mod tests {
 
         for (state_index, _) in lts.iter_states() {
             for (other_state_index, _) in lts.iter_states() {
-                if strong_partition.block_number(state_index)
-                    == strong_partition.block_number(other_state_index)
-                {
+                if strong_partition.block_number(state_index) == strong_partition.block_number(other_state_index) {
                     // If the states are together according to branching bisimilarity, then they should also be together according to strong bisimilarity.
                     assert_eq!(
                         branching_partition.block_number(state_index),

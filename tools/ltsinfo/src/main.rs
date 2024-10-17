@@ -1,8 +1,19 @@
-use std::{error::Error, fs::File, io::{stdout, BufWriter}, process::ExitCode};
+use std::error::Error;
+use std::fs::File;
+use std::io::stdout;
+use std::io::BufWriter;
+use std::process::ExitCode;
 
-use clap::{Parser, ValueEnum};
-use io::io_aut::{read_aut, write_aut};
-use lts::{branching_bisim_sigref, branching_bisim_sigref_naive, quotient_lts, strong_bisim_sigref, strong_bisim_sigref_naive, IndexedPartition};
+use clap::Parser;
+use clap::ValueEnum;
+use io::io_aut::read_aut;
+use io::io_aut::write_aut;
+use lts::branching_bisim_sigref;
+use lts::branching_bisim_sigref_naive;
+use lts::quotient_lts;
+use lts::strong_bisim_sigref;
+use lts::strong_bisim_sigref_naive;
+use lts::IndexedPartition;
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
@@ -59,8 +70,12 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     };
 
     let mut quotient_time = timing.start("quotient");
-    let quotient_lts = quotient_lts(&lts, &partition, matches!(cli.equivalence, Equivalence::BranchingBisim) 
-        || matches!(cli.equivalence, Equivalence::BranchingBisimNaive));
+    let quotient_lts = quotient_lts(
+        &lts,
+        &partition,
+        matches!(cli.equivalence, Equivalence::BranchingBisim)
+            || matches!(cli.equivalence, Equivalence::BranchingBisimNaive),
+    );
     if let Some(file) = cli.output {
         let mut writer = BufWriter::new(File::create(file)?);
         write_aut(&mut writer, &quotient_lts)?;

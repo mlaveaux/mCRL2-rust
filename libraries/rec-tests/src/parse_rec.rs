@@ -73,9 +73,7 @@ fn parse_REC(
             rewrite_spec
                 .rewrite_rules
                 .extend_from_slice(&include_spec.rewrite_rules);
-            rewrite_spec
-                .constructors
-                .extend_from_slice(&include_spec.constructors);
+            rewrite_spec.constructors.extend_from_slice(&include_spec.constructors);
             for s in include_spec.variables {
                 if !rewrite_spec.variables.contains(&s) {
                     rewrite_spec.variables.push(s);
@@ -247,9 +245,7 @@ fn parse_term(tp: &mut TermPool, pair: Pair<Rule>) -> Result<ATerm, Box<dyn Erro
 
 // /Extracts data from parsed rewrite rule
 fn parse_rewrite_rule(tp: &mut TermPool, pair: Pair<Rule>) -> RewriteRuleSyntax {
-    debug_assert!(
-        pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule
-    );
+    debug_assert!(pair.as_rule() == Rule::single_rewrite_rule || pair.as_rule() == Rule::rewrite_rule);
 
     let mut inner = match pair.as_rule() {
         Rule::single_rewrite_rule => pair.into_inner().next().unwrap().into_inner(),
@@ -284,11 +280,7 @@ fn parse_rewrite_rule(tp: &mut TermPool, pair: Pair<Rule>) -> RewriteRuleSyntax 
         conditions.push(condition);
     }
 
-    RewriteRuleSyntax {
-        lhs,
-        rhs,
-        conditions,
-    }
+    RewriteRuleSyntax { lhs, rhs, conditions }
 }
 
 #[cfg(test)]
@@ -333,13 +325,10 @@ mod tests {
 
         let actual = parse_rewrite_rule(
             &mut tp,
-            RecParser::parse(
-                Rule::single_rewrite_rule,
-                "f(x,b) = g(x) if x = a and-if b = b",
-            )
-            .unwrap()
-            .next()
-            .unwrap(),
+            RecParser::parse(Rule::single_rewrite_rule, "f(x,b) = g(x) if x = a and-if b = b")
+                .unwrap()
+                .next()
+                .unwrap(),
         );
         assert_eq!(actual, expected);
     }
@@ -347,10 +336,7 @@ mod tests {
     #[test]
     fn test_variable_parsing() {
         let mut pairs = RecParser::parse(Rule::var_decl, "X Y Val Max : Nat").unwrap();
-        assert_eq!(
-            parse_var_decl(pairs.next().unwrap()),
-            vec!["X", "Y", "Val", "Max"]
-        );
+        assert_eq!(parse_var_decl(pairs.next().unwrap()), vec!["X", "Y", "Val", "Max"]);
     }
 
     #[test]

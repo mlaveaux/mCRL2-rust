@@ -1,9 +1,9 @@
 //! This is the reduction module.
-//! 
+//!
 //! It provides various functionalities for reducing labeled transition systems (LTS).
-//! The module includes different partitioning strategies, quotienting mechanisms, 
+//! The module includes different partitioning strategies, quotienting mechanisms,
 //! and other techniques to simplify and analyze LTS.
-//! 
+//!
 //!
 
 //mod strong_bisim_partition;

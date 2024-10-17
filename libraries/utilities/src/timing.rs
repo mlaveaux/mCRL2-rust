@@ -1,4 +1,6 @@
-use std::{cell::RefCell, rc::Rc, time::Instant};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::time::Instant;
 
 use log::debug;
 
@@ -16,10 +18,7 @@ pub struct Timer {
 impl Timer {
     pub fn finish(&mut self) {
         let time = self.start.elapsed().as_secs_f64();
-        debug!("Time {}: {:.3}s",
-            self.name,
-            time
-        );
+        debug!("Time {}: {:.3}s", self.name, time);
 
         // Register the result.
         self.results.borrow_mut().push((self.name.clone(), time as f32));
@@ -36,7 +35,6 @@ impl Drop for Timer {
 }
 
 impl Timing {
-
     /// Creates a new timing object to track timers.
     pub fn new() -> Self {
         Self {
@@ -60,5 +58,4 @@ impl Timing {
             eprintln!("Time {}: {:.3}s", name, time);
         }
     }
-    
 }

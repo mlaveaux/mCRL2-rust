@@ -9,9 +9,9 @@ fn main() {
     match Mcrl2Parser::parse(Rule::MCRL2Spec, input) {
         Err(y) => {
             panic!("{}", y);
-        },
+        }
         Ok(mut rule) => {
             println!("{}", DisplayPair(rule.next().unwrap()));
         }
-    } 
+    }
 }

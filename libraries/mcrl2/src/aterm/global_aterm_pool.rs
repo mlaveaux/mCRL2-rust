@@ -36,8 +36,7 @@ unsafe impl Send for ATermPtr {}
 pub(crate) type SharedProtectionSet = Arc<BfTermPool<ProtectionSet<ATermPtr>>>;
 
 /// The protection set for containers.
-pub(crate) type SharedContainerProtectionSet =
-    Arc<BfTermPool<ProtectionSet<Arc<dyn Markable + Sync + Send>>>>;
+pub(crate) type SharedContainerProtectionSet = Arc<BfTermPool<ProtectionSet<Arc<dyn Markable + Sync + Send>>>>;
 
 /// The single global (singleton) term pool.
 pub(crate) struct GlobalTermPool {
@@ -85,23 +84,16 @@ impl GlobalTermPool {
     }
 
     /// Register a new thread term pool to manage thread specific aspects.l
-    pub(crate) fn register_thread_term_pool(
-        &mut self,
-    ) -> (SharedProtectionSet, SharedContainerProtectionSet, usize) {
-        trace!(
-            "Registered ThreadTermPool {}",
-            self.thread_protection_sets.len()
-        );
+    pub(crate) fn register_thread_term_pool(&mut self) -> (SharedProtectionSet, SharedContainerProtectionSet, usize) {
+        trace!("Registered ThreadTermPool {}", self.thread_protection_sets.len());
 
         // Register a protection set into the global set.
         // TODO: use existing free spots.
         let protection_set = Arc::new(BfTermPool::new(ProtectionSet::new()));
-        self.thread_protection_sets
-            .push(Some(protection_set.clone()));
+        self.thread_protection_sets.push(Some(protection_set.clone()));
 
         let container_protection_set = Arc::new(BfTermPool::new(ProtectionSet::new()));
-        self.thread_container_sets
-            .push(Some(container_protection_set.clone()));
+        self.thread_container_sets.push(Some(container_protection_set.clone()));
 
         (
             protection_set,
@@ -230,8 +222,7 @@ impl Debug for GlobalTermPool {
 }
 
 /// This is the global set of protection sets that are managed by the ThreadTermPool
-pub(crate) static GLOBAL_TERM_POOL: Lazy<Mutex<GlobalTermPool>> =
-    Lazy::new(|| Mutex::new(GlobalTermPool::new()));
+pub(crate) static GLOBAL_TERM_POOL: Lazy<Mutex<GlobalTermPool>> = Lazy::new(|| Mutex::new(GlobalTermPool::new()));
 
 /// Marks the terms in all protection sets using the global aterm pool.
 pub(crate) fn mark_protection_sets(todo: Pin<&mut ffi::term_mark_stack>) {

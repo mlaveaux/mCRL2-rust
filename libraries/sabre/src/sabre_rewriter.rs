@@ -62,12 +62,8 @@ impl SabreRewriter {
     pub fn stack_based_normalise(&mut self, t: DataExpression) -> DataExpression {
         let mut stats = RewritingStatistics::default();
 
-        let result = SabreRewriter::stack_based_normalise_aux(
-            &mut self.term_pool.borrow_mut(),
-            &self.automaton,
-            t,
-            &mut stats,
-        );
+        let result =
+            SabreRewriter::stack_based_normalise_aux(&mut self.term_pool.borrow_mut(), &self.automaton, t, &mut stats);
         info!(
             "{} rewrites, {} single steps and {} symbol comparisons",
             stats.recursions, stats.rewrite_steps, stats.symbol_comparisons
@@ -100,42 +96,27 @@ impl SabreRewriter {
                     let read_terms = cs.terms.read();
                     let leaf_term = &read_terms[leaf_index];
 
-                    match ConfigurationStack::pop_side_branch_leaf(
-                        &mut cs.side_branch_stack,
-                        leaf_index,
-                    ) {
+                    match ConfigurationStack::pop_side_branch_leaf(&mut cs.side_branch_stack, leaf_index) {
                         None => {
                             // Observe a symbol according to the state label of the set automaton.
-                            let pos: DataExpressionRef = leaf_term
-                                .get_position(&automaton.states[leaf.state].label)
-                                .into();
+                            let pos: DataExpressionRef =
+                                leaf_term.get_position(&automaton.states[leaf.state].label).into();
 
                             let function_symbol = pos.data_function_symbol();
                             stats.symbol_comparisons += 1;
 
                             // Get the transition belonging to the observed symbol
-                            if let Some(tr) = automaton
-                                .transitions
-                                .get(&(leaf.state, function_symbol.operation_id()))
-                            {
+                            if let Some(tr) = automaton.transitions.get(&(leaf.state, function_symbol.operation_id())) {
                                 // Loop over the match announcements of the transition
                                 for (announcement, annotation) in &tr.announcements {
-                                    if annotation.conditions.is_empty()
-                                        && annotation.equivalence_classes.is_empty()
-                                    {
+                                    if annotation.conditions.is_empty() && annotation.equivalence_classes.is_empty() {
                                         if annotation.is_duplicating {
-                                            trace!(
-                                                "Delaying duplicating rule {}",
-                                                announcement.rule
-                                            );
+                                            trace!("Delaying duplicating rule {}", announcement.rule);
 
                                             // We do not want to apply duplicating rules straight away
                                             cs.side_branch_stack.push(SideInfo {
                                                 corresponding_configuration: leaf_index,
-                                                info: SideInfoType::DelayedRewriteRule(
-                                                    announcement,
-                                                    annotation,
-                                                ),
+                                                info: SideInfoType::DelayedRewriteRule(announcement, annotation),
                                             });
                                         } else {
                                             // For a rewrite rule that is not duplicating or has a condition we just apply it straight away
@@ -152,16 +133,10 @@ impl SabreRewriter {
                                         }
                                     } else {
                                         // We delay the condition checks
-                                        trace!(
-                                            "Delaying condition check for rule {}",
-                                            announcement.rule
-                                        );
+                                        trace!("Delaying condition check for rule {}", announcement.rule);
                                         cs.side_branch_stack.push(SideInfo {
                                             corresponding_configuration: leaf_index,
-                                            info: SideInfoType::EquivalenceAndConditionCheck(
-                                                announcement,
-                                                annotation,
-                                            ),
+                                            info: SideInfoType::EquivalenceAndConditionCheck(announcement, annotation),
                                         });
                                     }
                                 }
@@ -207,10 +182,7 @@ impl SabreRewriter {
                                         stats,
                                     );
                                 }
-                                SideInfoType::EquivalenceAndConditionCheck(
-                                    announcement,
-                                    annotation,
-                                ) => {
+                                SideInfoType::EquivalenceAndConditionCheck(announcement, annotation) => {
                                     // Apply the delayed rewrite rule if the conditions hold
                                     let t: &ATermRef<'_> = leaf_term;
                                     if check_equivalence_classes(t, &annotation.equivalence_classes)
@@ -270,7 +242,9 @@ impl SabreRewriter {
 
         trace!(
             "rewrote {} to {} using rule {}",
-            &leaf_subterm, &new_subterm, announcement.rule
+            &leaf_subterm,
+            &new_subterm,
+            announcement.rule
         );
 
         // The match announcement tells us how far we need to prune back.
@@ -295,8 +269,7 @@ impl SabreRewriter {
 
             // Equality => lhs == rhs.
             if !c.equality || lhs != rhs {
-                let rhs_normal =
-                    SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs, stats);
+                let rhs_normal = SabreRewriter::stack_based_normalise_aux(tp, automaton, rhs, stats);
                 let lhs_normal = if &lhs == tp.true_term() {
                     // TODO: Store the conditions in a better way. REC now uses a list of equalities while mCRL2 specifications have a simple condition.
                     lhs
@@ -305,9 +278,7 @@ impl SabreRewriter {
                 };
 
                 // If lhs != rhs && !equality OR equality && lhs == rhs.
-                if (!c.equality && lhs_normal == rhs_normal)
-                    || (c.equality && lhs_normal != rhs_normal)
-                {
+                if (!c.equality && lhs_normal == rhs_normal) || (c.equality && lhs_normal != rhs_normal) {
                     return false;
                 }
             }

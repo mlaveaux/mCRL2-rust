@@ -1,8 +1,10 @@
 use std::error::Error;
 
-use log::{debug, trace};
+use log::debug;
+use log::trace;
 
-use crate::{LabelledTransitionSystem, State};
+use crate::LabelledTransitionSystem;
+use crate::State;
 
 /// Returns a topological ordering of the states of the given LTS.
 ///
@@ -27,7 +29,8 @@ where
     let mut marks = vec![None; lts.num_of_states()];
 
     for (state_index, _) in lts.iter_states() {
-        if marks[state_index].is_none() && !sort_topological_visit(
+        if marks[state_index].is_none()
+            && !sort_topological_visit(
                 lts,
                 &filter,
                 state_index,
@@ -35,7 +38,8 @@ where
                 &mut marks,
                 &mut visited,
                 &mut stack,
-        ) {
+            )
+        {
             trace!("There is a cycle from state {state_index} on path {stack:?}");
             return Err("Labelled transition system contains a cycle".into());
         }
@@ -52,11 +56,11 @@ where
         reorder[state_index] = i;
     }
 
-    debug_assert!(is_topologically_sorted(lts, filter, |i| reorder[i], reverse), "The permutation {reorder:?} is not a valid topological ordering of the states of the given LTS: {lts:?}");
-    debug!(
-        "Time sort_topological: {:.3}s",
-        start.elapsed().as_secs_f64()
+    debug_assert!(
+        is_topologically_sorted(lts, filter, |i| reorder[i], reverse),
+        "The permutation {reorder:?} is not a valid topological ordering of the states of the given LTS: {lts:?}"
     );
+    debug!("Time sort_topological: {:.3}s", start.elapsed().as_secs_f64());
 
     Ok(reorder)
 }
@@ -74,9 +78,7 @@ where
 
         for (label, to_index) in &state.outgoing {
             let new_to_index = permutation(*to_index);
-            states[new_state_index]
-                .outgoing
-                .push((*label, new_to_index));
+            states[new_state_index].outgoing.push((*label, new_to_index));
         }
     }
 
@@ -146,12 +148,7 @@ where
 }
 
 /// Returns true if the given permutation is a topological ordering of the states of the given LTS.
-fn is_topologically_sorted<F, P>(
-    lts: &LabelledTransitionSystem,
-    filter: F,
-    permutation: P,
-    reverse: bool,
-) -> bool
+fn is_topologically_sorted<F, P>(lts: &LabelledTransitionSystem, filter: F, permutation: P, reverse: bool) -> bool
 where
     F: Fn(usize, usize) -> bool,
     P: Fn(usize) -> usize,
@@ -161,11 +158,7 @@ where
     // Check that each vertex appears before its successors.
     for (state_index, state) in lts.iter_states() {
         let state_order = permutation(state_index);
-        for (_, successor) in state
-            .outgoing
-            .iter()
-            .filter(|(label, to)| filter(*label, *to))
-        {
+        for (_, successor) in state.outgoing.iter().filter(|(label, to)| filter(*label, *to)) {
             if reverse {
                 if state_order <= permutation(*successor) {
                     return false;
@@ -217,12 +210,7 @@ mod tests {
     fn test_sort_topological_with_cycles() {
         let lts = random_lts(10, 3, 2);
         match sort_topological(&lts, |_, _| true, false) {
-            Ok(order) => assert!(is_topologically_sorted(
-                &lts,
-                |_, _| true,
-                |i| order[i],
-                false
-            )),
+            Ok(order) => assert!(is_topologically_sorted(&lts, |_, _| true, |i| order[i], false)),
             Err(_) => {}
         }
     }
@@ -266,10 +254,7 @@ mod tests {
             order
         };
 
-        assert!(is_valid_permutation(
-            &|i| valid_permutation[i],
-            valid_permutation.len()
-        ));
+        assert!(is_valid_permutation(&|i| valid_permutation[i], valid_permutation.len()));
 
         // Generate an invalid permutation (duplicate entries).
         let invalid_permutation = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 8];

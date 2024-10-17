@@ -48,11 +48,7 @@ struct RewriteArgs {
     #[arg(help = "File containing the terms to be rewritten.")]
     terms: Option<String>,
 
-    #[arg(
-        long = "output",
-        default_value_t = false,
-        help = "Print the rewritten term(s)"
-    )]
+    #[arg(long = "output", default_value_t = false, help = "Print the rewritten term(s)")]
     output: bool,
 }
 
@@ -79,13 +75,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
             } else {
                 match &args.terms {
                     Some(terms) => {
-                        rewrite_data_spec(
-                            tp.clone(),
-                            args.rewriter,
-                            &args.specification,
-                            terms,
-                            args.output,
-                        )?;
+                        rewrite_data_spec(tp.clone(), args.rewriter, &args.specification, terms, args.output)?;
                     }
                     None => {
                         warn!("No expressions given to rewrite!");

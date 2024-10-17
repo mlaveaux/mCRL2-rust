@@ -24,9 +24,7 @@ impl ExplicitPosition {
     }
 
     pub fn empty_pos() -> ExplicitPosition {
-        ExplicitPosition {
-            indices: smallvec![],
-        }
+        ExplicitPosition { indices: smallvec![] }
     }
 
     pub fn len(&self) -> usize {
@@ -39,7 +37,10 @@ impl ExplicitPosition {
 }
 
 impl PositionIndexed for ATermRef<'_> {
-    type Target<'a> = ATermRef<'a> where Self: 'a;
+    type Target<'a>
+        = ATermRef<'a>
+    where
+        Self: 'a;
 
     fn get_position<'a>(&'a self, position: &ExplicitPosition) -> Self::Target<'a> {
         let mut result = self.copy();
@@ -114,8 +115,7 @@ impl<'a> Iterator for PositionIterator<'a> {
             for (i, argument) in term.arguments().enumerate() {
                 let mut new_position = pos.clone();
                 new_position.indices.push(i + 1);
-                self.queue
-                    .push_back((argument.upgrade(&term), new_position));
+                self.queue.push_back((argument.upgrade(&term), new_position));
             }
 
             Some((term, pos))
@@ -135,10 +135,7 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
         let expected = tp.from_string("a").unwrap();
 
-        assert_eq!(
-            t.get_position(&ExplicitPosition::new(&[1, 1])),
-            expected.copy()
-        );
+        assert_eq!(t.get_position(&ExplicitPosition::new(&[1, 1])), expected.copy());
     }
 
     #[test]
@@ -147,7 +144,11 @@ mod tests {
         let t = tp.from_string("f(g(a),b)").unwrap();
 
         for (term, pos) in PositionIterator::new(t.copy()) {
-            assert_eq!(t.get_position(&pos), term, "The resulting (subterm, position) pair doesn't match the get_position implementation");
+            assert_eq!(
+                t.get_position(&pos),
+                term,
+                "The resulting (subterm, position) pair doesn't match the get_position implementation"
+            );
         }
 
         assert_eq!(

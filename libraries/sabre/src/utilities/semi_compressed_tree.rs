@@ -59,16 +59,10 @@ impl SemiCompressedTermTree {
     /// evaluate will encounter an ExplicitNode and make two recursive calls to get the subterms.
     /// Both these recursive calls will return the term '0'.
     /// The term pool will be used to construct the term minus(0, 0).
-    pub fn evaluate_with<'a>(
-        &'a self,
-        builder: &mut SCCTBuilder,
-        t: &ATermRef<'_>,
-        tp: &mut TermPool,
-    ) -> ATerm {
+    pub fn evaluate_with<'a>(&'a self, builder: &mut SCCTBuilder, t: &ATermRef<'_>, tp: &mut TermPool) -> ATerm {
         // TODO: Figure out if this can be done properly. This is safe because evaluate will always leave the
         // underlying vectors empty.
-        let builder: &mut TermBuilder<&'a SemiCompressedTermTree, &'a Symbol> =
-            unsafe { std::mem::transmute(builder) };
+        let builder: &mut TermBuilder<&'a SemiCompressedTermTree, &'a Symbol> = unsafe { std::mem::transmute(builder) };
 
         builder
             .evaluate(
@@ -272,10 +266,7 @@ mod tests {
         let sctt = SemiCompressedTermTree::from_term(&t, &map);
         let en = Explicit(ExplicitNode {
             head: tp.create_symbol("f", 2),
-            children: vec![
-                Compressed(compressible),
-                Variable(ExplicitPosition::new(&[2])),
-            ],
+            children: vec![Compressed(compressible), Variable(ExplicitPosition::new(&[2]))],
         });
         assert_eq!(sctt, en);
     }
@@ -325,9 +316,6 @@ mod tests {
         map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
 
         let sctt = SemiCompressedTermTree::from_term(&t_rhs, &map);
-        assert!(
-            sctt.contains_duplicate_var_references(),
-            "This sctt is duplicating"
-        );
+        assert!(sctt.contains_duplicate_var_references(), "This sctt is duplicating");
     }
 }
