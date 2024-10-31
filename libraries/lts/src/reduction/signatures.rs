@@ -33,6 +33,37 @@ impl Signature {
     }
 }
 
+impl Signature {
+    // Check if target is a subset of self, excluding a specific element
+    fn is_subset_of(&self, other: &[(usize,usize)], exclude: (usize, usize)) -> bool {
+        let mut self_iter = self.as_slice().iter();
+        let mut other_iter = other.iter().filter(|&&x| x != exclude);
+
+        let mut self_item: Option<&(usize, usize)> = self_iter.next();
+        let mut other_item = other_iter.next();
+
+        while let Some(&o) = other_item {
+            match self_item {
+                Some(&s) if s == o => {
+                    // Match found, move both iterators forward
+                    self_item = self_iter.next();
+                    other_item = other_iter.next();
+                },
+                Some(&s) if s < o => {
+                    // Move only self iterator forward
+                    self_item = self_iter.next();
+                },
+                _ => {
+                    // No match found in other for s
+                    return false;
+                }
+            }
+        }
+        // If we finished self_iter without returning false, self is a subset
+        true
+    }
+}
+
 impl Default for Signature {
     fn default() -> Self {
         Signature(&[])
@@ -125,7 +156,8 @@ pub fn branching_bisim_signature_sorted(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
-    state_to_signature: &[Signature],
+    state_to_key: &[usize],
+    key_to_signature: &[Signature],
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();
@@ -136,7 +168,7 @@ pub fn branching_bisim_signature_sorted(
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(label_index) {
                 // Inert tau transition, take signature from the outgoing tau-transition.
-                builder.extend(state_to_signature[to].as_slice());
+                builder.extend(key_to_signature[state_to_key[to]].as_slice());
             } else {
                 builder.push((label_index, to_block));
             }
@@ -149,6 +181,47 @@ pub fn branching_bisim_signature_sorted(
     // Compute the flat signature, which has Hash and is more compact.
     builder.sort_unstable();
     builder.dedup();
+}
+
+/// The input lts must contain no tau-cycles.
+pub fn branching_bisim_signature_inductive(
+    state_index: StateIndex,
+    lts: &LabelledTransitionSystem,
+    partition: &impl Partition,
+    state_to_key : &[usize],
+    key_to_signature: &[Signature],
+    builder: &mut SignatureBuilder,
+) {
+    builder.clear();
+    let mut stack:Vec<(usize,usize)> = Vec::new();
+    const N:usize = 100000;
+    for &(label_index, to) in lts.outgoing_transitions(state_index) {
+        let to_block = partition.block_number(to);
+
+        if partition.block_number(state_index) == to_block {
+            if lts.is_hidden_label(label_index) {
+                // Inert tau transition, take signature from the outgoing tau-transition.
+                builder.push((label_index, state_to_key[to] + N)); // 100000 because we should not overlap with block indices (fix this).
+                stack.push((label_index, state_to_key[to] + N));
+            } else {
+                builder.push((label_index, to_block));
+            }
+        } else {
+            // Visible action, add to the signature.
+            builder.push((label_index, to_block));
+        }
+    }
+
+    // Compute the flat signature, which has Hash and is more compact.
+    builder.sort_unstable();
+    builder.dedup();
+    // Check if the signature is a subset of the some signature on the stack
+    for (label_index, sig_index) in stack.iter() {
+        if key_to_signature[*sig_index - N].is_subset_of(&builder, (*label_index, *sig_index)) {
+            println!("Found subset: {:?} is subset of {:?}", builder, key_to_signature[*sig_index - N]);
+            return builder.clone_from_slice(key_to_signature[*sig_index - N].as_slice());
+        }
+    }
 }
 
 /// Perform the preprocessing necessary for branching bisimulation with the
