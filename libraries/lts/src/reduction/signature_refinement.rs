@@ -9,6 +9,7 @@ use utilities::Timing;
 
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_sorted;
+use crate::branching_bisim_signature_inductive;
 use crate::combine_partition;
 use crate::preprocess_branching;
 use crate::strong_bisim_signature;
@@ -24,7 +25,7 @@ use crate::SignatureBuilder;
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut time = timing.start("reduction");
-    let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, builder| {
+    let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
@@ -41,7 +42,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut time = timing.start("reduction");
-    let partition = signature_refinement_naive(lts, |state_index, partition, _, builder| {
+    let partition = signature_refinement_naive(lts, |state_index, partition, _, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
@@ -57,11 +58,10 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
-
     let partition = signature_refinement::<_, true>(
         &preprocessed_lts,
-        |state_index, partition, state_to_signature, builder| {
-            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder);
+        |state_index, partition, state_to_key, key_to_signature, builder| {
+            branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, key_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -87,7 +87,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
 
     debug_assert_eq!(
         partition,
-        signature_refinement_naive(&preprocessed_lts, |state_index, partition, _, builder| {
+        signature_refinement_naive(&preprocessed_lts, |state_index, partition, _, _, builder| {
             branching_bisim_signature(
                 state_index,
                 &preprocessed_lts,
@@ -119,8 +119,8 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 
     let partition = signature_refinement_naive(
         &preprocessed_lts,
-        |state_index, partition, state_to_signature, builder| {
-            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder);
+        |state_index, partition, state_to_key, key_to_signature, builder| {
+            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_key, key_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -159,7 +159,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 /// current partition, the signatures per state for the next partition.
 fn signature_refinement<F, const BRANCHING: bool>(lts: &LabelledTransitionSystem, mut signature: F) -> BlockPartition
 where
-    F: FnMut(usize, &BlockPartition, &Vec<Signature>, &mut SignatureBuilder),
+    F: FnMut(usize, &BlockPartition, &Vec<usize>, &Vec<Signature>, &mut SignatureBuilder),
 {
     trace!("{:?}", lts);
 
@@ -173,8 +173,10 @@ where
 
     // Assigns the signature to each state.
     let mut partition = BlockPartition::new(lts.num_of_states());
-    let mut state_to_signature: Vec<Signature> = Vec::new();
-    state_to_signature.resize_with(lts.num_of_states(), Signature::default);
+    let mut state_to_key: Vec<usize> = Vec::new();
+    state_to_key.resize_with(lts.num_of_states(), usize::default);
+    let mut key_to_signature: Vec<Signature> = Vec::new();
+    key_to_signature.resize_with(lts.num_of_states(), Signature::default);
 
     // Refine partitions until stable.
     let mut iteration = 0usize;
@@ -197,23 +199,23 @@ where
             "Every block in the worklist should have at least one marked state"
         );
 
+        // It might be safer to start counting at the fresh block number
         let mut new_id = 0;
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
                 // Compute the signature of a single state
-                signature(state_index, partition, &state_to_signature, &mut builder);
+                signature(state_index, partition, &state_to_key, &key_to_signature, &mut builder);
 
                 // Keep track of the index for every signature, either use the arena to allocate space or simply borrow the value.
                 let index = if let Some((signature, index)) = id.get_key_value(&Signature::new(&builder)) {
-                    state_to_signature[state_index] = Signature::new(signature.as_slice());
+                    state_to_key[state_index] = *index;
                     *index
                 } else {
                     let slice = arena.alloc_slice_copy(&builder);
                     id.insert(Signature::new(slice), new_id);
 
                     // (branching)  Keep track of the signature for every block in the next partition.
-                    state_to_signature[state_index] = Signature::new(slice);
-
+                    state_to_key[state_index] = new_id;
                     let result = new_id;
                     new_id += 1;
                     result
@@ -283,7 +285,8 @@ where
         is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(
             state_index,
             partition,
-            &state_to_signature,
+            &state_to_key,
+            &key_to_signature,
             builder
         )),
         "The resulting partition is not a valid partition."
@@ -333,7 +336,7 @@ fn mark_inert_tau(
 /// current partition, the signatures per state for the next partition.
 fn signature_refinement_naive<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
 where
-    F: FnMut(usize, &IndexedPartition, &Vec<Signature>, &mut SignatureBuilder),
+    F: FnMut(usize, &IndexedPartition, &Vec<usize>, &Vec<Signature>, &mut SignatureBuilder),
 {
     trace!("{:?}", lts);
 
@@ -347,8 +350,12 @@ where
     // Assigns the signature to each state.
     let mut partition = IndexedPartition::new(lts.num_of_states());
     let mut next_partition = IndexedPartition::new(lts.num_of_states());
-    let mut state_to_signature: Vec<Signature> = Vec::new();
-    state_to_signature.resize_with(lts.num_of_states(), Signature::default);
+    let mut state_to_key: Vec<usize> = Vec::new();
+    state_to_key.resize_with(lts.num_of_states(), usize::default);
+    let mut key_to_signature: Vec<Signature> = Vec::new();
+    // Num states is too much. 
+    key_to_signature.resize_with(lts.num_of_states(), Signature::default);
+
 
     // Refine partitions until stable.
     let mut old_count = 1;
@@ -367,21 +374,21 @@ where
 
         for (state_index, _) in lts.iter_states() {
             // Compute the signature of a single state
-            signature(state_index, &partition, &state_to_signature, &mut builder);
+            signature(state_index, &partition, &state_to_key, &key_to_signature, &mut builder);
 
             trace!("State {state_index} signature {:?}", builder);
 
             // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
             let mut new_id = id.len();
             if let Some((signature, index)) = id.get_key_value(&Signature::new(&builder)) {
-                state_to_signature[state_index] = Signature::new(signature.as_slice());
+                state_to_key[state_index]  = *index;
                 new_id = *index;
             } else {
                 let slice = arena.alloc_slice_copy(&builder);
                 id.insert(Signature::new(slice), new_id);
-
+                
                 // Keep track of the signature for every block in the next partition.
-                state_to_signature[state_index] = Signature::new(slice);
+                state_to_key[state_index] = new_id;
             }
 
             next_partition.set_block(state_index, new_id);
@@ -400,7 +407,8 @@ where
         is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(
             state_index,
             partition,
-            &state_to_signature,
+            &state_to_key,
+            &key_to_signature,
             builder
         )),
         "The resulting partition is not a valid partition."
