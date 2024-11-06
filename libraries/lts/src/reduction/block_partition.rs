@@ -111,8 +111,8 @@ impl BlockPartition {
                     block.marked_split
                 } else {
                     // Use this as the zero block.
-                    self.blocks[block_index] = Block::new_unmarked(block.begin, block.begin + *size);
-                    block.begin
+                self.blocks[block_index] = Block::new_unmarked(block.begin, block.begin + *size);
+                block.begin
                 }
             } else {
                 // Introduce a new block for every other non-empty block.
@@ -141,17 +141,15 @@ impl BlockPartition {
             block_offsets[*offset_block_index] += 1;
         }
 
+        // Swap the first block and the maximum sized block.
+        let max_block_index =  (block_index..=block_index).chain(end_of_blocks..self.blocks.len())
+            .max_by_key(|block_index| self.block(*block_index).len())
+            .unwrap();
+        self.swap_blocks(block_index, max_block_index);
+
         self.assert_consistent();
 
-        // If we have unmarked elements skip the current block, otherwise take
-        // the current block as first block.
-        let (first_index, rest_index) = if block.has_unmarked() {
-            (end_of_blocks, end_of_blocks + 1)
-        } else {
-            (block_index, end_of_blocks)
-        };
-
-        (first_index..=first_index).chain(rest_index..self.blocks.len())
+        (block_index..=block_index).chain(end_of_blocks..self.blocks.len())
     }
 
     /// Split the given block into two separate block based on the splitter
@@ -207,6 +205,26 @@ impl BlockPartition {
         }
 
         println!("{self:?}");
+        self.assert_consistent();
+    }
+
+    /// Swaps the given blocks given by the indices.
+    pub fn swap_blocks(&mut self, left_index: usize, right_index: usize) {
+        if left_index == right_index {
+            // Nothing to do.
+            return;
+        }
+
+        self.blocks.swap(left_index, right_index);
+
+        for element in self.block(left_index).iter(&self.elements) {
+            self.element_to_block[element] = left_index;
+        }
+
+        for element in self.block(right_index).iter(&self.elements) {
+            self.element_to_block[element] = right_index;
+        }
+
         self.assert_consistent();
     }
 
@@ -403,7 +421,7 @@ impl Block {
     }
 
     pub fn new_unmarked(begin: usize, end: usize) -> Block {
-        debug_assert!(begin < end, "The range of this block is incorrect");
+        debug_assert!(begin < end, "The range {begin} to {end} of this block is incorrect");
 
         Block {
             begin,
@@ -549,7 +567,6 @@ mod tests {
         }
 
         // Test the case where all elements belong to the split block.
-        print!("{partition}");
         partition.split_marked(1, |element| element < 7);
     }
 
@@ -560,17 +577,17 @@ mod tests {
         let mut builder = BlockPartitionBuilder::default();
 
         let _ = partition.partition_marked_with(0, &mut builder, |element, _| match element {
-            0..=3 => 0,
-            4..=6 => 1,
+            0..=1 => 0,
+            2..=6 => 1,
             _ => 2,
         });
 
-        partition.mark_element(4);
-        partition.mark_element(5);
-        partition.mark_element(6);
-        let _ = partition.partition_marked_with(1, &mut builder, |element, _| match element {
-            4..=5 => 0,
-            _ => 1,
+        partition.mark_element(7);
+        partition.mark_element(8);
+        let _ = partition.partition_marked_with(2, &mut builder, |element, _| match element {
+            7 => 0,
+            8 => 1,
+            _ => 2,
         });
     }
 }
