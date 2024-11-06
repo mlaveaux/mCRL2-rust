@@ -241,7 +241,6 @@ where
                                 || partition.block_number(incoming_state) != partition.block_number(state_index)
                             {
                                 mark_inert_tau(
-                                    lts,
                                     &mut partition,
                                     &mut worklist,
                                     &mut stack,
@@ -262,14 +261,14 @@ where
                         }
                     }
 
-                    if BRANCHING {
-                        // If we have a tau transition that becomes visible (to the original block) then mark the state as dirty.
-                        for &(label_index, to) in lts.outgoing_transitions(state_index) {
-                            if lts.is_hidden_label(label_index) && partition.block_number(to) == block_index {
-                                mark_inert_tau(lts, &mut partition, &mut worklist, &mut stack, &incoming, state_index);
-                            }
-                        }
-                    }
+                    // if BRANCHING {
+                    //     // If we have a tau transition that becomes visible (to the original block) then mark the state as dirty.
+                    //     for &(label_index, to) in lts.outgoing_transitions(state_index) {
+                    //         if lts.is_hidden_label(label_index) && partition.block_number(to) == block_index {
+                    //             mark_inert_tau( &mut partition, &mut worklist, &mut stack, &incoming, state_index);
+                    //         }
+                    //     }
+                    // }
                 }
             }
         }
@@ -300,7 +299,6 @@ where
 
 /// Marks the given state and all incoming (inert) tau transitions.
 fn mark_inert_tau(
-    lts: &LabelledTransitionSystem,
     partition: &mut BlockPartition,
     worklist: &mut Vec<usize>,
     stack: &mut Vec<usize>,
@@ -320,9 +318,8 @@ fn mark_inert_tau(
 
         partition.mark_element(state_index);
 
-        for &(label_index, incoming_state) in incoming.incoming_transitions(state_index) {
-            if lts.is_hidden_label(label_index)
-                && partition.block_number(state_index) == partition.block_number(incoming_state)
+        for &(_ , incoming_state) in incoming.incoming_silent_transitions(state_index) {
+            if partition.block_number(state_index) == partition.block_number(incoming_state)
                 && !partition.is_element_marked(incoming_state)
             {
                 // If this is a bottom state then it must be marked recursively.
