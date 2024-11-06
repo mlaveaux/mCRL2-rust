@@ -68,24 +68,18 @@ impl BlockPartition {
 
         // Keeps track of the block index for every element in this block by index.
         builder.index_to_block.clear();
-        builder.index_to_block.resize(block.len(), 0);
-
-        // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
         builder.block_sizes.clear();
         builder.old_elements.clear();
-        builder.old_elements.extend(block.iter(&self.elements));
+
+        builder.index_to_block.resize(block.len_marked(), 0);
+
+        // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
+        builder.old_elements.extend(block.iter_marked(&self.elements));
         builder.old_elements.sort_unstable();
 
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
         for (element_index, &element) in builder.old_elements.iter().enumerate() {
-            let number = if element_index <= block.marked_split {
-                0                
-            } else if block.has_unmarked() {
-                // Offset by one since 0 is the unmarked elements block.
-                partitioner(element, self) + 1
-            } else {
-                partitioner(element, self)
-            };
+            let number = partitioner(element, self);
 
             builder.index_to_block[element_index] = number;
             if number + 1 > builder.block_sizes.len() {
@@ -95,18 +89,31 @@ impl BlockPartition {
             builder.block_sizes[number] += 1;
         }
 
+        // Convert block sizes into block offsets.
         let end_of_blocks = self.blocks.len();
-
-        // Figure out the largest block, which must be kept stable.
-        let max_block_index = 0; //builder.block_sizes.iter().enumerate().max_by_key(|(_, &v)| v).unwrap().0;
-        builder.block_sizes.swap(max_block_index, 0);
+        let new_block_index = if block.has_unmarked() {
+            self.blocks.len()
+        } else {
+            self.blocks.len() - 1
+        };
 
         let _ = builder.block_sizes.iter_mut().fold(0usize, |current, size| {
             debug_assert!(*size > 0, "Partition is not dense, there are empty blocks");
 
             let current = if current == 0 {
+                if block.has_unmarked() {
+                    // Adapt the offsets of the current block to only include the unmarked elements.
+                    self.blocks[block_index] = Block::new_unmarked(block.begin, block.marked_split);
+
+                    // Introduce a new block for the zero block.
+                    self.blocks
+                        .push(Block::new_unmarked(block.marked_split, block.marked_split + *size));
+                    block.marked_split
+                } else {
+                    // Use this as the zero block.
                 self.blocks[block_index] = Block::new_unmarked(block.begin, block.begin + *size);
                 block.begin
+                }
             } else {
                 // Introduce a new block for every other non-empty block.
                 self.blocks.push(Block::new_unmarked(current, current + *size));
@@ -120,30 +127,28 @@ impl BlockPartition {
         let block_offsets = &mut builder.block_sizes;
 
         for (index, offset_block_index) in builder.index_to_block.iter().enumerate() {
-            // Swap the max block and the first block offsets.
-            let block_offset = match *offset_block_index {
-                0 => max_block_index,
-                i if i == max_block_index => 0,
-                _ => *offset_block_index,
-            };
-
             // Swap the element to the correct position.
-            let offset = block_offsets[block_offset];
             let element = builder.old_elements[index];
-            self.elements[offset] = builder.old_elements[index];
-            self.element_offset[element] = offset;
-
-            self.element_to_block[element] = if block_offset == 0 {
+            self.elements[block_offsets[*offset_block_index]] = builder.old_elements[index];
+            self.element_offset[element] = block_offsets[*offset_block_index];
+            self.element_to_block[element] = if *offset_block_index == 0 && !block.has_unmarked() {
                 block_index
             } else {
-                end_of_blocks + block_offset - 1
+                new_block_index + *offset_block_index
             };
 
             // Update the offset for this block.
-            block_offsets[block_offset] += 1;
+            block_offsets[*offset_block_index] += 1;
         }
 
+        // Swap the first block and the maximum sized block.
+        let max_block_index =  (block_index..=block_index).chain(end_of_blocks..self.blocks.len())
+            .max_by_key(|block_index| self.block(*block_index).len())
+            .unwrap();
+        self.swap_blocks(block_index, max_block_index);
+
         self.assert_consistent();
+
         (block_index..=block_index).chain(end_of_blocks..self.blocks.len())
     }
 
@@ -197,6 +202,27 @@ impl BlockPartition {
                     self.element_to_block[element] = self.blocks.len() - 1;
                 }
             }
+        }
+
+        println!("{self:?}");
+        self.assert_consistent();
+    }
+
+    /// Swaps the given blocks given by the indices.
+    pub fn swap_blocks(&mut self, left_index: usize, right_index: usize) {
+        if left_index == right_index {
+            // Nothing to do.
+            return;
+        }
+
+        self.blocks.swap(left_index, right_index);
+
+        for element in self.block(left_index).iter(&self.elements) {
+            self.element_to_block[element] = left_index;
+        }
+
+        for element in self.block(right_index).iter(&self.elements) {
+            self.element_to_block[element] = right_index;
         }
 
         self.assert_consistent();
