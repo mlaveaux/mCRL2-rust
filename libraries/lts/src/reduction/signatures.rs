@@ -190,11 +190,14 @@ pub fn branching_bisim_signature_inductive(
     partition: &impl Partition,
     state_to_key : &[usize],
     key_to_signature: &[Signature],
+    stack: &mut Vec<(usize,usize)>,
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();
-    let mut stack:Vec<(usize,usize)> = Vec::new();
-    const N:usize = 100000;
+    stack.clear();
+    debug_assert!(stack.is_empty(), "The stack should be empty");
+
+    let N:usize = lts.num_of_states(); //Magic number is hack.
     for &(label_index, to) in lts.outgoing_transitions(state_index) {
         let to_block = partition.block_number(to);
 
@@ -216,12 +219,13 @@ pub fn branching_bisim_signature_inductive(
     builder.sort_unstable();
     builder.dedup();
     // Check if the signature is a subset of the some signature on the stack
-    for (label_index, sig_index) in stack.iter() {
-        if key_to_signature[*sig_index - N].is_subset_of(&builder, (*label_index, *sig_index)) {
-            println!("Found subset: {:?} is subset of {:?}", builder, key_to_signature[*sig_index - N]);
-            return builder.clone_from_slice(key_to_signature[*sig_index - N].as_slice());
+    for &(label_index, sig_index) in stack.iter() {
+        if key_to_signature[sig_index - N].is_subset_of(&builder, (label_index, sig_index)) {
+            builder.clear();
+            builder.extend_from_slice(key_to_signature[sig_index - N].as_slice());
         }
     }
+    stack.clear();
 }
 
 /// Perform the preprocessing necessary for branching bisimulation with the
