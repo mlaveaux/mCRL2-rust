@@ -177,7 +177,7 @@ where
     let mut state_to_key: Vec<usize> = Vec::new();
     state_to_key.resize_with(lts.num_of_states(), usize::default);
     let mut key_to_signature: Vec<Signature> = Vec::new();
-    key_to_signature.resize_with(lts.num_of_states(), Signature::default);
+    // key_to_signature.resize_with(lts.num_of_states(), Signature::default);
     let mut silent_tau_stack: Vec<(usize,usize)> = Vec::new();
 
     // Refine partitions until stable.
@@ -193,6 +193,7 @@ where
     while let Some(block_index) = worklist.pop() {
         // Clear the current partition to start the next blocks.
         id.clear();
+        key_to_signature.clear();
 
         num_of_blocks = partition.num_of_blocks();
         let block = partition.block(block_index);
@@ -202,7 +203,6 @@ where
         );
 
         // It might be safer to start counting at the fresh block number
-        let mut new_id = 0;
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
                 // Compute the signature of a single state
@@ -214,13 +214,12 @@ where
                     *index
                 } else {
                     let slice = arena.alloc_slice_copy(&builder);
-                    id.insert(Signature::new(slice), new_id);
-
+                    id.insert(Signature::new(slice), key_to_signature.len());
+                    
                     // (branching)  Keep track of the signature for every block in the next partition.
-                    state_to_key[state_index] = new_id;
-                    key_to_signature[new_id] = Signature::new(slice);
-                    let result = new_id;
-                    new_id += 1;
+                    state_to_key[state_index] = key_to_signature.len();
+                    let result = key_to_signature.len();
+                    key_to_signature.push(Signature::new(slice));
                     result
                 };
 
