@@ -351,6 +351,9 @@ impl Partition for BlockPartition {
     fn len(&self) -> usize {
         self.elements.len()
     }
+    fn is_element_marked(&self, element: usize) -> bool {
+        self.is_element_marked(element)
+    }
 }
 
 impl PartialEq<IndexedPartition> for BlockPartition {

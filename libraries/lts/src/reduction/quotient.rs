@@ -23,6 +23,8 @@ pub trait Partition {
         self.len() == 0
     }
 
+    fn is_element_marked(&self, state_index: usize) -> bool;
+
     /// Returns true iff the partitions are equal, runs in O(n^2)
     fn equal(&self, other: &impl Partition) -> bool {
         // Check that states in the same block, have a single (unique) number in
