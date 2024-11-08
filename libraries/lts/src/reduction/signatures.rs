@@ -196,16 +196,21 @@ pub fn branching_bisim_signature_inductive(
     builder.clear();
     stack.clear();
     debug_assert!(stack.is_empty(), "The stack should be empty");
-
-    let n:usize = lts.num_of_states(); //Magic number is hack.
+    
+    let n:usize = lts.num_of_states() + 1; //Magic number is hack.
     for &(label_index, to) in lts.outgoing_transitions(state_index) {
         let to_block = partition.block_number(to);
 
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(label_index) {
-                // Inert tau transition, take signature from the outgoing tau-transition.
-                builder.push((label_index, state_to_key[to] + n)); // 100000 because we should not overlap with block indices (fix this).
-                stack.push((label_index, state_to_key[to] + n));
+                // Is it marked?
+                if partition.is_element_marked(to) {
+                    // Inert tau transition, take signature from the outgoing tau-transition.
+                    builder.push((label_index, state_to_key[to] + n)); // 100000 because we should not overlap with block indices (fix this).
+                    stack.push((label_index, state_to_key[to] + n));
+                } else {
+                    builder.push((label_index, to_block));
+                }
             } else {
                 builder.push((label_index, to_block));
             }
