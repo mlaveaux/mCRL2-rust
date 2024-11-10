@@ -29,15 +29,15 @@ impl IncomingTransitions {
             count += *end;
             *start = count-*silent;
             *end = count;
-            *silent = 0;
+            *silent = count;
         }
 
         for (state_index, state) in lts.iter_states() {
             for (label_index, to) in &state.outgoing {
                 if lts.is_hidden_label(*label_index) {
                     //Place at end of incoming transitions.
-                    state2incoming[*to].2 += 1;
-                    incoming_transitions[state2incoming[*to].1 - state2incoming[*to].2] = (*label_index, state_index);
+                    state2incoming[*to].2 -= 1;
+                    incoming_transitions[state2incoming[*to].2] = (*label_index, state_index);
                 } else {
                     state2incoming[*to].0 -= 1;
                     incoming_transitions[state2incoming[*to].0] = (*label_index, state_index);
@@ -59,7 +59,7 @@ impl IncomingTransitions {
     }
 
     pub fn incoming_silent_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)>  {
-        self.incoming_transitions[self.state2incoming[state_index].1-self.state2incoming[state_index].2 .. self.state2incoming[state_index].1].iter()
+        self.incoming_transitions[self.state2incoming[state_index].2 .. self.state2incoming[state_index].1].iter()
     }
 }
 

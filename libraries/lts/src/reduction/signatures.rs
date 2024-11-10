@@ -35,7 +35,7 @@ impl Signature {
 
 impl Signature {
     // Check if target is a subset of self, excluding a specific element
-    fn is_subset_of(&self, other: &[(usize,usize)], exclude: (usize, usize)) -> bool {
+    pub fn is_subset_of(&self, other: &[(usize,usize)], exclude: (usize, usize)) -> bool {
         let mut self_iter = self.as_slice().iter();
         let mut other_iter = other.iter().filter(|&&x| x != exclude);
 
@@ -54,7 +54,7 @@ impl Signature {
                     self_item = self_iter.next();
                 },
                 _ => {
-                    // No match found in other for s
+                    // No match found in self for o
                     return false;
                 }
             }
@@ -189,28 +189,18 @@ pub fn branching_bisim_signature_inductive(
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
     state_to_key : &[usize],
-    key_to_signature: &[Signature],
-    stack: &mut Vec<(usize,usize)>,
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();
-    stack.clear();
-    debug_assert!(stack.is_empty(), "The stack should be empty");
     
-    let n:usize = lts.num_of_states() + 1; //Magic number is hack.
+    let num_act:usize = lts.num_of_labels(); //this label index does not occur.
     for &(label_index, to) in lts.outgoing_transitions(state_index) {
         let to_block = partition.block_number(to);
 
         if partition.block_number(state_index) == to_block {
-            if lts.is_hidden_label(label_index) {
-                // Is it marked?
-                if partition.is_element_marked(to) {
-                    // Inert tau transition, take signature from the outgoing tau-transition.
-                    builder.push((label_index, state_to_key[to] + n)); // 100000 because we should not overlap with block indices (fix this).
-                    stack.push((label_index, state_to_key[to] + n));
-                } else {
-                    builder.push((label_index, to_block));
-                }
+            if lts.is_hidden_label(label_index) && partition.is_element_marked(to) {
+                // Inert tau transition, take signature from the outgoing tau-transition.
+                builder.push((num_act, state_to_key[to])); 
             } else {
                 builder.push((label_index, to_block));
             }
@@ -223,14 +213,6 @@ pub fn branching_bisim_signature_inductive(
     // Compute the flat signature, which has Hash and is more compact.
     builder.sort_unstable();
     builder.dedup();
-    // Check if the signature is a subset of the some signature on the stack
-    for &(label_index, sig_index) in stack.iter() {
-        if key_to_signature[sig_index - n].is_subset_of(&builder, (label_index, sig_index)) {
-            builder.clear();
-            builder.extend_from_slice(key_to_signature[sig_index - n].as_slice());
-        }
-    }
-    stack.clear();
 }
 
 /// Perform the preprocessing necessary for branching bisimulation with the
