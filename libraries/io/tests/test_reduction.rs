@@ -1,6 +1,7 @@
 use lts::branching_bisim_sigref;
-use lts::quotient_lts;
+use lts::branching_bisim_sigref_naive;
 use lts::strong_bisim_sigref;
+use lts::strong_bisim_sigref_naive;
 use test_case::test_case;
 use utilities::Timing;
 
@@ -21,7 +22,10 @@ fn test_strong_bisimilation_reduction(input: &str) {
     let lts = read_aut(input.as_bytes(), vec!["tau".into()]).unwrap();
     let mut timing = Timing::new();
 
-    let _reduced_lts = quotient_lts(&lts, &strong_bisim_sigref(&lts, &mut timing), true);
+    let reduced = strong_bisim_sigref(&lts, &mut timing);
+    let naive_reduced = strong_bisim_sigref_naive(&lts, &mut timing);
+
+    assert_eq!(reduced, naive_reduced, "The partitions are not equal");
 }
 
 #[test_case(include_str!("../../../examples/lts/abp.aut") ; "abp.aut")]
@@ -39,5 +43,8 @@ fn test_branching_bisimilation_reduction(input: &str) {
     let lts = read_aut(input.as_bytes(), vec!["tau".into()]).unwrap();
     let mut timing = Timing::new();
 
-    let _reduced_lts = quotient_lts(&lts, &branching_bisim_sigref(&lts, &mut timing), true);
+    let reduced = branching_bisim_sigref(&lts, &mut timing);
+    let naive_reduced = branching_bisim_sigref_naive(&lts, &mut timing);
+
+    assert_eq!(reduced, naive_reduced, "The partitions are not equal");
 }
