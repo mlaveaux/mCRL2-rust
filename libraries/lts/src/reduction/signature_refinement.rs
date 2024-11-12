@@ -8,8 +8,8 @@ use rustc_hash::FxHashSet;
 use utilities::Timing;
 
 use crate::branching_bisim_signature;
-use crate::branching_bisim_signature_sorted;
 use crate::branching_bisim_signature_inductive;
+use crate::branching_bisim_signature_sorted;
 use crate::combine_partition;
 use crate::preprocess_branching;
 use crate::strong_bisim_signature;
@@ -60,9 +60,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
 
-    let partition = signature_refinement::<_, true>(
-        &preprocessed_lts,
-        |state_index, partition, state_to_key, builder| {
+    let partition =
+        signature_refinement::<_, true>(&preprocessed_lts, |state_index, partition, state_to_key, builder| {
             branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, builder);
 
             // Compute the expected signature, only used in debugging.
@@ -84,8 +83,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
                     "The sorted and expected signature should be the same"
                 );
             }
-        },
-    );
+        });
 
     debug_assert_eq!(
         partition,
@@ -121,8 +119,15 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 
     let partition = signature_refinement_naive(
         &preprocessed_lts,
-        |state_index, partition, state_to_key, key_to_signature, builder| {
-            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_key, key_to_signature,  builder);
+        |state_index, partition, state_to_signature, builder| {
+            branching_bisim_signature_sorted(
+                state_index,
+                &preprocessed_lts,
+                partition,
+                state_to_key,
+                key_to_signature,
+                builder,
+            );
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -178,15 +183,16 @@ where
     let mut state_to_key: Vec<usize> = Vec::new();
     state_to_key.resize_with(lts.num_of_states(), usize::default);
     let mut key_to_signature: Vec<Signature> = Vec::new();
-    // key_to_signature.resize_with(lts.num_of_states(), Signature::default);
 
     // Refine partitions until stable.
     let mut iteration = 0usize;
     let mut num_of_blocks;
     let mut states = Vec::new();
 
-    // Used to keep track of dirty blocks.
+    // Keep back references.
     let incoming = IncomingTransitions::new(lts);
+
+    // Used to keep track of dirty blocks.
     let mut worklist = vec![0];
     let mut stack = Vec::new();
 
@@ -209,34 +215,39 @@ where
 
                 let mut maybe_index = None;
                 if BRANCHING {
-                    if let Some(&(label,key)) = &builder.last() {
-                        let label2nd = if builder.len() > 1 { builder[builder.len()-2].0 } else { 0 };
-                        if label == lts.num_of_labels() && label2nd != lts.num_of_labels() && key_to_signature[key].is_subset_of(&builder, (label,key)) {
+                    if let Some(&(label, key)) = &builder.last() {
+                        let label2nd = if builder.len() > 1 {
+                            builder[builder.len() - 2].0
+                        } else {
+                            0
+                        };
+
+                        if label == lts.num_of_labels()
+                            && label2nd != lts.num_of_labels()
+                            && key_to_signature[key].is_subset_of(&builder, (label, key))
+                        {
                             maybe_index = Some(key);
                         }
                     }
                 }
 
-                let index = 
-                    if let Some(somekey) = maybe_index 
-                    {
-                        let index = somekey;
-                        state_to_key[state_index] = somekey;
-                        index
-                    } else if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
-                        // Keep track of the index for every signature, either use the arena to allocate space or simply borrow the value.
-                            state_to_key[state_index] = *index;
-                            *index
-                    } else {
-                        let slice = arena.alloc_slice_copy(&builder);
-                        id.insert(Signature::new(slice), key_to_signature.len());
-                        
-                        // (branching)  Keep track of the signature for every block in the next partition.
-                        state_to_key[state_index] = key_to_signature.len();
-                        let result = key_to_signature.len();
-                        key_to_signature.push(Signature::new(slice));
-                        result
-                    };
+                let index = if let Some(key) = maybe_index {
+                    state_to_key[state_index] = key;
+                    key
+                } else if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
+                    // Keep track of the index for every signature, either use the arena to allocate space or simply borrow the value.
+                    state_to_key[state_index] = *index;
+                    *index
+                } else {
+                    let slice = arena.alloc_slice_copy(&builder);
+                    id.insert(Signature::new(slice), key_to_signature.len());
+
+                    // (branching)  Keep track of the signature for every block in the next partition.
+                    state_to_key[state_index] = key_to_signature.len();
+                    let result = key_to_signature.len();
+                    key_to_signature.push(Signature::new(slice));
+                    result
+                };
 
                 trace!("State {state_index} signature {:?} index {index}", builder);
                 index
@@ -254,13 +265,7 @@ where
                             if !lts.is_hidden_label(label_index)
                                 || partition.block_number(incoming_state) != partition.block_number(state_index)
                             {
-                                mark_inert_tau(
-                                    &mut partition,
-                                    &mut worklist,
-                                    &mut stack,
-                                    &incoming,
-                                    incoming_state,
-                                );
+                                mark_inert_tau(&mut partition, &mut worklist, &mut stack, &incoming, incoming_state);
                             }
                         } else {
                             // In this case mark all incoming states.
@@ -330,7 +335,7 @@ fn mark_inert_tau(
 
         partition.mark_element(state_index);
 
-        for &(_ , incoming_state) in incoming.incoming_silent_transitions(state_index) {
+        for &(_, incoming_state) in incoming.incoming_silent_transitions(state_index) {
             if partition.block_number(state_index) == partition.block_number(incoming_state)
                 && !partition.is_element_marked(incoming_state)
             {
@@ -349,7 +354,7 @@ fn mark_inert_tau(
 /// current partition, the signatures per state for the next partition.
 fn signature_refinement_naive<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
 where
-    F: FnMut(usize, &IndexedPartition, &Vec<usize>, &Vec<Signature>, &mut SignatureBuilder),
+    F: FnMut(usize, &IndexedPartition, &Vec<Signature>, &mut SignatureBuilder),
 {
     trace!("{:?}", lts);
 
@@ -363,12 +368,8 @@ where
     // Assigns the signature to each state.
     let mut partition = IndexedPartition::new(lts.num_of_states());
     let mut next_partition = IndexedPartition::new(lts.num_of_states());
-    let mut state_to_key: Vec<usize> = Vec::new();
-    state_to_key.resize_with(lts.num_of_states(), usize::default);
-    let mut key_to_signature: Vec<Signature> = Vec::new();
-    // Num states is too much. 
-    key_to_signature.resize_with(lts.num_of_states(), Signature::default);
-
+    let mut state_to_signature: Vec<Signature> = Vec::new();
+    state_to_signature.resize_with(lts.num_of_states(), Signature::default);
 
     // Refine partitions until stable.
     let mut old_count = 1;
@@ -387,21 +388,21 @@ where
 
         for (state_index, _) in lts.iter_states() {
             // Compute the signature of a single state
-            signature(state_index, &partition, &state_to_key, &key_to_signature, &mut builder);
+            signature(state_index, &partition, &state_to_signature, &mut builder);
 
             trace!("State {state_index} signature {:?}", builder);
 
             // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
             let mut new_id = id.len();
-            if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
-                state_to_key[state_index]  = *index;
+            if let Some((signature, index)) = id.get_key_value(&Signature::new(&builder)) {
+                state_to_signature[state_index] = Signature::new(signature.as_slice());
                 new_id = *index;
             } else {
                 let slice = arena.alloc_slice_copy(&builder);
                 id.insert(Signature::new(slice), new_id);
-                key_to_signature[new_id] = Signature::new(slice);
-                // Keep track of the signature for every block in the next partition.
-                state_to_key[state_index] = new_id;
+
+                // (branching) Keep track of the signature for every block in the next partition.
+                state_to_signature[state_index] = Signature::new(slice);
             }
 
             next_partition.set_block(state_index, new_id);
@@ -420,8 +421,7 @@ where
         is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(
             state_index,
             partition,
-            &state_to_key,
-            &key_to_signature,
+            &state_to_signature,
             builder
         )),
         "The resulting partition is not a valid partition."

@@ -168,7 +168,7 @@ pub fn branching_bisim_signature_sorted(
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(label_index) {
                 // Inert tau transition, take signature from the outgoing tau-transition.
-                builder.extend(key_to_signature[state_to_key[to]].as_slice());
+                builder.extend(state_to_signature[to].as_slice());
             } else {
                 builder.push((label_index, to_block));
             }
