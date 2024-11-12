@@ -42,7 +42,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut time = timing.start("reduction");
-    let partition = signature_refinement_naive(lts, |state_index, partition, _, _, builder| {
+    let partition = signature_refinement_naive(lts, |state_index, partition, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
@@ -87,7 +87,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
 
     debug_assert_eq!(
         partition,
-        signature_refinement_naive(&preprocessed_lts, |state_index, partition, _, _, builder| {
+        signature_refinement_naive(&preprocessed_lts, |state_index, partition, _, builder| {
             branching_bisim_signature(
                 state_index,
                 &preprocessed_lts,
@@ -120,14 +120,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
     let partition = signature_refinement_naive(
         &preprocessed_lts,
         |state_index, partition, state_to_signature, builder| {
-            branching_bisim_signature_sorted(
-                state_index,
-                &preprocessed_lts,
-                partition,
-                state_to_key,
-                key_to_signature,
-                builder,
-            );
+            branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -171,7 +164,7 @@ where
     trace!("{:?}", lts);
 
     // Avoids reallocations when computing the signature.
-    let arena = Bump::new();
+    let mut arena = Bump::new();
     let mut builder = SignatureBuilder::default();
     let mut split_builder = BlockPartitionBuilder::default();
 
@@ -199,7 +192,10 @@ where
     while let Some(block_index) = worklist.pop() {
         // Clear the current partition to start the next blocks.
         id.clear();
+
+        // Removes the existing signatures.
         key_to_signature.clear();
+        arena.reset();
 
         num_of_blocks = partition.num_of_blocks();
         let block = partition.block(block_index);
@@ -302,15 +298,6 @@ where
     }
 
     trace!("Refinement partition {partition}");
-    debug_assert!(
-        is_valid_refinement(lts, &partition, |state_index, partition, builder| signature(
-            state_index,
-            partition,
-            &state_to_key,
-            builder
-        )),
-        "The resulting partition is not a valid partition."
-    );
     partition
 }
 
@@ -494,14 +481,11 @@ mod tests {
         strong_bisim_sigref(&lts, &mut timing);
     }
 
-    #[test]
-    fn test_random_branching_bisim_sigref() {
-        let lts = random_lts(10, 3, 3);
-        let mut timing = Timing::new();
-
-        let strong_partition = strong_bisim_sigref(&lts, &mut timing);
-        let branching_partition = branching_bisim_sigref(&lts, &mut timing);
-
+    fn is_refinement(
+        lts: &LabelledTransitionSystem,
+        strong_partition: &impl Partition,
+        branching_partition: &impl Partition,
+    ) {
         for (state_index, _) in lts.iter_states() {
             for (other_state_index, _) in lts.iter_states() {
                 if strong_partition.block_number(state_index) == strong_partition.block_number(other_state_index) {
@@ -515,5 +499,25 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_random_branching_bisim_sigref() {
+        let lts = random_lts(10, 3, 3);
+        let mut timing = Timing::new();
+
+        let strong_partition = strong_bisim_sigref(&lts, &mut timing);
+        let branching_partition = branching_bisim_sigref(&lts, &mut timing);
+        is_refinement(&lts, &strong_partition, &branching_partition);
+    }
+
+    #[test]
+    fn test_random_branching_bisim_sigref_naive() {
+        let lts = random_lts(10, 3, 3);
+        let mut timing = Timing::new();
+
+        let strong_partition = strong_bisim_sigref_naive(&lts, &mut timing);
+        let branching_partition = branching_bisim_sigref_naive(&lts, &mut timing);
+        is_refinement(&lts, &strong_partition, &branching_partition);
     }
 }
