@@ -37,14 +37,14 @@ impl BlockPartition {
         }
     }
 
-    /// Partition the marked elements of the given block into multiple new
-    /// blocks based on the given partitioner; which returns a number for each
-    /// element. Elements with the same number belong to the same group, and
-    /// these numbers should be dense. Note that unmarked elements remain in the
-    /// existing block, and number 0 is a new block. If there are no unmarked
-    /// elements the current block is replaced.
+    /// Partition the elements of the given block into multiple new blocks based
+    /// on the given partitioner; which returns a number for each marked
+    /// element. Elements with the same number belong to the same block, and the
+    /// returned numbers should be dense.
     ///
-    /// Returns an iterator over the new block indices.
+    /// Returns an iterator over the new block indices, where the first element
+    /// is the index of the block that was partitioned. And that block is the
+    /// largest block.
     pub fn partition_marked_with<F>(
         &mut self,
         block_index: usize,
@@ -350,9 +350,6 @@ impl Partition for BlockPartition {
 
     fn len(&self) -> usize {
         self.elements.len()
-    }
-    fn is_element_marked(&self, element: usize) -> bool {
-        self.is_element_marked(element)
     }
 }
 
