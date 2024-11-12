@@ -14,7 +14,6 @@ pub struct LabelledTransitionSystem {
 
     labels: Vec<String>,
     hidden_labels: Vec<String>,
-    hidden_indices: Vec<usize>,
 
     initial_state: StateIndex,
 
@@ -24,7 +23,7 @@ pub struct LabelledTransitionSystem {
 impl LabelledTransitionSystem {
     pub fn new(
         initial_state: StateIndex,
-        states: Vec<State>,
+        mut states: Vec<State>,
         labels: Vec<String>,
         hidden_labels: Vec<String>,
         num_of_transitions: usize,
@@ -36,31 +35,32 @@ impl LabelledTransitionSystem {
         );
 
         // Check that the outgoing transitions are a function.
-        let num_of_states = states.len();
-        for (state_index, state) in states.iter().enumerate() {
-            let mut outgoing_dedup = state.outgoing.clone();
-            outgoing_dedup.sort_unstable();
-            outgoing_dedup.dedup();
+        if cfg!(debug_assertions) {
+            let num_of_states = states.len();
+            for (state_index, state) in states.iter().enumerate() {
+                let mut outgoing_dedup = state.outgoing.clone();
+                outgoing_dedup.sort_unstable();
+                outgoing_dedup.dedup();
 
-            debug_assert_eq!(
-                outgoing_dedup.len(),
-                state.outgoing.len(),
-                "State {state_index} has duplicated outgoing transitions {:?}",
-                state.outgoing
-            );
+                debug_assert_eq!(
+                    outgoing_dedup.len(),
+                    state.outgoing.len(),
+                    "State {state_index} has duplicated outgoing transitions {:?}",
+                    state.outgoing
+                );
 
-            debug_assert!(
-                state
-                    .outgoing
-                    .iter()
-                    .all(|(label, to)| *label < labels.len() && *to < num_of_states),
-                "State {state_index} has invalid outgoing transitions {:?}.",
-                state.outgoing
-            );
+                debug_assert!(
+                    state
+                        .outgoing
+                        .iter()
+                        .all(|(label, to)| *label < labels.len() && *to < num_of_states),
+                    "State {state_index} has invalid outgoing transitions {:?}.",
+                    state.outgoing
+                );
+            }
         }
 
-        // Keep track of which label indexes are hidden label for log(n) search.
-        // TODO: We could remap all labels to group them into hidden | visible, and keep track of the maximum index.
+        // Keep track of which label indexes are hidden labels.h.
         let mut hidden_indices: Vec<usize> = Vec::new();
         for label in &hidden_labels {
             if let Some(index) = labels.iter().position(|other| other == label) {
@@ -69,11 +69,19 @@ impl LabelledTransitionSystem {
         }
         hidden_indices.sort();
 
+        // Remap all hidden actions to zero.
+        for state in &mut states {
+            for (label, _) in &mut state.outgoing {
+                if let Ok(_) = hidden_indices.binary_search(label) {
+                    *label = 0;
+                }
+            }
+        }        
+
         LabelledTransitionSystem {
             initial_state,
             labels,
             hidden_labels,
-            hidden_indices,
             states,
             num_of_transitions,
         }
@@ -131,7 +139,7 @@ impl LabelledTransitionSystem {
 
     /// Returns true iff the given label index is a hidden label.
     pub fn is_hidden_label(&self, label_index: LabelIndex) -> bool {
-        self.hidden_indices.binary_search(&label_index).is_ok()
+        label_index == 0
     }
 }
 
