@@ -23,8 +23,6 @@ pub trait Partition {
         self.len() == 0
     }
 
-    fn is_element_marked(&self, state_index: usize) -> bool;
-
     /// Returns true iff the partitions are equal, runs in O(n^2)
     fn equal(&self, other: &impl Partition) -> bool {
         // Check that states in the same block, have a single (unique) number in
@@ -95,6 +93,7 @@ pub fn quotient_lts(
         }
     }
 
+    // Insert the transition into the original block.
     for &(from, label, to) in &transitions {
         states[from].outgoing.push((label, to));
     }

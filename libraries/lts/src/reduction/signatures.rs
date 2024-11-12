@@ -13,6 +13,7 @@ use super::reorder_partition;
 use super::reorder_states;
 use super::sort_topological;
 use super::tau_scc_decomposition;
+use super::BlockPartition;
 use super::IndexedPartition;
 
 /// The builder used to construct the signature.
@@ -156,8 +157,7 @@ pub fn branching_bisim_signature_sorted(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
     partition: &impl Partition,
-    state_to_key: &[usize],
-    key_to_signature: &[Signature],
+    state_to_signature: &[Signature],
     builder: &mut SignatureBuilder,
 ) {
     builder.clear();
@@ -187,7 +187,7 @@ pub fn branching_bisim_signature_sorted(
 pub fn branching_bisim_signature_inductive(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
-    partition: &impl Partition,
+    partition: &BlockPartition,
     state_to_key : &[usize],
     builder: &mut SignatureBuilder,
 ) {
