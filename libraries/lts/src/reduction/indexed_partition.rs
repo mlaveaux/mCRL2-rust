@@ -115,9 +115,4 @@ impl Partition for IndexedPartition {
     fn len(&self) -> usize {
         self.partition.len()
     }
-
-    fn is_element_marked(&self, _state_index: usize) -> bool {
-        // Indexed partitions do not support marking elements.
-        return true;
-    }
 }
