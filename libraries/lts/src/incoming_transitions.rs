@@ -6,60 +6,68 @@ use crate::StateIndex;
 /// state.
 pub struct IncomingTransitions {
     incoming_transitions: Vec<(LabelIndex, StateIndex)>,
-    state2incoming: Vec<(usize,usize,usize)>, // (start, end, silent)
+    state2incoming: Vec<TransitionIndex>,
+}
+
+#[derive(Default, Clone)]
+struct TransitionIndex {
+    start: usize,
+    end: usize,
+    silent: usize,
 }
 
 impl IncomingTransitions {
     pub fn new(lts: &LabelledTransitionSystem) -> IncomingTransitions {
         let mut incoming_transitions: Vec<(LabelIndex, StateIndex)> = vec![(0,0); lts.num_of_transitions()];
-        let mut state2incoming: Vec<(usize,usize,usize)> = vec![ (0,0,0); lts.num_of_states()];
+        let mut state2incoming: Vec<TransitionIndex> = vec![TransitionIndex::default(); lts.num_of_states()];
         
-        // Compute incoming transitions for all states.
+        // Compute the number of incoming (silent) transitions for each state.
         for (_, state) in lts.iter_states() {
             for (label_index, to) in &state.outgoing {
-                state2incoming[*to].1 += 1;
+                state2incoming[*to].end += 1;
                 if lts.is_hidden_label(*label_index) {
-                    state2incoming[*to].2 += 1;
+                    state2incoming[*to].silent += 1;
                 }
             }
         }
-        // Fold the counts in state2incoming (temporay mixing up the data structure).
-        let mut count = 0;
-        for (start, end, silent) in state2incoming.iter_mut() {
-            count += *end;
-            *start = count-*silent;
-            *end = count;
-            *silent = count;
-        }
+
+        // Fold the counts in state2incoming. Temporarily mixing up the data
+        // structure such that after placing the transitions below the counts
+        // will be correct.
+        state2incoming.iter_mut().fold(0, |count, index| {
+            let end = count + index.end;
+            index.start = end - index.silent;
+            index.end = end;
+            index.silent = end;
+            end
+        });
 
         for (state_index, state) in lts.iter_states() {
             for (label_index, to) in &state.outgoing {
+                let index = &mut state2incoming[*to];
+
                 if lts.is_hidden_label(*label_index) {
-                    //Place at end of incoming transitions.
-                    state2incoming[*to].2 -= 1;
-                    incoming_transitions[state2incoming[*to].2] = (*label_index, state_index);
+                    // Place at end of incoming transitions.
+                    index.silent -= 1;
+                    incoming_transitions[index.silent] = (*label_index, state_index);
                 } else {
-                    state2incoming[*to].0 -= 1;
-                    incoming_transitions[state2incoming[*to].0] = (*label_index, state_index);
+                    index.start -= 1;
+                    incoming_transitions[index.start] = (*label_index, state_index);
                 }
             }
         }
-        // for (start, end , silent) in state2incoming.iter() {
-        //     print!("{} {} {}\n", start, end, silent);
-        // }
+        
         IncomingTransitions { incoming_transitions, state2incoming}
     }
 
     /// Returns an iterator over the incoming transitions for the given state.
     pub fn incoming_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
-        // Return an iterator over the incoming transitions for the given state.
-        let start = self.state2incoming[state_index].0;
-        let end = self.state2incoming[state_index].1;
-        self.incoming_transitions[start .. end].iter()
+        self.incoming_transitions[self.state2incoming[state_index].start .. self.state2incoming[state_index].end].iter()
     }
 
+    // Return an iterator over the incoming silent transitions for the given state.
     pub fn incoming_silent_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)>  {
-        self.incoming_transitions[self.state2incoming[state_index].2 .. self.state2incoming[state_index].1].iter()
+        self.incoming_transitions[self.state2incoming[state_index].silent .. self.state2incoming[state_index].end].iter()
     }
 }
 
