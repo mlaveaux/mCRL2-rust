@@ -24,7 +24,7 @@ impl LabelledTransitionSystem {
     pub fn new(
         initial_state: StateIndex,
         mut states: Vec<State>,
-        labels: Vec<String>,
+        mut labels: Vec<String>,
         hidden_labels: Vec<String>,
         num_of_transitions: usize,
     ) -> LabelledTransitionSystem {
@@ -60,7 +60,8 @@ impl LabelledTransitionSystem {
             }
         }
 
-        // Keep track of which label indexes are hidden labels.h.
+
+        // Keep track of which label indexes are hidden labels.
         let mut hidden_indices: Vec<usize> = Vec::new();
         for label in &hidden_labels {
             if let Some(index) = labels.iter().position(|other| other == label) {
@@ -69,14 +70,22 @@ impl LabelledTransitionSystem {
         }
         hidden_indices.sort();
 
-        // Remap all hidden actions to zero.
+        // Make an implicit tau label the first label.
+        labels.insert(0, "tau".to_string());
+
         for state in &mut states {
             for (label, _) in &mut state.outgoing {
                 if let Ok(_) = hidden_indices.binary_search(label) {
+                    // Remap all hidden actions to zero.
                     *label = 0;
+                } 
+                else
+                {
+                    // Remap the zero action to the original first hidden index.
+                    *label += 1;
                 }
             }
-        }        
+        } 
 
         LabelledTransitionSystem {
             initial_state,
