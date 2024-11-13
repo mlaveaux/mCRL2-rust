@@ -19,7 +19,7 @@ use io::io_aut::read_aut;
 fn test_strong_bisimilation_reduction(input: &str) {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let lts = read_aut(input.as_bytes(), vec!["tau".into()]).unwrap();
+    let lts = read_aut(input.as_bytes(), vec![]).unwrap();
     let mut timing = Timing::new();
 
     let reduced = strong_bisim_sigref(&lts, &mut timing);
@@ -40,7 +40,7 @@ fn test_strong_bisimilation_reduction(input: &str) {
 fn test_branching_bisimilation_reduction(input: &str) {
     let _ = env_logger::builder().is_test(true).try_init();
 
-    let lts = read_aut(input.as_bytes(), vec!["tau".into()]).unwrap();
+    let lts = read_aut(input.as_bytes(), vec!["tau".into(), "i".into()]).unwrap();
     let mut timing = Timing::new();
 
     let reduced = branching_bisim_sigref(&lts, &mut timing);
