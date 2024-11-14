@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use log::debug;
 
+#[derive(Default)]
 pub struct Timing {
     results: Rc<RefCell<Vec<(String, f32)>>>,
 }

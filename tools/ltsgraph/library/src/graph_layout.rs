@@ -47,7 +47,7 @@ impl GraphLayout {
     ///
     /// Returns true iff the layout is stable.
     pub fn update(&mut self, handle_length: f32, repulsion_strength: f32, delta: f32) -> bool {
-        for (state_index, state) in self.lts.iter_states() {
+        for state_index in self.lts.iter_states() {
             // Ignore the last state since it cannot repulse with any other state.
             if state_index < self.layout_states.len() {
                 // Use split_at_mut to get two mutable slices at every split point.
@@ -68,7 +68,7 @@ impl GraphLayout {
             }
 
             // Accumulate forces over all connected edges.
-            for (_, to_index) in &state.outgoing {
+            for (_, to_index) in self.lts.outgoing_transitions(state_index) {
                 // Index an edge in the graph.
                 match index_edge(&mut self.layout_states, state_index, *to_index) {
                     Edge::Selfloop(_) => {
