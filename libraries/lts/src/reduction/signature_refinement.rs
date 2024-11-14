@@ -373,7 +373,7 @@ where
         // Remove the current signatures.
         arena.reset();
 
-        for (state_index, _) in lts.iter_states() {
+        for state_index in lts.iter_states() {
             // Compute the signature of a single state
             signature(state_index, &partition, &state_to_signature, &mut builder);
 
@@ -428,7 +428,7 @@ where
     // Avoids reallocations when computing the signature.
     let mut builder = SignatureBuilder::default();
 
-    for (state_index, _) in lts.iter_states() {
+    for state_index in lts.iter_states() {
         let block = partition.block_number(state_index);
 
         // Compute the flat signature, which has Hash and is more compact.
@@ -486,8 +486,8 @@ mod tests {
         strong_partition: &impl Partition,
         branching_partition: &impl Partition,
     ) {
-        for (state_index, _) in lts.iter_states() {
-            for (other_state_index, _) in lts.iter_states() {
+        for state_index in lts.iter_states() {
+            for other_state_index in lts.iter_states() {
                 if strong_partition.block_number(state_index) == strong_partition.block_number(other_state_index) {
                     // If the states are together according to branching bisimilarity, then they should also be together according to strong bisimilarity.
                     assert_eq!(

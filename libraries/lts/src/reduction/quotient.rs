@@ -1,7 +1,7 @@
+use log::debug;
 use rustc_hash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
-use crate::State;
 
 /// A trait for partition refinement algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.
@@ -69,12 +69,12 @@ pub fn quotient_lts(
     partition: &impl Partition,
     eliminate_tau_loops: bool,
 ) -> LabelledTransitionSystem {
+    let start = std::time::Instant::now();
     // Introduce the transitions based on the block numbers
-    let mut states: Vec<State> = vec![State::default(); partition.num_of_blocks()];
     let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
 
-    for (state_index, state) in lts.iter_states() {
-        for &(label, to) in &state.outgoing {
+    for state_index in lts.iter_states() {
+        for &(label, to) in lts.outgoing_transitions(state_index) {
             let block = partition.block_number(state_index);
             let to_block = partition.block_number(to);
 
@@ -93,16 +93,12 @@ pub fn quotient_lts(
         }
     }
 
-    // Insert the transition into the original block.
-    for &(from, label, to) in &transitions {
-        states[from].outgoing.push((label, to));
-    }
-
-    LabelledTransitionSystem::new(
+    let result = LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),
-        states,
+        || transitions.iter().cloned(),
         lts.labels().into(),
-        lts.hidden_labels().into(),
-        transitions.len(),
-    )
+        lts.hidden_labels().into()
+    );
+    debug!("Time quotient: {:.3}s", start.elapsed().as_secs_f64());
+    result
 }

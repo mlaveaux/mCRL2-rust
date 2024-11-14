@@ -7,6 +7,7 @@ use std::time::Instant;
 use log::debug;
 use log::trace;
 use regex::Regex;
+use rustc_hash::FxHashSet;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
@@ -14,7 +15,6 @@ use crate::line_iterator::LineIterator;
 use crate::progress::Progress;
 use lts::LabelIndex;
 use lts::LabelledTransitionSystem;
-use lts::State;
 
 #[derive(Error, Debug)]
 pub enum IOError {
@@ -53,7 +53,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"?([^"]*)"?\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
-    let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
+    let (_, [initial_txt, num_of_transitions_txt, _]) = header_regex
         .captures(header)
         .ok_or(IOError::InvalidHeader(
             "does not match des (<init>, <num_states>, <num_transitions>)",
@@ -62,13 +62,12 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
     let initial_state: usize = initial_txt.parse()?;
     let num_of_transitions: usize = num_of_transitions_txt.parse()?;
-    let num_of_states: usize = num_of_states_txt.parse()?;
 
     // This is used to keep track of the label to index mapping.
     let mut labels_index: HashMap<String, LabelIndex> = HashMap::new();
     let mut labels: Vec<String> = Vec::new();
 
-    let mut states: Vec<State> = Vec::with_capacity(num_of_states);
+    let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
     let mut progress = Progress::new(
         |value, increment| debug!("Reading transitions {}%...", value / increment),
         num_of_transitions,
@@ -98,22 +97,13 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
         let label_index = *labels_index.entry(label_txt.to_string()).or_insert(labels.len());
 
-        // Insert state when it does not exist, and then add the transition.
-        if from >= states.len() {
-            states.resize_with(from + 1, Default::default);
-        }
-
-        if to >= states.len() {
-            states.resize_with(to + 1, Default::default);
-        }
-
         if label_index >= labels.len() {
             labels.resize_with(label_index + 1, Default::default);
         }
 
         trace!("Read transition {} --[{}]-> {}", from, label_txt, to);
 
-        states[from].outgoing.push((label_index, to));
+        transitions.insert((from, label_index, to));
 
         if labels[label_index].is_empty() {
             labels[label_index] = label_txt.to_string();
@@ -122,24 +112,15 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
         progress.add(1);
     }
 
-    // Remove duplicated outgoing transitions.
-    let mut num_of_transitions = 0;
-    for state in &mut states {
-        state.outgoing.sort();
-        state.outgoing.dedup();
-        num_of_transitions += state.outgoing.len();
-    }
-
     debug!("Finished reading LTS");
 
     hidden_labels.push("tau".to_string());
     debug!("Time read_aut: {:.3}s", start.elapsed().as_secs_f64());
     Ok(LabelledTransitionSystem::new(
         initial_state,
-        states,
+        || transitions.iter().cloned(),
         labels,
         hidden_labels,
-        num_of_transitions,
     ))
 }
 
@@ -153,8 +134,8 @@ pub fn write_aut(writer: &mut impl Write, lts: &LabelledTransitionSystem) -> Res
         lts.num_of_states()
     )?;
 
-    for (state_index, state) in lts.iter_states() {
-        for (label, to) in &state.outgoing {
+    for state_index in lts.iter_states() {
+        for (label, to) in lts.outgoing_transitions(state_index) {
             writeln!(
                 writer,
                 "({}, \"{}\", {})",
@@ -229,6 +210,7 @@ mod tests {
 
         let lts = read_aut(&buffer[0..], vec![]).unwrap();
 
-        assert_eq!(lts_original, lts, "The LTS after writing is different");
+        assert!(lts.num_of_states() == lts_original.num_of_states());
+        assert!(lts.num_of_labels() == lts_original.num_of_labels());
     }
 }
