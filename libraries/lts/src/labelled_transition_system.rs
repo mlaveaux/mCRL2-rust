@@ -71,7 +71,13 @@ impl LabelledTransitionSystem {
         hidden_indices.sort();
 
         // Make an implicit tau label the first label.
-        labels.insert(0, "tau".to_string());
+        let introduced_tau = if hidden_indices.contains(&0) {
+            labels[0] = "tau".to_string();
+            false
+        } else {
+            labels.insert(0, "tau".to_string());
+            true
+        };
 
         for state in &mut states {
             for (label, _) in &mut state.outgoing {
@@ -79,7 +85,7 @@ impl LabelledTransitionSystem {
                     // Remap all hidden actions to zero.
                     *label = 0;
                 } 
-                else
+                else if introduced_tau
                 {
                     // Remap the zero action to the original first hidden index.
                     *label += 1;
