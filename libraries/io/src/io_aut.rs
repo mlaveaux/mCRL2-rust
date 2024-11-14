@@ -7,7 +7,6 @@ use std::time::Instant;
 use log::debug;
 use log::trace;
 use regex::Regex;
-use rustc_hash::FxHashSet;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
@@ -23,6 +22,27 @@ pub enum IOError {
 
     #[error("Invalid transition line")]
     InvalidTransition(),
+}
+
+///     `(<from>: Nat, "<label>": Str, <to>: Nat)`
+///     `(<from>: Nat, <label>: Str, <to>: Nat)`
+fn read_transition(input: &str) -> Result<(&str, &str, &str), Box<dyn Error>> {
+    let start_paren = input.find('(').ok_or(IOError::InvalidTransition())?;
+    let start_comma = input.find(',').ok_or(IOError::InvalidTransition())?;
+
+    // Find the comma in the second part
+    let start_second_comma = input[start_comma+1..].find(',').ok_or(IOError::InvalidTransition())? + start_comma + 1;
+    let end_paren = input.rfind(')').ok_or(IOError::InvalidTransition())?;
+
+    let from = &input[start_paren+1..start_comma].trim();
+    let label = &input[start_comma+1..start_second_comma].trim();
+    let to = &input[start_second_comma+1..end_paren].trim();
+    // Handle the special case where it has quotes.
+    if label.starts_with('"') && label.ends_with('"') {
+        return Ok((from, &label[1..label.len()-1], to))
+    }
+
+    Ok((from, label, to))
 }
 
 /// Loads a labelled transition system in the Aldebaran format from the given reader.
@@ -47,12 +67,6 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
-    // Regex for (<from>: Nat, "<label>": str, <to>: Nat) or (<from>: Nat,
-    // label: str, <to>: Nat). Note that the quotes are optional, and even one
-    // side can be forgotten.
-    let transition_regex = Regex::new(r#"\s*\(\s*([0-9]*)\s*,\s*"?([^"]*)"?\s*,\s*([0-9]*)\s*\)\s*"#)
-        .expect("Regex compilation should not fail");
-
     let (_, [initial_txt, num_of_transitions_txt, _]) = header_regex
         .captures(header)
         .ok_or(IOError::InvalidHeader(
@@ -67,29 +81,15 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     let mut labels_index: HashMap<String, LabelIndex> = HashMap::new();
     let mut labels: Vec<String> = Vec::new();
 
-    let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
+    let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
     let mut progress = Progress::new(
         |value, increment| debug!("Reading transitions {}%...", value / increment),
         num_of_transitions,
     );
 
-    // Only used to avoid allocations when reading the transitions.
-    let mut capture_locations = transition_regex.capture_locations();
-
     while let Some(line) = lines.next() {
         trace!("{}", line);
-
-        // Try either of the transition regexes and otherwise return an error.transition_regex.
-        // This is essentially a low level version of captures().extract() that does not allocate.
-        transition_regex
-            .captures_read(&mut capture_locations, line)
-            .ok_or(IOError::InvalidTransition())?;
-
-        let (from_txt, label_txt, to_txt) = (
-            &line[capture_locations.get(1).unwrap().0..capture_locations.get(1).unwrap().1],
-            &line[capture_locations.get(2).unwrap().0..capture_locations.get(2).unwrap().1],
-            &line[capture_locations.get(3).unwrap().0..capture_locations.get(3).unwrap().1],
-        );
+        let (from_txt, label_txt, to_txt) = read_transition(line)?;
 
         // Parse the from and to states, with the given label.
         let from: usize = from_txt.parse()?;
@@ -103,7 +103,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
         trace!("Read transition {} --[{}]-> {}", from, label_txt, to);
 
-        transitions.insert((from, label_index, to));
+        transitions.push((from, label_index, to));
 
         if labels[label_index].is_empty() {
             labels[label_index] = label_txt.to_string();
@@ -111,6 +111,10 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
         progress.add(1);
     }
+
+    // Remove duplicated transitions, it is not clear if they are allowed in the .aut format.
+    transitions.sort_unstable();
+    transitions.dedup();
 
     debug!("Finished reading LTS");
 
