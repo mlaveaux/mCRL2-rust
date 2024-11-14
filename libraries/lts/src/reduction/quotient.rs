@@ -93,7 +93,7 @@ pub fn quotient_lts(
     }
 
     // Remove duplicates.
-    transitions.sort();
+    transitions.sort_unstable();
     transitions.dedup();
 
     let result = LabelledTransitionSystem::new(
