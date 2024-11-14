@@ -448,9 +448,11 @@ where
     // Check if there are two blocks with the same signature
     let mut signature_to_block: FxHashMap<Signature, usize> = FxHashMap::default();
 
-    for block_index in 0..partition.num_of_blocks() {
-        let signature = block_to_signature[block_index].as_ref().unwrap();
-
+    for (block_index, signature) in block_to_signature
+        .iter()
+        .map(|signature| signature.as_ref().unwrap())
+        .enumerate()
+    {
         if let Some(other_block_index) = signature_to_block.get(&Signature::new(signature)) {
             if block_index != *other_block_index {
                 trace!("Block {block_index} and {other_block_index} have the same signature {signature:?}");

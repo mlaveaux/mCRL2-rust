@@ -84,7 +84,7 @@ impl LabelledTransitionSystem {
         // Remap all hidden actions to zero.
         for state in &mut states {
             for (label, _) in &mut transitions[state.outgoing_start..state.outgoing_end] {
-                if let Ok(_) = hidden_indices.binary_search(label) {
+                if hidden_indices.binary_search(label).is_ok() {
                     *label = 0;
                 } 
                 else if introduced_tau

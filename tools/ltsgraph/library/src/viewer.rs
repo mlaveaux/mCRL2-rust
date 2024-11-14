@@ -56,13 +56,14 @@ impl Viewer {
         let mut view_states = vec![StateView::default(); lts.num_of_states()];
 
         // Add the transition view information
-        for (index, state_view) in view_states.iter_mut().enumerate() {
-            let state = lts.state(index);
-
-            state_view.outgoing = vec![TransitionView::default(); state.outgoing.len()];
+        for (state_index, state_view) in view_states.iter_mut().enumerate() {
+            state_view.outgoing = vec![TransitionView::default(); lts.outgoing_transitions(state_index).count()];
 
             // Compute the offsets for self-loops, put them at equal distance around the state.
-            let num_selfloops = state.outgoing.iter().filter(|(_, to)| *to == index).count();
+            let num_selfloops = lts
+                .outgoing_transitions(state_index)
+                .filter(|(_, to)| *to == state_index)
+                .count();
 
             // Keep track of the current self loop index.
             let mut index_selfloop = 0;
@@ -70,10 +71,10 @@ impl Viewer {
             // Keep track of the current transition index.
             let mut index_transition = 0;
 
-            for (transition_index, (_, to)) in state.outgoing.iter().enumerate() {
+            for (transition_index, (_, to)) in lts.outgoing_transitions(state_index).enumerate() {
                 let transition_view = &mut state_view.outgoing[transition_index];
 
-                if index == *to {
+                if state_index == *to {
                     // This is a self loop so compute a rotation around the state for its handle.
                     let rotation_mat = Mat3::from_euler(
                         glam::EulerRot::XYZ,
@@ -88,12 +89,15 @@ impl Viewer {
                     // Determine whether any of the outgoing edges from the reached state point back.
                     let has_backtransition = lts
                         .outgoing_transitions(*to)
-                        .filter(|(_, other_to)| *other_to == index)
+                        .filter(|(_, other_to)| *other_to == state_index)
                         .count()
                         > 0;
 
                     // Compute the number of transitions going to the same state.
-                    let num_transitions = state.outgoing.iter().filter(|(_, to)| *to == index).count();
+                    let num_transitions = lts
+                        .outgoing_transitions(state_index)
+                        .filter(|(_, to)| *to == state_index)
+                        .count();
 
                     if has_backtransition {
                         // Offset the outgoing transitions towards that state to the right.
@@ -191,17 +195,17 @@ impl Viewer {
         let mut edge_builder = tiny_skia::PathBuilder::new();
         let mut arrow_builder = tiny_skia::PathBuilder::new();
 
-        for (index, state) in self.lts.iter_states() {
-            let state_view = &self.view_states[index];
+        for state_index in self.lts.iter_states() {
+            let state_view = &self.view_states[state_index];
 
             // For now we only draw 2D graphs properly.
             debug_assert!(state_view.position.z.abs() < 0.01);
 
-            for (transition_index, (label, to)) in state.outgoing.iter().enumerate() {
+            for (transition_index, (label, to)) in self.lts.outgoing_transitions(state_index).enumerate() {
                 let to_state_view = &self.view_states[*to];
                 let transition_view = &state_view.outgoing[transition_index];
 
-                let label_position = if *to != index {
+                let label_position = if *to != state_index {
                     // Draw the transition
                     edge_builder.move_to(state_view.position.x, state_view.position.y);
                     edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
