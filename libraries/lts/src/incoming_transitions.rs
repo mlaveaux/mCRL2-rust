@@ -22,8 +22,8 @@ impl IncomingTransitions {
         let mut state2incoming: Vec<TransitionIndex> = vec![TransitionIndex::default(); lts.num_of_states()];
         
         // Compute the number of incoming (silent) transitions for each state.
-        for (_, state) in lts.iter_states() {
-            for (label_index, to) in &state.outgoing {
+        for state_index in lts.iter_states() {
+            for (label_index, to) in lts.outgoing_transitions(state_index) {
                 state2incoming[*to].end += 1;
                 if lts.is_hidden_label(*label_index) {
                     state2incoming[*to].silent += 1;
@@ -42,8 +42,8 @@ impl IncomingTransitions {
             end
         });
 
-        for (state_index, state) in lts.iter_states() {
-            for (label_index, to) in &state.outgoing {
+        for state_index in lts.iter_states() {
+            for (label_index, to) in lts.outgoing_transitions(state_index) {
                 let index = &mut state2incoming[*to];
 
                 if lts.is_hidden_label(*label_index) {

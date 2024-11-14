@@ -39,7 +39,7 @@ where
     let mut next_block_number = 0;
 
     // The outer depth first search used to traverse all the states.
-    for (state_index, _) in lts.iter_states() {
+    for state_index in lts.iter_states() {
         if state_info[state_index].is_none() {
             trace!("State {state_index}");
 
@@ -175,7 +175,6 @@ mod tests {
     use crate::quotient_lts;
     use crate::random_lts;
     use crate::Partition;
-    use crate::State;
 
     use super::*;
 
@@ -213,15 +212,15 @@ mod tests {
         let reduction = quotient_lts(&lts, &partitioning, true);
 
         // Check that states in a strongly connected component are reachable from each other.
-        for (state_index, _) in lts.iter_states() {
+        for state_index in lts.iter_states() {
             let reachable = reachable_states(&lts, state_index, &|_, label, _| lts.is_hidden_label(label));
 
             // All other states in the same block should be reachable.
             let block = partitioning.block_number(state_index);
 
-            for (other_state_index, _) in lts
+            for other_state_index in lts
                 .iter_states()
-                .filter(|(index, _)| state_index != *index && partitioning.block_number(*index) == block)
+                .filter(|index| state_index != *index && partitioning.block_number(*index) == block)
             {
                 assert!(
                     reachable.contains(&other_state_index),
@@ -238,15 +237,14 @@ mod tests {
 
     #[test]
     fn test_cycles() {
-        let states = vec![
-            State::new(vec![(0, 2), (0, 4)]),
-            State::new(vec![(0, 0)]),
-            State::new(vec![(0, 1), (1, 0)]),
-            State::new(vec![]),
-            State::new(vec![]),
-        ];
+        let transitions = vec![(0, 0, 2), (0, 0, 4), (1, 0, 0), (2, 0, 1), (2, 0, 0)];
 
-        let lts = LabelledTransitionSystem::new(0, states, vec!["tau".into(), "a".into()], vec!["tau".into()], 5);
+        let lts = LabelledTransitionSystem::new(
+            0,
+            || transitions.iter().cloned(),
+            vec!["tau".into(), "a".into()],
+            vec!["tau".into()]
+        );
 
         let _ = tau_scc_decomposition(&lts);
     }

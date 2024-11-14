@@ -1,14 +1,11 @@
 use rand::Rng;
+use rustc_hash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
-use crate::State;
 
 /// Generates a monolithic LTS with the desired number of states, labels, out
 /// degree and in degree for all the states.
 pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) -> LabelledTransitionSystem {
-    // Introduce num_of_states states.
-    let mut states: Vec<State> = vec![State::default(); num_of_states];
-
     // Introduce lower case letters for the labels.
     let tau_label = "tau".to_string();
 
@@ -17,28 +14,24 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
         labels.push(char::from_digit(i + 10, 36).unwrap().to_string());
     }
 
-    let mut num_of_transitions = 0;
-
     let mut rng = rand::thread_rng();
+    let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
 
-    for state in &mut states {
+    for state_index in 0..num_of_states {
         // Introduce outgoing transitions for this state based on the desired out degree.
         for _ in 0..rng.gen_range(0..outdegree) {
             // Pick a random label and state.
             let label = rng.gen_range(0..num_of_labels);
             let to = rng.gen_range(0..num_of_states);
 
-            match state.outgoing.binary_search(&(label as usize, to)) {
-                Ok(_) => {} // element already in vector
-                Err(pos) => {
-                    state.outgoing.insert(pos, (label as usize, to));
-                    num_of_transitions += 1;
-                }
-            }
+            transitions.insert((state_index, label as usize, to));
         }
     }
 
-    LabelledTransitionSystem::new(0, states, labels, vec![tau_label], num_of_transitions)
+    LabelledTransitionSystem::new(0, 
+        || transitions.iter().cloned(),
+        labels, 
+        vec![tau_label])
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@ pub type StateIndex = usize;
 #[derive(PartialEq, Eq)]
 pub struct LabelledTransitionSystem {
     states: Vec<State>,
+    transitions: Vec<(LabelIndex, StateIndex)>,
 
     labels: Vec<String>,
     hidden_labels: Vec<String>,
@@ -21,45 +22,46 @@ pub struct LabelledTransitionSystem {
 }
 
 impl LabelledTransitionSystem {
-    pub fn new(
+    pub fn new<I, F>(
         initial_state: StateIndex,
-        mut states: Vec<State>,
+        transition_iter: F,
         mut labels: Vec<String>,
         hidden_labels: Vec<String>,
-        num_of_transitions: usize,
-    ) -> LabelledTransitionSystem {
-        // Check that the number of transitions has been provided correctly.
-        debug_assert!(
-            states.iter().fold(0, |previous, state| previous + state.outgoing.len()) == num_of_transitions,
-            "The number of transitions is not equal to the actual number of transitions."
-        );
+    ) -> LabelledTransitionSystem 
+    where F: Fn() -> I,
+          I:Iterator<Item = (StateIndex, LabelIndex, StateIndex)> {
 
-        // Check that the outgoing transitions are a function.
-        if cfg!(debug_assertions) {
-            let num_of_states = states.len();
-            for (state_index, state) in states.iter().enumerate() {
-                let mut outgoing_dedup = state.outgoing.clone();
-                outgoing_dedup.sort_unstable();
-                outgoing_dedup.dedup();
+        let mut states = Vec::new();
 
-                debug_assert_eq!(
-                    outgoing_dedup.len(),
-                    state.outgoing.len(),
-                    "State {state_index} has duplicated outgoing transitions {:?}",
-                    state.outgoing
-                );
-
-                debug_assert!(
-                    state
-                        .outgoing
-                        .iter()
-                        .all(|(label, to)| *label < labels.len() && *to < num_of_states),
-                    "State {state_index} has invalid outgoing transitions {:?}.",
-                    state.outgoing
-                );
+        // Count the number of transitions for every state
+        let mut num_of_transitions = 0;
+        for (from, _, to) in transition_iter() {
+            // Ensure that the states vector is large enough.
+            while states.len() <= from.max(to) {
+                states.push(State {
+                    outgoing_start: 0,
+                    outgoing_end: 0,
+                });
             }
+
+            states[from].outgoing_end += 1;
+            num_of_transitions += 1;
         }
 
+        // Track the number of transitions before every state.
+        states.iter_mut().fold(0, |count, state| {
+            let result = count + state.outgoing_end;
+            state.outgoing_start = count;
+            state.outgoing_end = count;
+            result
+        });
+        
+        // Place the transitions, and increment the end for every state.
+        let mut transitions = vec![(0, 0); num_of_transitions];
+        for (from, label, to) in transition_iter() {
+            transitions[states[from].outgoing_end] = (label, to);
+            states[from].outgoing_end += 1;
+        }
 
         // Keep track of which label indexes are hidden labels.
         let mut hidden_indices: Vec<usize> = Vec::new();
@@ -79,10 +81,10 @@ impl LabelledTransitionSystem {
             true
         };
 
+        // Remap all hidden actions to zero.
         for state in &mut states {
-            for (label, _) in &mut state.outgoing {
+            for (label, _) in &mut transitions[state.outgoing_start..state.outgoing_end] {
                 if let Ok(_) = hidden_indices.binary_search(label) {
-                    // Remap all hidden actions to zero.
                     *label = 0;
                 } 
                 else if introduced_tau
@@ -98,7 +100,8 @@ impl LabelledTransitionSystem {
             labels,
             hidden_labels,
             states,
-            num_of_transitions,
+            num_of_transitions: transitions.len(),
+            transitions,
         }
     }
 
@@ -107,24 +110,15 @@ impl LabelledTransitionSystem {
         self.initial_state
     }
 
-    /// Returns a borrow of the initial state.
-    pub fn initial_state(&self) -> &State {
-        &self.states[self.initial_state]
-    }
-
     /// Returns the set of outgoing transitions for the given state.
     pub fn outgoing_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
-        self.state(state_index).outgoing.iter()
+        let state = &self.states[state_index];
+        self.transitions[state.outgoing_start..state.outgoing_end].iter()
     }
 
-    /// Iterate over all (state_index, state) in the labelled transition system
-    pub fn iter_states(&self) -> impl Iterator<Item = (StateIndex, &State)> + '_ {
-        self.states.iter().enumerate()
-    }
-
-    /// Returns access to the given state.
-    pub fn state(&self, index: StateIndex) -> &State {
-        &self.states[index]
+    /// Iterate over all state_index in the labelled transition system
+    pub fn iter_states(&self) -> impl Iterator<Item = StateIndex> {
+        0..self.states.len()
     }
 
     /// Returns the number of states.
@@ -159,16 +153,10 @@ impl LabelledTransitionSystem {
 }
 
 /// A single state in the LTS, containing a vector of outgoing edges.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct State {
-    pub outgoing: Vec<(LabelIndex, StateIndex)>,
-}
-
-impl State {
-    /// Creates a new state with no outgoing transitions.
-    pub fn new(outgoing: Vec<(LabelIndex, StateIndex)>) -> State {
-        State { outgoing }
-    }
+#[derive(Clone, PartialEq, Eq)]
+struct State {
+    outgoing_start: usize,
+    outgoing_end: usize,
 }
 
 impl fmt::Display for LabelledTransitionSystem {
@@ -186,11 +174,11 @@ impl fmt::Debug for LabelledTransitionSystem {
         writeln!(f, "Initial state: {}", self.initial_state)?;
         writeln!(f, "Hidden labels: {:?}", self.hidden_labels)?;
 
-        for (from, state) in self.states.iter().enumerate() {
-            for (label, to) in &state.outgoing {
-                let label_name = &self.labels[*label];
+        for state_index in self.iter_states() {
+            for &(label, to) in self.outgoing_transitions(state_index) {
+                let label_name = &self.labels[label];
 
-                writeln!(f, "{from} --[{label_name}]-> {to}")?;
+                writeln!(f, "{state_index} --[{label_name}]-> {to}")?;
             }
         }
 
