@@ -1,5 +1,4 @@
 use log::debug;
-use rustc_hash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
 
@@ -71,7 +70,7 @@ pub fn quotient_lts(
 ) -> LabelledTransitionSystem {
     let start = std::time::Instant::now();
     // Introduce the transitions based on the block numbers
-    let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
+    let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
 
     for state_index in lts.iter_states() {
         for &(label, to) in lts.outgoing_transitions(state_index) {
@@ -88,10 +87,14 @@ pub fn quotient_lts(
                 );
 
                 // Make sure to keep the outgoing transitions sorted.
-                transitions.insert((block, label, to_block));
+                transitions.push((block, label, to_block));
             }
         }
     }
+
+    // Remove duplicates.
+    transitions.sort();
+    transitions.dedup();
 
     let result = LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),
