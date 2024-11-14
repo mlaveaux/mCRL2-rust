@@ -2,7 +2,6 @@ use std::error::Error;
 
 use log::debug;
 use log::trace;
-use rustc_hash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
 
@@ -71,14 +70,16 @@ where
     P: Fn(usize) -> usize,
 {
     let start = std::time::Instant::now();
-    let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
+
+    // We know that it is a permutation, so there won't be any duplicated transitions.
+    let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
 
     for state_index in lts.iter_states() {
         let new_state_index = permutation(state_index);
 
         for (label, to_index) in lts.outgoing_transitions(state_index) {
             let new_to_index = permutation(*to_index);
-            transitions.insert((new_state_index, *label, new_to_index));
+            transitions.push((new_state_index, *label, new_to_index));
         }
     }
 
