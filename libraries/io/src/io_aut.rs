@@ -31,7 +31,7 @@ fn read_transition(input: &str) -> Result<(&str, &str, &str), Box<dyn Error>> {
     let start_comma = input.find(',').ok_or(IOError::InvalidTransition())?;
 
     // Find the comma in the second part
-    let start_second_comma = input[start_comma+1..].find(',').ok_or(IOError::InvalidTransition())? + start_comma + 1;
+    let start_second_comma = input.rfind(',').ok_or(IOError::InvalidTransition())?;
     let end_paren = input.rfind(')').ok_or(IOError::InvalidTransition())?;
 
     let from = &input[start_paren+1..start_comma].trim();

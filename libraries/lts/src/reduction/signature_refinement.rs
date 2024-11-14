@@ -275,15 +275,6 @@ where
                             partition.mark_element(incoming_state);
                         }
                     }
-
-                    // if BRANCHING {
-                    //     // If we have a tau transition that becomes visible (to the original block) then mark the state as dirty.
-                    //     for &(label_index, to) in lts.outgoing_transitions(state_index) {
-                    //         if lts.is_hidden_label(label_index) && partition.block_number(to) == block_index {
-                    //             mark_inert_tau( &mut partition, &mut worklist, &mut stack, &incoming, state_index);
-                    //         }
-                    //     }
-                    // }
                 }
             }
         }
