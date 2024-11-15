@@ -211,18 +211,12 @@ where
 
                 let mut maybe_index = None;
                 if BRANCHING {
-                    if let Some(&(label, key)) = &builder.last() {
-                        let label2nd = if builder.len() > 1 {
-                            builder[builder.len() - 2].0
-                        } else {
-                            0
-                        };
-
-                        if label == lts.num_of_labels()
-                            && label2nd != lts.num_of_labels()
-                            && key_to_signature[key].is_subset_of(&builder, (label, key))
+                    for (label, key) in builder.iter().rev() {
+                        if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(&builder, (*label, *key))
                         {
-                            maybe_index = Some(key);
+                            maybe_index = Some(*key);
+                        } else {
+                            break;
                         }
                     }
                 }
