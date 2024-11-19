@@ -205,7 +205,7 @@ where
         );
 
         for new_block_index in
-            partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
+            partition.partition_marked_with(block_index, &mut split_builder, &incoming, &lts, |state_index, partition| {
                 // Compute the signature of a single state
                 signature(state_index, partition, &state_to_key, &mut builder);
 
