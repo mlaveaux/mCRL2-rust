@@ -1,5 +1,9 @@
 use std::fmt;
 
+use crate::incoming_transitions;
+use crate::IncomingTransitions;
+use crate::LabelledTransitionSystem;
+
 use super::IndexedPartition;
 use super::Partition;
 
@@ -49,6 +53,8 @@ impl BlockPartition {
         &mut self,
         block_index: usize,
         builder: &mut BlockPartitionBuilder,
+        incoming_transitions: &IncomingTransitions,
+        lts : &LabelledTransitionSystem,
         mut partitioner: F,
     ) -> impl Iterator<Item = usize>
     where
@@ -75,9 +81,54 @@ impl BlockPartition {
 
         // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
         builder.old_elements.extend(block.iter_marked(&self.elements));
-        builder.old_elements.sort_unstable();
+
+        let mut inS = vec![false; builder.old_elements.len()];
+        let mut S = vec![];
+        for element in builder.old_elements.iter().rev() {
+            let mut shouldadd = true;
+            for (_label, s) in incoming_transitions.incoming_silent_transitions(*element) {
+                if self.block_number(*s) == block_index {
+                    shouldadd = false;
+                    break;
+                }
+            }
+            if shouldadd {
+                inS[self.element_offset[*element]- block.marked_split] = true;
+                S.push(*element);    
+            }
+        }
+
+        let mut i = 0;
+        while i < builder.old_elements.len() {
+            let s = S[i];                
+            for &(_label, element) in lts.outgoing_transitions(s).filter(|(label, state)| 
+                lts.is_hidden_label(*label) 
+                && self.block_number(*state) == block_index){
+                if inS[self.element_offset[element] - block.marked_split] {
+                    break;
+                }
+                let mut shouldadd = true;
+                for &(_label, sprime) in incoming_transitions.incoming_silent_transitions(element).filter(|(label, state)| self.block_number(*state) == block_index) {
+                    if !inS[self.element_offset[sprime] - block.marked_split] {
+                        shouldadd = false;
+                        break;
+                    }
+                }
+                if shouldadd {
+                    inS[self.element_offset[element] - block.marked_split] = true;
+                    S.push(element);    
+                }
+            }
+            i += 1;            
+        }
+
+        // Topological sort the elements in old_elements
+        builder.old_elements.clear();
+        builder.old_elements.extend(S.iter().rev());
 
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
+        // println!["{S:?}"];
+
         for (element_index, &element) in builder.old_elements.iter().enumerate() {
             let number = partitioner(element, self);
 
@@ -511,6 +562,7 @@ impl Block {
         );
     }
 }
+
 
 pub struct BlockIter<'a> {
     elements: &'a Vec<usize>,
