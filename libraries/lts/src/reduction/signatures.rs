@@ -89,6 +89,18 @@ impl Debug for Signature {
     }
 }
 
+// pub fn weak_bisim_signature(
+//     state_index : StateIndex,
+//     lts: &LabelledTransitionSystem,
+//     partition: &impl Partition,
+//     builder: &mut SignatureBuilder,
+// ) {
+//     builder.clear();
+//     for(label, to) in lts.outgoing_transitions(state_index) {
+//         builder.push((*label, partition.block_number(*to)));
+//     }
+// }
+
 /// Returns the signature for strong bisimulation sig(s, pi) = { (a, pi(t)) | s -a-> t in T }
 pub fn strong_bisim_signature(
     state_index: StateIndex,
@@ -182,6 +194,39 @@ pub fn branching_bisim_signature_sorted(
     builder.sort_unstable();
     builder.dedup();
 }
+
+/// The input lts must contain no tau-cycles.
+pub fn branching_bisim_signature_inductive_naive(
+    state_index: StateIndex,
+    lts: &LabelledTransitionSystem,
+    partition: &IndexedPartition,
+    state_to_key: &[usize],
+    builder: &mut SignatureBuilder,
+) {
+    builder.clear();
+    
+    let num_act:usize = lts.num_of_labels(); //this label index does not occur.
+    for &(label_index, to) in lts.outgoing_transitions(state_index) {
+        let to_block = partition.block_number(to);
+
+        if partition.block_number(state_index) == to_block {
+            if lts.is_hidden_label(label_index) {
+                // Inert tau transition, take signature from the outgoing tau-transition.
+                builder.push((num_act, state_to_key[to])); 
+            } else {
+                builder.push((label_index, to_block));
+            }
+        } else {
+            // Visible action, add to the signature.
+            builder.push((label_index, to_block));
+        }
+    }
+
+    // Compute the flat signature, which has Hash and is more compact.
+    builder.sort_unstable();
+    builder.dedup();
+}
+
 
 /// The input lts must contain no tau-cycles.
 pub fn branching_bisim_signature_inductive(
