@@ -378,31 +378,32 @@ where
             trace!("State {state_index} signature {:?}", builder);
             
             // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
-            let mut new_id = id.len();
-            let mut maybe_index = None;
-            if BRANCHING {
-                for (label, key) in builder.iter().rev() {
-                    if *label == lts.num_of_labels() && signatures[*key].is_subset_of(&builder, (*label, *key))
-                    {
-                        maybe_index = Some(*key);
-                    } else {
-                        break;
-                    }
-                }
-            }
-             if let Some(index) = maybe_index {
-                state_to_key[state_index] = index;
-                new_id = index
-            } else if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
+            let mut new_id = signatures.len();
+            if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
                 state_to_key[state_index] = *index;
                 new_id = *index;
             } else {
                 let slice = arena.alloc_slice_copy(&builder);
-                id.insert(Signature::new(slice), new_id);
-
+                let mut maybe_index: Option<usize> = None;
+                if BRANCHING {
+                    for (label, key) in builder.iter().rev() {
+                        if *label == lts.num_of_labels() && signatures[*key].is_subset_of(&builder, (*label, *key))
+                        {
+                            maybe_index = Some(*key);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                if let Some(index) = maybe_index {
+                    state_to_key[state_index] = index;
+                    new_id = index
+                } else {
+                    signatures.push(Signature::new(slice));
+                }
                 // (branching) Keep track of the signature for every block in the next partition.
                 state_to_key[state_index] = new_id;
-                signatures.push(Signature::new(slice));
+                id.insert(Signature::new(slice), new_id);
             }
             next_partition.set_block(state_index, new_id);
         }
