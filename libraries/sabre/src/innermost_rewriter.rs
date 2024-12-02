@@ -263,8 +263,8 @@ impl InnermostRewriter {
         t: &ATermRef<'_>,
     ) -> bool {
         for c in &announcement.conditions {
-            let rhs: DataExpression = c.semi_compressed_rhs.evaluate_with(tp, t, builder).into();
-            let lhs: DataExpression = c.semi_compressed_lhs.evaluate_with(tp, t, builder).into();
+            let rhs: DataExpression = c.stack_rhs.evaluate_with(tp, t, builder).into();
+            let lhs: DataExpression = c.stack_lhs.evaluate_with(tp, t, builder).into();
 
             let rhs_normal = InnermostRewriter::rewrite_aux(tp, stack, builder, stats, automaton, rhs);
             let lhs_normal = if &lhs == tp.true_term() {

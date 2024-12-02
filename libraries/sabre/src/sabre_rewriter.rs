@@ -264,8 +264,8 @@ impl SabreRewriter {
         for c in &annotation.conditions {
             let subterm = subterm.get_position(&announcement.position);
 
-            let rhs: DataExpression = c.semi_compressed_rhs.evaluate(tp, &subterm).into();
-            let lhs: DataExpression = c.semi_compressed_lhs.evaluate(tp, &subterm).into();
+            let rhs: DataExpression = c.stack_rhs.evaluate(tp, &subterm).into();
+            let lhs: DataExpression = c.stack_lhs.evaluate(tp, &subterm).into();
 
             // Equality => lhs == rhs.
             if !c.equality || lhs != rhs {

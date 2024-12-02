@@ -2,12 +2,17 @@ use std::fmt;
 
 use ahash::{HashMap, HashMapExt};
 use log::trace;
-use mcrl2::{aterm::{ATermRef, Markable, Protected, TermPool, Todo}, data::{is_data_expression, is_data_machine_number, is_data_variable, DataApplication, DataExpression, DataExpressionRef, DataFunctionSymbolRef, DataVariable}};
+use mcrl2::{
+    aterm::{ATermRef, Markable, Protected, TermPool, Todo},
+    data::{
+        is_data_expression, is_data_machine_number, is_data_variable, DataApplication, DataExpression,
+        DataExpressionRef, DataFunctionSymbolRef, DataVariable,
+    },
+};
 
 use crate::{utilities::InnermostStack, Rule};
 
 use super::{ExplicitPosition, PositionIterator};
-
 
 /// A stack used to represent a term with free variables that can be constructed
 /// efficiently.
@@ -83,7 +88,7 @@ impl TermStack {
         Self::from_term(&rule.rhs.copy(), &create_var_map(&rule.lhs.copy().into()))
     }
 
-    /// 
+    /// Construct a term stack from a data expression where variables are taken from a specific position of the left hand side.
     pub fn from_term(term: &DataExpressionRef, var_map: &HashMap<DataVariable, ExplicitPosition>) -> TermStack {
         // Compute the extra information for the InnermostRewriter.
         let mut innermost_stack: Protected<Vec<Config>> = Protected::new(vec![]);
@@ -101,9 +106,7 @@ impl TermStack {
                 variables.push((
                     var_map
                         .get(&term.protect())
-                        .expect(
-                            "All variables in the right hand side must occur in the left hand side",
-                        )
+                        .expect("All variables in the right hand side must occur in the left hand side")
                         .clone(),
                     stack_size,
                 ));
@@ -139,7 +142,7 @@ impl TermStack {
         let stack = &mut builder.stack;
         {
             let mut write = stack.terms.write();
-            write.clear();   
+            write.clear();
             write.push(DataExpressionRef::default());
         }
 
@@ -173,7 +176,7 @@ impl TermStack {
                         write_terms.drain(length - arity..);
                         let t = write_terms.protect(&term);
                         write_terms[index] = t.into();
-                    },
+                    }
                     Config::Term(term, index) => {
                         let mut write_terms = stack.terms.write();
                         let t = write_terms.protect(&term);
@@ -203,16 +206,18 @@ impl TermStack {
             .expect("The result should be the last element on the stack")
             .protect()
     }
-    
+
     /// Used to check if a subterm is duplicated, for example "times(s(x), y) =
     /// plus(y, times(x,y))" is duplicating.
     pub(crate) fn contains_duplicate_var_references(&self) -> bool {
-        let mut variables = self.variables.clone();
-        variables.sort_by_key(|(pos, _)| pos.clone());
+        let mut variables: Vec<&ExplicitPosition> = self.variables.iter().map(|(v, _)| v).collect();
+
+        // Check if there are duplicates.
+        variables.sort_unstable();
         let len = variables.len();
         variables.dedup();
 
-        len == variables.len()
+        len != variables.len()
     }
 }
 
@@ -246,10 +251,8 @@ impl Clone for TermStack {
     }
 }
 
-
 pub struct TermStackBuilder {
     stack: InnermostStack,
-
 }
 
 impl TermStackBuilder {
@@ -269,6 +272,7 @@ pub fn create_var_map(t: &ATermRef) -> HashMap<DataVariable, ExplicitPosition> {
             result.insert(term.protect().into(), position.clone());
         }
     }
+
     result
 }
 
@@ -300,9 +304,8 @@ mod tests {
     fn test_rhs_stack() {
         let mut tp = TermPool::new();
 
-        let rhs_stack = TermStack::new(
-            &create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]).unwrap(),
-        );
+        let rhs_stack =
+            TermStack::new(&create_rewrite_rule(&mut tp, "fact(s(N))", "times(s(N), fact(N))", &["N"]).unwrap());
         let mut expected = Protected::new(vec![]);
 
         let mut write = expected.write();
@@ -402,9 +405,6 @@ mod tests {
         map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
 
         let sctt = TermStack::from_term(&t_rhs.copy(), &map);
-        assert!(
-            sctt.contains_duplicate_var_references(),
-            "This sctt is duplicating"
-        );
+        assert!(sctt.contains_duplicate_var_references(), "This sctt is duplicating");
     }
 }
