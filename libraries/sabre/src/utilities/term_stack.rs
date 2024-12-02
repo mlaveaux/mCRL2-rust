@@ -284,14 +284,6 @@ mod tests {
 
     use test_log::test;
 
-    /// Converts a slice of static strings into a set of owned strings
-    ///
-    /// example:
-    ///     make_var_map(["x"])
-    fn var_map(vars: &[&str]) -> AHashSet<String> {
-        AHashSet::from_iter(vars.iter().map(|x| String::from(*x)))
-    }
-
     /// Convert terms in variables to a [DataVariable].
     pub fn convert_variables(tp: &mut TermPool, t: &ATerm, variables: &AHashSet<String>) -> ATerm {
         apply(tp, t, &|tp, arg| {

@@ -18,8 +18,8 @@ use mcrl2::data::DataExpressionRef;
 use super::create_var_map;
 use super::substitute_with;
 use super::PositionIndexed;
-use super::SemiCompressedTermTree;
 use super::SubstitutionBuilder;
+use super::TermStack;
 
 /// This is the announcement for Sabre, which stores additional information about the rewrite rules.
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -31,19 +31,16 @@ pub struct AnnouncementSabre {
     pub conditions: Vec<EMACondition>,
 
     /// Right hand side is stored in the term pool as much as possible with a SemiCompressedTermTree
-    pub semi_compressed_rhs: SemiCompressedTermTree,
+    pub semi_compressed_rhs: TermStack,
+    
     /// Whether the rewrite rule duplicates subterms, e.g. times(s(x), y) = plus(y, times(x, y))
     pub is_duplicating: bool,
 }
 
 impl AnnouncementSabre {
     pub fn new(rule: &Rule) -> AnnouncementSabre {
-        // Compute the extra information for the InnermostRewriter.
-        // Create a mapping of where the variables are and derive SemiCompressedTermTrees for the
-        // rhs of the rewrite rule and for lhs and rhs of each condition.
-        // Also see the documentation of SemiCompressedTermTree
-        let var_map = create_var_map(&rule.lhs.clone().into());
-        let sctt_rhs = SemiCompressedTermTree::from_term(&rule.rhs.copy().into(), &var_map);
+        let var_map = create_var_map(&rule.lhs);
+        let sctt_rhs = TermStack::from_term(&rule.rhs.copy().into(), &var_map);
 
         let is_duplicating = sctt_rhs.contains_duplicate_var_references();
 
