@@ -25,8 +25,9 @@ use crate::SignatureBuilder;
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut time = timing.start("reduction");
-    let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, builder| {
+    let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
+        None
     });
 
     debug_assert_eq!(
@@ -61,8 +62,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     let mut stack = Vec::new();
 
     let partition =
-        signature_refinement::<_, true>(&preprocessed_lts, |state_index, partition, state_to_key, builder| {
-            branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, builder);
+        signature_refinement::<_, true>(&preprocessed_lts, |state_index, partition, state_to_key, key_to_signature, builder| {
+            let result = branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, key_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -83,6 +84,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
                     "The sorted and expected signature should be the same"
                 );
             }
+
+            result
         });
 
     debug_assert_eq!(
@@ -159,7 +162,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 /// current partition, the signatures per state for the next partition.
 fn signature_refinement<F, const BRANCHING: bool>(lts: &LabelledTransitionSystem, mut signature: F) -> BlockPartition
 where
-    F: FnMut(usize, &BlockPartition, &Vec<usize>, &mut SignatureBuilder),
+    F: FnMut(usize, &BlockPartition, &[usize], &[Signature], &mut SignatureBuilder) -> Option<usize>,
 {
     trace!("{:?}", lts);
 
@@ -207,21 +210,8 @@ where
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
                 // Compute the signature of a single state
-                signature(state_index, partition, &state_to_key, &mut builder);
-
-                let mut maybe_index = None;
-                if BRANCHING {
-                    for (label, key) in builder.iter().rev() {
-                        if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(&builder, (*label, *key))
-                        {
-                            maybe_index = Some(*key);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
-                let index = if let Some(key) = maybe_index {
+                let index = if let Some(key) = signature(state_index, partition, &state_to_key, &key_to_signature, &mut builder) {
+                    // The signature refers to an existing block.
                     state_to_key[state_index] = key;
                     key
                 } else if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
