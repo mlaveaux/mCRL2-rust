@@ -19,7 +19,8 @@ fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
     build
         .flag_if_supported("-Wall")
         .flag_if_supported("-pipe")
-        .flag_if_supported("-pedantic");
+        .flag_if_supported("-pedantic")
+        .flag_if_supported("-stdlib=libc++");
 
     #[cfg(windows)]
     build
@@ -180,7 +181,17 @@ fn main() {
     // Disable assertions and other checks in release mode.
     let profile = std::env::var("PROFILE").expect("cargo should always set this variable");
     match profile.as_str() {
-        "debug" => (),
+        "debug" => {            
+            build.define("_LIBCPP_DEBUG", "1");
+            build.define("_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS", "1");
+            build.define("_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS", "1");
+            build.define("_LIBCPP_HARDENING_MODE", "_LIBCPP_HARDENING_MODE_DEBUG");
+            build.define("_LIBCPP_ABI_BOUNDED_ITERATORS ", "1");
+            build.define("_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING", "1");
+            build.define("_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR", "1");
+            build.define("_LIBCPP_ABI_BOUNDED_UNIQUE_PTR", "1");
+            build.define("_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY", "1");
+        },
         "release" => {
             build.define("NDEBUG", "1");
         }
