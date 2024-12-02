@@ -76,56 +76,77 @@ impl BlockPartition {
         builder.index_to_block.clear();
         builder.block_sizes.clear();
         builder.old_elements.clear();
+        
+        let mut top: usize = block.end;
+        let mut it = block.end - 1;
+        // First compute backwards silent transitive closure.
+        while it >= self.blocks[block_index].marked_split {
+            let mut is_top = true;
+            for (_label, s) in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
+                if self.block_number(*s) == block_index {
+                    is_top = false;
+                    if !self.is_element_marked(*s) {
+                        self.mark_element(*s);
+                        println!("mark one");
+                    }
+                }
+            }
+            if is_top {
+                self.swap_elements(it, top-1);
+                top -= 1;
+            }
+            if it == 0 {
+                break;
+            }
+            it -= 1;
+        }
 
+        // Now loop again from top, too topologically sort.
+        it = block.end-1;
+        while it >= top {
+            let s = self.elements[it];
+            for &(_label, element) in lts.outgoing_transitions(s).filter(|(label, state)| 
+            lts.is_hidden_label(*label)){
+                //maybe add element, if it contains no silent /incoming transition/ which is not yet marked top.
+                if self.block_number(element) == block_index &&
+                   self.element_offset[element] < top &&
+                   self.is_element_marked(element) &&
+                   incoming_transitions.incoming_silent_transitions(element).filter(
+                    |(_label,target)| self.block_number(*target) == block_index && self.element_offset[*target] < top
+                 && self.is_element_marked(*target)).count() == 0 {
+                    // mark element to be top.
+                    self.swap_elements(self.element_offset[element], top-1);
+                    top -= 1;
+                }
+            }
+            if it == 0 {
+                break;
+            }
+            it -= 1;
+        }
+
+        // println!("{} : {}", top, self.blocks[block_index].marked_split);
+        assert!(top == self.blocks[block_index].marked_split);
+        // Debug check if sorted.
+        for s in self.blocks[block_index].iter_marked(&self.elements) {
+            for &(_label, element) in lts.outgoing_transitions(s).filter(|(label, state)| 
+            lts.is_hidden_label(*label)){
+                if block_index == self.block_number(element) &&
+                    self.is_element_marked(element) 
+                    && self.element_offset[element] > self.element_offset[s] 
+                {
+                    // println!("Whoops: {} {}" , s, element);
+                }
+            }
+        }
+        
         builder.index_to_block.resize(block.len_marked(), 0);
 
         // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
         builder.old_elements.extend(block.iter_marked(&self.elements));
-
-        let mut inS = vec![false; builder.old_elements.len()];
-        let mut S = vec![];
-        for element in builder.old_elements.iter().rev() {
-            let mut shouldadd = true;
-            for (_label, s) in incoming_transitions.incoming_silent_transitions(*element) {
-                if self.block_number(*s) == block_index {
-                    shouldadd = false;
-                    break;
-                }
-            }
-            if shouldadd {
-                inS[self.element_offset[*element]- block.marked_split] = true;
-                S.push(*element);    
-            }
-        }
-
-        let mut i = 0;
-        while i < builder.old_elements.len() {
-            let s = S[i];                
-            for &(_label, element) in lts.outgoing_transitions(s).filter(|(label, state)| 
-                lts.is_hidden_label(*label) 
-                && self.block_number(*state) == block_index){
-                if inS[self.element_offset[element] - block.marked_split] {
-                    break;
-                }
-                let mut shouldadd = true;
-                for &(_label, sprime) in incoming_transitions.incoming_silent_transitions(element).filter(|(label, state)| self.block_number(*state) == block_index) {
-                    if !inS[self.element_offset[sprime] - block.marked_split] {
-                        shouldadd = false;
-                        break;
-                    }
-                }
-                if shouldadd {
-                    inS[self.element_offset[element] - block.marked_split] = true;
-                    S.push(element);    
-                }
-            }
-            i += 1;            
-        }
-
-        // Topological sort the elements in old_elements
-        builder.old_elements.clear();
-        builder.old_elements.extend(S.iter().rev());
-
+        len = block.len_marked();
+        // println!("{}", len);
+        
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
         // println!["{S:?}"];
 
