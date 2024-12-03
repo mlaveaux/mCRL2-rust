@@ -64,6 +64,7 @@ impl InnermostStack {
             }
             first = false;
         }
+        
         trace!(
             "\t applied stack size: {}, substitution: {}, stack: [{}]",
             rhs_stack.stack_size,
@@ -77,6 +78,7 @@ impl InnermostStack {
             rhs_stack.stack_size != 1 || rhs_stack.variables.len() <= 1,
             "There can only be a single variable in the right hand side"
         );
+
         if rhs_stack.stack_size == 1 && rhs_stack.variables.len() == 1 {
             // This is a special case where we place the result on the correct position immediately.
             // The right hand side is only a variable

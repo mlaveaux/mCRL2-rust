@@ -369,7 +369,7 @@ mod tests {
 
         // Make a variable map with only x@1.
         let mut map = HashMap::new();
-        map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[1]));
+        map.insert(DataVariable::new(&mut tp, "x"), ExplicitPosition::new(&[2]));
 
         let sctt = TermStack::from_term(&t_rhs.copy(), &map);
 
