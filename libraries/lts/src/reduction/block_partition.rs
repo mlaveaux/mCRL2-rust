@@ -124,6 +124,58 @@ impl BlockPartition {
             }
             it -= 1;
         }
+        println!("loop2 done");
+        self.assert_consistent();
+        
+        if top != self.blocks[block_index].marked_split {
+            // Print first elements and first elements of top
+            for i in 201599 .. 201601 {
+                let element: usize = self.elements[i];
+                let is_silent =  incoming_transitions.incoming_silent_transitions(element).filter(
+                    |(_label, target)| 
+                        self.block_number(*target) == block_index && self.element_offset[*target] < top
+                        && self.is_element_marked(*target)
+                    ).count() == 0;
+    
+                println!("{} : {} : {} : {} : {}",
+                    i,
+                    self.elements[i],
+                    self.element_offset[self.elements[i]],
+                    self.is_element_marked(self.elements[i]),
+                    is_silent
+                );
+            }
+        }
+
+        // Loop backwards again to see if states are in topological order, and where we went wrong
+        it = self.blocks[block_index].end-1;
+
+        while it >= self.blocks[block_index].marked_split {
+            let s = self.elements[it];
+            let not_top = incoming_transitions.incoming_silent_transitions(s).any(
+                |(label, state)| 
+                    lts.is_hidden_label(*label) && self.block_number(*state) == block_index
+                    && self.is_element_marked(*state) && self.element_offset[*state] < self.element_offset[s]
+                );
+            if not_top {
+                let mut preds  = incoming_transitions.incoming_silent_transitions(s).filter(
+                    |(label, state)| 
+                        lts.is_hidden_label(*label) && self.block_number(*state) == block_index
+                        && self.is_element_marked(*state) && self.element_offset[*state] < self.element_offset[s]
+                    );
+                if let Some(&s) = preds.next() {
+                    println!("{} :{}, bid {} :{}" , s.1, self.element_offset[s.1], block_index, self.element_to_block[s.1]);
+                }
+            }
+            if it == 0 {
+                break;
+            }
+            it -= 1;
+        }
+
+        let block = self.blocks[block_index]; //update block.
+        println!("further");
+        self.assert_consistent();
 
         // println!("{} : {}", top, self.blocks[block_index].marked_split);
         assert!(top == self.blocks[block_index].marked_split);

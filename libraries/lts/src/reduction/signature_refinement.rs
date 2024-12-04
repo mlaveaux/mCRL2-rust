@@ -190,7 +190,6 @@ where
 
     // Used to keep track of dirty blocks.
     let mut worklist = vec![0];
-    let mut stack = Vec::new();
 
     while let Some(block_index) = worklist.pop() {
         // Clear the current partition to start the next blocks.
@@ -245,7 +244,14 @@ where
                             if !lts.is_hidden_label(label_index)
                                 || partition.block_number(incoming_state) != partition.block_number(state_index)
                             {
-                                mark_inert_tau(&mut partition, &mut worklist, &mut stack, &incoming, incoming_state);
+                                let other_block = partition.block_number(incoming_state);
+
+                                if !partition.block(other_block).has_marked() {
+                                    // If block was not already marked then add it to the worklist.
+                                    worklist.push(other_block);
+                                }
+    
+                                partition.mark_element(incoming_state);
                             }
                         } else {
                             // In this case mark all incoming states.
