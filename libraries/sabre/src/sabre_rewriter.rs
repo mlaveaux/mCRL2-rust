@@ -237,7 +237,7 @@ impl SabreRewriter {
         // Computes the new subterm of the configuration
         let new_subterm = annotation
             .semi_compressed_rhs
-            .evaluate(&leaf_subterm.get_position(&announcement.position), tp)
+            .evaluate(tp, &leaf_subterm.get_position(&announcement.position))
             .into();
 
         trace!(
@@ -264,8 +264,8 @@ impl SabreRewriter {
         for c in &annotation.conditions {
             let subterm = subterm.get_position(&announcement.position);
 
-            let rhs: DataExpression = c.semi_compressed_rhs.evaluate(&subterm, tp).into();
-            let lhs: DataExpression = c.semi_compressed_lhs.evaluate(&subterm, tp).into();
+            let rhs: DataExpression = c.stack_rhs.evaluate(tp, &subterm).into();
+            let lhs: DataExpression = c.stack_lhs.evaluate(tp, &subterm).into();
 
             // Equality => lhs == rhs.
             if !c.equality || lhs != rhs {

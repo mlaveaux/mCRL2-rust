@@ -19,8 +19,8 @@ use crate::set_automaton::SetAutomaton;
 use crate::utilities::Config;
 use crate::utilities::InnermostStack;
 use crate::utilities::PositionIndexed;
-use crate::utilities::RHSStack;
-use crate::utilities::SCCTBuilder;
+use crate::utilities::TermStack;
+use crate::utilities::TermStackBuilder;
 use crate::RewriteEngine;
 use crate::RewriteSpecification;
 use crate::RewritingStatistics;
@@ -57,7 +57,7 @@ impl InnermostRewriter {
             apma,
             tp: tp.clone(),
             stack: InnermostStack::default(),
-            builder: SCCTBuilder::new(),
+            builder: TermStackBuilder::new(),
         }
     }
 
@@ -78,7 +78,7 @@ impl InnermostRewriter {
     pub(crate) fn rewrite_aux(
         tp: &mut TermPool,
         stack: &mut InnermostStack,
-        builder: &mut SCCTBuilder,
+        builder: &mut TermStackBuilder,
         stats: &mut RewritingStatistics,
         automaton: &SetAutomaton<AnnouncementInnermost>,
         input_term: DataExpression,
@@ -162,7 +162,7 @@ impl InnermostRewriter {
                                     &mut write_configs,
                                     &mut write_terms,
                                     &annotation.rhs_stack,
-                                    &term,
+                                    &term.copy(),
                                     index,
                                 );
                                 stats.rewrite_steps += 1;
@@ -174,6 +174,9 @@ impl InnermostRewriter {
                                 write_terms[index] = t.into();
                             }
                         }
+                    },
+                    Config::Term(_, _) => {
+                        unreachable!("This case should not happen");
                     }
                     Config::Return() => {
                         let mut write_terms = stack.terms.write();
@@ -193,6 +196,7 @@ impl InnermostRewriter {
                                 match x {
                                     Config::Construct(_, _, result) => index == *result,
                                     Config::Rewrite(result) => index == *result,
+                                    Config::Term(_, result) => index == *result,
                                     Config::Return() => true,
                                 }
                             }),
@@ -208,7 +212,7 @@ impl InnermostRewriter {
     fn find_match<'a>(
         tp: &mut TermPool,
         stack: &mut InnermostStack,
-        builder: &mut SCCTBuilder,
+        builder: &mut TermStackBuilder,
         stats: &mut RewritingStatistics,
         automaton: &'a SetAutomaton<AnnouncementInnermost>,
         t: &ATermRef<'_>,
@@ -252,15 +256,15 @@ impl InnermostRewriter {
     fn check_conditions(
         tp: &mut TermPool,
         stack: &mut InnermostStack,
-        builder: &mut SCCTBuilder,
+        builder: &mut TermStackBuilder,
         stats: &mut RewritingStatistics,
         automaton: &SetAutomaton<AnnouncementInnermost>,
         announcement: &AnnouncementInnermost,
         t: &ATermRef<'_>,
     ) -> bool {
         for c in &announcement.conditions {
-            let rhs: DataExpression = c.semi_compressed_rhs.evaluate_with(builder, t, tp).into();
-            let lhs: DataExpression = c.semi_compressed_lhs.evaluate_with(builder, t, tp).into();
+            let rhs: DataExpression = c.stack_rhs.evaluate_with(tp, t, builder).into();
+            let lhs: DataExpression = c.stack_lhs.evaluate_with(tp, t, builder).into();
 
             let rhs_normal = InnermostRewriter::rewrite_aux(tp, stack, builder, stats, automaton, rhs);
             let lhs_normal = if &lhs == tp.true_term() {
@@ -284,7 +288,7 @@ pub struct InnermostRewriter {
     tp: Rc<RefCell<TermPool>>,
     apma: SetAutomaton<AnnouncementInnermost>,
     stack: InnermostStack,
-    builder: SCCTBuilder,
+    builder: TermStackBuilder,
 }
 
 pub(crate) struct AnnouncementInnermost {
@@ -295,7 +299,7 @@ pub(crate) struct AnnouncementInnermost {
     conditions: Vec<EMACondition>,
 
     /// The innermost stack for the right hand side of the rewrite rule.
-    rhs_stack: RHSStack,
+    rhs_stack: TermStack,
 }
 
 impl AnnouncementInnermost {
@@ -303,7 +307,7 @@ impl AnnouncementInnermost {
         AnnouncementInnermost {
             conditions: extend_conditions(rule),
             equivalence_classes: derive_equivalence_classes(rule),
-            rhs_stack: RHSStack::new(rule),
+            rhs_stack: TermStack::new(rule),
         }
     }
 }
