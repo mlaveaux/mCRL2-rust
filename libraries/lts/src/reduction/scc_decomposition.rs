@@ -241,6 +241,7 @@ mod tests {
 
         let lts = LabelledTransitionSystem::new(
             0,
+            None,
             || transitions.iter().cloned(),
             vec!["tau".into(), "a".into()],
             vec!["tau".into()]

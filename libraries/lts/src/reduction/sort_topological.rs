@@ -86,6 +86,7 @@ where
     debug!("Time reorder_states: {:.3}s", start.elapsed().as_secs_f64());
     LabelledTransitionSystem::new(
         permutation(lts.initial_state_index()),
+        Some(lts.num_of_states()),
         || transitions.iter().cloned(),
         lts.labels().into(),
         lts.hidden_labels().into(),

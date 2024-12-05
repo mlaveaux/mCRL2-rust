@@ -29,6 +29,7 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
     }
 
     LabelledTransitionSystem::new(0, 
+        Some(num_of_states),
         || transitions.iter().cloned(),
         labels, 
         vec![tau_label])
