@@ -22,8 +22,14 @@ pub struct LabelledTransitionSystem {
 }
 
 impl LabelledTransitionSystem {
+
+    /// Creates a new a labelled transition system with the given transitions, labels, and hidden labels.
+    /// 
+    /// The initial state is the state with the given index.
+    /// num_of_states is the number of states in the LTS, if known. If None then deadlock states without incoming transitions are removed.
     pub fn new<I, F>(
         initial_state: StateIndex,
+        num_of_states: Option<usize>,
         transition_iter: F,
         mut labels: Vec<String>,
         hidden_labels: Vec<String>,
@@ -32,16 +38,16 @@ impl LabelledTransitionSystem {
           I:Iterator<Item = (StateIndex, LabelIndex, StateIndex)> {
 
         let mut states = Vec::new();
+        if let Some(num_of_states) = num_of_states {
+            states.resize_with(num_of_states, Default::default);
+        }
 
         // Count the number of transitions for every state
         let mut num_of_transitions = 0;
         for (from, _, to) in transition_iter() {
             // Ensure that the states vector is large enough.
             while states.len() <= from.max(to) {
-                states.push(State {
-                    outgoing_start: 0,
-                    outgoing_end: 0,
-                });
+                states.push(State::default());
             }
 
             states[from].outgoing_end += 1;
@@ -153,7 +159,7 @@ impl LabelledTransitionSystem {
 }
 
 /// A single state in the LTS, containing a vector of outgoing edges.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 struct State {
     outgoing_start: usize,
     outgoing_end: usize,

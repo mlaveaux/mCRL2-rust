@@ -77,7 +77,7 @@ pub fn quotient_lts(
             let block = partition.block_number(state_index);
             let to_block = partition.block_number(to);
 
-            // If we eliminate tau loops then check if the to and from end up in the same block
+            // If we eliminate tau loops then check if the 'to' and 'from' end up in the same block
             if !eliminate_tau_loops
                 || !(lts.is_hidden_label(label) && block == to_block)
             {
@@ -98,6 +98,7 @@ pub fn quotient_lts(
 
     let result = LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),
+        Some(partition.num_of_blocks()),
         || transitions.iter().cloned(),
         lts.labels().into(),
         lts.hidden_labels().into()

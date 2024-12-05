@@ -67,15 +67,16 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     let header_regex = Regex::new(r#"des\s*\(\s*([0-9]*)\s*,\s*([0-9]*)\s*,\s*([0-9]*)\s*\)\s*"#)
         .expect("Regex compilation should not fail");
 
-    let (_, [initial_txt, num_of_transitions_txt, _]) = header_regex
+    let (_, [initial_txt, num_of_transitions_txt, num_of_states_txt]) = header_regex
         .captures(header)
         .ok_or(IOError::InvalidHeader(
-            "does not match des (<init>, <num_states>, <num_transitions>)",
+            "does not match des (<init>, <num_of_transitions>, <num_of_states>)",
         ))?
         .extract();
 
     let initial_state: usize = initial_txt.parse()?;
     let num_of_transitions: usize = num_of_transitions_txt.parse()?;
+    let num_of_states: usize = num_of_states_txt.parse()?;
 
     // This is used to keep track of the label to index mapping.
     let mut labels_index: HashMap<String, LabelIndex> = HashMap::new();
@@ -122,6 +123,7 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     debug!("Time read_aut: {:.3}s", start.elapsed().as_secs_f64());
     Ok(LabelledTransitionSystem::new(
         initial_state,
+        Some(num_of_states),
         || transitions.iter().cloned(),
         labels,
         hidden_labels,
