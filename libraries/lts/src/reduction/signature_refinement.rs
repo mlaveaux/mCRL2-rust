@@ -206,8 +206,11 @@ where
             "Every block in the worklist should have at least one marked state"
         );
 
-        for new_block_index in
-            partition.partition_marked_with(block_index, &mut split_builder, &incoming, &lts, |state_index, partition| {
+        if BRANCHING {
+            partition.sorted_closure(block_index, &incoming, lts);
+        }
+        
+        for new_block_index in partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
                 // Compute the signature of a single state
                 let index = if let Some(key) = signature(state_index, partition, &state_to_key, &key_to_signature, &mut builder) {
                     // The signature refers to an existing block.
@@ -280,39 +283,6 @@ where
 
     trace!("Refinement partition {partition}");
     partition
-}
-
-/// Marks the given state and all incoming (inert) tau transitions.
-fn mark_inert_tau(
-    partition: &mut BlockPartition,
-    worklist: &mut Vec<usize>,
-    stack: &mut Vec<usize>,
-    incoming: &IncomingTransitions,
-    state_index: usize,
-) {
-    stack.clear();
-    stack.push(state_index);
-
-    while let Some(state_index) = stack.pop() {
-        let other_block = partition.block_number(state_index);
-
-        if !partition.block(other_block).has_marked() {
-            // If block was not already marked then add it to the worklist.
-            worklist.push(other_block);
-        }
-
-        partition.mark_element(state_index);
-
-        for &(_, incoming_state) in incoming.incoming_silent_transitions(state_index) {
-            if partition.block_number(state_index) == partition.block_number(incoming_state)
-                && !partition.is_element_marked(incoming_state)
-            {
-                // If this is a bottom state then it must be marked recursively.
-                trace!("Added state {incoming_state}");
-                stack.push(incoming_state);
-            }
-        }
-    }
 }
 
 /// General signature refinement algorithm that accepts an arbitrary signature
