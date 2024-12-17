@@ -112,6 +112,7 @@ impl BlockPartition {
             it -= 1;
         }
 
+        self.blocks[block_index] = block;
         self.assert_consistent();
     }
 
