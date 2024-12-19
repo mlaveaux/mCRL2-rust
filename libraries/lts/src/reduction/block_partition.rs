@@ -1,5 +1,8 @@
 use std::fmt;
 
+use crate::IncomingTransitions;
+use crate::LabelledTransitionSystem;
+
 use super::IndexedPartition;
 use super::Partition;
 
@@ -35,6 +38,82 @@ impl BlockPartition {
             element_offset: element_to_block_offset,
             blocks,
         }
+    }
+
+    /// Makes the marked elements closed under the silent closure of incoming
+    /// tau-transitions based on the current partition, and maintains
+    /// topological sorting of the elements in the block.
+    pub fn sorted_closure(
+        &mut self,
+        block_index: usize,
+        incoming_transitions: &IncomingTransitions,
+        lts: &LabelledTransitionSystem,
+    ) {
+        let block = self.blocks[block_index];
+
+        let mut top: usize = block.end;
+        let mut it = block.end - 1;
+
+        // First compute backwards silent transitive closure.
+        while it >= self.blocks[block_index].marked_split {
+            let mut is_top = true;
+            for (_label, s) in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
+                if self.block_number(*s) == block_index {
+                    is_top = false;
+                    if !self.is_element_marked(*s) {
+                        self.mark_element(*s);
+                    }
+                }
+            }
+            if is_top {
+                self.swap_elements(it, top - 1);
+                top -= 1;
+            }
+
+            if it == 0 {
+                break;
+            }
+
+            it -= 1;
+        }
+
+        // Now loop again from top to sort topologically.
+        it = block.end - 1;
+        while it >= top {
+            let s = self.elements[it];
+            for &(_label, element) in lts
+                .outgoing_transitions(s)
+                .filter(|(label, _state)| lts.is_hidden_label(*label))
+            {
+                // Maybe add element, if it contains no silent /incoming transition/ which is not yet marked top.
+                if self.block_number(element) == block_index
+                    && self.element_offset[element] < top
+                    && self.is_element_marked(element)
+                    && incoming_transitions
+                        .incoming_silent_transitions(element)
+                        .filter(|(_label, target)| {
+                            self.block_number(*target) == block_index
+                                && self.element_offset[*target] < top
+                                && self.is_element_marked(*target)
+                        })
+                        .count()
+                        == 0
+                {
+                    // Mark element to be top.
+                    self.swap_elements(self.element_offset[element], top - 1);
+                    top -= 1;
+                }
+            }
+
+            if it == 0 {
+                break;
+            }
+
+            it -= 1;
+        }
+
+        self.blocks[block_index] = block;
+        self.assert_consistent();
     }
 
     /// Partition the elements of the given block into multiple new blocks based
@@ -73,11 +152,9 @@ impl BlockPartition {
 
         builder.index_to_block.resize(block.len_marked(), 0);
 
-        // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
+        // O(n) Loop through the marked elements, used later for the swapping.
         builder.old_elements.extend(block.iter_marked(&self.elements));
-        builder.old_elements.sort_unstable();
 
-        // O(n) Loop over marked elements to determine the number of the new block each element is in.
         for (element_index, &element) in builder.old_elements.iter().enumerate() {
             let number = partitioner(element, self);
 
@@ -111,8 +188,8 @@ impl BlockPartition {
                     block.marked_split
                 } else {
                     // Use this as the zero block.
-                self.blocks[block_index] = Block::new_unmarked(block.begin, block.begin + *size);
-                block.begin
+                    self.blocks[block_index] = Block::new_unmarked(block.begin, block.begin + *size);
+                    block.begin
                 }
             } else {
                 // Introduce a new block for every other non-empty block.
@@ -142,7 +219,8 @@ impl BlockPartition {
         }
 
         // Swap the first block and the maximum sized block.
-        let max_block_index =  (block_index..=block_index).chain(end_of_blocks..self.blocks.len())
+        let max_block_index = (block_index..=block_index)
+            .chain(end_of_blocks..self.blocks.len())
             .max_by_key(|block_index| self.block(*block_index).len())
             .unwrap();
         self.swap_blocks(block_index, max_block_index);
@@ -271,7 +349,7 @@ impl BlockPartition {
         }
     }
 
-    /// Swaps the elements at the given indices and updates the element_to_block
+    /// Swaps the elements at the given indices and updates the element_offset
     fn swap_elements(&mut self, left_index: usize, right_index: usize) {
         self.elements.swap(left_index, right_index);
         self.element_offset[self.elements[left_index]] = left_index;
