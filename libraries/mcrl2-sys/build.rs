@@ -20,17 +20,19 @@ fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
         .flag_if_supported("-Wall")
         .flag_if_supported("-pipe")
         .flag_if_supported("-pedantic")
-        .flag_if_supported("-stdlib=libc++");
+        .flag_if_supported("-stdlib=libc++")
+        .flag_if_supported("-std=c++17");
 
     #[cfg(windows)]
     build
         .include(mcrl2_path + "build/workarounds/msvc") // These are MSVC workarounds that mCRL2 relies on for compilation.
-        .flag_if_supported("/EHs")
-        .flag_if_supported("/bigobj")
-        .flag_if_supported("/W3")
-        .flag_if_supported("/MP")
-        .flag_if_supported("/Zc:inline")
-        .flag_if_supported("/permissive-")
+        .flag("/EHs")
+        .flag("/bigobj")
+        .flag("/W3")
+        .flag("/MP")
+        .flag("/Zc:inline")
+        .flag("/permissive-")
+        .flag("/std:c++17")
         .define("WIN32", "1")
         .define("WIN32_LEAN_AND_MEAN", "1")
         .define("NOMINMAX", "1")
@@ -38,21 +40,6 @@ fn add_compile_flags(build: &mut Build, mcrl2_path: String) {
         .define("_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES", "1")
         .define("_CRT_SECURE_NO_WARNINGS", "1")
         .define("BOOST_ALL_NO_LIB", "1");
-}
-
-/// Add compiler specific flags to enable C++17 compilation.
-fn add_cpp_flags(build: &mut Build) {
-    #[cfg(windows)]
-    build.flag_if_supported("/std:c++17");
-
-    #[cfg(unix)]
-    {
-        build.flag_if_supported("-std=c++17");
-        // build.flag_if_supported("-flto=auto");
-        // build.flag_if_supported("-fno-fat-lto-objects");
-        // build.flag_if_supported("-fuse-linker-plugin");
-        // build.flag_if_supported("-fuse-ld=lld");
-    }
 }
 
 fn main() {
@@ -184,7 +171,6 @@ fn main() {
         "debug" => {            
             build.define("_LIBCPP_DEBUG", "1");
             build.define("_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS", "1");
-            build.define("_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS", "1");
             build.define("_LIBCPP_HARDENING_MODE", "_LIBCPP_HARDENING_MODE_DEBUG");
             build.define("_LIBCPP_ABI_BOUNDED_ITERATORS ", "1");
             build.define("_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING", "1");
@@ -207,7 +193,6 @@ fn main() {
     //build.define("MCRL2_ENABLE_MACHINENUMBERS", "1");
 
     add_compile_flags(&mut build, mcrl2_path);
-    add_cpp_flags(&mut build);
 
     build.compile("mcrl2-sys");
 
