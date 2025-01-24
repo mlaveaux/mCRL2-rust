@@ -119,7 +119,9 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
 
 /// Computes a branching bisimulation partitioning using signature refinement without dirty blocks.
 pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
-    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts, timing);
+    let mut timepre = timing.start("preprocess");
+    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+    timepre.finish();
 
     let mut time = timing.start("reduction");
     let mut expected_builder = SignatureBuilder::default();
