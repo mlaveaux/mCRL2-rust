@@ -193,7 +193,6 @@ where
 
     // Used to keep track of dirty blocks.
     let mut worklist = vec![0];
-    let mut stack = Vec::new();
 
     while let Some(block_index) = worklist.pop() {
         // Clear the current partition to start the next blocks.
@@ -209,6 +208,10 @@ where
             block.has_marked(),
             "Every block in the worklist should have at least one marked state"
         );
+
+        if BRANCHING {
+            partition.mark_backward_closure(block_index, incoming);
+        }
 
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
@@ -227,6 +230,7 @@ where
 
                     // (branching)  Keep track of the signature for every block in the next partition.
                     state_to_key[state_index] = key_to_signature.len();
+                    
                     let result = key_to_signature.len();
                     key_to_signature.push(Signature::new(slice));
                     result
@@ -248,7 +252,14 @@ where
                             if !lts.is_hidden_label(label_index)
                                 || partition.block_number(incoming_state) != partition.block_number(state_index)
                             {
-                                mark_inert_tau(&mut partition, &mut worklist, &mut stack, &incoming, incoming_state);
+                                let other_block = partition.block_number(incoming_state);
+
+                                if !partition.block(other_block).has_marked() {
+                                    // If block was not already marked then add it to the worklist.
+                                    worklist.push(other_block);
+                                }
+    
+                                partition.mark_element(incoming_state);
                             }
                         } else {
                             // In this case mark all incoming states.
@@ -277,39 +288,6 @@ where
 
     trace!("Refinement partition {partition}");
     partition
-}
-
-/// Marks the given state and all incoming (inert) tau transitions.
-fn mark_inert_tau(
-    partition: &mut BlockPartition,
-    worklist: &mut Vec<usize>,
-    stack: &mut Vec<usize>,
-    incoming: &IncomingTransitions,
-    state_index: usize,
-) {
-    stack.clear();
-    stack.push(state_index);
-
-    while let Some(state_index) = stack.pop() {
-        let other_block = partition.block_number(state_index);
-
-        if !partition.block(other_block).has_marked() {
-            // If block was not already marked then add it to the worklist.
-            worklist.push(other_block);
-        }
-
-        partition.mark_element(state_index);
-
-        for &(_, incoming_state) in incoming.incoming_silent_transitions(state_index) {
-            if partition.block_number(state_index) == partition.block_number(incoming_state)
-                && !partition.is_element_marked(incoming_state)
-            {
-                // If this is a bottom state then it must be marked recursively.
-                trace!("Added state {incoming_state}");
-                stack.push(incoming_state);
-            }
-        }
-    }
 }
 
 /// General signature refinement algorithm that accepts an arbitrary signature

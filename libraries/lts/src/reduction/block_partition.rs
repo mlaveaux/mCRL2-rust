@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::IncomingTransitions;
 use super::IndexedPartition;
 use super::Partition;
 
@@ -206,6 +207,32 @@ impl BlockPartition {
 
         println!("{self:?}");
         self.assert_consistent();
+    }
+
+    /// Makes the marked elements closed under the silent closure of incoming
+    /// tau-transitions within the current block.
+    pub fn mark_backward_closure(
+        &mut self,
+        block_index: usize,
+        incoming_transitions: &IncomingTransitions,
+    ) {
+        let block = self.blocks[block_index];
+        let mut it = block.end - 1;
+
+        // First compute backwards silent transitive closure.
+        while it >= self.blocks[block_index].marked_split {
+            for (_label, s) in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
+                if self.block_number(*s) == block_index {
+                    self.mark_element(*s);
+                }
+            }
+
+            if it == 0 {
+                break;
+            }
+
+            it -= 1;
+        }
     }
 
     /// Swaps the given blocks given by the indices.
