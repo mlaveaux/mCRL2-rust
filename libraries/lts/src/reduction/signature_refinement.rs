@@ -24,8 +24,12 @@ use crate::SignatureBuilder;
 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let mut timepre = timing.start("preprocess");
+    let incoming = IncomingTransitions::new(lts);
+    timepre.finish();
+
     let mut time = timing.start("reduction");
-    let partition = signature_refinement::<_, false>(lts, |state_index, partition, _, _, builder| {
+    let partition = signature_refinement::<_, false>(lts, &incoming, |state_index, partition, _, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
         None
     });
@@ -54,15 +58,17 @@ pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Ti
 /// Computes a branching bisimulation partitioning using signature refinement
 pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut timepre = timing.start("preprocess");
-    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts, timing);
+    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+    let incoming = IncomingTransitions::new(&preprocessed_lts);
     timepre.finish();
+
     let mut time = timing.start("reduction");
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
 
     let partition =
-        signature_refinement::<_, true>(&preprocessed_lts, |state_index, partition, state_to_key, key_to_signature, builder| {
+        signature_refinement::<_, true>(&preprocessed_lts, &incoming, |state_index, partition, state_to_key, key_to_signature, builder| {
             let result = branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, key_to_signature, builder);
 
             // Compute the expected signature, only used in debugging.
@@ -160,7 +166,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 /// The signature function is called for each state and should fill the
 /// signature builder with the signature of the state. It consists of the
 /// current partition, the signatures per state for the next partition.
-fn signature_refinement<F, const BRANCHING: bool>(lts: &LabelledTransitionSystem, mut signature: F) -> BlockPartition
+fn signature_refinement<F, const BRANCHING: bool>(lts: &LabelledTransitionSystem, incoming: &IncomingTransitions, mut signature: F) -> BlockPartition
 where
     F: FnMut(usize, &BlockPartition, &[usize], &[Signature], &mut SignatureBuilder) -> Option<usize>,
 {
@@ -184,9 +190,6 @@ where
     let mut iteration = 0usize;
     let mut num_of_blocks;
     let mut states = Vec::new();
-
-    // Keep back references.
-    let incoming = IncomingTransitions::new(lts);
 
     // Used to keep track of dirty blocks.
     let mut worklist = vec![0];
