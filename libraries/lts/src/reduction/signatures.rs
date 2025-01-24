@@ -2,7 +2,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 use rustc_hash::FxHashSet;
-use utilities::Timing;
 
 use crate::LabelledTransitionSystem;
 use crate::Partition;
@@ -189,9 +188,8 @@ pub fn branching_bisim_signature_inductive(
     lts: &LabelledTransitionSystem,
     partition: &BlockPartition,
     state_to_key: &[usize],
-    key_to_signature: &[Signature],
     builder: &mut SignatureBuilder,
-) -> Option<usize> {
+) {
     builder.clear();
 
     let num_act: usize = lts.num_of_labels(); //this label index does not occur.
@@ -214,31 +212,12 @@ pub fn branching_bisim_signature_inductive(
     // Compute the flat signature, which has Hash and is more compact.
     builder.sort_unstable();
     builder.dedup();
-
-    for (label, key) in builder.iter().rev() {
-        if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(&builder, (*label, *key)) {
-            return Some(*key);
-        } else {
-            break;
-        }
-    }
-
-    None
 }
 
 /// Perform the preprocessing necessary for branching bisimulation with the
 /// sorted signature see `branching_bisim_signature_sorted`.
-pub fn preprocess_branching(
-    lts: &LabelledTransitionSystem,
-    timing: &mut Timing,
-) -> (LabelledTransitionSystem, IndexedPartition) {
-    let scc_partition = {
-        let mut time = timing.start("scc_partition");
-        let partition = tau_scc_decomposition(lts);
-        time.finish();
-        partition
-    };
-
+pub fn preprocess_branching(lts: &LabelledTransitionSystem) -> (LabelledTransitionSystem, IndexedPartition) {
+    let scc_partition = tau_scc_decomposition(lts);
     let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
 
     // Sort the states according to the topological order of the tau transitions.

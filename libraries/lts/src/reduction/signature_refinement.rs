@@ -29,10 +29,9 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) 
     timepre.finish();
 
     let mut time = timing.start("reduction");
-    let partition = signature_refinement::<_, false>(lts, &incoming, |state_index, partition, _, _, builder| {
+    let partition = signature_refinement::<_, _, false>(lts, &incoming, |state_index, partition, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
-        None
-    });
+    }, |_, _| { None });
 
     debug_assert_eq!(
         partition,
@@ -68,8 +67,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     let mut stack = Vec::new();
 
     let partition =
-        signature_refinement::<_, true>(&preprocessed_lts, &incoming, |state_index, partition, state_to_key, key_to_signature, builder| {
-            let result = branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, key_to_signature, builder);
+        signature_refinement::<_, _, true>(&preprocessed_lts, &incoming, |state_index, partition, state_to_key, builder| {
+            branching_bisim_signature_inductive(state_index, &preprocessed_lts, partition, state_to_key, builder);
 
             // Compute the expected signature, only used in debugging.
             if cfg!(debug_assertions) {
@@ -90,8 +89,18 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
                     "The sorted and expected signature should be the same"
                 );
             }
+        },
+            |signature, key_to_signature| {                
+                // Inductive signatures.
+                for (label, key) in signature.iter().rev() {
+                    if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(&signature, (*label, *key)) {
+                        return Some(*key);
+                    } else {
+                        return None;
+                    }
+                }
 
-            result
+                None
         });
 
     debug_assert_eq!(
@@ -168,9 +177,12 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
 /// The signature function is called for each state and should fill the
 /// signature builder with the signature of the state. It consists of the
 /// current partition, the signatures per state for the next partition.
-fn signature_refinement<F, const BRANCHING: bool>(lts: &LabelledTransitionSystem, incoming: &IncomingTransitions, mut signature: F) -> BlockPartition
+fn signature_refinement<F, G, const BRANCHING: bool>(lts: &LabelledTransitionSystem, incoming: &IncomingTransitions, 
+    mut signature: F,
+    mut renumber: G) -> BlockPartition
 where
-    F: FnMut(usize, &BlockPartition, &[usize], &[Signature], &mut SignatureBuilder) -> Option<usize>,
+    F: FnMut(usize, &BlockPartition, &[usize], &mut SignatureBuilder),
+    G: FnMut(&[(usize, usize)], &Vec<Signature>) -> Option<usize>
 {
     trace!("{:?}", lts);
 
@@ -217,25 +229,30 @@ where
 
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
+                signature(state_index, partition, &state_to_key, &mut builder);
+
                 // Compute the signature of a single state
-                let index = if let Some(key) = signature(state_index, partition, &state_to_key, &key_to_signature, &mut builder) {
-                    // The signature refers to an existing block.
-                    state_to_key[state_index] = key;
-                    key
-                } else if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
+                let index = if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
                     // Keep track of the index for every signature, either use the arena to allocate space or simply borrow the value.
                     state_to_key[state_index] = *index;
                     *index
                 } else {
                     let slice = arena.alloc_slice_copy(&builder);
-                    id.insert(Signature::new(slice), key_to_signature.len());
 
-                    // (branching)  Keep track of the signature for every block in the next partition.
-                    state_to_key[state_index] = key_to_signature.len();
+                    let number = if let Some(key) = renumber(&builder, &key_to_signature) {
+                        key
+                    } else {
+                        let result = key_to_signature.len();
+                        key_to_signature.push(Signature::new(slice));
+                        result
+                    };
+
+                    id.insert(Signature::new(slice), number);
                     
-                    let result = key_to_signature.len();
-                    key_to_signature.push(Signature::new(slice));
-                    result
+                    // (branching)  Keep track of the signature for every block in the next partition.
+                    state_to_key[state_index] = number;
+
+                    number
                 };
 
                 trace!("State {state_index} signature {:?} index {index}", builder);
