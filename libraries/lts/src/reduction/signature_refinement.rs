@@ -108,10 +108,10 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
         }),
         "The resulting partition is not a branching bisimulation partition."
     );
+    time.finish();
 
     // Combine the SCC partition with the branching bisimulation partition.
     let combined_partition = combine_partition(preprocess_partition, &partition);
-    time.finish();
 
     trace!("Final partition {combined_partition}");
     combined_partition
@@ -152,10 +152,10 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
             }
         },
     );
+    time.finish();
 
     // Combine the SCC partition with the branching bisimulation partition.
     let combined_partition = combine_partition(preprocess_partition, &partition);
-    time.finish();
 
     trace!("Final partition {combined_partition}");
     combined_partition
