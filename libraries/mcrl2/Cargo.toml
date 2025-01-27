@@ -8,8 +8,8 @@ edition.workspace = true
 unstable = []
 
 [dependencies]
-parking_lot = "0.12"
-once_cell = "1.19"
+parking_lot.workspace = true
+once_cell.workspace = true
 
 ahash.workspace = true
 log.workspace = true

@@ -21,4 +21,4 @@ itertools.workspace = true
 
 
 [build-dependencies]
-slint-build = "1.5"
+slint-build.workspace = true
