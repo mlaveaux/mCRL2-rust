@@ -17,18 +17,19 @@ use std::time::Instant;
 
 use clap::Parser;
 
-use io::io_aut::read_aut;
+use gui::console;
 use log::debug;
 use log::info;
-use ltsgraph_lib::GraphLayout;
-use ltsgraph_lib::Viewer;
-use pauseable_thread::PauseableThread;
 use slint::invoke_from_event_loop;
 use slint::Image;
 use slint::Rgba8Pixel;
 use slint::SharedPixelBuffer;
 
-mod console;
+use io::io_aut::read_aut;
+use ltsgraph_lib::GraphLayout;
+use ltsgraph_lib::Viewer;
+use pauseable_thread::PauseableThread;
+
 mod error_dialog;
 mod pauseable_thread;
 

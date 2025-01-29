@@ -7,6 +7,9 @@
 //! These functions enable that, primarily for the purposes of displaying Rust
 //! panics.
 
+use std::error::Error;
+use std::result::Result;
+
 #[cfg(windows)]
 use winapi::um::consoleapi::AllocConsole;
 
@@ -25,7 +28,7 @@ pub struct Console {
 }
 
 /// Initialises the console. On Windows this either attaches to the
-pub fn init() -> anyhow::Result<Console> {
+pub fn init() -> Result<Console, Box<dyn Error>> {
     #[cfg(windows)]
     unsafe {
         // Check if we're attached to an existing Windows console
@@ -40,7 +43,7 @@ pub fn init() -> anyhow::Result<Console> {
                 if AllocConsole() != 0 {
                     Ok(Console { attached: false })
                 } else {
-                    anyhow::bail!("Failed to attach to a console, and to create one")
+                    Err("Failed to attach to a console, and to create one")
                 }
             } else {
                 // We attached to an existing console.

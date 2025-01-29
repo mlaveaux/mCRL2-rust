@@ -7,18 +7,16 @@ license.workspace = true
 
 [dependencies]
 ltsgraph-lib = { path = "./library" }
-slint.workspace = true
-rfd.workspace = true
-tiny-skia.workspace = true
-tokio.workspace = true
-winapi.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 env_logger.workspace = true
-log.workspace = true
+gui.workspace = true
 io.workspace = true
-itertools.workspace = true
-
+log.workspace = true
+rfd.workspace = true
+slint.workspace = true
+tiny-skia.workspace = true
+tokio.workspace = true
 
 [build-dependencies]
 slint-build.workspace = true

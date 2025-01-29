@@ -80,6 +80,7 @@ strum = { version = "0.26", features = ["derive"] }
 slint-build = "1.9"
 
 # The workspace libraries.
+gui = { path = "libraries/gui" }
 io = { path = "libraries/io" }
 lts = { path = "libraries/lts" }
 mcrl2 = { path = "libraries/mcrl2" }
