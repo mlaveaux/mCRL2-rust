@@ -28,13 +28,13 @@ impl GraphLayout {
         let mut states_simulation = vec![StateLayout::default(); lts.num_of_states()];
 
         // Place the states at a random position within some bound based on the number of states.
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let bound = (lts.num_of_states() as f32).sqrt().ceil();
 
         debug!("Placing states within bound {bound}");
         for layout_state in &mut states_simulation {
-            layout_state.position.x = rng.gen_range(-bound..bound);
-            layout_state.position.y = rng.gen_range(-bound..bound);
+            layout_state.position.x = rng.random_range(-bound..bound);
+            layout_state.position.y = rng.random_range(-bound..bound);
         }
 
         GraphLayout {

@@ -14,15 +14,15 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
         labels.push(char::from_digit(i + 10, 36).unwrap().to_string());
     }
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
 
     for state_index in 0..num_of_states {
         // Introduce outgoing transitions for this state based on the desired out degree.
-        for _ in 0..rng.gen_range(0..outdegree) {
+        for _ in 0..rng.random_range(0..outdegree) {
             // Pick a random label and state.
-            let label = rng.gen_range(0..num_of_labels);
-            let to = rng.gen_range(0..num_of_states);
+            let label = rng.random_range(0..num_of_labels);
+            let to = rng.random_range(0..num_of_states);
 
             transitions.insert((state_index, label as usize, to));
         }

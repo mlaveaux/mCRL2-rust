@@ -170,12 +170,12 @@ mod tests {
         // Protect a number of indices and record their roots.
         let mut indices: Vec<usize> = Vec::new();
 
-        let seed: u64 = rand::thread_rng().gen();
+        let seed: u64 = rand::rng().random();
         println!("seed: {}", seed);
         let mut rng = StdRng::seed_from_u64(seed);
 
         for _ in 0..5000 {
-            indices.push(protection_set.protect(rng.gen_range(0..1000)));
+            indices.push(protection_set.protect(rng.random_range(0..1000)));
         }
 
         // Unprotect a number of roots.
@@ -187,7 +187,7 @@ mod tests {
 
         // Protect more to test the freelist
         for _ in 0..1000 {
-            indices.push(protection_set.protect(rng.gen_range(0..1000)));
+            indices.push(protection_set.protect(rng.random_range(0..1000)));
         }
 
         for index in &indices {
