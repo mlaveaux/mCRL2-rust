@@ -6,7 +6,6 @@ edition.workspace = true
 
 [dependencies]
 crossbeam-utils.workspace = true
-once_cell.workspace = true
 rand.workspace = true
 test-log.workspace = true
 log.workspace = true

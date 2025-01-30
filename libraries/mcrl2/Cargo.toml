@@ -8,13 +8,11 @@ edition.workspace = true
 unstable = []
 
 [dependencies]
-parking_lot.workspace = true
-once_cell.workspace = true
-
 ahash.workspace = true
 log.workspace = true
 mcrl2-macros.workspace = true
 mcrl2-sys.workspace = true
+parking_lot.workspace = true
 rand.workspace = true
 utilities.workspace = true
 

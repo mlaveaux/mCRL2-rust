@@ -1,7 +1,6 @@
+use std::sync::LazyLock;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
-
-use once_cell::sync::Lazy;
 
 pub type GlobalLockGuard = MutexGuard<'static, ()>;
 
@@ -11,4 +10,4 @@ pub fn lock_global() -> GlobalLockGuard {
 }
 
 /// This is the global mutex used to guard non thread safe FFI functions.
-pub(crate) static GLOBAL_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+pub(crate) static GLOBAL_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));

@@ -1,10 +1,10 @@
 use std::fmt::Debug;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use log::info;
 use log::trace;
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
 use mcrl2_sys::atermpp::ffi;
@@ -222,7 +222,7 @@ impl Debug for GlobalTermPool {
 }
 
 /// This is the global set of protection sets that are managed by the ThreadTermPool
-pub(crate) static GLOBAL_TERM_POOL: Lazy<Mutex<GlobalTermPool>> = Lazy::new(|| Mutex::new(GlobalTermPool::new()));
+pub(crate) static GLOBAL_TERM_POOL: LazyLock<Mutex<GlobalTermPool>> = LazyLock::new(|| Mutex::new(GlobalTermPool::new()));
 
 /// Marks the terms in all protection sets using the global aterm pool.
 pub(crate) fn mark_protection_sets(todo: Pin<&mut ffi::term_mark_stack>) {
