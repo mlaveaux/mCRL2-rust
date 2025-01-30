@@ -43,7 +43,7 @@ pub fn init() -> Result<Console, Box<dyn Error>> {
                 if AllocConsole() != 0 {
                     Ok(Console { attached: false })
                 } else {
-                    Err("Failed to attach to a console, and to create one")
+                    Err("Failed to attach to a console, and to create one".into())
                 }
             } else {
                 // We attached to an existing console.
