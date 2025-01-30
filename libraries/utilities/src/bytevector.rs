@@ -151,7 +151,7 @@ impl Entry for usize {
 #[cfg(test)]
 mod tests {
     use crate::bytevec;
-    use rand::distributions::Uniform;
+    use rand::distr::Uniform;
     use rand::Rng;
     use test_log::test;
 
@@ -172,9 +172,9 @@ mod tests {
 
     #[test]
     fn test_random_bytevector() {
-        let rng = rand::thread_rng();
+        let rng = rand::rng();
 
-        let range = Uniform::new(0, usize::MAX);
+        let range = Uniform::new(0, usize::MAX).unwrap();
         let expected_vector: Vec<usize> = rng.sample_iter(range).take(100).collect();
         let mut vector = ByteCompressedVec::new();
 
@@ -189,9 +189,9 @@ mod tests {
 
     #[test]
     fn test_random_setting_bytevector() {
-        let rng = rand::thread_rng();
+        let rng = rand::rng();
 
-        let range = Uniform::new(0, usize::MAX);
+        let range = Uniform::new(0, usize::MAX).unwrap();
         let expected_vector: Vec<usize> = rng.sample_iter(range).take(100).collect();
         let mut vector = bytevec![0; 100];
 
@@ -206,10 +206,10 @@ mod tests {
 
     #[test]
     fn test_usize_entry() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         for _ in 0..100 {
-            let value = rng.gen_range(0..1024);
+            let value = rng.random_range(0..1024);
             assert!(value.bytes_required() <= 2);
 
             let mut bytes = [0; 2];

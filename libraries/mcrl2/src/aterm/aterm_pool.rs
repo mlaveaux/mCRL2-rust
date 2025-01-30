@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_thread_aterm_pool_parallel() {
-        let seed: u64 = rand::thread_rng().gen();
+        let seed: u64 = rand::rng().random();
         println!("seed: {}", seed);
 
         thread::scope(|s| {

@@ -224,7 +224,7 @@ mod tests {
         let lts = random_lts(10, 3, 2);
 
         // Generate a random permutation.
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let order: Vec<usize> = {
             let mut order: Vec<usize> = (0..lts.num_of_states()).collect();
             order.shuffle(&mut rng);
@@ -256,7 +256,7 @@ mod tests {
         let lts = random_lts(10, 15, 2);
 
         // Generate a valid permutation.
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let valid_permutation: Vec<usize> = {
             let mut order: Vec<usize> = (0..lts.num_of_states()).collect();
             order.shuffle(&mut rng);

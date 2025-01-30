@@ -334,7 +334,7 @@ mod tests {
         let spec = RewriteSpecification { rewrite_rules: vec![] };
         let mut inner = InnermostRewriter::new(tp.clone(), &spec);
 
-        let seed: u64 = rand::thread_rng().gen();
+        let seed: u64 = rand::rng().random();
         println!("seed: {}", seed);
         let mut rng = StdRng::seed_from_u64(seed);
 
