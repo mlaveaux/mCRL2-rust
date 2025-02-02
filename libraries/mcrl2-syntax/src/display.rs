@@ -2,13 +2,13 @@ use std::fmt;
 
 pub struct DisplayPair<'i, R: pest::RuleType>(pub pest::iterators::Pair<'i, R>);
 
-impl<'i, R: pest::RuleType> fmt::Display for DisplayPair<'i, R> {
+impl<R: pest::RuleType> fmt::Display for DisplayPair<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.display(f, 0)
     }
 }
 
-impl<'i, R: pest::RuleType> DisplayPair<'i, R> {
+impl<R: pest::RuleType> DisplayPair<'_, R> {
     fn display(&self, f: &mut fmt::Formatter, depth: usize) -> fmt::Result {
         let span = self.0.clone().as_span();
         let rule = self.0.as_rule();
