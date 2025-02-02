@@ -141,11 +141,11 @@ DataExprPrimary = {
 DataExprSuffix = _{
         DataExprUpdate
     |   DataExprApplication
+    |   DataExprWhr
 }
-    /// Function update.
     DataExprUpdate = { "[" ~ DataExpr ~ "->" ~ DataExpr ~ "]" }
-    /// Function application
     DataExprApplication = { "(" ~ DataExprList ~ ")" }
+    DataExprWhr     = { "whr" ~ AssignmentList ~ "end" }
 
 DataExprInfix = _{
         DataExprImpl
@@ -168,7 +168,6 @@ DataExprInfix = _{
     |   DataExprMod
     |   DataExprMult
     |   DataExprAt
-    |   DataExprWhr
 }
     DataExprImpl    = { "=>" }
     DataExprDisj    = { "||" }
@@ -184,13 +183,12 @@ DataExprInfix = _{
     DataExprCons    = { "|>" }
     DataExprConcat  = { "++" }
     DataExprAdd     = { "+" }
-    DataExprMinus   = { "-" }
+    DataExprMinus   = { "-" ~ !">" }
     DataExprDiv     = { "/" }
     DataExprIntDiv  = { "div" }
     DataExprMod     = { "mod" }
     DataExprMult    = { "*" }
     DataExprAt      = { "." }
-    DataExprWhr     = { "whr" }
 
 /// List of data expressions
 DataExprList = { DataExpr ~ ( "," ~ DataExpr )* }
@@ -272,12 +270,10 @@ ProcExprUnit = {
     |   "hide" ~ "(" ~ ActIdSet ~ "," ~ ProcExpr ~ ")"           // Hiding operator
     |   "rename" ~ "(" ~ RenExprSet ~ "," ~ ProcExpr ~ ")"       // Action renaming operator
     |   "comm" ~ "(" ~ CommExprSet ~ "," ~ ProcExpr ~ ")"        // Communication operator
-    |   "(" ~ ProcExpr ~ ")"                                     // Brackets
     |   "sum" ~ VarsDeclList ~ "." ~ ProcExpr                    // Sum operator
-    |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]"
-            ~ "." ~ ProcExpr                                     // Distribution operator
-    |   DataExpr ~ "->" ~ ProcExpr                               // If-then-else operator
-            ~ ("<>" ~ ProcExpr)?
+    |   "dist" ~ VarsDeclList ~ "[" ~ DataExpr ~ "]" ~ "." ~ ProcExpr
+    |   DataExpr ~ "->" ~ ProcExpr ~ ("<>" ~ ProcExpr)?
+    |   "(" ~ ProcExpr ~ ")"                                     // Brackets
     |   Id ~ "(" ~ AssignmentList? ~ ")"                         // Process instantiation with assignment shorthand
     |   Action                                                   // Action or process instantiation
 }
