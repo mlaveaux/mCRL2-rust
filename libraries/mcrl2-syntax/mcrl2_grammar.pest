@@ -104,7 +104,7 @@ SortProduct = {
 }
 
 /// Data Expression
-DataExpr = { DataExprPrimary ~ DataExprSuffix? ~ (DataExprInfix ~ DataExprPrimary ~ DataExprSuffix?)* }
+DataExpr = { DataExprPrimary ~ DataExprSuffix* ~ (DataExprInfix ~ DataExprPrimary ~ DataExprSuffix*)* }
 
 // A single data expressions
 DataExprPrimary = {
