@@ -35,10 +35,10 @@ pub struct ATermRef<'a> {
 /// These are safe because terms are never modified. Garbage collection is
 /// always performed with exclusive access and uses relaxed atomics to perform
 /// some interior mutability.
-unsafe impl<'a> Send for ATermRef<'a> {}
-unsafe impl<'a> Sync for ATermRef<'a> {}
+unsafe impl Send for ATermRef<'_> {}
+unsafe impl Sync for ATermRef<'_> {}
 
-impl<'a> Default for ATermRef<'a> {
+impl Default for ATermRef<'_> {
     fn default() -> Self {
         ATermRef {
             term: std::ptr::null(),
@@ -178,14 +178,14 @@ impl ATermRef<'_> {
     }
 }
 
-impl<'a> fmt::Display for ATermRef<'a> {
+impl fmt::Display for ATermRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.require_valid();
         write!(f, "{:?}", self)
     }
 }
 
-impl<'a> fmt::Debug for ATermRef<'a> {
+impl fmt::Debug for ATermRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_default() {
             write!(f, "<default>")?;
@@ -515,7 +515,7 @@ impl<'a> Iterator for ATermArgs<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for ATermArgs<'a> {
+impl DoubleEndedIterator for ATermArgs<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.index < self.arity {
             let res = unsafe { Some(self.term.arg(self.arity - 1).upgrade_unchecked(&self.term)) };
@@ -528,7 +528,7 @@ impl<'a> DoubleEndedIterator for ATermArgs<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for ATermArgs<'a> {
+impl ExactSizeIterator for ATermArgs<'_> {
     fn len(&self) -> usize {
         self.arity - self.index
     }

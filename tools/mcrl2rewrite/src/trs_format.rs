@@ -30,7 +30,7 @@ impl SimpleTermFormatter<'_> {
     }
 }
 
-impl<'a> fmt::Display for SimpleTermFormatter<'a> {
+impl fmt::Display for SimpleTermFormatter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if is_data_function_symbol(&self.term) {
             let symbol = DataFunctionSymbolRef::from(self.term.copy());
@@ -76,7 +76,7 @@ impl TrsFormatter<'_> {
     }
 }
 
-impl<'a> fmt::Display for TrsFormatter<'a> {
+impl fmt::Display for TrsFormatter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Find all the variables in the specification
         let variables = {

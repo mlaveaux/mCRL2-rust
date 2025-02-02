@@ -334,7 +334,7 @@ impl<'a> ConfigurationStack<'a> {
     }
 }
 
-impl<'a> fmt::Display for ConfigurationStack<'a> {
+impl fmt::Display for ConfigurationStack<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Current node: {:?}", self.current_node)?;
         for (i, c) in self.stack.iter().enumerate() {
@@ -361,7 +361,7 @@ impl<'a> fmt::Display for ConfigurationStack<'a> {
     }
 }
 
-impl<'a> fmt::Display for SideInfoType<'a> {
+impl fmt::Display for SideInfoType<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SideInfoType::SideBranch(tr_slice) => {

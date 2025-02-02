@@ -134,7 +134,7 @@ pub trait Markable {
     }
 }
 
-impl<'a> Markable for ATermRef<'a> {
+impl Markable for ATermRef<'_> {
     fn mark(&self, todo: Pin<&mut ffi::term_mark_stack>) {
         if !self.is_default() {
             unsafe {
@@ -224,7 +224,7 @@ impl<'a, C: Markable> Protector<'a, C> {
     }
 }
 
-impl<'a, C: Markable> Deref for Protector<'a, C> {
+impl<C: Markable> Deref for Protector<'_, C> {
     type Target = C;
 
     fn deref(&self) -> &Self::Target {
@@ -232,13 +232,13 @@ impl<'a, C: Markable> Deref for Protector<'a, C> {
     }
 }
 
-impl<'a, C: Markable> DerefMut for Protector<'a, C> {
+impl<C: Markable> DerefMut for Protector<'_, C> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.reference
     }
 }
 
-impl<'a, C: Markable> Drop for Protector<'a, C> {
+impl<C: Markable> Drop for Protector<'_, C> {
     fn drop(&mut self) {
         #[cfg(debug_assertions)]
         {

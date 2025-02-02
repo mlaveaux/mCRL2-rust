@@ -33,7 +33,7 @@ impl<'a> SymbolRef<'a> {
     }
 }
 
-impl<'a> SymbolRef<'a> {
+impl SymbolRef<'_> {
     /// Obtain the symbol's name
     pub fn name(&self) -> &str {
         unsafe { ffi::get_function_symbol_name(self.symbol) }
@@ -50,19 +50,19 @@ impl<'a> SymbolRef<'a> {
     }
 }
 
-impl<'a> fmt::Display for SymbolRef<'a> {
+impl fmt::Display for SymbolRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
 }
 
-impl<'a> fmt::Debug for SymbolRef<'a> {
+impl fmt::Debug for SymbolRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{} [{}]", self.name(), self.arity(), self.address() as usize,)
     }
 }
 
-impl<'a> From<*const ffi::_function_symbol> for SymbolRef<'a> {
+impl From<*const ffi::_function_symbol> for SymbolRef<'_> {
     fn from(symbol: *const ffi::_function_symbol) -> Self {
         SymbolRef {
             symbol,
@@ -104,7 +104,7 @@ impl Symbol {
     }
 }
 
-impl<'a> From<&SymbolRef<'a>> for Symbol {
+impl From<&SymbolRef<'_>> for Symbol {
     fn from(value: &SymbolRef) -> Self {
         value.protect()
     }

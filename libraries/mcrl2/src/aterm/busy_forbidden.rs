@@ -77,7 +77,7 @@ pub struct BfTermPoolRead<'a, T: ?Sized> {
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a, T: ?Sized> Deref for BfTermPoolRead<'a, T> {
+impl<T: ?Sized> Deref for BfTermPoolRead<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -86,7 +86,7 @@ impl<'a, T: ?Sized> Deref for BfTermPoolRead<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> Drop for BfTermPoolRead<'a, T> {
+impl<T: ?Sized> Drop for BfTermPoolRead<'_, T> {
     fn drop(&mut self) {
         // If we leave the shared section and the counter is zero.
         ffi::unlock_shared();
@@ -98,7 +98,7 @@ pub struct BfTermPoolWrite<'a, T: ?Sized> {
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a, T: ?Sized> Deref for BfTermPoolWrite<'a, T> {
+impl<T: ?Sized> Deref for BfTermPoolWrite<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -107,14 +107,14 @@ impl<'a, T: ?Sized> Deref for BfTermPoolWrite<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> DerefMut for BfTermPoolWrite<'a, T> {
+impl<T: ?Sized> DerefMut for BfTermPoolWrite<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // We are the only guard after `write()`, so we can provide mutable access to the underlying object.
         unsafe { &mut *self.mutex.object.get() }
     }
 }
 
-impl<'a, T: ?Sized> Drop for BfTermPoolWrite<'a, T> {
+impl<T: ?Sized> Drop for BfTermPoolWrite<'_, T> {
     fn drop(&mut self) {
         ffi::unlock_exclusive();
     }
@@ -126,7 +126,7 @@ pub struct BfTermPoolThreadWrite<'a, T: ?Sized> {
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a, T: ?Sized> BfTermPoolThreadWrite<'a, T> {
+impl<T: ?Sized> BfTermPoolThreadWrite<'_, T> {
     /// Unlocks the guard prematurely, but returns whether the shared section was actually left.
     pub fn unlock(&mut self) -> bool {
         if self.locked {
@@ -138,7 +138,7 @@ impl<'a, T: ?Sized> BfTermPoolThreadWrite<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> Deref for BfTermPoolThreadWrite<'a, T> {
+impl<T: ?Sized> Deref for BfTermPoolThreadWrite<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -147,14 +147,14 @@ impl<'a, T: ?Sized> Deref for BfTermPoolThreadWrite<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> DerefMut for BfTermPoolThreadWrite<'a, T> {
+impl<T: ?Sized> DerefMut for BfTermPoolThreadWrite<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // We are the only guard after `write()`, so we can provide mutable access to the underlying object.
         unsafe { &mut *self.mutex.object.get() }
     }
 }
 
-impl<'a, T: ?Sized> Drop for BfTermPoolThreadWrite<'a, T> {
+impl<T: ?Sized> Drop for BfTermPoolThreadWrite<'_, T> {
     fn drop(&mut self) {
         if self.locked {
             ffi::unlock_shared();

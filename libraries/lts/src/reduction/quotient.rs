@@ -78,8 +78,7 @@ pub fn quotient_lts(
             let to_block = partition.block_number(to);
 
             // If we eliminate tau loops then check if the 'to' and 'from' end up in the same block
-            if !eliminate_tau_loops
-                || !(lts.is_hidden_label(label) && block == to_block)
+            if !(eliminate_tau_loops && lts.is_hidden_label(label) && block == to_block)
             {
                 debug_assert!(
                     partition.block_number(state_index) < partition.num_of_blocks(),

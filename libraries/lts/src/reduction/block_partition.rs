@@ -545,7 +545,7 @@ pub struct BlockIter<'a> {
     end: usize,
 }
 
-impl<'a> Iterator for BlockIter<'a> {
+impl Iterator for BlockIter<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {

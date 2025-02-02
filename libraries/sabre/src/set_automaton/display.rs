@@ -80,7 +80,7 @@ pub struct DotFormatter<'a, M> {
     pub(crate) show_final: bool,
 }
 
-impl<'a, M> fmt::Display for DotFormatter<'a, M> {
+impl<M> fmt::Display for DotFormatter<'_, M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Write the header anf final states.
         writeln!(f, "digraph{{")?;
