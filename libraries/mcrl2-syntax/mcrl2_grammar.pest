@@ -58,9 +58,9 @@ ActDecl = { IdList ~ ( ":" ~  SortProduct )? ~ ";" }
 /// Sort specification
 SortSpec = { "sort" ~ SortDecl+ } 
 
-SortDecl = {    
-        IdList ~ ";"                                                 // List of sort identifiers                                            
-    |   Id ~ "=" ~ SortExpr ~ ";"                                    // Sort alias                                              
+SortDecl = {                                             
+        Id ~ "=" ~ SortExpr ~ ";"                                    // Sort alias  
+    |   IdList ~ ";"                                                 // List of sort identifiers                                               
 }
 
 /// A general sort expression with infix operators.
@@ -70,20 +70,30 @@ SortExpr = {
 
 /// A single sort expression
 SortExprAtom = { 
-        "Bool" ~ !Id                                                 // Booleans
-    |   "Pos" ~ !Id                                                  // Positive numbers
-    |   "Nat" ~ !Id                                                  // Natural numbers
-    |   "Int" ~ !Id                                                  // Integers
-    |   "Real" ~ !Id                                                 // Reals
-    |   "List" ~ "(" ~ SortExpr ~ ")"                                // List sort
-    |   "Set" ~ "(" ~ SortExpr ~ ")"                                 // Set sort
-    |   "Bag" ~ "(" ~ SortExpr ~ ")"                                 // Bag sort
-    |   "FSet" ~ "(" ~ SortExpr ~ ")"                                // Finite set sort
-    |   "FBag" ~ "(" ~ SortExpr ~ ")"                                // Finite bag sort
+        SortExprBool
+    |   SortExprPos                                                  
+    |   SortExprNat                                                  
+    |   SortExprInt                                                  
+    |   SortExprReal                                                
+    |   SortExprList
+    |   SortExprSet
+    |   SortExprBag
+    |   SortExprFSet
+    |   SortExprFBag
     |   "(" ~ SortExpr ~ ")"                                         // Sort expression with parentheses
     |   "struct" ~ ConstrDeclList                                    // Structured sort
     |   Id                                                           // Sort reference
 }
+    SortExprBool = { "Bool" ~ !Id }
+    SortExprPos  = { "Pos" ~ !Id }
+    SortExprNat  = { "Nat" ~ !Id }
+    SortExprInt  = { "Int" ~ !Id }
+    SortExprReal = { "Real" ~ !Id }
+    SortExprList = { "List" ~ "(" ~ SortExpr ~ ")" }
+    SortExprSet = { "Set" ~ "(" ~ SortExpr ~ ")" }
+    SortExprBag  = { "Bag" ~ "(" ~ SortExpr ~ ")" }
+    SortExprFSet = { "FSet" ~ "(" ~ SortExpr ~ ")" }
+    SortExprFBag = { "FBag" ~ "(" ~ SortExpr ~ ")" }
 
 SortExprInfix = _{
     |   SortExprFunction
