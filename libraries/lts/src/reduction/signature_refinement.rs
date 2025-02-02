@@ -93,9 +93,11 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
             |signature, key_to_signature| {                
                 // Inductive signatures.
                 for (label, key) in signature.iter().rev() {
-                    if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(&signature, (*label, *key)) {
+                    if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(signature, (*label, *key)) {
                         return Some(*key);
-                    } else {
+                    }
+                    
+                    if *label != lts.num_of_labels() {
                         return None;
                     }
                 }
