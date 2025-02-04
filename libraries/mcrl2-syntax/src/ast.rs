@@ -40,6 +40,7 @@ pub enum Sort {
 pub enum ComplexSort {
     List,
     Set,
+    Bag,
     FSet,
     FBag,
 }
