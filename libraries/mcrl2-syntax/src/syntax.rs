@@ -5,7 +5,6 @@ use pest_consume::Error;
 use crate::ast::Mcrl2Specification;
 use crate::parse_sortexpr;
 use crate::ComplexSort;
-use crate::DisplayPair;
 use crate::IdsDecl;
 use crate::Mcrl2Parser;
 use crate::Rule;

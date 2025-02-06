@@ -6,6 +6,7 @@ use log::trace;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 use utilities::Timing;
+use lts::LabelledTransitionSystem;
 
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_inductive;
@@ -17,7 +18,6 @@ use crate::BlockPartition;
 use crate::BlockPartitionBuilder;
 use crate::IncomingTransitions;
 use crate::IndexedPartition;
-use crate::LabelledTransitionSystem;
 use crate::Partition;
 use crate::Signature;
 use crate::SignatureBuilder;
@@ -448,7 +448,7 @@ mod tests {
     use test_log::test;
     use utilities::Timing;
 
-    use crate::random_lts;
+    use lts::random_lts;
 
     use super::*;
 

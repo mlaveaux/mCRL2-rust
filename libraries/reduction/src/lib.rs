@@ -6,8 +6,8 @@
 //!
 //!
 
-//mod strong_bisim_partition;
 mod block_partition;
+mod incoming_transitions;
 mod indexed_partition;
 mod quotient;
 mod scc_decomposition;
@@ -15,8 +15,8 @@ mod signature_refinement;
 mod signatures;
 mod sort_topological;
 
-//pub use strong_bisim_partition::*;
 pub use block_partition::*;
+pub use incoming_transitions::*;
 pub use indexed_partition::*;
 pub use quotient::*;
 pub use scc_decomposition::*;

@@ -13,6 +13,7 @@ env_logger.workspace = true
 io.workspace = true
 log.workspace = true
 lts.workspace = true
+reduction.workspace = true
 unsafety.workspace = true
 utilities.workspace = true
 

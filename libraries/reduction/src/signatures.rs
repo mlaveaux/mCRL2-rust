@@ -3,9 +3,9 @@ use std::hash::Hash;
 
 use rustc_hash::FxHashSet;
 
-use crate::LabelledTransitionSystem;
+use lts::LabelledTransitionSystem;
+use lts::StateIndex;
 use crate::Partition;
-use crate::StateIndex;
 
 use super::quotient_lts;
 use super::reorder_partition;

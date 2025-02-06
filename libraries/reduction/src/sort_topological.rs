@@ -3,7 +3,7 @@ use std::error::Error;
 use log::debug;
 use log::trace;
 
-use crate::LabelledTransitionSystem;
+use lts::LabelledTransitionSystem;
 
 /// Returns a topological ordering of the states of the given LTS.
 ///
@@ -206,7 +206,7 @@ mod tests {
     use rand::seq::SliceRandom;
     use test_log::test;
 
-    use crate::random_lts;
+    use lts::random_lts;
 
     use super::*;
 

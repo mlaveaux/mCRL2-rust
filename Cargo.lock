@@ -3092,6 +3092,7 @@ dependencies = [
  "io",
  "log",
  "lts",
+ "reduction",
  "tikv-jemallocator",
  "unsafety",
  "utilities",
@@ -4196,6 +4197,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03a862b389f93e68874fbf580b9de08dd02facb9a788ebadaf4a3fd33cf58834"
 dependencies = [
  "bitflags 2.8.0",
+]
+
+[[package]]
+name = "reduction"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+ "env_logger",
+ "io",
+ "log",
+ "lts",
+ "rand 0.9.0",
+ "rustc-hash 2.1.0",
+ "test-case",
+ "test-log",
+ "utilities",
 ]
 
 [[package]]

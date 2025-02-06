@@ -40,7 +40,7 @@ pub fn parse_sortexpr(pairs: Pairs<Rule>) -> SortExpression {
                 Rule::SortExprFSet => Mcrl2Parser::SortExprFSet(Node::new(primary)).unwrap(),
                 Rule::SortExprFBag => Mcrl2Parser::SortExprFBag(Node::new(primary)).unwrap(),
 
-                Rule::SortExprStruct => unimplemented!(),
+                //Rule::SortExprStruct => unimplemented!(),
                 _ => unreachable!(),
            }
         })

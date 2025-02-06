@@ -1,6 +1,6 @@
 use log::debug;
 
-use crate::LabelledTransitionSystem;
+use lts::LabelledTransitionSystem;
 
 /// A trait for partition refinement algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.

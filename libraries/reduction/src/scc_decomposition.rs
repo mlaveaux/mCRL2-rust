@@ -2,11 +2,11 @@ use std::time::Instant;
 
 use log::debug;
 use log::trace;
+use lts::LabelledTransitionSystem;
 
 use crate::quotient_lts;
-use crate::reduction::sort_topological;
+use crate::sort_topological;
 use crate::IndexedPartition;
-use crate::LabelledTransitionSystem;
 use crate::Partition;
 
 /// Computes the strongly connected tau component partitioning of the given LTS.
@@ -171,9 +171,9 @@ pub fn has_tau_loop(lts: &LabelledTransitionSystem) -> bool {
 #[cfg(test)]
 mod tests {
     use test_log::test;
+    use lts::random_lts;
 
     use crate::quotient_lts;
-    use crate::random_lts;
     use crate::Partition;
 
     use super::*;

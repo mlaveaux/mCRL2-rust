@@ -87,6 +87,7 @@ mcrl2 = { path = "libraries/mcrl2" }
 mcrl2-macros = { path = "libraries/mcrl2-macros" }
 mcrl2-sys = { path = "libraries/mcrl2-sys" }
 rec-tests = { path = "libraries/rec-tests" }
+reduction = { path = "libraries/reduction" }
 sabre = { path = "libraries/sabre" }
 unsafety = { path = "libraries/unsafety" }
 utilities = { path = "libraries/utilities" }

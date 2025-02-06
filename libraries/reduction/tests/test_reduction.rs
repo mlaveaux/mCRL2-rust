@@ -1,7 +1,7 @@
-use lts::branching_bisim_sigref;
-use lts::branching_bisim_sigref_naive;
-use lts::strong_bisim_sigref;
-use lts::strong_bisim_sigref_naive;
+use reduction::branching_bisim_sigref;
+use reduction::branching_bisim_sigref_naive;
+use reduction::strong_bisim_sigref;
+use reduction::strong_bisim_sigref_naive;
 use test_case::test_case;
 use utilities::Timing;
 
