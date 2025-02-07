@@ -8,11 +8,12 @@ edition.workspace = true
 measure-allocs = []
 
 [dependencies]
+mcrl2rust-io.workspace = true
+mcrl2rust-lts.workspace = true
+
 clap.workspace = true
 env_logger.workspace = true
-io.workspace = true
 log.workspace = true
-lts.workspace = true
 reduction.workspace = true
 unsafety.workspace = true
 utilities.workspace = true

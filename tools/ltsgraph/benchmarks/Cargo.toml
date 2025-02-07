@@ -7,11 +7,12 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+mcrl2rust-io.workspace = true
+ltsgraph-lib = { path = "../library" }
+
 criterion.workspace = true
 tiny-skia.workspace = true
-ltsgraph-lib = { path = "../library" }
 rand.workspace = true
-io.workspace = true
 
 [[bench]]
 name = "benchmark_ltsgraph"

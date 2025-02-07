@@ -1,5 +1,5 @@
 [package]
-name = "lts"
+name = "mcrl2rust-lts"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true

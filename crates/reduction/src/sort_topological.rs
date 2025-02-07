@@ -3,7 +3,7 @@ use std::error::Error;
 use log::debug;
 use log::trace;
 
-use lts::LabelledTransitionSystem;
+use mcrl2rust_lts::LabelledTransitionSystem;
 
 /// Returns a topological ordering of the states of the given LTS.
 ///
@@ -202,13 +202,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     use rand::seq::SliceRandom;
     use test_log::test;
 
-    use lts::random_lts;
-
-    use super::*;
+    use mcrl2rust_lts::random_lts;
 
     #[test]
     fn test_sort_topological_with_cycles() {

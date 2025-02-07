@@ -6,7 +6,8 @@ use log::trace;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
 use utilities::Timing;
-use lts::LabelledTransitionSystem;
+
+use mcrl2rust_lts::LabelledTransitionSystem;
 
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_inductive;
@@ -445,12 +446,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use test_log::test;
     use utilities::Timing;
 
-    use lts::random_lts;
-
-    use super::*;
+    use mcrl2rust_lts::random_lts;
 
     #[test]
     fn test_random_strong_bisim_sigref() {

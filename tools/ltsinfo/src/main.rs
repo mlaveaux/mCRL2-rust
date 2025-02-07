@@ -6,14 +6,15 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use clap::ValueEnum;
-use io::io_aut::read_aut;
-use io::io_aut::write_aut;
 use reduction::branching_bisim_sigref;
 use reduction::branching_bisim_sigref_naive;
 use reduction::quotient_lts;
 use reduction::strong_bisim_sigref;
 use reduction::strong_bisim_sigref_naive;
 use reduction::IndexedPartition;
+
+use mcrl2rust_io::io_aut::read_aut;
+use mcrl2rust_io::io_aut::write_aut;
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]

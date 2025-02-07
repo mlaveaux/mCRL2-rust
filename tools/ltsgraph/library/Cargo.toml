@@ -5,11 +5,12 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
+mcrl2rust-io.workspace = true
+mcrl2rust-lts.workspace = true
+
 cosmic-text.workspace = true
 glam.workspace = true
-io.workspace = true
 log.workspace = true
-lts.workspace = true
 rand.workspace = true
 tiny-skia.workspace = true
 unsafety.workspace = true

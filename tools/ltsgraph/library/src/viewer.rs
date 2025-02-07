@@ -5,10 +5,11 @@ use glam::Mat3;
 use glam::Vec2;
 use glam::Vec3;
 use glam::Vec3Swizzles;
-use lts::LabelledTransitionSystem;
 use tiny_skia::Shader;
 use tiny_skia::Stroke;
 use tiny_skia::Transform;
+
+use mcrl2rust_lts::LabelledTransitionSystem;
 
 use crate::graph_layout::GraphLayout;
 use crate::text_cache::TextCache;
@@ -306,11 +307,12 @@ impl Viewer {
 
 #[cfg(test)]
 mod tests {
-    use io::io_aut::read_aut;
+    use super::*;
+
     use tiny_skia::Pixmap;
     use tiny_skia::PixmapMut;
 
-    use super::*;
+    use mcrl2rust_io::io_aut::read_aut;
 
     #[test]
     fn test_viewer() {

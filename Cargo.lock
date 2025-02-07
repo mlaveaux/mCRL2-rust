@@ -572,8 +572,8 @@ name = "benchmarks-ltsgraph"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "io",
  "ltsgraph-lib",
+ "mcrl2rust-io",
  "rand 0.9.0",
  "tiny-skia",
 ]
@@ -2137,15 +2137,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gui"
-version = "0.1.0"
-dependencies = [
- "log",
- "streaming-iterator",
- "winapi",
-]
-
-[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2747,23 +2738,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "io"
-version = "0.1.0"
-dependencies = [
- "bitstream-io",
- "env_logger",
- "log",
- "lts",
- "regex",
- "rustc-hash 2.1.0",
- "streaming-iterator",
- "test-case",
- "test-log",
- "thiserror 2.0.11",
- "utilities",
-]
-
-[[package]]
 name = "io-lifetimes"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3040,28 +3014,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
 
 [[package]]
-name = "lts"
-version = "0.1.0"
-dependencies = [
- "bumpalo",
- "log",
- "rand 0.9.0",
- "rustc-hash 2.1.0",
- "test-log",
- "utilities",
-]
-
-[[package]]
 name = "ltsgraph"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
  "env_logger",
- "gui",
- "io",
  "log",
  "ltsgraph-lib",
+ "mcrl2rust-gui",
+ "mcrl2rust-io",
  "rfd",
  "slint",
  "slint-build",
@@ -3075,9 +3037,9 @@ version = "0.1.0"
 dependencies = [
  "cosmic-text",
  "glam",
- "io",
  "log",
- "lts",
+ "mcrl2rust-io",
+ "mcrl2rust-lts",
  "rand 0.9.0",
  "tiny-skia",
  "unsafety",
@@ -3089,9 +3051,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "env_logger",
- "io",
  "log",
- "lts",
+ "mcrl2rust-io",
+ "mcrl2rust-lts",
  "reduction",
  "tikv-jemallocator",
  "unsafety",
@@ -3217,6 +3179,44 @@ dependencies = [
  "sabre",
  "tikv-jemallocator",
  "unsafety",
+]
+
+[[package]]
+name = "mcrl2rust-gui"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "streaming-iterator",
+ "winapi",
+]
+
+[[package]]
+name = "mcrl2rust-io"
+version = "0.1.0"
+dependencies = [
+ "bitstream-io",
+ "env_logger",
+ "log",
+ "mcrl2rust-lts",
+ "regex",
+ "rustc-hash 2.1.0",
+ "streaming-iterator",
+ "test-case",
+ "test-log",
+ "thiserror 2.0.11",
+ "utilities",
+]
+
+[[package]]
+name = "mcrl2rust-lts"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+ "log",
+ "rand 0.9.0",
+ "rustc-hash 2.1.0",
+ "test-log",
+ "utilities",
 ]
 
 [[package]]
@@ -4205,9 +4205,9 @@ version = "0.1.0"
 dependencies = [
  "bumpalo",
  "env_logger",
- "io",
  "log",
- "lts",
+ "mcrl2rust-io",
+ "mcrl2rust-lts",
  "rand 0.9.0",
  "rustc-hash 2.1.0",
  "test-case",

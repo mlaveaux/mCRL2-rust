@@ -1,13 +1,14 @@
 [package]
-name = "io"
+name = "mcrl2rust-io"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
+mcrl2rust-lts.workspace = true
+
 bitstream-io.workspace = true
 log.workspace = true
-lts.workspace = true
 regex.workspace = true
 rustc-hash.workspace = true
 streaming-iterator.workspace = true

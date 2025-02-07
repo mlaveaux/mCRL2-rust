@@ -5,8 +5,8 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
-io.workspace = true
-lts.workspace = true
+mcrl2rust-io.workspace = true
+mcrl2rust-lts.workspace = true
 utilities.workspace = true
 
 bumpalo.workspace = true

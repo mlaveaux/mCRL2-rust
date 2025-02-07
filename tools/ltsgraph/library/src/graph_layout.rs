@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use glam::Vec3;
 use log::debug;
-use lts::LabelledTransitionSystem;
 use rand::Rng;
 use unsafety::index_edge;
 use unsafety::Edge;
+
+use mcrl2rust_lts::LabelledTransitionSystem;
 
 pub struct GraphLayout {
     // Store the underlying LTS to get the edges.
@@ -136,7 +137,7 @@ fn compute_repulsion_force(p1: &Vec3, p2: &Vec3, repulsion_strength: f32) -> Vec
 mod tests {
     use std::sync::Arc;
 
-    use io::io_aut::read_aut;
+    use mcrl2rust_io::io_aut::read_aut;
 
     use super::GraphLayout;
 

@@ -1,6 +1,6 @@
-use lts::LabelIndex;
-use lts::LabelledTransitionSystem;
-use lts::StateIndex;
+use mcrl2rust_lts::LabelIndex;
+use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_lts::StateIndex;
 
 /// A struct containg information related to the incoming transitions for every
 /// state.
@@ -74,7 +74,7 @@ impl IncomingTransitions {
 #[cfg(test)]
 mod tests {
 
-    use lts::random_lts;
+    use mcrl2rust_lts::random_lts;
 
     use super::*;
 

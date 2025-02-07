@@ -16,22 +16,18 @@ use std::time::Duration;
 use std::time::Instant;
 
 use clap::Parser;
-
-use gui::console;
 use log::debug;
 use log::info;
-use slint::invoke_from_event_loop;
+use ltsgraph::PauseableThread;
 use slint::Image;
+use slint::invoke_from_event_loop;
 use slint::Rgba8Pixel;
 use slint::SharedPixelBuffer;
 
-use io::io_aut::read_aut;
+use mcrl2rust_gui::console;
+use mcrl2rust_io::io_aut::read_aut;
 use ltsgraph_lib::GraphLayout;
 use ltsgraph_lib::Viewer;
-use pauseable_thread::PauseableThread;
-
-mod error_dialog;
-mod pauseable_thread;
 
 #[derive(Parser, Debug)]
 #[command(name = "Maurice Laveaux", about = "A lts viewing tool")]
@@ -252,12 +248,12 @@ async fn main() -> Result<ExitCode, Box<dyn Error>> {
                             render_handle.resume();
                         }
                         Err(x) => {
-                            error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
+                            ltsgraph::error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
                         }
                     }
                 }
                 Err(x) => {
-                    error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
+                    ltsgraph::error_dialog::show_error_dialog("Failed to load LTS!", &format!("{}", x));
                 }
             }
         }

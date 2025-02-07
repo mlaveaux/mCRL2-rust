@@ -2,7 +2,8 @@ use std::time::Instant;
 
 use log::debug;
 use log::trace;
-use lts::LabelledTransitionSystem;
+
+use mcrl2rust_lts::LabelledTransitionSystem;
 
 use crate::quotient_lts;
 use crate::sort_topological;
@@ -170,13 +171,15 @@ pub fn has_tau_loop(lts: &LabelledTransitionSystem) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    
     use test_log::test;
-    use lts::random_lts;
+    
+    use mcrl2rust_lts::random_lts;
 
     use crate::quotient_lts;
     use crate::Partition;
 
-    use super::*;
 
     /// Returns the reachable states from the given state index.
     fn reachable_states(

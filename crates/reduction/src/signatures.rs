@@ -3,17 +3,17 @@ use std::hash::Hash;
 
 use rustc_hash::FxHashSet;
 
-use lts::LabelledTransitionSystem;
-use lts::StateIndex;
-use crate::Partition;
+use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_lts::StateIndex;
 
-use super::quotient_lts;
-use super::reorder_partition;
-use super::reorder_states;
-use super::sort_topological;
-use super::tau_scc_decomposition;
-use super::BlockPartition;
-use super::IndexedPartition;
+use crate::Partition;
+use crate::quotient_lts;
+use crate::reorder_partition;
+use crate::reorder_states;
+use crate::sort_topological;
+use crate::tau_scc_decomposition;
+use crate::BlockPartition;
+use crate::IndexedPartition;
 
 /// The builder used to construct the signature.
 pub type SignatureBuilder = Vec<(usize, usize)>;

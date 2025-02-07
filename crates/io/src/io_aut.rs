@@ -10,10 +10,11 @@ use regex::Regex;
 use streaming_iterator::StreamingIterator;
 use thiserror::Error;
 
+use mcrl2rust_lts::LabelIndex;
+use mcrl2rust_lts::LabelledTransitionSystem;
+
 use crate::line_iterator::LineIterator;
 use crate::progress::Progress;
-use lts::LabelIndex;
-use lts::LabelledTransitionSystem;
 
 #[derive(Error, Debug)]
 pub enum IOError {

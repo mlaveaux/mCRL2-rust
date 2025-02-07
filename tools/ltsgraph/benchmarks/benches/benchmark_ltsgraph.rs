@@ -3,11 +3,12 @@ use std::sync::Arc;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::Criterion;
-use io::io_aut::read_aut;
-use ltsgraph_lib::GraphLayout;
-use ltsgraph_lib::Viewer;
 use tiny_skia::Pixmap;
 use tiny_skia::PixmapMut;
+
+use mcrl2rust_io::io_aut::read_aut;
+use ltsgraph_lib::GraphLayout;
+use ltsgraph_lib::Viewer;
 
 /// Render the alternating bit protocol with some settings.
 pub fn criterion_benchmark_viewer(c: &mut Criterion) {
