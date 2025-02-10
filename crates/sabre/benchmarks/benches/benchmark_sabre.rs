@@ -11,9 +11,9 @@ use mcrl2::data::DataExpression;
 use mcrl2::data::DataSpecification;
 use mcrl2::data::JittyRewriter;
 use rec_tests::load_REC_from_strings;
-use sabre::set_automaton::SetAutomaton;
-use sabre::InnermostRewriter;
-use sabre::RewriteEngine;
+use mcrl2rust_sabre::set_automaton::SetAutomaton;
+use mcrl2rust_sabre::InnermostRewriter;
+use mcrl2rust_sabre::RewriteEngine;
 
 /// Creates a rewriter and a vector of ATerm expressions for the given case.
 pub fn load_case(
