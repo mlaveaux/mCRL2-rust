@@ -9,7 +9,7 @@ use log::trace;
 use mcrl2_sys::atermpp::ffi;
 use mcrl2_sys::cxx::Exception;
 use mcrl2_sys::cxx::UniquePtr;
-use utilities::protection_set::ProtectionSet;
+use mcrl2rust_utilities::protection_set::ProtectionSet;
 
 use crate::aterm::ATerm;
 use crate::aterm::BfTermPoolThreadWrite;

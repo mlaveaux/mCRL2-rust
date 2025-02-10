@@ -7,12 +7,11 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use mcrl2_sys::atermpp::ffi;
-use utilities::PhantomUnsend;
+use mcrl2rust_utilities::PhantomUnsend;
 
 use crate::aterm::ATermRef;
 use crate::aterm::BfTermPool;
 use crate::aterm::THREAD_TERM_POOL;
-
 use super::BfTermPoolThreadWrite;
 
 #[cfg(debug_assertions)]

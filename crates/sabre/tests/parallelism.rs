@@ -5,8 +5,8 @@ use std::thread;
 use mcrl2::aterm::TermPool;
 use mcrl2::data::DataExpression;
 use mcrl2::data::DataSpecification;
-use sabre::InnermostRewriter;
-use sabre::RewriteEngine;
+use mcrl2rust_sabre::InnermostRewriter;
+use mcrl2rust_sabre::RewriteEngine;
 
 #[test]
 fn test_parallelism() {

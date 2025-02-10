@@ -15,11 +15,11 @@ use mcrl2::data::DataExpression;
 use mcrl2::data::DataSpecification;
 use mcrl2::data::JittyRewriter;
 use rec_tests::load_REC_from_file;
-use sabre::utilities::to_untyped_data_expression;
-use sabre::InnermostRewriter;
-use sabre::RewriteEngine;
-use sabre::RewriteSpecification;
-use sabre::SabreRewriter;
+use mcrl2rust_sabre::utilities::to_untyped_data_expression;
+use mcrl2rust_sabre::InnermostRewriter;
+use mcrl2rust_sabre::RewriteEngine;
+use mcrl2rust_sabre::RewriteSpecification;
+use mcrl2rust_sabre::SabreRewriter;
 
 #[derive(ValueEnum, Debug, Clone)]
 pub enum Rewriter {

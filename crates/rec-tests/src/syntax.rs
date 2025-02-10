@@ -3,10 +3,10 @@ use core::fmt;
 use ahash::AHashSet;
 use mcrl2::aterm::ATerm;
 use mcrl2::aterm::TermPool;
-use sabre::rewrite_specification::Condition;
-use sabre::rewrite_specification::RewriteSpecification;
-use sabre::rewrite_specification::Rule;
-use sabre::utilities::to_untyped_data_expression;
+use mcrl2rust_sabre::rewrite_specification::Condition;
+use mcrl2rust_sabre::rewrite_specification::RewriteSpecification;
+use mcrl2rust_sabre::rewrite_specification::Rule;
+use mcrl2rust_sabre::utilities::to_untyped_data_expression;
 
 /// A rewrite specification contains all the bare info we need for rewriting (in particular no type information) as a syntax tree.
 /// Parsing a REC file results in a RewriteSpecificationSyntax.

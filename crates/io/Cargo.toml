@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 mcrl2rust-lts.workspace = true
+mcrl2rust-utilities.workspace = true
 
 bitstream-io.workspace = true
 log.workspace = true
@@ -13,7 +14,6 @@ regex.workspace = true
 rustc-hash.workspace = true
 streaming-iterator.workspace = true
 thiserror.workspace = true
-utilities.workspace = true
 
 [dev-dependencies]
 test-log.workspace = true

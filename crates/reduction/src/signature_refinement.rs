@@ -5,9 +5,9 @@ use log::debug;
 use log::trace;
 use rustc_hash::FxHashMap;
 use rustc_hash::FxHashSet;
-use utilities::Timing;
 
 use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_utilities::Timing;
 
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_inductive;
@@ -449,9 +449,9 @@ mod tests {
     use super::*;
 
     use test_log::test;
-    use utilities::Timing;
 
     use mcrl2rust_lts::random_lts;
+    use mcrl2rust_utilities::Timing;
 
     #[test]
     fn test_random_strong_bisim_sigref() {

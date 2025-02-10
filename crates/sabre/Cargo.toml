@@ -1,10 +1,12 @@
 [package]
-name = "sabre"
+name = "mcrl2rust-sabre"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
+mcrl2.workspace = true
+
 rustc-hash.workspace = true
 smallvec.workspace = true
 html-escape.workspace = true
@@ -12,7 +14,6 @@ ahash.workspace = true
 env_logger.workspace = true
 log.workspace = true
 itertools.workspace = true
-mcrl2.workspace = true
 rand.workspace = true
 
 [dev-dependencies]

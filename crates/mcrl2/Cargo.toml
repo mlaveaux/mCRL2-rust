@@ -8,13 +8,14 @@ edition.workspace = true
 unstable = []
 
 [dependencies]
-ahash.workspace = true
-log.workspace = true
 mcrl2-macros.workspace = true
 mcrl2-sys.workspace = true
+mcrl2rust-utilities.workspace = true
+
+ahash.workspace = true
+log.workspace = true
 parking_lot.workspace = true
 rand.workspace = true
-utilities.workspace = true
 
 [dev-dependencies]
 test-log.workspace = true

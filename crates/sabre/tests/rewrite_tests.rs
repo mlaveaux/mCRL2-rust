@@ -5,8 +5,8 @@ use std::rc::Rc;
 use test_case::test_case;
 
 use mcrl2::aterm::TermPool;
-use sabre::InnermostRewriter;
-use sabre::RewriteEngine;
+use mcrl2rust_sabre::InnermostRewriter;
+use mcrl2rust_sabre::RewriteEngine;
 
 #[test_case(include_str!("../../../examples/REC/mcrl2/benchexpr10.dataspec"), include_str!("../../../examples/REC/mcrl2/benchexpr10.expressions"), include_str!("snapshot/result_benchexpr10.txt") ; "benchexpr10")]
 #[test_case(include_str!("../../../examples/REC/mcrl2/benchsym10.dataspec"), include_str!("../../../examples/REC/mcrl2/benchsym10.expressions"), include_str!("snapshot/result_benchsym10.txt") ; "benchsym10")]

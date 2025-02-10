@@ -586,9 +586,9 @@ dependencies = [
  "criterion",
  "env_logger",
  "mcrl2",
+ "mcrl2rust-sabre",
+ "mcrl2rust-utilities",
  "rec-tests",
- "sabre",
- "utilities",
 ]
 
 [[package]]
@@ -3040,9 +3040,9 @@ dependencies = [
  "log",
  "mcrl2rust-io",
  "mcrl2rust-lts",
+ "mcrl2rust-unsafety",
  "rand 0.9.0",
  "tiny-skia",
- "unsafety",
 ]
 
 [[package]]
@@ -3054,10 +3054,10 @@ dependencies = [
  "log",
  "mcrl2rust-io",
  "mcrl2rust-lts",
- "reduction",
+ "mcrl2rust-reduction",
+ "mcrl2rust-unsafety",
+ "mcrl2rust-utilities",
  "tikv-jemallocator",
- "unsafety",
- "utilities",
 ]
 
 [[package]]
@@ -3127,11 +3127,11 @@ dependencies = [
  "log",
  "mcrl2-macros",
  "mcrl2-sys",
+ "mcrl2rust-utilities",
  "parking_lot",
  "rand 0.9.0",
  "test-log",
  "trybuild",
- "utilities",
 ]
 
 [[package]]
@@ -3175,10 +3175,10 @@ dependencies = [
  "env_logger",
  "log",
  "mcrl2",
+ "mcrl2rust-sabre",
+ "mcrl2rust-unsafety",
  "rec-tests",
- "sabre",
  "tikv-jemallocator",
- "unsafety",
 ]
 
 [[package]]
@@ -3198,13 +3198,13 @@ dependencies = [
  "env_logger",
  "log",
  "mcrl2rust-lts",
+ "mcrl2rust-utilities",
  "regex",
  "rustc-hash 2.1.0",
  "streaming-iterator",
  "test-case",
  "test-log",
  "thiserror 2.0.11",
- "utilities",
 ]
 
 [[package]]
@@ -3213,10 +3213,57 @@ version = "0.1.0"
 dependencies = [
  "bumpalo",
  "log",
+ "mcrl2rust-utilities",
  "rand 0.9.0",
  "rustc-hash 2.1.0",
  "test-log",
- "utilities",
+]
+
+[[package]]
+name = "mcrl2rust-reduction"
+version = "0.1.0"
+dependencies = [
+ "bumpalo",
+ "env_logger",
+ "log",
+ "mcrl2rust-io",
+ "mcrl2rust-lts",
+ "mcrl2rust-utilities",
+ "rand 0.9.0",
+ "rustc-hash 2.1.0",
+ "test-case",
+ "test-log",
+]
+
+[[package]]
+name = "mcrl2rust-sabre"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "env_logger",
+ "html-escape",
+ "itertools 0.14.0",
+ "log",
+ "mcrl2",
+ "rand 0.9.0",
+ "rustc-hash 2.1.0",
+ "smallvec",
+ "test-case",
+ "test-log",
+]
+
+[[package]]
+name = "mcrl2rust-unsafety"
+version = "0.1.0"
+
+[[package]]
+name = "mcrl2rust-utilities"
+version = "0.1.0"
+dependencies = [
+ "crossbeam-utils",
+ "log",
+ "rand 0.9.0",
+ "test-log",
 ]
 
 [[package]]
@@ -4175,9 +4222,9 @@ dependencies = [
  "ahash",
  "env_logger",
  "mcrl2",
+ "mcrl2rust-sabre",
  "pest",
  "pest_derive",
- "sabre",
  "test-case",
 ]
 
@@ -4197,22 +4244,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03a862b389f93e68874fbf580b9de08dd02facb9a788ebadaf4a3fd33cf58834"
 dependencies = [
  "bitflags 2.8.0",
-]
-
-[[package]]
-name = "reduction"
-version = "0.1.0"
-dependencies = [
- "bumpalo",
- "env_logger",
- "log",
- "mcrl2rust-io",
- "mcrl2rust-lts",
- "rand 0.9.0",
- "rustc-hash 2.1.0",
- "test-case",
- "test-log",
- "utilities",
 ]
 
 [[package]]
@@ -4428,23 +4459,6 @@ name = "ryu"
 version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ea1a2d0a644769cc99faa24c3ad26b379b786fe7c36fd3c546254801650e6dd"
-
-[[package]]
-name = "sabre"
-version = "0.1.0"
-dependencies = [
- "ahash",
- "env_logger",
- "html-escape",
- "itertools 0.14.0",
- "log",
- "mcrl2",
- "rand 0.9.0",
- "rustc-hash 2.1.0",
- "smallvec",
- "test-case",
- "test-log",
-]
 
 [[package]]
 name = "same-file"
@@ -5514,10 +5528,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
-name = "unsafety"
-version = "0.1.0"
-
-[[package]]
 name = "url"
 version = "2.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5585,16 +5595,6 @@ name = "utf8parse"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
-
-[[package]]
-name = "utilities"
-version = "0.1.0"
-dependencies = [
- "crossbeam-utils",
- "log",
- "rand 0.9.0",
- "test-log",
-]
 
 [[package]]
 name = "valuable"

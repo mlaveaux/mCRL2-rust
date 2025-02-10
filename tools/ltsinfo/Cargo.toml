@@ -10,13 +10,13 @@ measure-allocs = []
 [dependencies]
 mcrl2rust-io.workspace = true
 mcrl2rust-lts.workspace = true
+mcrl2rust-reduction.workspace = true
+mcrl2rust-unsafety.workspace = true
+mcrl2rust-utilities.workspace = true
 
 clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
-reduction.workspace = true
-unsafety.workspace = true
-utilities.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator.workspace = true

@@ -8,15 +8,16 @@ edition.workspace = true
 measure-allocs = []
 
 [dependencies]
+mcrl2.workspace = true
+mcrl2rust-sabre.workspace = true
+mcrl2rust-unsafety.workspace = true
+rec-tests.workspace = true
+
 ahash.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
-mcrl2.workspace = true
-rec-tests.workspace = true
-sabre.workspace = true
-unsafety.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator.workspace = true

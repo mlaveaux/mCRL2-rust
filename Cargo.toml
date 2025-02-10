@@ -80,14 +80,14 @@ strum = { version = "0.26", features = ["derive"] }
 slint-build = "1.9"
 
 # The workspace libraries.
-mcrl2rust-gui = { path = "crates/gui" }
-mcrl2rust-io = { path = "crates/io" }
-mcrl2rust-lts = { path = "crates/lts" }
 mcrl2 = { path = "crates/mcrl2" }
 mcrl2-macros = { path = "crates/mcrl2-macros" }
 mcrl2-sys = { path = "crates/mcrl2-sys" }
+mcrl2rust-gui = { path = "crates/gui" }
+mcrl2rust-io = { path = "crates/io" }
+mcrl2rust-lts = { path = "crates/lts" }
+mcrl2rust-reduction = { path = "crates/reduction" }
+mcrl2rust-sabre = { path = "crates/sabre" }
+mcrl2rust-unsafety = { path = "crates/unsafety" }
+mcrl2rust-utilities = { path = "crates/utilities" }
 rec-tests = { path = "crates/rec-tests" }
-reduction = { path = "crates/reduction" }
-sabre = { path = "crates/sabre" }
-unsafety = { path = "crates/unsafety" }
-utilities = { path = "crates/utilities" }

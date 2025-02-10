@@ -3,10 +3,10 @@ use std::sync::Arc;
 use glam::Vec3;
 use log::debug;
 use rand::Rng;
-use unsafety::index_edge;
-use unsafety::Edge;
 
 use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_unsafety::index_edge;
+use mcrl2rust_unsafety::Edge;
 
 pub struct GraphLayout {
     // Store the underlying LTS to get the edges.

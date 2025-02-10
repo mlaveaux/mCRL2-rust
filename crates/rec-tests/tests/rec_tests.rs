@@ -7,11 +7,11 @@ use ahash::AHashSet;
 
 use mcrl2::aterm::TermPool;
 use rec_tests::load_REC_from_strings;
-use sabre::utilities::to_untyped_data_expression;
-use sabre::InnermostRewriter;
-use sabre::RewriteEngine;
-use sabre::RewriteSpecification;
-use sabre::SabreRewriter;
+use mcrl2rust_sabre::utilities::to_untyped_data_expression;
+use mcrl2rust_sabre::InnermostRewriter;
+use mcrl2rust_sabre::RewriteEngine;
+use mcrl2rust_sabre::RewriteSpecification;
+use mcrl2rust_sabre::SabreRewriter;
 
 #[test_case(vec![include_str!("../../../examples/REC/rec/benchexpr10.rec"), include_str!("../../../examples/REC/rec/asfsdfbenchmark.rec")], include_str!("snapshot/result_benchexpr10.txt") ; "benchexpr10")]
 #[test_case(vec![include_str!("../../../examples/REC/rec/benchsym10.rec"), include_str!("../../../examples/REC/rec/asfsdfbenchmark.rec")], include_str!("snapshot/result_benchsym10.txt") ; "benchsym10")]

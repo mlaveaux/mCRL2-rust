@@ -8,7 +8,7 @@ use log::trace;
 use parking_lot::Mutex;
 
 use mcrl2_sys::atermpp::ffi;
-use utilities::protection_set::ProtectionSet;
+use mcrl2rust_utilities::protection_set::ProtectionSet;
 
 use crate::aterm::ATermRef;
 use crate::aterm::BfTermPool;

@@ -8,8 +8,8 @@ use mcrl2::data::is_data_variable;
 use mcrl2::data::DataExpressionRef;
 use mcrl2::data::DataFunctionSymbolRef;
 use mcrl2::data::DataVariableRef;
-use sabre::set_automaton::is_supported_rule;
-use sabre::RewriteSpecification;
+use mcrl2rust_sabre::set_automaton::is_supported_rule;
+use mcrl2rust_sabre::RewriteSpecification;
 
 /// Finds all data symbols in the term and adds them to the symbol index.
 fn find_variables(t: &DataExpressionRef<'_>, variables: &mut HashSet<String>) {

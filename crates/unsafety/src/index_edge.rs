@@ -12,7 +12,8 @@ pub fn index_edge<T>(slice: &mut [T], a: usize, b: usize) -> Edge<&mut T> {
         assert!(a <= slice.len());
         Edge::Selfloop(slice.get_mut(a).unwrap())
     } else {
-        assert!(a <= slice.len() && b < slice.len());
+        assert!(a < slice.len() && b < slice.len());
+        assert!(a != b);
 
         // safe because a, b are in bounds and distinct
         unsafe {

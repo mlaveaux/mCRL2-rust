@@ -1,5 +1,5 @@
 [package]
-name = "utilities"
+name = "mcrl2rust-utilities"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true

@@ -1,11 +1,11 @@
-use reduction::branching_bisim_sigref;
-use reduction::branching_bisim_sigref_naive;
-use reduction::strong_bisim_sigref;
-use reduction::strong_bisim_sigref_naive;
 use test_case::test_case;
-use utilities::Timing;
 
 use mcrl2rust_io::io_aut::read_aut;
+use mcrl2rust_reduction::branching_bisim_sigref_naive;
+use mcrl2rust_reduction::branching_bisim_sigref;
+use mcrl2rust_reduction::strong_bisim_sigref_naive;
+use mcrl2rust_reduction::strong_bisim_sigref;
+use mcrl2rust_utilities::Timing;
 
 #[test_case(include_str!("../../../examples/lts/abp.aut") ; "abp.aut")]
 #[test_case(include_str!("../../../examples/lts/cwi_1_2.aut") ; "cwi_1_2.aut")]

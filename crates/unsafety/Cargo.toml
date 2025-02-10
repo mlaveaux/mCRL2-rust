@@ -1,5 +1,5 @@
 [package]
-name = "unsafety"
+name = "mcrl2rust-unsafety"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true

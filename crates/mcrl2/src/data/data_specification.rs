@@ -3,7 +3,7 @@ use std::error::Error;
 use mcrl2_sys::cxx::UniquePtr;
 use mcrl2_sys::cxx::{self};
 use mcrl2_sys::data::ffi;
-use utilities::lock_global;
+use mcrl2rust_utilities::lock_global;
 
 use crate::aterm::ATerm;
 use crate::aterm::ATermList;

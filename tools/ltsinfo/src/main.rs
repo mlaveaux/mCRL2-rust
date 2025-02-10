@@ -6,15 +6,16 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use clap::ValueEnum;
-use reduction::branching_bisim_sigref;
-use reduction::branching_bisim_sigref_naive;
-use reduction::quotient_lts;
-use reduction::strong_bisim_sigref;
-use reduction::strong_bisim_sigref_naive;
-use reduction::IndexedPartition;
 
 use mcrl2rust_io::io_aut::read_aut;
 use mcrl2rust_io::io_aut::write_aut;
+use mcrl2rust_reduction::branching_bisim_sigref;
+use mcrl2rust_reduction::branching_bisim_sigref_naive;
+use mcrl2rust_reduction::quotient_lts;
+use mcrl2rust_reduction::strong_bisim_sigref;
+use mcrl2rust_reduction::strong_bisim_sigref_naive;
+use mcrl2rust_reduction::IndexedPartition;
+use mcrl2rust_utilities::Timing;
 
 #[cfg(feature = "measure-allocs")]
 #[global_allocator]
@@ -22,7 +23,6 @@ static MEASURE_ALLOC: unsafety::AllocCounter = unsafety::AllocCounter;
 
 #[cfg(feature = "measure-allocs")]
 use log::info;
-use utilities::Timing;
 
 #[cfg(not(target_env = "msvc"))]
 #[cfg(not(feature = "measure-allocs"))]

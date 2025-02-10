@@ -9,7 +9,7 @@ use std::ops::Deref;
 
 use mcrl2_sys::atermpp::ffi;
 use mcrl2_sys::cxx::UniquePtr;
-use utilities::PhantomUnsend;
+use mcrl2rust_utilities::PhantomUnsend;
 
 use crate::aterm::SymbolRef;
 use crate::aterm::THREAD_TERM_POOL;

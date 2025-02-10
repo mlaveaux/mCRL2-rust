@@ -15,7 +15,7 @@ use mcrl2::data::DataSpecification;
 use mcrl2rewrite::rewrite_data_spec;
 use mcrl2rewrite::rewrite_rec;
 use mcrl2rewrite::Rewriter;
-use sabre::RewriteSpecification;
+use mcrl2rust_sabre::RewriteSpecification;
 
 use crate::trs_format::TrsFormatter;
 

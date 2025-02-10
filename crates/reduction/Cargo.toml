@@ -1,5 +1,5 @@
 [package]
-name = "reduction"
+name = "mcrl2rust-reduction"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
@@ -7,7 +7,7 @@ edition.workspace = true
 [dependencies]
 mcrl2rust-io.workspace = true
 mcrl2rust-lts.workspace = true
-utilities.workspace = true
+mcrl2rust-utilities.workspace = true
 
 bumpalo.workspace = true
 env_logger.workspace = true
