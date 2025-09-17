@@ -9,6 +9,8 @@ use rustc_hash::FxHashSet;
 use mcrl2rust_lts::LabelledTransitionSystem;
 use mcrl2rust_utilities::Timing;
 
+use crate::CompactSignaturePair;
+
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_inductive;
 use crate::branching_bisim_signature_sorted;
@@ -93,12 +95,12 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
         },
             |signature, key_to_signature| {                
                 // Inductive signatures.
-                for (label, key) in signature.iter().rev() {
-                    if *label == lts.num_of_labels() && key_to_signature[*key].is_subset_of(signature, (*label, *key)) {
-                        return Some(*key);
+                for sig in signature.iter().rev() {
+                    if sig.label() == lts.num_of_labels() && key_to_signature[sig.state()].is_subset_of(signature, *sig) {
+                        return Some(sig.state());
                     }
-                    
-                    if *label != lts.num_of_labels() {
+
+                    if sig.label() != lts.num_of_labels() {
                         return None;
                     }
                 }
@@ -185,7 +187,7 @@ fn signature_refinement<F, G, const BRANCHING: bool>(lts: &LabelledTransitionSys
     mut renumber: G) -> BlockPartition
 where
     F: FnMut(usize, &BlockPartition, &[usize], &mut SignatureBuilder),
-    G: FnMut(&[(usize, usize)], &Vec<Signature>) -> Option<usize>
+    G: FnMut(&[CompactSignaturePair], &Vec<Signature>) -> Option<usize>
 {
     trace!("{:?}", lts);
 
@@ -411,7 +413,7 @@ where
 
         // Compute the flat signature, which has Hash and is more compact.
         compute_signature(state_index, partition, &mut builder);
-        let signature: Vec<(usize, usize)> = builder.clone();
+        let signature: Vec<CompactSignaturePair> = builder.clone();
 
         if let Some(block_signature) = &block_to_signature[block] {
             if signature != *block_signature {
