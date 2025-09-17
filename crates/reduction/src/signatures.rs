@@ -15,31 +15,63 @@ use crate::tau_scc_decomposition;
 use crate::BlockPartition;
 use crate::IndexedPartition;
 
+#[repr(transparent)]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+pub struct CompactSignaturePair(u64);
+
+impl Debug for CompactSignaturePair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.label(), self.state())
+    }
+}
+
+impl CompactSignaturePair {
+    #[inline]
+    pub fn new(label: usize, state: usize) -> Self {
+        Self(((label as u64) << 48) | (state as u64 & 0xFFFF_FFFF_FFFF))
+    }
+
+    #[inline]
+    pub fn label(&self) -> usize {
+        (self.0 >> 48) as usize
+    }
+
+    #[inline]
+    pub fn state(&self) -> usize {
+        (self.0 & 0xFFFF_FFFF_FFFF) as usize
+    }
+}
 /// The builder used to construct the signature.
-pub type SignatureBuilder = Vec<(usize, usize)>;
+pub type SignatureBuilder = Vec<CompactSignaturePair>;
 
 /// The type of a signature. We use sorted vectors to avoid the overhead of hash
 /// sets that might have unused values.
 #[derive(Eq)]
-pub struct Signature(*const [(usize, usize)]);
+pub struct Signature(*const [CompactSignaturePair]);
 
 impl Signature {
-    pub fn new(slice: &[(usize, usize)]) -> Signature {
+    pub fn new(slice: &[CompactSignaturePair]) -> Signature {
         Signature(slice)
     }
 
-    pub fn as_slice(&self) -> &[(usize, usize)] {
+    pub fn as_slice(&self) -> &[CompactSignaturePair] {
         unsafe { &*self.0 }
+    }
+}
+
+impl Hash for CompactSignaturePair {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
     }
 }
 
 impl Signature {
     // Check if target is a subset of self, excluding a specific element
-    pub fn is_subset_of(&self, other: &[(usize, usize)], exclude: (usize, usize)) -> bool {
+    pub fn is_subset_of(&self, other: &[CompactSignaturePair], exclude: CompactSignaturePair) -> bool {
         let mut self_iter = self.as_slice().iter();
         let mut other_iter = other.iter().filter(|&&x| x != exclude);
 
-        let mut self_item: Option<&(usize, usize)> = self_iter.next();
+        let mut self_item = self_iter.next();
         let mut other_item = other_iter.next();
 
         while let Some(&o) = other_item {
@@ -98,7 +130,7 @@ pub fn strong_bisim_signature(
     builder.clear();
 
     for (label, to) in lts.outgoing_transitions(state_index) {
-        builder.push((*label, partition.block_number(*to)));
+        builder.push(CompactSignaturePair::new(*label, partition.block_number(*to)));
     }
 
     // Compute the flat signature, which has Hash and is more compact.
@@ -137,11 +169,11 @@ pub fn branching_bisim_signature(
                     }
                 } else {
                     //  pi(s) != pi(t)
-                    builder.push((*label_index, partition.block_number(*to_index)));
+                    builder.push(CompactSignaturePair::new(*label_index, partition.block_number(*to_index)));
                 }
             } else {
                 // (a != tau) This is a visible action only reachable from tau paths with equal signatures.
-                builder.push((*label_index, partition.block_number(*to_index)));
+                builder.push(CompactSignaturePair::new(*label_index, partition.block_number(*to_index)));
             }
         }
     }
@@ -169,11 +201,11 @@ pub fn branching_bisim_signature_sorted(
                 // Inert tau transition, take signature from the outgoing tau-transition.
                 builder.extend(state_to_signature[to].as_slice());
             } else {
-                builder.push((label_index, to_block));
+                builder.push(CompactSignaturePair::new(label_index, to_block));
             }
         } else {
             // Visible action, add to the signature.
-            builder.push((label_index, to_block));
+            builder.push(CompactSignaturePair::new(label_index, to_block));
         }
     }
 
@@ -199,13 +231,13 @@ pub fn branching_bisim_signature_inductive(
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(label_index) && partition.is_element_marked(to) {
                 // Inert tau transition, take signature from the outgoing tau-transition.
-                builder.push((num_act, state_to_key[to]));
+                builder.push(CompactSignaturePair::new(num_act, state_to_key[to]));
             } else {
-                builder.push((label_index, to_block));
+                builder.push(CompactSignaturePair::new(label_index, to_block));
             }
         } else {
             // Visible action, add to the signature.
-            builder.push((label_index, to_block));
+            builder.push(CompactSignaturePair::new(label_index, to_block));
         }
     }
 
