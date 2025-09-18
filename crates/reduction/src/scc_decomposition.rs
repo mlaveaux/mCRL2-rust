@@ -109,13 +109,13 @@ fn strongly_connect<F>(
 
     // Consider successors of the current state.
     for (label_index, to_index) in lts.outgoing_transitions(state_index) {
-        if filter(state_index, *label_index, *to_index) {
-            if let Some(meta) = &mut state_info[*to_index] {
+        if filter(state_index, label_index, to_index) {
+            if let Some(meta) = &mut state_info[to_index] {
                 if meta.on_stack {
                     // Successor w is in stack S and hence in the current SCC
                     // If w is not on stack, then (v, w) is an edge pointing to an SCC already found and must be ignored
                     // v.lowlink := min(v.lowlink, w.lowlink);
-                    let w_index = state_info[*to_index]
+                    let w_index = state_info[to_index]
                         .as_ref()
                         .expect("The state must be visited in the recursive call")
                         .index;
@@ -125,7 +125,7 @@ fn strongly_connect<F>(
             } else {
                 // Successor w has not yet been visited; recurse on it
                 strongly_connect(
-                    *to_index,
+                    to_index,
                     lts,
                     filter,
                     partition,
@@ -136,7 +136,7 @@ fn strongly_connect<F>(
                 );
 
                 // v.lowlink := min(v.lowlink, w.lowlink);
-                let w_lowlink = state_info[*to_index]
+                let w_lowlink = state_info[to_index]
                     .as_ref()
                     .expect("The state must be visited in the recursive call")
                     .lowlink;

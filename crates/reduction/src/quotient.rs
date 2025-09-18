@@ -73,7 +73,7 @@ pub fn quotient_lts(
     let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
 
     for state_index in lts.iter_states() {
-        for &(label, to) in lts.outgoing_transitions(state_index) {
+        for (label, to) in lts.outgoing_transitions(state_index) {
             let block = partition.block_number(state_index);
             let to_block = partition.block_number(to);
 
