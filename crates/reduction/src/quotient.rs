@@ -1,6 +1,7 @@
 use log::debug;
 
 use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_lts::CompactTransition;
 
 /// A trait for partition refinement algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.
@@ -70,7 +71,7 @@ pub fn quotient_lts(
 ) -> LabelledTransitionSystem {
     let start = std::time::Instant::now();
     // Introduce the transitions based on the block numbers
-    let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
+    let mut transitions: Vec<(usize, CompactTransition)> = Vec::default();
 
     for state_index in lts.iter_states() {
         for (label, to) in lts.outgoing_transitions(state_index) {
@@ -86,7 +87,7 @@ pub fn quotient_lts(
                 );
 
                 // Make sure to keep the outgoing transitions sorted.
-                transitions.push((block, label, to_block));
+                transitions.push((block, CompactTransition::new(label, to_block)));
             }
         }
     }

@@ -9,7 +9,7 @@ pub type StateIndex = usize;
 /// A compact representation of a transition using a single u64.
 /// The high 16 bits store the label index, the low 48 bits store the target state index.
 #[repr(transparent)]
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct CompactTransition(u64);
 
 impl CompactTransition {
@@ -77,7 +77,7 @@ impl LabelledTransitionSystem {
         hidden_labels: Vec<String>,
     ) -> LabelledTransitionSystem 
     where F: Fn() -> I,
-          I:Iterator<Item = (StateIndex, LabelIndex, StateIndex)> {
+          I:Iterator<Item = (StateIndex, CompactTransition)> {
 
         let mut states = Vec::new();
         if let Some(num_of_states) = num_of_states {
@@ -86,9 +86,9 @@ impl LabelledTransitionSystem {
 
         // Count the number of transitions for every state
         let mut num_of_transitions = 0;
-        for (from, _, to) in transition_iter() {
+        for (from, trans) in transition_iter() {
             // Ensure that the states vector is large enough.
-            while states.len() <= from.max(to) {
+            while states.len() <= from.max(trans.state()) {
                 states.push(State::default());
             }
 
@@ -106,8 +106,8 @@ impl LabelledTransitionSystem {
         
         // Place the transitions, and increment the end for every state.
         let mut transitions = vec![CompactTransition::new(0, 0); num_of_transitions];
-        for (from, label, to) in transition_iter() {
-            transitions[states[from].outgoing_end] = CompactTransition::new(label, to);
+        for (from, trans) in transition_iter() {
+            transitions[states[from].outgoing_end] = trans;
             states[from].outgoing_end += 1;
         }
 

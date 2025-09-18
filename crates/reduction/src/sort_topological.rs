@@ -4,6 +4,7 @@ use log::debug;
 use log::trace;
 
 use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_lts::CompactTransition;
 
 /// Returns a topological ordering of the states of the given LTS.
 ///
@@ -72,14 +73,14 @@ where
     let start = std::time::Instant::now();
 
     // We know that it is a permutation, so there won't be any duplicated transitions.
-    let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
+    let mut transitions: Vec<(usize, CompactTransition)> = Vec::default();
 
     for state_index in lts.iter_states() {
         let new_state_index = permutation(state_index);
 
         for (label, to_index) in lts.outgoing_transitions(state_index) {
             let new_to_index = permutation(to_index);
-            transitions.push((new_state_index, label, new_to_index));
+            transitions.push((new_state_index, CompactTransition::new(label, new_to_index)));
         }
     }
 
