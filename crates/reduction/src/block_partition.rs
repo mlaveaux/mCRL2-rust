@@ -221,9 +221,9 @@ impl BlockPartition {
 
         // First compute backwards silent transitive closure.
         while it >= self.blocks[block_index].marked_split {
-            for (_label, s) in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
-                if self.block_number(*s) == block_index {
-                    self.mark_element(*s);
+            for &trans in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
+                if self.block_number(trans.state()) == block_index {
+                    self.mark_element(trans.state());
                 }
             }
 

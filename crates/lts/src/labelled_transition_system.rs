@@ -9,7 +9,7 @@ pub type StateIndex = usize;
 /// A compact representation of a transition using a single u64.
 /// The high 16 bits store the label index, the low 48 bits store the target state index.
 #[repr(transparent)]
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
 pub struct CompactTransition(u64);
 
 impl CompactTransition {
