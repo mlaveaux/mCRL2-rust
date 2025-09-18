@@ -1,11 +1,12 @@
 use mcrl2rust_lts::LabelIndex;
 use mcrl2rust_lts::LabelledTransitionSystem;
 use mcrl2rust_lts::StateIndex;
+use mcrl2rust_lts::CompactTransition;
 
 /// A struct containg information related to the incoming transitions for every
 /// state.
 pub struct IncomingTransitions {
-    incoming_transitions: Vec<(LabelIndex, StateIndex)>,
+    incoming_transitions: Vec<CompactTransition>,
     state2incoming: Vec<TransitionIndex>,
 }
 
@@ -18,15 +19,15 @@ struct TransitionIndex {
 
 impl IncomingTransitions {
     pub fn new(lts: &LabelledTransitionSystem) -> IncomingTransitions {
-        let mut incoming_transitions: Vec<(LabelIndex, StateIndex)> = vec![(0,0); lts.num_of_transitions()];
+        let mut incoming_transitions: Vec<CompactTransition> = vec![CompactTransition::default(); lts.num_of_transitions()];
         let mut state2incoming: Vec<TransitionIndex> = vec![TransitionIndex::default(); lts.num_of_states()];
         
         // Compute the number of incoming (silent) transitions for each state.
         for state_index in lts.iter_states() {
-            for (label_index, to) in lts.outgoing_transitions(state_index) {
-                state2incoming[to].end += 1;
-                if lts.is_hidden_label(label_index) {
-                    state2incoming[to].silent += 1;
+            for trans in lts.outgoing_transitions_compact(state_index) {
+                state2incoming[trans.state()].end += 1;
+                if lts.is_hidden_label(trans.label()) {
+                    state2incoming[trans.state()].silent += 1;
                 }
             }
         }
@@ -49,10 +50,10 @@ impl IncomingTransitions {
                 if lts.is_hidden_label(transition.label()) {
                     // Place at end of incoming transitions.
                     index.silent -= 1;
-                    incoming_transitions[index.silent] = (transition.label(), state_index);
+                    incoming_transitions[index.silent] = CompactTransition::new(transition.label(), state_index);
                 } else {
                     index.start -= 1;
-                    incoming_transitions[index.start] = (transition.label(), state_index);
+                    incoming_transitions[index.start] = CompactTransition::new(transition.label(), state_index);
                 }
             }
         }
@@ -61,12 +62,12 @@ impl IncomingTransitions {
     }
 
     /// Returns an iterator over the incoming transitions for the given state.
-    pub fn incoming_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
+    pub fn incoming_transitions(&self, state_index: usize) -> impl Iterator<Item = &CompactTransition> {
         self.incoming_transitions[self.state2incoming[state_index].start .. self.state2incoming[state_index].end].iter()
     }
 
     // Return an iterator over the incoming silent transitions for the given state.
-    pub fn incoming_silent_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)>  {
+    pub fn incoming_silent_transitions(&self, state_index: usize) -> impl Iterator<Item = &CompactTransition>  {
         self.incoming_transitions[self.state2incoming[state_index].silent .. self.state2incoming[state_index].end].iter()
     }
 }
