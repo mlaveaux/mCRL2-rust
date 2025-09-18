@@ -12,6 +12,7 @@ use thiserror::Error;
 
 use mcrl2rust_lts::LabelIndex;
 use mcrl2rust_lts::LabelledTransitionSystem;
+use mcrl2rust_lts::CompactTransition;
 
 use crate::line_iterator::LineIterator;
 use crate::progress::Progress;
@@ -83,7 +84,8 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     let mut labels_index: HashMap<String, LabelIndex> = HashMap::new();
     let mut labels: Vec<String> = Vec::new();
 
-    let mut transitions: Vec<(usize, usize, usize)> = Vec::default();
+    // Pre-allocate the transitions vector
+    let mut transitions: Vec<(usize, CompactTransition)> = Vec::with_capacity(num_of_transitions);
     let mut progress = Progress::new(
         |value, increment| debug!("Reading transitions {}%...", value / increment),
         num_of_transitions,
@@ -105,7 +107,8 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
 
         trace!("Read transition {} --[{}]-> {}", from, label_txt, to);
 
-        transitions.push((from, label_index, to));
+        // Create CompactTransition directly
+        transitions.push((from, CompactTransition::new(label_index, to)));
 
         if labels[label_index].is_empty() {
             labels[label_index] = label_txt.to_string();
@@ -115,13 +118,15 @@ pub fn read_aut(reader: impl Read, mut hidden_labels: Vec<String>) -> Result<Lab
     }
 
     // Remove duplicated transitions, it is not clear if they are allowed in the .aut format.
-    transitions.sort_unstable();
-    transitions.dedup();
+    // I don't think we should do this, it seems expensive and not really necessary.
+    // transitions.sort_unstable_by_key(|(from, _)| *from);
+    // transitions.dedup();
 
     debug!("Finished reading LTS");
 
     hidden_labels.push("tau".to_string());
     debug!("Time read_aut: {:.3}s", start.elapsed().as_secs_f64());
+
     Ok(LabelledTransitionSystem::new(
         initial_state,
         Some(num_of_states),

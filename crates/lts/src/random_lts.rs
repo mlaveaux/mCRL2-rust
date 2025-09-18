@@ -2,7 +2,7 @@ use rand::Rng;
 use rustc_hash::FxHashSet;
 
 use crate::LabelledTransitionSystem;
-
+use crate::CompactTransition;
 /// Generates a monolithic LTS with the desired number of states, labels, out
 /// degree and in degree for all the states.
 pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) -> LabelledTransitionSystem {
@@ -15,7 +15,7 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
     }
 
     let mut rng = rand::rng();
-    let mut transitions: FxHashSet<(usize, usize, usize)> = FxHashSet::default();
+    let mut transitions: FxHashSet<(usize, CompactTransition)> = FxHashSet::default();
 
     for state_index in 0..num_of_states {
         // Introduce outgoing transitions for this state based on the desired out degree.
@@ -24,7 +24,7 @@ pub fn random_lts(num_of_states: usize, num_of_labels: u32, outdegree: usize) ->
             let label = rng.random_range(0..num_of_labels);
             let to = rng.random_range(0..num_of_states);
 
-            transitions.insert((state_index, label as usize, to));
+            transitions.insert((state_index, CompactTransition::new(label as usize, to)));
         }
     }
 
