@@ -78,8 +78,8 @@ where
         let new_state_index = permutation(state_index);
 
         for (label, to_index) in lts.outgoing_transitions(state_index) {
-            let new_to_index = permutation(*to_index);
-            transitions.push((new_state_index, *label, new_to_index));
+            let new_to_index = permutation(to_index);
+            transitions.push((new_state_index, label, new_to_index));
         }
     }
 
@@ -128,11 +128,11 @@ where
                     .filter(|(label, to)| filter(*label, *to))
                 {
                     // If it was marked temporary, then a cycle is detected.
-                    if marks[*next_state] == Some(Mark::Temporary) {
+                    if marks[next_state] == Some(Mark::Temporary) {
                         return false;
                     }
-                    if marks[*next_state].is_none() {
-                        depth_stack.push(*next_state);
+                    if marks[next_state].is_none() {
+                        depth_stack.push(next_state);
                     }
                 }
             }
@@ -164,10 +164,10 @@ where
             .filter(|(label, to)| filter(*label, *to))
         {
             if reverse {
-                if state_order <= permutation(*successor) {
+                if state_order <= permutation(successor) {
                     return false;
                 }
-            } else if state_order >= permutation(*successor) {
+            } else if state_order >= permutation(successor) {
                 return false;
             }
         }

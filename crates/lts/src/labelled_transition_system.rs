@@ -6,12 +6,54 @@ pub type LabelIndex = usize;
 /// The index for a state.
 pub type StateIndex = usize;
 
+/// A compact representation of a transition using a single u64.
+/// The high 16 bits store the label index, the low 48 bits store the target state index.
+#[repr(transparent)]
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct CompactTransition(u64);
+
+impl CompactTransition {
+    #[inline]
+    pub fn new(label: LabelIndex, state: StateIndex) -> Self {
+        debug_assert!(label < (1 << 16), "Label index too large for compact representation");
+        debug_assert!(state < (1 << 48), "State index too large for compact representation");
+        Self(((label as u64) << 48) | (state as u64 & 0xFFFF_FFFF_FFFF))
+    }
+
+    #[inline]
+    pub fn label(&self) -> LabelIndex {
+        (self.0 >> 48) as LabelIndex
+    }
+
+    #[inline]
+    pub fn state(&self) -> StateIndex {
+        (self.0 & 0xFFFF_FFFF_FFFF) as StateIndex
+    }
+
+    #[inline]
+    pub fn to_tuple(&self) -> (LabelIndex, StateIndex) {
+        (self.label(), self.state())
+    }
+}
+
+impl From<(LabelIndex, StateIndex)> for CompactTransition {
+    fn from(tuple: (LabelIndex, StateIndex)) -> Self {
+        Self::new(tuple.0, tuple.1)
+    }
+}
+
+impl fmt::Debug for CompactTransition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.label(), self.state())
+    }
+}
+
 /// Represents a labelled transition system consisting of states with directed
 /// labelled edges.
 #[derive(PartialEq, Eq)]
 pub struct LabelledTransitionSystem {
     states: Vec<State>,
-    transitions: Vec<(LabelIndex, StateIndex)>,
+    transitions: Vec<CompactTransition>,
 
     labels: Vec<String>,
     hidden_labels: Vec<String>,
@@ -63,9 +105,9 @@ impl LabelledTransitionSystem {
         });
         
         // Place the transitions, and increment the end for every state.
-        let mut transitions = vec![(0, 0); num_of_transitions];
+        let mut transitions = vec![CompactTransition::new(0, 0); num_of_transitions];
         for (from, label, to) in transition_iter() {
-            transitions[states[from].outgoing_end] = (label, to);
+            transitions[states[from].outgoing_end] = CompactTransition::new(label, to);
             states[from].outgoing_end += 1;
         }
 
@@ -89,15 +131,17 @@ impl LabelledTransitionSystem {
 
         // Remap all hidden actions to zero.
         for state in &mut states {
-            for (label, _) in &mut transitions[state.outgoing_start..state.outgoing_end] {
-                if hidden_indices.binary_search(label).is_ok() {
-                    *label = 0;
+            for transition in &mut transitions[state.outgoing_start..state.outgoing_end] {
+                let mut label = transition.label();
+                let state = transition.state();
+                if hidden_indices.binary_search(&label).is_ok() {
+                    label = 0;
                 } 
-                else if introduced_tau
-                {
+                else if introduced_tau {
                     // Remap the zero action to the original first hidden index.
-                    *label += 1;
+                    label += 1;
                 }
+                *transition = CompactTransition::new(label, state);
             }
         } 
 
@@ -117,9 +161,16 @@ impl LabelledTransitionSystem {
     }
 
     /// Returns the set of outgoing transitions for the given state.
-    pub fn outgoing_transitions(&self, state_index: usize) -> impl Iterator<Item = &(LabelIndex, StateIndex)> {
+    pub fn outgoing_transitions(&self, state_index: usize) -> impl Iterator<Item = (LabelIndex, StateIndex)> + '_ {
         let state = &self.states[state_index];
-        self.transitions[state.outgoing_start..state.outgoing_end].iter()
+        self.transitions[state.outgoing_start..state.outgoing_end]
+            .iter()
+            .map(CompactTransition::to_tuple)
+    }
+
+    pub fn outgoing_transitions_compact(&self, state_index: usize) -> &[CompactTransition] {
+        let state = &self.states[state_index];
+        &self.transitions[state.outgoing_start..state.outgoing_end]
     }
 
     /// Iterate over all state_index in the labelled transition system
@@ -181,7 +232,7 @@ impl fmt::Debug for LabelledTransitionSystem {
         writeln!(f, "Hidden labels: {:?}", self.hidden_labels)?;
 
         for state_index in self.iter_states() {
-            for &(label, to) in self.outgoing_transitions(state_index) {
+            for (label, to) in self.outgoing_transitions(state_index) {
                 let label_name = &self.labels[label];
 
                 writeln!(f, "{state_index} --[{label_name}]-> {to}")?;

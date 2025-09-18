@@ -24,9 +24,9 @@ impl IncomingTransitions {
         // Compute the number of incoming (silent) transitions for each state.
         for state_index in lts.iter_states() {
             for (label_index, to) in lts.outgoing_transitions(state_index) {
-                state2incoming[*to].end += 1;
-                if lts.is_hidden_label(*label_index) {
-                    state2incoming[*to].silent += 1;
+                state2incoming[to].end += 1;
+                if lts.is_hidden_label(label_index) {
+                    state2incoming[to].silent += 1;
                 }
             }
         }
@@ -43,21 +43,21 @@ impl IncomingTransitions {
         });
 
         for state_index in lts.iter_states() {
-            for (label_index, to) in lts.outgoing_transitions(state_index) {
-                let index = &mut state2incoming[*to];
+            for transition in lts.outgoing_transitions_compact(state_index) {
+                let index = &mut state2incoming[transition.state()];
 
-                if lts.is_hidden_label(*label_index) {
+                if lts.is_hidden_label(transition.label()) {
                     // Place at end of incoming transitions.
                     index.silent -= 1;
-                    incoming_transitions[index.silent] = (*label_index, state_index);
+                    incoming_transitions[index.silent] = (transition.label(), state_index);
                 } else {
                     index.start -= 1;
-                    incoming_transitions[index.start] = (*label_index, state_index);
+                    incoming_transitions[index.start] = (transition.label(), state_index);
                 }
             }
         }
-        
-        IncomingTransitions { incoming_transitions, state2incoming}
+
+        IncomingTransitions { incoming_transitions, state2incoming }
     }
 
     /// Returns an iterator over the incoming transitions for the given state.

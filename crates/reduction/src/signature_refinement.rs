@@ -104,7 +104,6 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
                         return None;
                     }
                 }
-
                 None
         });
 

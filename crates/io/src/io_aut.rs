@@ -142,17 +142,17 @@ pub fn write_aut(writer: &mut impl Write, lts: &LabelledTransitionSystem) -> Res
     )?;
 
     for state_index in lts.iter_states() {
-        for (label, to) in lts.outgoing_transitions(state_index) {
+        for trans in lts.outgoing_transitions_compact(state_index) {
             writeln!(
                 writer,
                 "({}, \"{}\", {})",
                 state_index,
-                if lts.is_hidden_label(*label) {
+                if lts.is_hidden_label(trans.label()) {
                     "tau"
                 } else {
-                    &lts.labels()[*label]
+                    &lts.labels()[trans.label()]
                 },
-                to
+                trans.state()
             )?;
         }
     }

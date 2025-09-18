@@ -129,8 +129,8 @@ pub fn strong_bisim_signature(
 ) {
     builder.clear();
 
-    for (label, to) in lts.outgoing_transitions(state_index) {
-        builder.push(CompactSignaturePair::new(*label, partition.block_number(*to)));
+    for transition in lts.outgoing_transitions_compact(state_index) {
+        builder.push(CompactSignaturePair::new(transition.label(), partition.block_number(transition.state())));
     }
 
     // Compute the flat signature, which has Hash and is more compact.
@@ -159,21 +159,21 @@ pub fn branching_bisim_signature(
     while let Some(inner_state_index) = stack.pop() {
         visited.insert(inner_state_index);
 
-        for (label_index, to_index) in lts.outgoing_transitions(inner_state_index) {
-            if lts.is_hidden_label(*label_index) {
-                if partition.block_number(state_index) == partition.block_number(*to_index) {
+        for transition in lts.outgoing_transitions_compact(inner_state_index) {
+            if lts.is_hidden_label(transition.label()) {
+                if partition.block_number(state_index) == partition.block_number(transition.state()) {
                     // Explore the outgoing state as well, still tau path in same block
-                    if !visited.contains(to_index) {
-                        visited.insert(*to_index);
-                        stack.push(*to_index);
+                    if !visited.contains(&transition.state()) {
+                        visited.insert(transition.state());
+                        stack.push(transition.state());
                     }
                 } else {
                     //  pi(s) != pi(t)
-                    builder.push(CompactSignaturePair::new(*label_index, partition.block_number(*to_index)));
+                    builder.push(CompactSignaturePair::new(transition.label(), partition.block_number(transition.state())));
                 }
             } else {
                 // (a != tau) This is a visible action only reachable from tau paths with equal signatures.
-                builder.push(CompactSignaturePair::new(*label_index, partition.block_number(*to_index)));
+                builder.push(CompactSignaturePair::new(transition.label(), partition.block_number(transition.state())));
             }
         }
     }
@@ -193,19 +193,19 @@ pub fn branching_bisim_signature_sorted(
 ) {
     builder.clear();
 
-    for &(label_index, to) in lts.outgoing_transitions(state_index) {
-        let to_block = partition.block_number(to);
+    for transition in lts.outgoing_transitions_compact(state_index) {
+        let to_block = partition.block_number(transition.state());
 
         if partition.block_number(state_index) == to_block {
-            if lts.is_hidden_label(label_index) {
+            if lts.is_hidden_label(transition.label()) {
                 // Inert tau transition, take signature from the outgoing tau-transition.
-                builder.extend(state_to_signature[to].as_slice());
+                builder.extend(state_to_signature[transition.state()].as_slice());
             } else {
-                builder.push(CompactSignaturePair::new(label_index, to_block));
+                builder.push(CompactSignaturePair::new(transition.label(), to_block));
             }
         } else {
             // Visible action, add to the signature.
-            builder.push(CompactSignaturePair::new(label_index, to_block));
+            builder.push(CompactSignaturePair::new(transition.label(), to_block));
         }
     }
 
@@ -225,7 +225,7 @@ pub fn branching_bisim_signature_inductive(
     builder.clear();
 
     let num_act: usize = lts.num_of_labels(); //this label index does not occur.
-    for &(label_index, to) in lts.outgoing_transitions(state_index) {
+    for (label_index, to) in lts.outgoing_transitions(state_index) {
         let to_block = partition.block_number(to);
 
         if partition.block_number(state_index) == to_block {
