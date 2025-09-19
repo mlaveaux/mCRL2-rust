@@ -58,12 +58,10 @@ pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Ti
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement
-pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
-    let mut timepre = timing.start("preprocess");
-    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let mut timepre: mcrl2rust_utilities::Timer = timing.start("preprocess");
     let incoming = IncomingTransitions::new(&preprocessed_lts);
     timepre.finish();
-
     let mut time = timing.start("reduction");
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
@@ -96,11 +94,11 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
             |signature, key_to_signature| {                
                 // Inductive signatures.
                 for sig in signature.iter().rev() {
-                    if sig.label() == lts.num_of_labels() && key_to_signature[sig.state()].is_subset_of(signature, *sig) {
+                    if sig.label() == preprocessed_lts.num_of_labels() && key_to_signature[sig.state()].is_subset_of(signature, *sig) {
                         return Some(sig.state());
                     }
 
-                    if sig.label() != lts.num_of_labels() {
+                    if sig.label() != preprocessed_lts.num_of_labels() {
                         return None;
                     }
                 }
@@ -123,11 +121,8 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
     );
     time.finish();
 
-    // Combine the SCC partition with the branching bisimulation partition.
-    let combined_partition = combine_partition(preprocess_partition, &partition);
-
-    trace!("Final partition {combined_partition}");
-    combined_partition
+    trace!("Final partition {partition}");
+    partition.into()
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement without dirty blocks.
@@ -299,10 +294,10 @@ where
         trace!("Iteration {iteration} partition {partition}");
 
         iteration += 1;
-        if num_of_blocks != partition.num_of_blocks() {
-            // Only print a message when new blocks have been found.
-            debug!("Iteration {iteration}, found {} blocks", partition.num_of_blocks());
-        }
+        // if num_of_blocks != partition.num_of_blocks() {
+        //     // Only print a message when new blocks have been found.
+        //     trace!("Iteration {iteration}, found {} blocks", partition.num_of_blocks());
+        // }
     }
 
     trace!("Refinement partition {partition}");
@@ -409,6 +404,8 @@ where
         // Compute the flat signature, which has Hash and is more compact.
         compute_signature(state_index, partition, &mut builder);
         let signature: Vec<CompactSignaturePair> = builder.clone();
+
+
 
         if let Some(block_signature) = &block_to_signature[block] {
             if signature != *block_signature {
