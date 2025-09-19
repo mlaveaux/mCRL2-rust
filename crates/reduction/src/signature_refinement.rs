@@ -236,27 +236,23 @@ where
                 signature(state_index, partition, &state_to_key, &mut builder);
 
                 // Compute the signature of a single state
-                let index = if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
-                    // Keep track of the index for every signature, either use the arena to allocate space or simply borrow the value.
-                    state_to_key[state_index] = *index;
-                    *index
-                } else {
-                    let slice = arena.alloc_slice_copy(&builder);
-
-                    let number = if let Some(key) = renumber(&builder, &key_to_signature) {
+               let index = if let Some(key) = renumber(&builder, &key_to_signature) {
                         key
+               } else {
+                    if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
+                        state_to_key[state_index] = *index;
+                        *index
                     } else {
-                        let result = key_to_signature.len();
+                        let slice = arena.alloc_slice_copy(&builder);
+                        let number = key_to_signature.len();
+                        id.insert(Signature::new(slice), number);
                         key_to_signature.push(Signature::new(slice));
-                        result
-                    };
 
-                    id.insert(Signature::new(slice), number);
-                    
-                    // (branching)  Keep track of the signature for every block in the next partition.
-                    state_to_key[state_index] = number;
+                        // (branching) Keep track of the signature for every block in the next partition.
+                        state_to_key[state_index] = number;
 
-                    number
+                        number
+                    }
                 };
 
                 trace!("State {state_index} signature {:?} index {index}", builder);
