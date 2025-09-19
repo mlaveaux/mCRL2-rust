@@ -1,6 +1,4 @@
-use mcrl2rust_lts::LabelIndex;
 use mcrl2rust_lts::LabelledTransitionSystem;
-use mcrl2rust_lts::StateIndex;
 use mcrl2rust_lts::CompactTransition;
 
 /// A struct containg information related to the incoming transitions for every
