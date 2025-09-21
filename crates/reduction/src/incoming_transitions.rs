@@ -8,6 +8,7 @@ pub struct IncomingTransitions {
     state2incoming: Vec<TransitionIndex>,
 }
 
+// TODO: Bytepack end and silent into one u64.
 #[derive(Default, Clone)]
 struct TransitionIndex {
     start: usize,
