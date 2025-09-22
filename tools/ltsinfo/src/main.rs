@@ -12,8 +12,10 @@ use mcrl2rust_io::io_aut::write_aut;
 use mcrl2rust_reduction::branching_bisim_sigref;
 use mcrl2rust_reduction::branching_bisim_sigref_naive;
 use mcrl2rust_reduction::quotient_lts;
+use mcrl2rust_reduction::quotient_lts_jan;
 use mcrl2rust_reduction::strong_bisim_sigref;
 use mcrl2rust_reduction::strong_bisim_sigref_naive;
+use mcrl2rust_reduction::BlockPartition;
 use mcrl2rust_reduction::IndexedPartition;
 use mcrl2rust_utilities::Timing;
 use mcrl2rust_reduction::preprocess_branching;
@@ -63,25 +65,24 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
 
     let mut timing = Timing::new();
     let preprocessed_lts = {
-        let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
+        let lts: mcrl2rust_lts::LabelledTransitionSystem = read_aut(&file, cli.tau.unwrap_or_default())?;
         let (preprocessed, _) = preprocess_branching(&lts);
         preprocessed
     }; // lts is dropped here
 
-    let partition: IndexedPartition = match cli.equivalence {
-        Equivalence::StrongBisim => strong_bisim_sigref(&preprocessed_lts, &mut timing),
-        Equivalence::StrongBisimNaive => strong_bisim_sigref_naive(&preprocessed_lts, &mut timing),
+
+    let partition: BlockPartition = match cli.equivalence {
+        Equivalence::StrongBisim => branching_bisim_sigref(&preprocessed_lts, &mut timing),
+        Equivalence::StrongBisimNaive => branching_bisim_sigref(&preprocessed_lts, &mut timing),
         Equivalence::BranchingBisim => branching_bisim_sigref(&preprocessed_lts, &mut timing),
-        Equivalence::BranchingBisimNaive => branching_bisim_sigref_naive(&preprocessed_lts, &mut timing),
+        Equivalence::BranchingBisimNaive => branching_bisim_sigref(&preprocessed_lts, &mut timing),
     };
 
     let mut quotient_time = timing.start("quotient");
-    let quotient_lts = quotient_lts(
+    let quotient_lts = quotient_lts_jan(
         &preprocessed_lts,
-        &partition,
-        matches!(cli.equivalence, Equivalence::BranchingBisim)
-            || matches!(cli.equivalence, Equivalence::BranchingBisimNaive),
-    );
+        &partition);
+
     if let Some(file) = cli.output {
         let mut writer = BufWriter::new(File::create(file)?);
         write_aut(&mut writer, &quotient_lts)?;

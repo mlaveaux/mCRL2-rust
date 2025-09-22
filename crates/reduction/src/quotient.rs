@@ -3,6 +3,8 @@ use log::debug;
 use mcrl2rust_lts::LabelledTransitionSystem;
 use mcrl2rust_lts::CompactTransition;
 
+use crate::BlockPartition;
+
 /// A trait for partition refinement algorithms that expose the block number for
 /// every state. Can be used to compute the quotient labelled transition system.
 ///
@@ -95,6 +97,43 @@ pub fn quotient_lts(
     // Remove duplicates.
     transitions.sort_unstable();
     transitions.dedup();
+
+    let result = LabelledTransitionSystem::new(
+        partition.block_number(lts.initial_state_index()),
+        Some(partition.num_of_blocks()),
+        || transitions.iter().cloned(),
+        lts.labels().into(),
+        lts.hidden_labels().into()
+    );
+    debug!("Time quotient: {:.3}s", start.elapsed().as_secs_f64());
+    result
+}
+
+// Implementation of the quotient function for branching bisimulation.
+pub fn quotient_lts_jan(
+    lts: &LabelledTransitionSystem,
+    partition: &BlockPartition
+) -> LabelledTransitionSystem {
+    let start = std::time::Instant::now();
+    let mut transitions: Vec<(usize, CompactTransition)> = Vec::default();
+    for block in 0..partition.num_of_blocks() {
+        for state in partition.iter_block(block) {
+            let mut found = true;
+            for trans in lts.outgoing_transitions_compact(state) {
+                if lts.is_hidden_label(trans.label()) && partition.block_number(trans.state()) == block {
+                    found = false;
+                    break;
+                } 
+            }
+            if found == true {
+                for trans in lts.outgoing_transitions_compact(state) {
+                    transitions.push((block, *trans));
+                }
+                break;
+            }
+        }
+        debug_assert!(!partition.block(block).is_empty(), "Blocks in the partition should not be empty");
+    }
 
     let result = LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),
