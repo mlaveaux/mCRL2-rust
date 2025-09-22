@@ -76,7 +76,7 @@ impl BlockPartition {
 
         // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
         builder.old_elements.extend(block.iter_marked(&self.elements));
-        // builder.old_elements.sort_unstable();
+        builder.old_elements.sort_unstable();
 
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
         for (element_index, &element) in builder.old_elements.iter().enumerate() {
@@ -225,10 +225,10 @@ impl BlockPartition {
                 if self.block_number(trans.state()) == block_index {
                     self.mark_element(trans.state());
                 }
-                if self.element_offset[trans.state()] > it {
-                    // We should guarantee topoligical sort.
-                    self.swap_elements(self.element_offset[trans.state()], it);
-                }
+                // if self.element_offset[trans.state()] > it {
+                //     // We should guarantee topoligical sort.
+                //     // self.swap_elements(self.element_offset[trans.state()], it);
+                // }
             }
 
             if it == 0 {

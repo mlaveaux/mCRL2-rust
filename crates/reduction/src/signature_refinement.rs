@@ -58,7 +58,7 @@ pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Ti
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement
-pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, timing: &mut Timing) -> BlockPartition {
     let mut timepre: mcrl2rust_utilities::Timer = timing.start("preprocess");
     let incoming = IncomingTransitions::new(&preprocessed_lts);
     timepre.finish();
@@ -235,20 +235,17 @@ where
                         key
                } else {
                     if let Some((_, index)) = id.get_key_value(&Signature::new(&builder)) {
-                        state_to_key[state_index] = *index;
                         *index
                     } else {
                         let slice = arena.alloc_slice_copy(&builder);
                         let number = key_to_signature.len();
                         id.insert(Signature::new(slice), number);
                         key_to_signature.push(Signature::new(slice));
-
-                        // (branching) Keep track of the signature for every block in the next partition.
-                        state_to_key[state_index] = number;
-
+                        
                         number
                     }
                 };
+                state_to_key[state_index] = index;
 
                 trace!("State {state_index} signature {:?} index {index}", builder);
                 index
