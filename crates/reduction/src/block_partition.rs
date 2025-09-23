@@ -225,7 +225,7 @@ impl BlockPartition {
         let mut it = block.end - 1;
 
         // First compute backwards silent transitive closure.
-        while it >= self.blocks[block_index].marked_split {
+        while it >= self.blocks[block_index].marked_split && self.blocks[block_index].has_unmarked() {
             for &trans in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
                 if self.block_number(trans.state()) == block_index && !self.is_element_marked(trans.state()) {
                     self.mark_element(trans.state());
