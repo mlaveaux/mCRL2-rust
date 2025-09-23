@@ -116,24 +116,40 @@ pub fn quotient_lts_jan(
 ) -> LabelledTransitionSystem {
     let start = std::time::Instant::now();
     let mut transitions: Vec<(usize, CompactTransition)> = Vec::default();
+
     for block in 0..partition.num_of_blocks() {
-        for state in partition.iter_block(block) {
-            let mut found = true;
-            for trans in lts.outgoing_transitions_compact(state) {
+            // Check if state is bottom
+        let mut candidate = if let Some(state) = partition.iter_block(block).next() {
+                state
+            } else {
+                panic!("Found empty block {}", block);
+            };
+        let mut found = false;
+        // DFS into a bottom state.
+        while !found {
+            found = true;
+            for trans in lts.outgoing_transitions_compact(candidate) {
                 if lts.is_hidden_label(trans.label()) && partition.block_number(trans.state()) == block {
                     found = false;
+                    candidate = trans.state();
                     break;
                 } 
+            }    
+        }
+        for trans in lts.outgoing_transitions_compact(candidate) {
+            //candidate is a bottom state, so add all transitions.
+            if (trans.label() == 0) && (partition.block_number(trans.state()) == block) {
+                log::error!("Warning: this state is not bottom {}", block);
             }
-            if found == true {
-                for trans in lts.outgoing_transitions_compact(state) {
-                    transitions.push((block, *trans));
-                }
-                break;
-            }
+            transitions.push((block, CompactTransition::new(trans.label(), partition.block_number(trans.state()))));
         }
         debug_assert!(!partition.block(block).is_empty(), "Blocks in the partition should not be empty");
     }
+    // Remove duplicates.
+    transitions.sort_unstable();
+    transitions.dedup();
+
+    log::error!("Number of transitions in quotient: {}", transitions.len());
 
     let result = LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),

@@ -120,7 +120,7 @@ pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, timin
         "The resulting partition is not a branching bisimulation partition."
     );
     time.finish();
-
+    log::error!("num of blocks: {}", partition.num_of_blocks());
     trace!("Final partition {partition}");
     partition.into()
 }
@@ -128,7 +128,7 @@ pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, timin
 /// Computes a branching bisimulation partitioning using signature refinement without dirty blocks.
 pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut timepre = timing.start("preprocess");
-    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+    let preprocessed_lts = preprocess_branching(lts);
     timepre.finish();
 
     let mut time = timing.start("reduction");
@@ -165,10 +165,10 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
     time.finish();
 
     // Combine the SCC partition with the branching bisimulation partition.
-    let combined_partition = combine_partition(preprocess_partition, &partition);
+    // let combined_partition = combine_partition(preprocess_partition, &partition);
 
-    trace!("Final partition {combined_partition}");
-    combined_partition
+    // trace!("Final partition {combined_partition}");
+    IndexedPartition::from(partition)
 }
 
 /// General signature refinement algorithm that accepts an arbitrary signature
@@ -201,7 +201,6 @@ where
 
     // Refine partitions until stable.
     let mut iteration = 0usize;
-    let mut num_of_blocks;
     let mut states = Vec::new();
 
     // Used to keep track of dirty blocks.
@@ -215,7 +214,6 @@ where
         key_to_signature.clear();
         arena.reset();
 
-        num_of_blocks = partition.num_of_blocks();
         let block = partition.block(block_index);
         debug_assert!(
             block.has_marked(),
@@ -223,8 +221,9 @@ where
         );
 
         if BRANCHING {
-            partition.mark_backward_closure(block_index, incoming);
+            partition.mark_backward_closure(block_index, incoming, lts);
         }
+
 
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
