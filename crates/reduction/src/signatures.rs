@@ -8,9 +8,6 @@ use mcrl2rust_lts::StateIndex;
 
 use crate::Partition;
 use crate::quotient_lts;
-use crate::reorder_partition;
-use crate::reorder_states;
-use crate::sort_topological;
 use crate::tau_scc_decomposition;
 use crate::BlockPartition;
 use crate::IndexedPartition;
@@ -248,20 +245,9 @@ pub fn branching_bisim_signature_inductive(
 
 /// Perform the preprocessing necessary for branching bisimulation with the
 /// sorted signature see `branching_bisim_signature_sorted`.
-pub fn preprocess_branching(lts: &LabelledTransitionSystem) -> (LabelledTransitionSystem, IndexedPartition) {
+pub fn preprocess_branching(lts: &LabelledTransitionSystem) -> LabelledTransitionSystem {
+    // TODO JM: Ik denk dat topo sort, direct in de scc run kan.
     let scc_partition = tau_scc_decomposition(lts);
     let tau_loop_free_lts = quotient_lts(lts, &scc_partition, true);
-
-    // Sort the states according to the topological order of the tau transitions.
-    let topological_permutation = sort_topological(
-        &tau_loop_free_lts,
-        |label_index, _| tau_loop_free_lts.is_hidden_label(label_index),
-        true,
-    )
-    .expect("After quotienting, the LTS should not contain cycles");
-
-    (
-        reorder_states(&tau_loop_free_lts, |i| topological_permutation[i]),
-        reorder_partition(scc_partition, |i| topological_permutation[i]),
-    )
+    tau_loop_free_lts
 }

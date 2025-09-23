@@ -66,8 +66,8 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let mut timing = Timing::new();
     let preprocessed_lts = {
         let lts: mcrl2rust_lts::LabelledTransitionSystem = read_aut(&file, cli.tau.unwrap_or_default())?;
-        let (preprocessed, _) = preprocess_branching(&lts);
-        preprocessed
+        let preproccessed_lts = preprocess_branching(&lts);
+        preproccessed_lts
     }; // lts is dropped here
 
 
