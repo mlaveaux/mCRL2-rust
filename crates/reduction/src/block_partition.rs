@@ -270,7 +270,7 @@ impl BlockPartition {
                 // Check if trans is now a top element
                 let mut top = true;
                 for itrans in incoming_transitions.incoming_silent_transitions(trans.state()) {
-                    if self.block_number(itrans.state()) == block_index && self.element_offset[itrans.state()] < top_elements {
+                    if self.block_number(itrans.state()) == block_index && self.element_offset[itrans.state()] <= top_elements {
                         // This element is not a top element.
                         top = false;
                         break;
