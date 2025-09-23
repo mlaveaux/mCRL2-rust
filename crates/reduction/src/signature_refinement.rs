@@ -221,7 +221,7 @@ where
         );
 
         if BRANCHING {
-            partition.mark_backward_closure(block_index, incoming, lts);
+            partition.mark_backward_closure(block_index, incoming);
         }
 
 

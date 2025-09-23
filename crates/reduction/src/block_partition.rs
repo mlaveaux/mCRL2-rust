@@ -78,7 +78,9 @@ impl BlockPartition {
 
         // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
         builder.old_elements.extend(block.iter_marked(&self.elements));
-        // builder.old_elements.sort_unstable();
+        builder.old_elements.sort_unstable();
+
+        
 
         // O(n) Loop over marked elements to determine the number of the new block each element is in.
         for (element_index, &element) in builder.old_elements.iter().enumerate() {
@@ -218,11 +220,10 @@ impl BlockPartition {
         &mut self,
         block_index: usize,
         incoming_transitions: &IncomingTransitions,
-        lts: &LabelledTransitionSystem,
     ) {
         let block = self.blocks[block_index];
         let mut it = block.end - 1;
-        let mut top_elements = block.end -1;
+
         // First compute backwards silent transitive closure.
         while it >= self.blocks[block_index].marked_split {
             for &trans in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
@@ -235,61 +236,8 @@ impl BlockPartition {
             }
             it -= 1;
         }
-
-        it = self.blocks[block_index].end - 1;
-        while it >= self.blocks[block_index].marked_split {
-            let mut is_top = true;
-            for &trans in incoming_transitions.incoming_silent_transitions(self.elements[it]) {
-                if self.block_number(trans.state()) == block_index {
-                    is_top = false;
-                    break;
-                }
-            }
-            if (is_top) {
-                // This element has no incoming tau transitions within the block,
-                // so we place it at the end.
-                self.swap_elements(it, top_elements);
-                top_elements -= 1;
-            }
-            if it == 0 {
-                break;
-            }
-            it -= 1;
-        }
-        // Now all marked elements are closed under the silent closure.
-        // Next we need to ensure that the marked elements are topologically sorted.
-        let mut it = block.end - 1;
-        while it >= self.blocks[block_index].marked_split {
-            for trans in lts.outgoing_transitions_compact(self.elements[it]) {
-                if trans.label() != 0 {
-                    break;
-                } else if self.block_number(trans.state()) != block_index
-                    || self.element_offset[trans.state()] > top_elements 
-                    || !self.is_element_marked(trans.state()) {
-                    continue;
-                }
-                // Check if trans is now a top element
-                let mut top = true;
-                for itrans in incoming_transitions.incoming_silent_transitions(trans.state()) {
-                    if self.block_number(itrans.state()) == block_index && self.element_offset[itrans.state()] <= top_elements {
-                        // This element is not a top element.
-                        top = false;
-                        break;
-                    }
-                }
-                if top {
-                    self.swap_elements(self.element_offset[trans.state()], top_elements);
-                    top_elements -= 1;
-                }
-            }
-            if it ==0 {
-                break;
-            }
-            it -= 1;
-        }
-        // Check if the marked elements are topologically sorted.
     }
-
+    
     /// Swaps the given blocks given by the indices.
     pub fn swap_blocks(&mut self, left_index: usize, right_index: usize) {
         if left_index == right_index {
