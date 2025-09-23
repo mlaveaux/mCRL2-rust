@@ -145,22 +145,7 @@ impl LabelledTransitionSystem {
             }
             transitions[state.outgoing_start..state.outgoing_end].sort_unstable();
         } 
-
-        // Test if hidden labels are always in front. 
-        for state in &states {
-            let mut found_non_hidden = false;
-            for transition in &transitions[state.outgoing_start..state.outgoing_end] {
-                let label = transition.label();
-                if label == 0 {
-                    if found_non_hidden {
-                        panic!("Hidden labels must be in front of other labels.");
-                    }
-                } else {
-                    found_non_hidden = true;
-                }
-            }
-        }
-        
+     
         LabelledTransitionSystem {
             initial_state,
             labels,
