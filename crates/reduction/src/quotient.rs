@@ -149,8 +149,6 @@ pub fn quotient_lts_jan(
     transitions.sort_unstable();
     transitions.dedup();
 
-    log::error!("Number of transitions in quotient: {}", transitions.len());
-
     let result = LabelledTransitionSystem::new(
         partition.block_number(lts.initial_state_index()),
         Some(partition.num_of_blocks()),
