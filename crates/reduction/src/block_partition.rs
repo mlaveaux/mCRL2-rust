@@ -261,8 +261,9 @@ impl BlockPartition {
         let mut it = block.end - 1;
         while it >= self.blocks[block_index].marked_split {
             for trans in lts.outgoing_transitions_compact(self.elements[it]) {
-                if trans.label() != 0 
-                    || self.block_number(trans.state()) != block_index
+                if trans.label() != 0 {
+                    break;
+                } else if self.block_number(trans.state()) != block_index
                     || self.element_offset[trans.state()] > top_elements 
                     || !self.is_element_marked(trans.state()) {
                     continue;
