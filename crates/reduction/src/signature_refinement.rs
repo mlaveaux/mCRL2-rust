@@ -220,7 +220,7 @@ where
         if BRANCHING {
             partition.mark_backward_closure(block_index, incoming);
         }
-
+        let num_blocks = partition.num_of_blocks();
 
         for new_block_index in
             partition.partition_marked_with(block_index, &mut split_builder, |state_index, partition| {
@@ -257,8 +257,9 @@ where
                         if BRANCHING {
                             // Mark incoming states in other blocks, or visible actions.
                             if !lts.is_hidden_label(trans.label())
-                                || partition.block_number(trans.state()) != partition.block_number(state_index)
+                                || partition.block_number(trans.state()) < num_blocks
                             {
+                                // I THINK we do not need to take silent actions that go to a new block into account.
                                 let other_block = partition.block_number(trans.state());
 
                                 if !partition.block(other_block).has_marked() {
