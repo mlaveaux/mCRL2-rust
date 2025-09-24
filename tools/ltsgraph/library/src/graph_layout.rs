@@ -71,7 +71,7 @@ impl GraphLayout {
             // Accumulate forces over all connected edges.
             for (_, to_index) in self.lts.outgoing_transitions(state_index) {
                 // Index an edge in the graph.
-                match index_edge(&mut self.layout_states, state_index, *to_index) {
+                match index_edge(&mut self.layout_states, state_index, to_index) {
                     Edge::Selfloop(_) => {
                         // Handle self loop, but we apply no forces in this case.
                     }

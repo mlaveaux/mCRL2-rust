@@ -75,7 +75,7 @@ impl Viewer {
             for (transition_index, (_, to)) in lts.outgoing_transitions(state_index).enumerate() {
                 let transition_view = &mut state_view.outgoing[transition_index];
 
-                if state_index == *to {
+                if state_index == to {
                     // This is a self loop so compute a rotation around the state for its handle.
                     let rotation_mat = Mat3::from_euler(
                         glam::EulerRot::XYZ,
@@ -89,7 +89,7 @@ impl Viewer {
                 } else {
                     // Determine whether any of the outgoing edges from the reached state point back.
                     let has_backtransition = lts
-                        .outgoing_transitions(*to)
+                        .outgoing_transitions(to)
                         .filter(|(_, other_to)| *other_to == state_index)
                         .count()
                         > 0;
@@ -203,10 +203,10 @@ impl Viewer {
             debug_assert!(state_view.position.z.abs() < 0.01);
 
             for (transition_index, (label, to)) in self.lts.outgoing_transitions(state_index).enumerate() {
-                let to_state_view = &self.view_states[*to];
+                let to_state_view = &self.view_states[to];
                 let transition_view = &state_view.outgoing[transition_index];
 
-                let label_position = if *to != state_index {
+                let label_position = if to != state_index {
                     // Draw the transition
                     edge_builder.move_to(state_view.position.x, state_view.position.y);
                     edge_builder.line_to(to_state_view.position.x, to_state_view.position.y);
@@ -248,7 +248,7 @@ impl Viewer {
 
                 // Draw the text label
                 if draw_actions {
-                    let buffer = &self.labels_cache[*label];
+                    let buffer = &self.labels_cache[label];
                     self.text_cache.draw(
                         buffer,
                         pixmap,
