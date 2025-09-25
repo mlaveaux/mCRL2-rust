@@ -1,6 +1,5 @@
 use std::fmt;
 
-use mcrl2rust_lts::LabelledTransitionSystem;
 
 use crate::IncomingTransitions;
 use super::IndexedPartition;
