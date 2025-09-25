@@ -10,13 +10,8 @@ use clap::ValueEnum;
 use mcrl2rust_io::io_aut::read_aut;
 use mcrl2rust_io::io_aut::write_aut;
 use mcrl2rust_reduction::branching_bisim_sigref;
-use mcrl2rust_reduction::branching_bisim_sigref_naive;
-use mcrl2rust_reduction::quotient_lts;
 use mcrl2rust_reduction::quotient_lts_jan;
-use mcrl2rust_reduction::strong_bisim_sigref;
-use mcrl2rust_reduction::strong_bisim_sigref_naive;
 use mcrl2rust_reduction::BlockPartition;
-use mcrl2rust_reduction::IndexedPartition;
 use mcrl2rust_utilities::Timing;
 use mcrl2rust_reduction::preprocess_branching;
 
