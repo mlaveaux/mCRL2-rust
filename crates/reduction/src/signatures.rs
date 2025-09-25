@@ -12,7 +12,6 @@ use crate::Partition;
 use crate::quotient_lts;
 use crate::tau_scc_decomposition;
 use crate::BlockPartition;
-use crate::IndexedPartition;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]

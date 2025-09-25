@@ -14,7 +14,6 @@ use crate::CompactSignaturePair;
 use crate::branching_bisim_signature;
 use crate::branching_bisim_signature_inductive;
 use crate::branching_bisim_signature_sorted;
-use crate::combine_partition;
 use crate::preprocess_branching;
 use crate::strong_bisim_signature;
 use crate::BlockPartition;
