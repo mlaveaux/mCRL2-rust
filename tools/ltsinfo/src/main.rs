@@ -59,13 +59,15 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let file = File::open(cli.filename)?;
 
     let mut timing = Timing::new();
+    let mut timepre: mcrl2rust_utilities::Timer = timing.start("preprocess");
+
     let preprocessed_lts = {
         let lts: mcrl2rust_lts::LabelledTransitionSystem = read_aut(&file, cli.tau.unwrap_or_default())?;
         let preproccessed_lts = preprocess_branching(&lts);
         preproccessed_lts
     }; // lts is dropped here
 
-
+    timepre.finish();
     let partition: BlockPartition = match cli.equivalence {
         Equivalence::StrongBisim => branching_bisim_sigref(&preprocessed_lts, &mut timing),
         Equivalence::StrongBisimNaive => branching_bisim_sigref(&preprocessed_lts, &mut timing),

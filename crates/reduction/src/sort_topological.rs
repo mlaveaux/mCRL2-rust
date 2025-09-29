@@ -68,30 +68,11 @@ where
 // Reorders the states of the given LTS according to the given permutation.
 pub fn reorder_states<P>(lts: &LabelledTransitionSystem, permutation: P) -> LabelledTransitionSystem
 where
-    P: Fn(usize) -> usize,
+    P: Fn(usize) -> usize + Copy,
 {
     let start = std::time::Instant::now();
-
-    // We know that it is a permutation, so there won't be any duplicated transitions.
-    let mut transitions: Vec<(usize, CompactTransition)> = Vec::default();
-
-    for state_index in lts.iter_states() {
-        let new_state_index = permutation(state_index);
-
-        for (label, to_index) in lts.outgoing_transitions(state_index) {
-            let new_to_index = permutation(to_index);
-            transitions.push((new_state_index, CompactTransition::new(label, new_to_index)));
-        }
-    }
-
     debug!("Time reorder_states: {:.3}s", start.elapsed().as_secs_f64());
-    LabelledTransitionSystem::new(
-        permutation(lts.initial_state_index()),
-        Some(lts.num_of_states()),
-        || transitions.iter().cloned(),
-        lts.labels().into(),
-        lts.hidden_labels().into(),
-    )
+    LabelledTransitionSystem::new_from_permutation(lts, permutation)
 }
 
 // The mark of a state in the depth first search.

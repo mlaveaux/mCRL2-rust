@@ -156,6 +156,32 @@ impl LabelledTransitionSystem {
         }
     }
 
+    pub fn new_from_permutation<P>(
+        lts: &LabelledTransitionSystem,
+        permutation: P,
+    ) -> Self
+    where
+        P: Fn(usize) -> usize + Copy,
+    {
+        let mut states = vec![State::default(); lts.num_of_states()];
+        for state_index in lts.iter_states() {
+            let new_state_index = permutation(state_index);
+            let state = &lts.states[state_index];
+            states[new_state_index].outgoing_start = state.outgoing_start;
+            states[new_state_index].outgoing_end = state.outgoing_end;
+        }
+
+
+        LabelledTransitionSystem {
+            initial_state: permutation(lts.initial_state),
+            labels: lts.labels.clone(),
+            hidden_labels: lts.hidden_labels.clone(),
+            states: states,
+            num_of_transitions: lts.transitions.len(),
+            transitions: lts.transitions.clone(),
+        }
+    }
+
     /// Returns the index of the initial state
     pub fn initial_state_index(&self) -> StateIndex {
         self.initial_state

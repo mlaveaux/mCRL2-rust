@@ -225,11 +225,13 @@ pub fn branching_bisim_signature_inductive(
     let num_act: usize = lts.num_of_labels(); //this label index does not occur.
     for (label_index, to) in lts.outgoing_transitions(state_index) {
         let to_block = partition.block_number(to);
-
+        let num_block = partition.num_of_blocks();
         if partition.block_number(state_index) == to_block {
             if lts.is_hidden_label(label_index) && partition.is_element_marked(to) {
                 // Inert tau transition, take signature from the outgoing tau-transition.
                 builder.push(CompactSignaturePair::new(num_act, state_to_key[to]));
+            } else if partition.is_element_marked(to) {
+                builder.push(CompactSignaturePair::new(label_index, num_block));
             } else {
                 builder.push(CompactSignaturePair::new(label_index, to_block));
             }
