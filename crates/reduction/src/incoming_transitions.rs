@@ -10,10 +10,10 @@ pub struct IncomingTransitions {
 
 // TODO: Bytepack end and silent into one u64.
 #[derive(Default, Clone)]
+
 struct TransitionIndex {
     start: usize,
-    end: usize,
-    silent: usize,
+    end: usize
 }
 
 impl IncomingTransitions {
@@ -25,9 +25,6 @@ impl IncomingTransitions {
         for state_index in lts.iter_states() {
             for trans in lts.outgoing_transitions_compact(state_index) {
                 state2incoming[trans.state()].end += 1;
-                if lts.is_hidden_label(trans.label()) {
-                    state2incoming[trans.state()].silent += 1;
-                }
             }
         }
 
@@ -36,27 +33,23 @@ impl IncomingTransitions {
         // will be correct.
         state2incoming.iter_mut().fold(0, |count, index| {
             let end = count + index.end;
-            index.start = end - index.silent;
+            index.start = end;
             index.end = end;
-            index.silent = end;
             end
         });
 
         for state_index in lts.iter_states() {
-            for transition in lts.outgoing_transitions_compact(state_index) {
+        for transition in lts.outgoing_transitions_compact(state_index) {
                 let index = &mut state2incoming[transition.state()];
-
-                if lts.is_hidden_label(transition.label()) {
-                    // Place at end of incoming transitions.
-                    index.silent -= 1;
-                    incoming_transitions[index.silent] = CompactTransition::new(transition.label(), state_index);
-                } else {
-                    index.start -= 1;
-                    incoming_transitions[index.start] = CompactTransition::new(transition.label(), state_index);
-                }
+                index.start -= 1;
+                incoming_transitions[index.start] = CompactTransition::new(transition.label(), state_index);
             }
         }
-
+        for state_index in lts.iter_states() {
+            // Sort the incoming transitions such that silent transitions come first.
+            let slice = &mut incoming_transitions[state2incoming[state_index].start .. state2incoming[state_index].end];
+            slice.sort_unstable();
+        }
         IncomingTransitions { incoming_transitions, state2incoming }
     }
 
@@ -67,7 +60,7 @@ impl IncomingTransitions {
 
     // Return an iterator over the incoming silent transitions for the given state.
     pub fn incoming_silent_transitions(&self, state_index: usize) -> impl Iterator<Item = &CompactTransition>  {
-        self.incoming_transitions[self.state2incoming[state_index].silent .. self.state2incoming[state_index].end].iter()
+        self.incoming_transitions[self.state2incoming[state_index].start .. self.state2incoming[state_index].end].iter().take_while(|t| t.label() == 0)
     }
 }
 

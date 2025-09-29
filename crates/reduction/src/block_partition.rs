@@ -77,7 +77,10 @@ impl BlockPartition {
 
         // O(n log n) Loop through the marked elements in order (to maintain topological sorting)
         builder.old_elements.extend(block.iter_marked(&self.elements));
-        builder.old_elements.sort_unstable();
+        
+        if builder.old_elements.len() != self.elements.len() {
+            builder.old_elements.sort_unstable();
+        }
 
         
 
