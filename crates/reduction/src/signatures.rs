@@ -245,6 +245,48 @@ pub fn weak_bisim_signature_sorted(
     builder.dedup();
 }
 
+
+/// The input lts must contain no tau-cycles.
+/// We only store top elements w.r.t. the topological sort in the signature
+/// I assume this is correct, but am not completely sure.
+pub fn weak_bisim_signature_sorted_top(
+    state_index: StateIndex,
+    lts: &LabelledTransitionSystem,
+    partition: &impl Partition,
+    state_to_signature: &[Signature],
+    builder: &mut SignatureBuilder,
+) {
+    builder.clear();
+    builder.push((0, partition.block_number(state_index))); // Add the inert tau transition to itself.
+    let mut filter: Vec<(usize,usize)> = vec![];
+
+    for &(label_index, to) in lts.outgoing_transitions(state_index) {
+        let to_block = partition.block_number(to);
+            if lts.is_hidden_label(label_index) {
+                // Inert tau transition, take signature from the outgoing tau-transition.
+                builder.extend(state_to_signature[to].as_slice());
+            } else {
+                builder.push((label_index, to_block));
+                for (_label_after,color) in state_to_signature[to].as_slice().iter().take_while(|(l,_)| !lts.is_hidden_label(*l)) {
+                    if *color != to_block {
+                        filter.push((label_index,*color));
+                    }
+                }
+                filter.sort_unstable();
+                filter.dedup();
+            }
+    }
+
+    // Compute the flat signature, which has Hash and is more compact.
+    filter.sort_unstable();
+    filter.dedup();
+
+    builder.retain(|x| !filter.contains(x));
+    builder.sort_unstable();
+    builder.dedup();
+}
+
+
 /// The input lts must contain no tau-cycles.
 /// This computes only tau signatures.
 pub fn weak_bisim_signature_sorted_taus(

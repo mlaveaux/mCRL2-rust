@@ -17,6 +17,7 @@ use crate::preprocess_branching;
 use crate::strong_bisim_signature;
 use crate::weak_bisim_signature_sorted;
 use crate::weak_bisim_signature_sorted_taus;
+use crate::weak_bisim_signature_sorted_top;
 use crate::BlockPartition;
 use crate::BlockPartitionBuilder;
 use crate::IncomingTransitions;
@@ -188,7 +189,7 @@ pub fn weak_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timi
     let partition = signature_refinement_naive::<_, true>(
         &preprocessed_lts,
         |state_index, partition, state_to_signature, builder| {
-            weak_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder)
+            weak_bisim_signature_sorted_top(state_index, &preprocessed_lts, partition, state_to_signature, builder)
         },
     );
     time.finish();

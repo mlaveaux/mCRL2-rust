@@ -53,6 +53,9 @@ struct Cli {
 
     #[arg(long)]
     time: bool,
+
+    #[arg(long, help = "Disable preprocessing the LTS by branching bisimulation minimization before computing weak bisimilarity.")]
+    weakonly: bool,
 }
 
 fn main() -> Result<ExitCode, Box<dyn Error>> {
@@ -65,7 +68,7 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let mut timing = Timing::new();
 
     let lts = {
-        if matches!(cli.equivalence, Equivalence::WeakBisim) {
+        if matches!(cli.equivalence, Equivalence::WeakBisim) && !cli.weakonly {
             let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
             timing.start("branching bisim");
             quotient_lts(&lts, &branching_bisim_sigref(&lts, &mut timing), true)
