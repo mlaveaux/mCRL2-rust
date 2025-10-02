@@ -14,6 +14,7 @@ use mcrl2rust_reduction::branching_bisim_sigref_naive;
 use mcrl2rust_reduction::quotient_lts;
 use mcrl2rust_reduction::strong_bisim_sigref;
 use mcrl2rust_reduction::strong_bisim_sigref_naive;
+use mcrl2rust_reduction::weak_bisim_sigref_naive;
 use mcrl2rust_reduction::IndexedPartition;
 use mcrl2rust_utilities::Timing;
 
@@ -35,6 +36,7 @@ enum Equivalence {
     StrongBisimNaive,
     BranchingBisim,
     BranchingBisimNaive,
+    WeakBisim,
 }
 
 #[derive(clap::Parser, Debug)]
@@ -51,6 +53,9 @@ struct Cli {
 
     #[arg(long)]
     time: bool,
+
+    #[arg(long, help = "Disable preprocessing the LTS by branching bisimulation minimization before computing weak bisimilarity.")]
+    weakonly: bool,
 }
 
 fn main() -> Result<ExitCode, Box<dyn Error>> {
@@ -61,13 +66,23 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
     let file = File::open(cli.filename)?;
 
     let mut timing = Timing::new();
-    let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
 
+    let lts = {
+        if matches!(cli.equivalence, Equivalence::WeakBisim) && !cli.weakonly {
+            let lts = read_aut(&file, cli.tau.unwrap_or_default())?;
+            timing.start("branching bisim");
+            quotient_lts(&lts, &branching_bisim_sigref(&lts, &mut timing), true)
+        } else {
+            read_aut(&file, cli.tau.unwrap_or_default())?
+        }
+    };
+       
     let partition: IndexedPartition = match cli.equivalence {
         Equivalence::StrongBisim => strong_bisim_sigref(&lts, &mut timing),
         Equivalence::StrongBisimNaive => strong_bisim_sigref_naive(&lts, &mut timing),
         Equivalence::BranchingBisim => branching_bisim_sigref(&lts, &mut timing),
         Equivalence::BranchingBisimNaive => branching_bisim_sigref_naive(&lts, &mut timing),
+        Equivalence::WeakBisim => weak_bisim_sigref_naive(&lts, &mut timing)
     };
 
     let mut quotient_time = timing.start("quotient");
@@ -75,7 +90,8 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
         &lts,
         &partition,
         matches!(cli.equivalence, Equivalence::BranchingBisim)
-            || matches!(cli.equivalence, Equivalence::BranchingBisimNaive),
+            || matches!(cli.equivalence, Equivalence::BranchingBisimNaive)
+            || matches!(cli.equivalence, Equivalence::WeakBisim)
     );
     if let Some(file) = cli.output {
         let mut writer = BufWriter::new(File::create(file)?);

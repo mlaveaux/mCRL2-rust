@@ -15,6 +15,9 @@ use crate::branching_bisim_signature_sorted;
 use crate::combine_partition;
 use crate::preprocess_branching;
 use crate::strong_bisim_signature;
+use crate::weak_bisim_signature_sorted;
+use crate::weak_bisim_signature_sorted_taus;
+use crate::weak_bisim_signature_sorted_top;
 use crate::BlockPartition;
 use crate::BlockPartitionBuilder;
 use crate::IncomingTransitions;
@@ -47,7 +50,7 @@ pub fn strong_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timing) 
 /// Computes a strong bisimulation partitioning using signature refinement
 pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
     let mut time = timing.start("reduction");
-    let partition = signature_refinement_naive(lts, |state_index, partition, _, builder| {
+    let partition = signature_refinement_naive::<_, false>(lts, |state_index, partition, _, builder| {
         strong_bisim_signature(state_index, lts, partition, builder);
     });
 
@@ -108,7 +111,7 @@ pub fn branching_bisim_sigref(lts: &LabelledTransitionSystem, timing: &mut Timin
 
     debug_assert_eq!(
         partition,
-        signature_refinement_naive(&preprocessed_lts, |state_index, partition, _, builder| {
+        signature_refinement_naive::<_, false>(&preprocessed_lts, |state_index, partition, _, builder| {
             branching_bisim_signature(
                 state_index,
                 &preprocessed_lts,
@@ -140,7 +143,7 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();
 
-    let partition = signature_refinement_naive(
+    let partition = signature_refinement_naive::<_, false>(
         &preprocessed_lts,
         |state_index, partition, state_to_signature, builder| {
             branching_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder);
@@ -174,6 +177,30 @@ pub fn branching_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut
     trace!("Final partition {combined_partition}");
     combined_partition
 }
+
+/// Computes a branching bisimulation partitioning using signature refinement without dirty blocks.
+pub fn weak_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timing) -> IndexedPartition {
+    let mut timepre = timing.start("preprocess");
+    let (preprocessed_lts, preprocess_partition) = preprocess_branching(lts);
+    timepre.finish();
+
+    let mut time = timing.start("reduction");
+
+    let partition = signature_refinement_naive::<_, true>(
+        &preprocessed_lts,
+        |state_index, partition, state_to_signature, builder| {
+            weak_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder)
+        },
+    );
+    time.finish();
+
+    // Combine the SCC partition with the branching bisimulation partition.
+    let combined_partition = combine_partition(preprocess_partition, &partition);
+
+    trace!("Final partition {combined_partition}");
+    combined_partition
+}
+
 
 /// General signature refinement algorithm that accepts an arbitrary signature
 ///
@@ -312,12 +339,13 @@ where
     partition
 }
 
+
 /// General signature refinement algorithm that accepts an arbitrary signature
 ///
 /// The signature function is called for each state and should fill the
 /// signature builder with the signature of the state. It consists of the
 /// current partition, the signatures per state for the next partition.
-fn signature_refinement_naive<F>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
+fn signature_refinement_naive<F, const WEAK: bool>(lts: &LabelledTransitionSystem, mut signature: F) -> IndexedPartition
 where
     F: FnMut(usize, &IndexedPartition, &Vec<Signature>, &mut SignatureBuilder),
 {
@@ -350,6 +378,19 @@ where
 
         // Remove the current signatures.
         arena.reset();
+        if WEAK {
+            for state_index in lts.iter_states() {
+                weak_bisim_signature_sorted_taus(state_index, &lts,&partition, &state_to_signature, &mut builder);
+
+                trace!("State {state_index} signature {:?}", builder);
+
+                // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
+                let slice = arena.alloc_slice_copy(&builder);
+                state_to_signature[state_index] = Signature::new(slice);
+            }
+        }
+
+
 
         for state_index in lts.iter_states() {
             // Compute the signature of a single state
