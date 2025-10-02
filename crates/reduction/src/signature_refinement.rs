@@ -189,7 +189,7 @@ pub fn weak_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Timi
     let partition = signature_refinement_naive::<_, true>(
         &preprocessed_lts,
         |state_index, partition, state_to_signature, builder| {
-            weak_bisim_signature_sorted_top(state_index, &preprocessed_lts, partition, state_to_signature, builder)
+            weak_bisim_signature_sorted(state_index, &preprocessed_lts, partition, state_to_signature, builder)
         },
     );
     time.finish();
@@ -385,7 +385,8 @@ where
                 trace!("State {state_index} signature {:?}", builder);
 
                 // Keep track of the index for every state, either use the arena to allocate space or simply borrow the value.
-                state_to_signature[state_index] = Signature::new(&builder);
+                let slice = arena.alloc_slice_copy(&builder);
+                state_to_signature[state_index] = Signature::new(slice);
             }
         }
 

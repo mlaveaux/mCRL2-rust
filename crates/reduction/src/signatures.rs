@@ -249,6 +249,7 @@ pub fn weak_bisim_signature_sorted(
 /// The input lts must contain no tau-cycles.
 /// We only store top elements w.r.t. the topological sort in the signature
 /// I assume this is correct, but am not completely sure.
+/// [WIP] this currently not correct.
 pub fn weak_bisim_signature_sorted_top(
     state_index: StateIndex,
     lts: &LabelledTransitionSystem,
