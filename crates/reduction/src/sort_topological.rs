@@ -222,12 +222,12 @@ mod tests {
 
         for from in lts.iter_states() {
             // Check that the states are in the correct order.
-            for &(label, to) in lts.outgoing_transitions(from) {
+            for (label, to) in lts.outgoing_transitions(from) {
                 let new_from = order[from];
                 let new_to = order[to];
                 assert!(new_lts
                     .outgoing_transitions(new_from)
-                    .any(|trans| *trans == (label, new_to)));
+                    .any(|trans| trans == (label, new_to)));
             }
         }
     }
