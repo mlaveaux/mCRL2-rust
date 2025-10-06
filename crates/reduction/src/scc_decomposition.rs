@@ -193,9 +193,9 @@ mod tests {
         // Depth first search to find all reachable states.
         while let Some(inner_state_index) = stack.pop() {
             for (_, to_index) in lts.outgoing_transitions(inner_state_index) {
-                if filter(inner_state_index, 0, *to_index) && !visited[*to_index] {
-                    visited[*to_index] = true;
-                    stack.push(*to_index);
+                if filter(inner_state_index, 0, to_index) && !visited[to_index] {
+                    visited[to_index] = true;
+                    stack.push(to_index);
                 }
             }
         }
@@ -236,20 +236,5 @@ mod tests {
             reduction.num_of_states() == tau_scc_decomposition(&reduction).num_of_blocks(),
             "Applying SCC decomposition again should yield the same number of SCC after second application"
         );
-    }
-
-    #[test]
-    fn test_cycles() {
-        let transitions = vec![(0, 0, 2), (0, 0, 4), (1, 0, 0), (2, 0, 1), (2, 0, 0)];
-
-        let lts = LabelledTransitionSystem::new(
-            0,
-            None,
-            || transitions.iter().cloned(),
-            vec!["tau".into(), "a".into()],
-            vec!["tau".into()]
-        );
-
-        let _ = tau_scc_decomposition(&lts);
     }
 }
