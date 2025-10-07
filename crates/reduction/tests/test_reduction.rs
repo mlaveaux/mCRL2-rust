@@ -1,3 +1,4 @@
+use mcrl2rust_reduction::preprocess_branching;
 use test_case::test_case;
 
 use mcrl2rust_io::io_aut::read_aut;
@@ -42,8 +43,8 @@ fn test_branching_bisimilation_reduction(input: &str) {
 
     let lts = read_aut(input.as_bytes(), vec!["tau".into(), "i".into()]).unwrap();
     let mut timing = Timing::new();
-
-    let reduced = branching_bisim_sigref(&lts, &mut timing);
+    let preprocessed = preprocess_branching(&lts);
+    let reduced = branching_bisim_sigref(&preprocessed, &mut timing);
     let naive_reduced = branching_bisim_sigref_naive(&lts, &mut timing);
 
     assert_eq!(reduced, naive_reduced, "The partitions are not equal");
