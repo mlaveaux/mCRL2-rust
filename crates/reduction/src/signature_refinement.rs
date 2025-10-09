@@ -57,10 +57,9 @@ pub fn strong_bisim_sigref_naive(lts: &LabelledTransitionSystem, timing: &mut Ti
 }
 
 /// Computes a branching bisimulation partitioning using signature refinement
-pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, timing: &mut Timing) -> BlockPartition {
-    let mut time = timing.start("reduction");
-    let incoming = IncomingTransitions::new(&preprocessed_lts);
+pub fn branching_bisim_sigref(preprocessed_lts: &LabelledTransitionSystem, incoming: &IncomingTransitions, timing: &mut Timing) -> BlockPartition {
 
+    let mut time = timing.start("reduction");
     let mut expected_builder = SignatureBuilder::default();
     let mut visited = FxHashSet::default();
     let mut stack = Vec::new();

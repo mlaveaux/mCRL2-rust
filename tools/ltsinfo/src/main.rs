@@ -12,6 +12,7 @@ use mcrl2rust_io::io_aut::write_aut;
 use mcrl2rust_reduction::branching_bisim_sigref;
 use mcrl2rust_reduction::quotient_lts_jan;
 use mcrl2rust_reduction::BlockPartition;
+use mcrl2rust_reduction::IncomingTransitions;
 use mcrl2rust_utilities::Timing;
 use mcrl2rust_reduction::preprocess_branching;
 
@@ -67,12 +68,14 @@ fn main() -> Result<ExitCode, Box<dyn Error>> {
         preproccessed_lts
     }; // lts is dropped here
 
+    let incoming = IncomingTransitions::new(&preprocessed_lts);
     timepre.finish();
+
     let partition: BlockPartition = match cli.equivalence {
-        Equivalence::StrongBisim => branching_bisim_sigref(&preprocessed_lts, &mut timing),
-        Equivalence::StrongBisimNaive => branching_bisim_sigref(&preprocessed_lts, &mut timing),
-        Equivalence::BranchingBisim => branching_bisim_sigref(&preprocessed_lts, &mut timing),
-        Equivalence::BranchingBisimNaive => branching_bisim_sigref(&preprocessed_lts, &mut timing),
+        Equivalence::StrongBisim => branching_bisim_sigref(&preprocessed_lts, &incoming, &mut timing),
+        Equivalence::StrongBisimNaive => branching_bisim_sigref(&preprocessed_lts, &incoming, &mut timing),
+        Equivalence::BranchingBisim => branching_bisim_sigref(&preprocessed_lts, &incoming, &mut timing),
+        Equivalence::BranchingBisimNaive => branching_bisim_sigref(&preprocessed_lts, &incoming, &mut timing),
     };
 
     let mut quotient_time = timing.start("quotient");
