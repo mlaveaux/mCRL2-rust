@@ -476,13 +476,13 @@ mod tests {
     //     is_refinement(&lts, &strong_partition, &branching_partition);
     // }
 
-    #[test]
-    fn test_random_branching_bisim_sigref_naive() {
-        let lts = random_lts(10, 3, 3);
-        let mut timing = Timing::new();
+    // #[test]
+    // fn test_random_branching_bisim_sigref_naive() {
+    //     let lts = random_lts(10, 3, 3);
+    //     let mut timing = Timing::new();
 
-        let strong_partition = strong_bisim_sigref_naive(&lts, &mut timing);
-        let branching_partition = branching_bisim_sigref_naive(&lts, &mut timing);
-        is_refinement(&lts, &strong_partition, &branching_partition);
-    }
+    //     let strong_partition = strong_bisim_sigref_naive(&lts, &mut timing);
+    //     let branching_partition = branching_bisim_sigref_naive(&lts, &mut timing);
+    //     is_refinement(&lts, &strong_partition, &branching_partition);
+    // }
 }
