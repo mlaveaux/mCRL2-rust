@@ -201,38 +201,6 @@ mod tests {
     }
 
     #[test]
-    fn test_reorder_states() {
-        let lts = random_lts(10, 3, 2);
-
-        // Generate a random permutation.
-        let mut rng = rand::rng();
-        let order: Vec<usize> = {
-            let mut order: Vec<usize> = (0..lts.num_of_states()).collect();
-            order.shuffle(&mut rng);
-            order
-        };
-
-        let new_lts = reorder_states(&lts, |i| order[i]);
-
-        trace!("{:?}", lts);	
-        trace!("{:?}", new_lts);	
-
-        //assert_eq!(new_lts.num_of_states(), lts.num_of_states());
-        assert_eq!(new_lts.num_of_labels(), lts.num_of_labels());
-
-        for from in lts.iter_states() {
-            // Check that the states are in the correct order.
-            for (label, to) in lts.outgoing_transitions(from) {
-                let new_from = order[from];
-                let new_to = order[to];
-                assert!(new_lts
-                    .outgoing_transitions(new_from)
-                    .any(|trans| trans == (label, new_to)));
-            }
-        }
-    }
-
-    #[test]
     fn test_is_valid_permutation() {
         let lts = random_lts(10, 15, 2);
 

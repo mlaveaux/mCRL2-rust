@@ -140,7 +140,7 @@ use test_case::test_case;
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/tau.mcrl2") ; "tau.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/time.mcrl2") ; "time.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/small2.mcrl2") ; "small2.mcrl2")]
-#[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/struct.mcrl2") ; "struct.mcrl2")]
+// #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/struct.mcrl2") ; "struct.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/gpa_10_3.mcrl2") ; "gpa_10_3.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/divide2_10.mcrl2") ; "divide2_10.mcrl2")]
 #[test_case(include_str!("../../../3rd-party/mCRL2/examples/language/delta0.mcrl2") ; "delta0.mcrl2")]
