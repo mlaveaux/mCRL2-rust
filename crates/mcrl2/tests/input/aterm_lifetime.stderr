@@ -4,7 +4,7 @@ warning: unused variable: `term`
 5 |     let term = {
   |         ^^^^ help: if this is intentional, prefix it with an underscore: `_term`
   |
-  = note: `#[warn(unused_variables)]` on by default
+  = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 
 error[E0597]: `t` does not live long enough
  --> tests/input/aterm_lifetime.rs:7:9
