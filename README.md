@@ -1,3 +1,5 @@
+**Important** This project has been abandonded in favor of [merc](https://github.com/mlaveaux/merc). All functionality of this repository has been incorporated there, and developement is continued.
+
 This repository contains several tools and libraries that interface with the C++ library functionality of the [mCRL2 toolset](https://github.com/mCRL2org/mCRL2) demonstrating the ability to write tools in Rust that interface with mCRL2. See the [documentation](https://mlaveaux.github.io/mCRL2-rust/mcrl2/index.html) of the `mcrl2` crate for the Rust wrapper around the `mcrl2-sys` crate, which provides the C++ interface. This documentation can be locally produced using `cargo doc --open`. Compilation requires at least rustc version 1.70.0 and we use 2021 edition rust.
 
 ## Tools
